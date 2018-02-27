@@ -1,0 +1,49 @@
+version: "2"
+
+volumes:
+    keytab-volume:
+
+services:
+  kerberos:
+    container_name: kerberos.example
+    hostname: kerberos.example.com
+    entrypoint: /tmp/start-kdc.sh
+    build:
+      context: .
+      args:
+        - http_proxy
+        - https_proxy
+    volumes:
+        - keytab-volume: /var/keytabs
+
+  nn:
+    ports:
+      - 9000:9000
+    container_name: nn.example
+    depends_on:
+        - kerberos
+    hostname: nn.example.com
+    user: hdfs
+    entrypoint: /tmp/start-namenode.sh
+    build:
+      context: .
+      args:
+        - http_proxy
+        - https_proxy
+    volumes:
+        - keytab-volume: /var/keytabs
+
+  dn1:
+    container_name: dn1.example
+    depends_on:
+        - kerberos
+    hostname: dn1.example.com
+    user: hdfs
+    entrypoint: /tmp/start-datanode.sh
+    build:
+      context: .
+      args:
+        - http_proxy
+        - https_proxy
+    volumes:
+        - keytab-volume: /var/keytabs
