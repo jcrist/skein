@@ -1,14 +1,6 @@
 version: "2"
 
 services:
-  edge:
-    container_name: edge.example.com
-    hostname: edge.example.com
-    user: testuser
-    command: /etc/startup/start-edgenode.sh
-    build:
-      context: .
-
   nn:
     ports:
       - 8020:8020    # NN
@@ -18,7 +10,7 @@ services:
     container_name: nn.example.com
     hostname: nn.example.com
     user: root
-    command: /etc/startup/start-namenode.sh
+    command: supervisord -c /etc/nn.supervisord.conf
     build:
       context: .
 
@@ -28,9 +20,15 @@ services:
       - 8042:8042    # NM webui
     container_name: dn.example.com
     hostname: dn.example.com
-    depends_on:
-      - nn
     user: root
-    command: /etc/startup/start-datanode.sh
+    command: supervisord -c /etc/dn.supervisord.conf
+    build:
+      context: .
+
+  edge:
+    container_name: edge.example.com
+    hostname: edge.example.com
+    user: root
+    command: supervisord -c /etc/edge.supervisord.conf
     build:
       context: .

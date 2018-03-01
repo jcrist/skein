@@ -24,8 +24,9 @@ RUN cd /etc/yum.repos.d/ && { curl -O https://archive.cloudera.com/cdh5/redhat/7
 
 # Install supervisord
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
-    && python get-pip.py && \
-    rm get-pip.py
+    && python get-pip.py \
+    && pip install supervisor \
+    && rm get-pip.py
 
 # Make a non-privileged account for edge node and install conda for that account
 RUN adduser testuser
@@ -48,6 +49,9 @@ RUN alternatives --install /etc/hadoop/conf hadoop-conf /etc/hadoop/conf.test 50
 
 RUN mkdir -p /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs \
     && chown -R yarn:yarn /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs
+
+# Format namenode
+RUN sudo -u hdfs hdfs namenode -format -force
 
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.161-0.b14.el7_4.x86_64/jre/
 ENV LIBHDFS3_CONF /etc/hadoop/conf/hdfs-site.xml
