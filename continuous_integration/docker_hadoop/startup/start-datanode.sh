@@ -1,7 +1,6 @@
 #! /bin/bash
 
 /etc/init.d/hadoop-hdfs-datanode start
-
-echo "Datanode Started"
+/etc/init.d/hadoop-yarn-nodemanager start
 
 sleep infinity

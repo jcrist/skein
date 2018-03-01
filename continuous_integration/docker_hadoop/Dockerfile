@@ -39,8 +39,16 @@ COPY conf.test/ /etc/hadoop/conf.test/
 RUN alternatives --install /etc/hadoop/conf hadoop-conf /etc/hadoop/conf.test 50 \
     && alternatives --set hadoop-conf /etc/hadoop/conf.test
 
+RUN mkdir -p /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs \
+    && chown -R yarn:yarn /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs
+
 # Copy over startup scripts
 COPY startup/ /tmp/startup/
 
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.161-0.b14.el7_4.x86_64/jre/
 ENV LIBHDFS3_CONF /etc/hadoop/conf/hdfs-site.xml
+ENV HADOOP_CONF_DIR /etc/hadoop/conf
+ENV HADOOP_HOME /usr/lib/hadoop
+ENV HADOOP_COMMON_HOME /usr/lib/hadoop
+ENV HADOOP_YARN_HOME /usr/lib/hadoop-yarn
+ENV HADOOP_HDFS_HOME /usr/lib/hadoop-hdfs
