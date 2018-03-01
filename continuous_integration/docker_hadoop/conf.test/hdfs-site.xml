@@ -8,4 +8,9 @@
     <name>dfs.permissions.enabled</name>
     <value>true</value>
   </property>
+
+  <property>
+    <name>dfs.webhdfs.enabled</name>
+    <value>true</value>
+  </property>
 </configuration>

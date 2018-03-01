@@ -11,7 +11,9 @@ services:
 
   nn:
     ports:
-      - 9000:9000
+      - 9000:9000    # NN
+      - 50070:50070  # NN webui
+      - 8088:8088    # RM webui
     container_name: nn.example.com
     hostname: nn.example.com
     user: root
@@ -22,6 +24,8 @@ services:
   dn1:
     container_name: dn1.example.com
     hostname: dn1.example.com
+    depends_on:
+      - nn
     user: root
     entrypoint: /tmp/startup/start-datanode.sh
     build:
