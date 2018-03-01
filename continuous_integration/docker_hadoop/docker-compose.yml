@@ -11,6 +11,7 @@ services:
 
   nn:
     ports:
+      - 8020:8020    # NN
       - 9000:9000    # NN
       - 50070:50070  # NN webui
       - 8088:8088    # RM webui
@@ -22,6 +23,9 @@ services:
       context: .
 
   dn1:
+    ports:
+      - 50075:50075  # DN webui
+      - 8042:8042    # NM webui
     container_name: dn1.example.com
     hostname: dn1.example.com
     depends_on:
