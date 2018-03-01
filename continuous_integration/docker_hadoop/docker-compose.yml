@@ -1,0 +1,28 @@
+version: "2"
+
+services:
+  edge:
+    container_name: edge.example.com
+    hostname: edge.example.com
+    user: testuser
+    entrypoint: sleep infinity
+    build:
+      context: .
+
+  nn:
+    ports:
+      - 9000:9000
+    container_name: nn.example.com
+    hostname: nn.example.com
+    user: hdfs
+    entrypoint: /tmp/startup/start-namenode.sh
+    build:
+      context: .
+
+  dn1:
+    container_name: dn1.example.com
+    hostname: dn1.example.com
+    user: hdfs
+    entrypoint: /tmp/startup/start-datanode.sh
+    build:
+      context: .
