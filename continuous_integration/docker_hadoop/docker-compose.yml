@@ -5,7 +5,7 @@ services:
     container_name: edge.example.com
     hostname: edge.example.com
     user: testuser
-    entrypoint: sleep infinity
+    command: /etc/startup/start-edgenode.sh
     build:
       context: .
 
@@ -18,19 +18,19 @@ services:
     container_name: nn.example.com
     hostname: nn.example.com
     user: root
-    entrypoint: /tmp/startup/start-namenode.sh
+    command: /etc/startup/start-namenode.sh
     build:
       context: .
 
-  dn1:
+  dn:
     ports:
       - 50075:50075  # DN webui
       - 8042:8042    # NM webui
-    container_name: dn1.example.com
-    hostname: dn1.example.com
+    container_name: dn.example.com
+    hostname: dn.example.com
     depends_on:
       - nn
     user: root
-    entrypoint: /tmp/startup/start-datanode.sh
+    command: /etc/startup/start-datanode.sh
     build:
       context: .

@@ -22,6 +22,11 @@ RUN cd /etc/yum.repos.d/ && { curl -O https://archive.cloudera.com/cdh5/redhat/7
     && yum clean all \
     && rm -rf /var/cache/yum
 
+# Install supervisord
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+    && python get-pip.py && \
+    rm get-pip.py
+
 # Make a non-privileged account for edge node and install conda for that account
 RUN adduser testuser
 USER testuser
@@ -34,16 +39,15 @@ RUN curl https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 # Revert to root permissions for rest of file
 USER root
 
+# Copy over files
+COPY ./files /
+
 # Configure hdfs
-COPY conf.test/ /etc/hadoop/conf.test/
 RUN alternatives --install /etc/hadoop/conf hadoop-conf /etc/hadoop/conf.test 50 \
     && alternatives --set hadoop-conf /etc/hadoop/conf.test
 
 RUN mkdir -p /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs \
     && chown -R yarn:yarn /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs
-
-# Copy over startup scripts
-COPY startup/ /tmp/startup/
 
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.161-0.b14.el7_4.x86_64/jre/
 ENV LIBHDFS3_CONF /etc/hadoop/conf/hdfs-site.xml
