@@ -22,6 +22,14 @@ RUN cd /etc/yum.repos.d/ && { curl -O https://archive.cloudera.com/cdh5/redhat/7
     && yum clean all \
     && rm -rf /var/cache/yum
 
+# Install kerberos
+RUN yum install -y \
+        krb5-libs \
+        krb5-server \
+        krb5-workstation \
+    && yum clean all \
+    && rm -rf /var/cache/yum
+
 # Install supervisord
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
     && python get-pip.py \
@@ -45,7 +53,10 @@ USER root
 COPY ./files /
 
 # Configure hdfs
+# We use the non-kerberized cluster for the dockerfile
+# The kerberized cluster will re-run alternatives on startup
 RUN cp /etc/hadoop/conf.empty/log4j.properties /etc/hadoop/conf.test/log4j.properties \
+    && chmod 6050 /etc/hadoop/conf.kerb/container-executor.cfg \
     && alternatives --install /etc/hadoop/conf hadoop-conf /etc/hadoop/conf.test 50 \
     && alternatives --set hadoop-conf /etc/hadoop/conf.test
 
@@ -54,6 +65,22 @@ RUN mkdir -p /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs \
 
 # Format namenode
 RUN sudo -u hdfs hdfs namenode -format -force
+
+# Configure Kerberos
+RUN kdb5_util create -s -P testpass \
+    && kadmin.local -q "addprinc -randkey hdfs/nn.example.com@EXAMPLE.COM" \
+    && kadmin.local -q "addprinc -randkey mapred/nn.example.com@EXAMPLE.COM" \
+    && kadmin.local -q "addprinc -randkey yarn/nn.example.com@EXAMPLE.COM" \
+    && kadmin.local -q "addprinc -randkey HTTP/nn.example.com@EXAMPLE.COM" \
+    && kadmin.local -q "xst -norandkey -k /etc/hadoop/conf.kerb/hdfs.keytab hdfs/nn.example.com HTTP/nn.example.com" \
+    && kadmin.local -q "xst -norandkey -k /etc/hadoop/conf.kerb/mapred.keytab mapred/nn.example.com HTTP/nn.example.com" \
+    && kadmin.local -q "xst -norandkey -k /etc/hadoop/conf.kerb/yarn.keytab yarn/nn.example.com HTTP/nn.example.com" \
+    && kadmin.local -q "xst -norandkey -k /etc/hadoop/conf.kerb/HTTP.keytab HTTP/nn.example.com" \
+    && chown hdfs:mapred /etc/hadoop/conf.kerb/hdfs.keytab \
+    && chown mapred:mapred /etc/hadoop/conf.kerb/mapred.keytab \
+    && chown yarn:mapred /etc/hadoop/conf.kerb/yarn.keytab \
+    && chown hdfs:mapred /etc/hadoop/conf.kerb/HTTP.keytab \
+    && chmod 400 /etc/hadoop/conf.kerb/*.keytab
 
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.161-0.b14.el7_4.x86_64/jre/
 ENV LIBHDFS3_CONF /etc/hadoop/conf/hdfs-site.xml
