@@ -35,7 +35,8 @@ USER testuser
 RUN curl https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh \
     && /bin/bash /tmp/miniconda.sh -b -p /home/testuser/miniconda \
     && rm /tmp/miniconda.sh \
-    && echo 'export PATH="/home/testuser/miniconda/bin:$PATH"' >> /home/testuser/.bashrc
+    && echo 'export PATH="/home/testuser/miniconda/bin:$PATH"' >> /home/testuser/.bashrc \
+    && /home/testuser/miniconda/bin/conda update conda -y
 
 # Revert to root permissions for rest of file
 USER root
@@ -44,7 +45,8 @@ USER root
 COPY ./files /
 
 # Configure hdfs
-RUN alternatives --install /etc/hadoop/conf hadoop-conf /etc/hadoop/conf.test 50 \
+RUN cp /etc/hadoop/conf.empty/log4j.properties /etc/hadoop/conf.test/log4j.properties \
+    && alternatives --install /etc/hadoop/conf hadoop-conf /etc/hadoop/conf.test 50 \
     && alternatives --set hadoop-conf /etc/hadoop/conf.test
 
 RUN mkdir -p /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs \
