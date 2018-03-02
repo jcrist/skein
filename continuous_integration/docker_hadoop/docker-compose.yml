@@ -12,7 +12,7 @@ services:
     container_name: nn.example.com
     hostname: nn.example.com
     user: root
-    command: supervisord -c /etc/nn.supervisord.conf
+    command: supervisord -c /etc/nn-kerb.supervisord.conf
     build:
       context: .
 
@@ -23,7 +23,7 @@ services:
     container_name: dn.example.com
     hostname: dn.example.com
     user: root
-    command: supervisord -c /etc/dn.supervisord.conf
+    command: supervisord -c /etc/dn-kerb.supervisord.conf
     build:
       context: .
 
@@ -31,6 +31,6 @@ services:
     container_name: edge.example.com
     hostname: edge.example.com
     user: root
-    command: supervisord -c /etc/edge.supervisord.conf
+    command: supervisord -c /etc/edge-kerb.supervisord.conf
     build:
       context: .
