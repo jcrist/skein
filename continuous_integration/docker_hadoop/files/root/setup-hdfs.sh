@@ -41,6 +41,9 @@ su -s /bin/bash hdfs -c \
     && hdfs dfs -mkdir -p /user/root \
     && hdfs dfs -chmod -R 777 /user/root \
     && hdfs dfs -chown root /user/root \
+    && hdfs dfs -mkdir -p /user/history \
+    && hdfs dfs -chmod -R 1777 /user/history \
+    && hdfs dfs -chown mapred:mapred /user/history \
     && hdfs dfs -mkdir -p /user/testuser \
     && hdfs dfs -chown testuser /user/testuser'
 

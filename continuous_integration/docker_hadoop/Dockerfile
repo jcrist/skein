@@ -60,5 +60,6 @@ ENV LIBHDFS3_CONF /etc/hadoop/conf/hdfs-site.xml
 ENV HADOOP_CONF_DIR /etc/hadoop/conf
 ENV HADOOP_HOME /usr/lib/hadoop
 ENV HADOOP_COMMON_HOME /usr/lib/hadoop
+ENV HADOOP_MAPRED_HOME /usr/lib/hadoop-mapreduce
 ENV HADOOP_YARN_HOME /usr/lib/hadoop-yarn
 ENV HADOOP_HDFS_HOME /usr/lib/hadoop-hdfs
