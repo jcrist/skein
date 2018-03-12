@@ -22,37 +22,37 @@
 
     <property>
         <name>dfs.namenode.keytab.file</name>
-        <value>/etc/hadoop/conf/hdfs.keytab</value>
+        <value>/etc/hadoop/conf/keytabs/hdfs.keytab</value>
     </property>
 
     <property>
         <name>dfs.namenode.kerberos.principal</name>
-        <value>hdfs/nn.example.com@EXAMPLE.COM</value>
+        <value>hdfs/_HOST@EXAMPLE.COM</value>
     </property>
 
     <property>
         <name>dfs.namenode.kerberos.internal.spnego.principal</name>
-        <value>HTTP/nn.example.com@EXAMPLE.COM</value>
+        <value>HTTP/_HOST@EXAMPLE.COM</value>
     </property>
 
     <property>
         <name>dfs.datanode.keytab.file</name>
-        <value>/etc/hadoop/conf/hdfs.keytab</value>
+        <value>/etc/hadoop/conf/keytabs/hdfs.keytab</value>
     </property>
 
     <property>
         <name>dfs.datanode.kerberos.principal</name>
-        <value>hdfs/nn.example.com@EXAMPLE.COM</value>
+        <value>hdfs/_HOST@EXAMPLE.COM</value>
 	</property>
 
     <property>
         <name>dfs.web.authentication.kerberos.principal</name>
-        <value>HTTP/nn.example.com@EXAMPLE.COM</value>
+        <value>HTTP/_HOST@EXAMPLE.COM</value>
     </property>
 
     <property>
         <name>dfs.web.authentication.kerberos.keytab</name>
-        <value>/etc/hadoop/conf/HTTP.keytab</value>
+        <value>/etc/hadoop/conf/keytabs/HTTP.keytab</value>
     </property>
 
     <property>

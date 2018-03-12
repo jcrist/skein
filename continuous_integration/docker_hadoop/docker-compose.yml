@@ -1,5 +1,8 @@
 version: "2"
 
+volumes:
+    server-keytab:
+
 services:
   nn:
     ports:

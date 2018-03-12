@@ -17,12 +17,12 @@
 
     <property>
         <name>mapreduce.jobhistory.keytab</name>
-        <value>/etc/hadoop/conf/mapred.keytab</value>
+        <value>/etc/hadoop/conf/keytabs/mapred.keytab</value>
     </property>
 
     <property>
         <name>mapreduce.jobhistory.principal</name>
-        <value>mapred/nn.example.com@EXAMPLE.COM</value>
+        <value>mapred/_HOST@EXAMPLE.COM</value>
     </property>
 
 </configuration>
