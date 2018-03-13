@@ -23,29 +23,28 @@ if [[ $exit_code != 0 ]]; then
 fi
 echo "HDFS connected, initializing directory structure"
 
-su -s /bin/bash hdfs -c \
-    'hdfs dfs -mkdir -p /tmp \
-    && hdfs dfs -chmod -R 1777 /tmp \
-    && hdfs dfs -mkdir -p /var/log \
-    && hdfs dfs -chmod -R 1775 /var/log \
-    && hdfs dfs -chown yarn:mapred /var/log \
-    && hdfs dfs -mkdir -p /tmp/hadoop-yarn \
-    && hdfs dfs -chown -R mapred:mapred /tmp/hadoop-yarn \
-    && hdfs dfs -mkdir -p /tmp/hadoop-yarn/staging/history/done_intermediate \
-    && hdfs dfs -chown -R mapred:mapred /tmp/hadoop-yarn/staging \
-    && hdfs dfs -chmod -R 1777 /tmp \
-    && hdfs dfs -mkdir -p /var/log/hadoop-yarn/apps \
-    && hdfs dfs -chmod -R 1777 /var/log/hadoop-yarn/apps \
-    && hdfs dfs -chown yarn:mapred /var/log/hadoop-yarn/apps \
-    && hdfs dfs -mkdir -p /user \
-    && hdfs dfs -mkdir -p /user/root \
-    && hdfs dfs -chmod -R 777 /user/root \
-    && hdfs dfs -chown root /user/root \
-    && hdfs dfs -mkdir -p /user/history \
-    && hdfs dfs -chmod -R 1777 /user/history \
-    && hdfs dfs -chown mapred:mapred /user/history \
-    && hdfs dfs -mkdir -p /user/testuser \
-    && hdfs dfs -chown testuser /user/testuser'
+hdfs dfs -mkdir -p /tmp \
+&& hdfs dfs -chmod -R 1777 /tmp \
+&& hdfs dfs -mkdir -p /var/log \
+&& hdfs dfs -chmod -R 1775 /var/log \
+&& hdfs dfs -chown yarn:mapred /var/log \
+&& hdfs dfs -mkdir -p /tmp/hadoop-yarn \
+&& hdfs dfs -chown -R mapred:mapred /tmp/hadoop-yarn \
+&& hdfs dfs -mkdir -p /tmp/hadoop-yarn/staging/history/done_intermediate \
+&& hdfs dfs -chown -R mapred:mapred /tmp/hadoop-yarn/staging \
+&& hdfs dfs -chmod -R 1777 /tmp \
+&& hdfs dfs -mkdir -p /var/log/hadoop-yarn/apps \
+&& hdfs dfs -chmod -R 1777 /var/log/hadoop-yarn/apps \
+&& hdfs dfs -chown yarn:mapred /var/log/hadoop-yarn/apps \
+&& hdfs dfs -mkdir -p /user \
+&& hdfs dfs -mkdir -p /user/root \
+&& hdfs dfs -chmod -R 777 /user/root \
+&& hdfs dfs -chown root /user/root \
+&& hdfs dfs -mkdir -p /user/history \
+&& hdfs dfs -chmod -R 1777 /user/history \
+&& hdfs dfs -chown mapred:mapred /user/history \
+&& hdfs dfs -mkdir -p /user/testuser \
+&& hdfs dfs -chown testuser /user/testuser
 
 exit_code=$?
 if [[ $exit_code != 0 ]]; then

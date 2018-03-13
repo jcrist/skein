@@ -1,7 +1,9 @@
 version: "2"
 
-volumes:
-    server-keytab:
+networks:
+  default:
+    external:
+      name: com
 
 services:
   nn:
@@ -12,7 +14,7 @@ services:
       - 8088:8088    # RM webui
       - 88:88        # Kerberos
       - 749:749      # Kerberos
-    container_name: nn.example.com
+    container_name: nn.example
     hostname: nn.example.com
     user: root
     command: supervisord -c /etc/nn-kerb.supervisord.conf
@@ -23,7 +25,7 @@ services:
     ports:
       - 50075:50075  # DN webui
       - 8042:8042    # NM webui
-    container_name: dn.example.com
+    container_name: dn.example
     hostname: dn.example.com
     user: root
     command: supervisord -c /etc/dn-kerb.supervisord.conf
@@ -31,7 +33,7 @@ services:
       context: .
 
   edge:
-    container_name: edge.example.com
+    container_name: edge.example
     hostname: edge.example.com
     user: root
     command: supervisord -c /etc/edge-kerb.supervisord.conf
