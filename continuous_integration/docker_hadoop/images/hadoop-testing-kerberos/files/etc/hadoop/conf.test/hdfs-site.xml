@@ -22,7 +22,7 @@
 
     <property>
         <name>dfs.namenode.keytab.file</name>
-        <value>/etc/hadoop/conf/keytabs/hdfs.keytab</value>
+        <value>/etc/hadoop/conf/master-keytabs/hdfs.keytab</value>
     </property>
 
     <property>
@@ -37,7 +37,7 @@
 
     <property>
         <name>dfs.datanode.keytab.file</name>
-        <value>/etc/hadoop/conf/keytabs/hdfs.keytab</value>
+        <value>/etc/hadoop/conf/worker-keytabs/hdfs.keytab</value>
     </property>
 
     <property>
@@ -52,7 +52,7 @@
 
     <property>
         <name>dfs.web.authentication.kerberos.keytab</name>
-        <value>/etc/hadoop/conf/keytabs/HTTP.keytab</value>
+        <value>/etc/hadoop/conf/master-keytabs/HTTP.keytab</value>
     </property>
 
     <property>

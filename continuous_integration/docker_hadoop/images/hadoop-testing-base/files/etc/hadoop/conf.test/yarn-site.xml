@@ -45,39 +45,4 @@
         <value>hdfs://master.example.com:9000/var/log/hadoop-yarn/apps</value>
     </property>
 
-    <property>
-        <name>yarn.resourcemanager.keytab</name>
-        <value>/etc/hadoop/conf/keytabs/yarn.keytab</value>
-    </property>
-
-    <property>
-        <name>yarn.resourcemanager.principal</name>
-        <value>yarn/master.example.com@EXAMPLE.COM</value>
-    </property>
-
-    <property>
-        <name>yarn.nodemanager.keytab</name>
-        <value>/etc/hadoop/conf/keytabs/yarn.keytab</value>
-    </property>
-
-    <property>
-        <name>yarn.nodemanager.principal</name>
-        <value>yarn/worker.example.com@EXAMPLE.COM</value>
-    </property>
-    
-    <property>
-        <name>yarn.nodemanager.container-executor.class</name>
-        <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
-    </property>
-
-    <property>
-        <name>yarn.nodemanager.linux-container-executor.path</name>
-        <value>/usr/lib/hadoop-yarn/bin/container-executor</value>
-    </property>
-
-    <property>
-        <name>yarn.nodemanager.linux-container-executor.group</name>
-        <value>yarn</value>
-    </property>
-
 </configuration>

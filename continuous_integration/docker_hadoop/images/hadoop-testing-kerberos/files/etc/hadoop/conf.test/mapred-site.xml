@@ -17,7 +17,7 @@
 
     <property>
         <name>mapreduce.jobhistory.keytab</name>
-        <value>/etc/hadoop/conf/keytabs/mapred.keytab</value>
+        <value>/etc/hadoop/conf/master-keytabs/mapred.keytab</value>
     </property>
 
     <property>

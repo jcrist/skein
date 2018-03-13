@@ -6,10 +6,9 @@ networks:
 
 services:
   master:
+    image: '${HADOOP_TESTING_IMAGE}'
     user: root
-    command: supervisord -c /etc/nn-kerb.supervisord.conf
-    build:
-      context: .
+    command: supervisord -c /etc/master.supervisord.conf
     hostname: master
     domainname: example.com
     networks:
@@ -25,10 +24,9 @@ services:
       - 749:749      # Kerberos
 
   worker:
+    image: '${HADOOP_TESTING_IMAGE}'
     user: root
-    command: supervisord -c /etc/dn-kerb.supervisord.conf
-    build:
-      context: .
+    command: supervisord -c /etc/worker.supervisord.conf
     hostname: worker
     domainname: example.com
     networks:
@@ -40,10 +38,9 @@ services:
       - 8042:8042    # NM webui
 
   edge:
+    image: '${HADOOP_TESTING_IMAGE}'
     user: root
-    command: supervisord -c /etc/edge-kerb.supervisord.conf
-    build:
-      context: .
+    command: supervisord -c /etc/edge.supervisord.conf
     hostname: edge
     domainname: example.com
     networks:

@@ -2,7 +2,7 @@
 
 create_keytabs() {
     HOST="$1.example.com"
-    KEYTABS="/etc/hadoop/conf.kerb/$1-keytabs"
+    KEYTABS="/etc/hadoop/conf.test/$1-keytabs"
     kadmin.local -q "addprinc -randkey hdfs/$HOST@EXAMPLE.COM" \
     && kadmin.local -q "addprinc -randkey mapred/$HOST@EXAMPLE.COM" \
     && kadmin.local -q "addprinc -randkey yarn/$HOST@EXAMPLE.COM" \
@@ -24,4 +24,4 @@ kdb5_util create -s -P testpass \
 && create_keytabs worker \
 && kadmin.local -q "addprinc -pw testpass testuser" \
 && kadmin.local -q "xst -norandkey -k /home/testuser/testuser.keytab testuser" \
-&& chown testuser:testuser /home/testuser.keytab
+&& chown testuser:testuser /home/testuser/testuser.keytab

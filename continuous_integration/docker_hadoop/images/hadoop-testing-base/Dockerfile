@@ -22,14 +22,6 @@ RUN cd /etc/yum.repos.d/ && { curl -O https://archive.cloudera.com/cdh5/redhat/7
     && yum clean all \
     && rm -rf /var/cache/yum
 
-# Install kerberos
-RUN yum install -y \
-        krb5-libs \
-        krb5-server \
-        krb5-workstation \
-    && yum clean all \
-    && rm -rf /var/cache/yum
-
 # Install supervisord
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
     && python get-pip.py \
@@ -53,10 +45,7 @@ USER root
 COPY ./files /
 
 # Configure hdfs
-# We use the non-kerberized cluster for the dockerfile
-# The kerberized cluster will re-run alternatives on startup
 RUN cp /etc/hadoop/conf.empty/log4j.properties /etc/hadoop/conf.test/log4j.properties \
-    && chmod 6050 /etc/hadoop/conf.kerb/container-executor.cfg \
     && alternatives --install /etc/hadoop/conf hadoop-conf /etc/hadoop/conf.test 50 \
     && alternatives --set hadoop-conf /etc/hadoop/conf.test
 
@@ -65,9 +54,6 @@ RUN mkdir -p /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs \
 
 # Format namenode
 RUN sudo -u hdfs hdfs namenode -format -force
-
-# Setup kerberos
-RUN /root/setup-kerb.sh
 
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.161-0.b14.el7_4.x86_64/jre/
 ENV LIBHDFS3_CONF /etc/hadoop/conf/hdfs-site.xml
