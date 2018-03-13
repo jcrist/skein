@@ -22,6 +22,6 @@ create_keytabs() {
 kdb5_util create -s -P testpass \
 && create_keytabs master \
 && create_keytabs worker \
-&& create_keytabs edge \
 && kadmin.local -q "addprinc -pw testpass testuser" \
-&& kadmin.local -q "xst -norandkey -k /home/testuser/testuser.keytab testpass"
+&& kadmin.local -q "xst -norandkey -k /home/testuser/testuser.keytab testuser" \
+&& chown testuser:testuser /home/testuser.keytab
