@@ -44,16 +44,8 @@ USER root
 # Copy over files
 COPY ./files /
 
-# Configure hdfs
-RUN cp /etc/hadoop/conf.empty/log4j.properties /etc/hadoop/conf.test/log4j.properties \
-    && alternatives --install /etc/hadoop/conf hadoop-conf /etc/hadoop/conf.test 50 \
-    && alternatives --set hadoop-conf /etc/hadoop/conf.test
-
-RUN mkdir -p /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs \
-    && chown -R yarn:yarn /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs
-
-# Format namenode
-RUN sudo -u hdfs hdfs namenode -format -force
+# Configure and setup hadoop
+RUN /root/setup-hadoop.sh
 
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.161-0.b14.el7_4.x86_64/jre/
 ENV LIBHDFS3_CONF /etc/hadoop/conf/hdfs-site.xml
