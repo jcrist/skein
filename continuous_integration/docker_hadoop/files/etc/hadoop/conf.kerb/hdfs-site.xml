@@ -27,12 +27,12 @@
 
     <property>
         <name>dfs.namenode.kerberos.principal</name>
-        <value>hdfs/_HOST@EXAMPLE.COM</value>
+        <value>hdfs/master.example.com@EXAMPLE.COM</value>
     </property>
 
     <property>
         <name>dfs.namenode.kerberos.internal.spnego.principal</name>
-        <value>HTTP/_HOST@EXAMPLE.COM</value>
+        <value>HTTP/master.example.com@EXAMPLE.COM</value>
     </property>
 
     <property>
@@ -42,12 +42,12 @@
 
     <property>
         <name>dfs.datanode.kerberos.principal</name>
-        <value>hdfs/_HOST@EXAMPLE.COM</value>
+        <value>hdfs/worker.example.com@EXAMPLE.COM</value>
 	</property>
 
     <property>
         <name>dfs.web.authentication.kerberos.principal</name>
-        <value>HTTP/_HOST@EXAMPLE.COM</value>
+        <value>HTTP/master.example.com@EXAMPLE.COM</value>
     </property>
 
     <property>
