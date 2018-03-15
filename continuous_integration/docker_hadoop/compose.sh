@@ -39,12 +39,17 @@ shift
 
 case "$1" in
 -w|--workdir)
-    export HADOOP_TESTING_WORKING_DIR="$2"
+    export HADOOP_TESTING_WORKING_DIR="$(cd "$2"; pwd)"
     shift
     shift
-    docker-compose -f docker-compose.yml -f add-workdir.yml "$@"
+    docker-compose \
+        -f "${BASH_SOURCE%/*}/docker-compose.yml" \
+        -f "${BASH_SOURCE%/*}/add-workdir.yml" \
+        "$@"
     ;;
 *)
-    docker-compose -f docker-compose.yml "$@"
+    docker-compose \
+        -f "${BASH_SOURCE%/*}/docker-compose.yml" \
+        "$@"
     ;;
 esac
