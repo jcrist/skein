@@ -1,0 +1,14 @@
+version: "2"
+
+services:
+  master:
+    volumes:
+      - ${HADOOP_TESTING_WORKING_DIR}:/home/testuser/working
+
+  worker:
+    volumes:
+      - ${HADOOP_TESTING_WORKING_DIR}:/home/testuser/working
+
+  edge:
+    volumes:
+      - ${HADOOP_TESTING_WORKING_DIR}:/home/testuser/working

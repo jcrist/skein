@@ -25,30 +25,50 @@ For the `kerberos` setup, a keytab for this user has been put at
 ## The `compose.sh` script
 
 To work with either cluster, please use the `compose.sh` convenience script,
-which properly sets the image environment variable before forwarding the
-remaining arguments to `docker-compose`. The syntax is:
+which properly sets the environment variables before forwarding the
+remaining arguments to `docker-compose`.
 
 ```
-./compose.sh CLUSTER-TYPE [ARGS...]
+$ ./compose.sh --help
+Helper script for working with dockerized hadoop clusters.
+
+./compose.sh CLUSTER_TYPE [--workdir WORKING_DIR] [ARGS...]
+
+Options:
+    CLUSTER_TYPE                The type of cluster. Either base or kerberos.
+    --workdir WORKING_DIR       If specified, this directory will be mounted as
+                                a volume at /home/testuser/working
+    ARGS...                     All remaining arguments are forwarded to the
+                                underlying docker-compose command.
+
+Example:
+
+    To start a kerberos enabled cluster with the current directory mounted as a
+    working directory:
+
+    ./compose.sh kerberos --workdir . up -d
 ```
-
-where `CLUSTER-TYPE` is either `base` or `kerberos`.
-
 
 ### Starting a cluster
 
 ```
-./compose.sh CLUSTER-TYPE up -d
+./compose.sh CLUSTER_TYPE up -d
+```
+
+### Starting a cluster, mounting the java source as a working directory
+
+```
+./compose.sh CLUSTER_TYPE --workdir ../../java/ up -d
 ```
 
 ### Login to the edge node
 
 ```
-./compose.sh CLUSTER-TYPE exec -u testuser edge bash
+./compose.sh CLUSTER_TYPE exec -u testuser edge bash
 ```
 
 ### Shutdown the cluster
 
 ```
-./compose.sh CLUSTER-TYPE down
+./compose.sh CLUSTER_TYPE down
 ```
