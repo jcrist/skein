@@ -1,20 +1,17 @@
-version: "2"
+version: "3.5"
 
 networks:
   default:
-    driver: bridge
+    name: example.com
 
 services:
   master:
     image: '${HADOOP_TESTING_IMAGE}'
     user: root
     command: supervisord -c /etc/master.supervisord.conf
+    container_name: master
     hostname: master
     domainname: example.com
-    networks:
-      default:
-        aliases:
-          - master.example.com
     ports:
       - 8020:8020    # NN
       - 9000:9000    # NN
@@ -27,12 +24,9 @@ services:
     image: '${HADOOP_TESTING_IMAGE}'
     user: root
     command: supervisord -c /etc/worker.supervisord.conf
+    container_name: worker
     hostname: worker
     domainname: example.com
-    networks:
-      default:
-        aliases:
-          - worker.example.com
     ports:
       - 50075:50075  # DN webui
       - 8042:8042    # NM webui
@@ -41,9 +35,6 @@ services:
     image: '${HADOOP_TESTING_IMAGE}'
     user: root
     command: supervisord -c /etc/edge.supervisord.conf
+    container_name: edge
     hostname: edge
     domainname: example.com
-    networks:
-      default:
-        aliases:
-          - edge.example.com
