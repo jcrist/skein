@@ -22,6 +22,23 @@ For the `kerberos` setup, a keytab for this user has been put at
 `/home/testuser/testuser.keytab`, so you can kinit easily like `kinit -kt
 /home/testuser/testuser.keytab testuser`
 
+## Ports
+
+The full address is dependent on the IP address of your docker-machine driver,
+which can be found at:
+
+```
+docker-machine inspect --format {{.Driver.IPAddress}})
+```
+
+- NameNode RPC: 9000
+- NameNode Webui: 50070
+- ResourceManager Webui: 8088
+- Kerberos KDC: 88
+- Kerberos Kadmin: 749
+- DataNode Webui: 50075
+- NodeManager Webui: 8042
+
 ## The `hcluster` script
 
 To work with either cluster, please use the `hcluster` convenience script. This
@@ -39,6 +56,7 @@ Commands:
     login           Login to one of the nodes
     shutdown        Shutdown the cluster
     compose         Forward commands to underlying docker-compose call
+    kerbenv         Output environment variables to setup kerberos locally
 
 Additionally, the following commands are aliases for
 
@@ -81,3 +99,65 @@ Aliases:
 ```
 ./hcluster shutdown
 ```
+
+## Authenticating with Kerberos from outside Docker
+
+In the kerberized cluster, the webui's are secured by kerberos, and so won't be
+accessible from your browser unless you configure kerberos properly. This is
+doable, but takes a few steps:
+
+1. Kerberos/SPNEGO requires that the requested url matches the hosts domain.
+   The easiest way to do this is to modify your `/etc/hosts` and add a line for
+   `master.example.com`:
+
+   ```
+   # Add a line to /etc/hosts pointing master.example.com to your docker-machine
+   # driver ip address.
+   # Note that you probably need to run this command as a super user.
+   echo "$(docker-machine inspect --format {{.Driver.IPAddress}})  master.example.com" >> /etc/hosts
+   ```
+
+2. You must have `kinit` installed locally. You may already have it, otherwise
+   it's available through most package managers.
+
+3. You need to tell kerberos where the `krb5.conf` is for this domain. This is
+   done with an environment variable. To make this easy, `hcluster` has a
+   command to do this:
+
+   ```
+   eval $(./hcluster kerbenv)
+   ```
+
+4. At this point you should be able to kinit as testuser:
+
+   ```
+   kinit testuser@EXAMPLE.COM
+   ```
+
+5. To access kerberos secured pages in your browser you'll need to do a bit of
+   (simple) configuration. See [this documentation from
+   Cloudera](https://www.cloudera.com/documentation/enterprise/5-9-x/topics/cdh_sg_browser_access_kerberos_protected_url.html)
+   for information on what's needed for your browser.
+
+6. Since environment variables are only available for processes started in the
+   environment, you have two options here:
+
+   - Restart your browser from the shell you added the environment variables to
+   - Use `curl` to authenticate the first time, at which point you'll already
+     have the proper tickets in your cache, and the browser authentication will
+     just work.
+
+   Option 2 can be done easily if your version of curl supports GSS-API:
+
+   ```
+   $ curl -V  # Check your version of curl supports GSS-API
+   curl 7.59.0 (x86_64-apple-darwin17.2.0) libcurl/7.59.0 SecureTransport zlib/1.2.11
+   Release-Date: 2018-03-14
+   Protocols: dict file ftp ftps gopher http https imap imaps ldap ldaps pop3 pop3s rtsp smb smbs smtp smtps telnet tftp
+   Features: AsynchDNS IPv6 Largefile GSS-API Kerberos SPNEGO NTLM NTLM_WB SSL libz UnixSockets
+
+   $ curl --negotiate -u : http://master.example.com:50070  # get a HTTP ticket for master.example.com
+   ```
+
+   After doing this, you should be able to access any of the pages from your
+   browser.

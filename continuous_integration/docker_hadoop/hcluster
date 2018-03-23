@@ -6,6 +6,10 @@ error: unrecognized argument: $2"
     exit 2
 }
 
+function abs_filepath {
+    echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+}
+
 
 function docker_compose_base {
     # The image only matters on startup, can use base here
@@ -172,8 +176,8 @@ function hcluster_shutdown {
                 echo "$usage
 
 Shuts down the cluster and removes the containers."
-exit 0;
-;;
+                exit 0;
+                ;;
             *)
                 unrecognized_argument "$usage" "$1"
                 ;;
@@ -182,6 +186,32 @@ exit 0;
 
     echo "Shutting down cluster..."
     docker_compose_base down
+}
+
+
+function hcluster_kerbenv {
+    usage='usage: hcluster kerbenv [-h]'
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                echo "$usage
+
+Output environment variables to setup kerberos locally.
+
+Intended use is to eval the output in bash:
+
+    eval \$(hcluster kerbenv)"
+                exit 0;
+                ;;
+            *)
+                unrecognized_argument "$usage" "$1"
+                ;;
+        esac
+    done
+
+    krb5_conf=$(abs_filepath "${BASH_SOURCE%/*}/images/hadoop-testing-kerberos/krb5.external.conf")
+    echo "KRB5_CONFIG=$krb5_conf"
 }
 
 
@@ -204,6 +234,10 @@ function hcluster_main {
             shift;
             hcluster_compose "$@";
             ;;
+        kerbenv)
+            shift;
+            hcluster_kerbenv "$@";
+            ;;
         kill|logs|pause|ps|restart|start|stop|top|unpause)
             docker_compose_base "$@"
             ;;
@@ -217,6 +251,7 @@ Commands:
     login           Login to one of the nodes
     shutdown        Shutdown the cluster
     compose         Forward commands to underlying docker-compose call
+    kerbenv         Output environment variables to setup kerberos locally
 
 Additionally, the following commands are aliases for
 
