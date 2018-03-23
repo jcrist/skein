@@ -210,8 +210,8 @@ Intended use is to eval the output in bash:
         esac
     done
 
-    krb5_conf=$(abs_filepath "${BASH_SOURCE%/*}/images/hadoop-testing-kerberos/krb5.external.conf")
-    echo "KRB5_CONFIG=$krb5_conf"
+    krb5_conf=$(abs_filepath "${BASH_SOURCE%/*}/images/hadoop-testing-kerberos/files/etc/krb5.conf")
+    echo "export KRB5_CONFIG=$krb5_conf"
 }
 
 

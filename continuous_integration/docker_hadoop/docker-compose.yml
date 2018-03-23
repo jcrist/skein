@@ -17,7 +17,7 @@ services:
       - 9000:9000    # NN
       - 50070:50070  # NN webui
       - 8088:8088    # RM webui
-      - 88:88        # Kerberos
+      - 88:88/udp    # Kerberos
       - 749:749      # Kerberos
 
   worker:

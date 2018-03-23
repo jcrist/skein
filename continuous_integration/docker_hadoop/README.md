@@ -22,6 +22,11 @@ For the `kerberos` setup, a keytab for this user has been put at
 `/home/testuser/testuser.keytab`, so you can kinit easily like `kinit -kt
 /home/testuser/testuser.keytab testuser`
 
+An admin kerberos principal has also been created for use with `kadmin`:
+
+- Login: `admin/admin`
+- Password: `adminpass`
+
 ## Ports
 
 The full address is dependent on the IP address of your docker-machine driver,
@@ -142,7 +147,8 @@ doable, but takes a few steps:
 6. Since environment variables are only available for processes started in the
    environment, you have three options here:
 
-   - Restart your browser from the shell you added the environment variables to
+   - Restart your browser from the shell in which you added the environment
+     variables
 
    - Manually get a ticket for the `HTTP/master.example.com` principal. Note
      that this will delete your other tickets, but works fine if you just want

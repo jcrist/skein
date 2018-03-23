@@ -25,6 +25,7 @@ kdb5_util create -s -P testpass \
 && dd if=/dev/urandom bs=64 count=1 > /etc/hadoop/conf/http-secret-file \
 && chown hdfs:hadoop /etc/hadoop/conf/http-secret-file \
 && chmod 440 /etc/hadoop/conf/http-secret-file \
+&& kadmin.local -q "addprinc -pw adminpass admin/admin" \
 && kadmin.local -q "addprinc -pw testpass testuser" \
 && kadmin.local -q "xst -norandkey -k /home/testuser/testuser.keytab testuser" \
 && chown testuser:testuser /home/testuser/testuser.keytab
