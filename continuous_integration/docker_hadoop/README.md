@@ -140,24 +140,31 @@ doable, but takes a few steps:
    for information on what's needed for your browser.
 
 6. Since environment variables are only available for processes started in the
-   environment, you have two options here:
+   environment, you have three options here:
 
    - Restart your browser from the shell you added the environment variables to
+
+   - Manually get a ticket for the `HTTP/master.example.com` principal. Note
+     that this will delete your other tickets, but works fine if you just want
+     to see the webpage
+
+     ```
+     kinit -S HTTP/master.example.com testuser
+     ```
+
    - Use `curl` to authenticate the first time, at which point you'll already
      have the proper tickets in your cache, and the browser authentication will
-     just work.
+     just work. Note that your version of curl must support the GSS-API.
 
-   Option 2 can be done easily if your version of curl supports GSS-API:
+     ```
+     $ curl -V  # Check your version of curl supports GSS-API
+     curl 7.59.0 (x86_64-apple-darwin17.2.0) libcurl/7.59.0 SecureTransport zlib/1.2.11
+     Release-Date: 2018-03-14
+     Protocols: dict file ftp ftps gopher http https imap imaps ldap ldaps pop3 pop3s rtsp smb smbs smtp smtps telnet tftp
+     Features: AsynchDNS IPv6 Largefile GSS-API Kerberos SPNEGO NTLM NTLM_WB SSL libz UnixSockets
 
-   ```
-   $ curl -V  # Check your version of curl supports GSS-API
-   curl 7.59.0 (x86_64-apple-darwin17.2.0) libcurl/7.59.0 SecureTransport zlib/1.2.11
-   Release-Date: 2018-03-14
-   Protocols: dict file ftp ftps gopher http https imap imaps ldap ldaps pop3 pop3s rtsp smb smbs smtp smtps telnet tftp
-   Features: AsynchDNS IPv6 Largefile GSS-API Kerberos SPNEGO NTLM NTLM_WB SSL libz UnixSockets
+     $ curl --negotiate -u : http://master.example.com:50070  # get a HTTP ticket for master.example.com
+     ```
 
-   $ curl --negotiate -u : http://master.example.com:50070  # get a HTTP ticket for master.example.com
-   ```
-
-   After doing this, you should be able to access any of the pages from your
-   browser.
+   After doing one of these, you should be able to access any of the pages from
+   your browser.
