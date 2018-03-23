@@ -46,7 +46,7 @@ error: must specify CLUSTER_TYPE (one of [base|kerberos])"
 
 
 function hcluster_compose {
-    usage='usage: hcluster compose CLUSTER_TYPE ARGS...'
+    usage='usage: hcluster compose [-h] CLUSTER_TYPE ARGS...'
     doc="$usage
 
 Forward commands to docker-compose with the correct files specified.
@@ -186,7 +186,7 @@ exit 0;
 
 
 function hcluster_main {
-    usage="usage: hcluster -h command ..."
+    usage="usage: hcluster [-h] command ..."
     case "$1" in
         startup)
             shift;

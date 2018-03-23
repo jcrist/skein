@@ -22,53 +22,62 @@ For the `kerberos` setup, a keytab for this user has been put at
 `/home/testuser/testuser.keytab`, so you can kinit easily like `kinit -kt
 /home/testuser/testuser.keytab testuser`
 
-## The `compose.sh` script
+## The `hcluster` script
 
-To work with either cluster, please use the `compose.sh` convenience script,
-which properly sets the environment variables before forwarding the
-remaining arguments to `docker-compose`.
+To work with either cluster, please use the `hcluster` convenience script. This
+is a thin wrapper around `docker-compose`, with utilities for quickly doing
+most common actions.
 
 ```
-$ ./compose.sh --help
+$ ./hcluster --help
+usage: hcluster [-h] command ...
+
 Helper script for working with dockerized hadoop clusters.
 
-./compose.sh CLUSTER_TYPE [--workdir WORKING_DIR] [ARGS...]
+Commands:
+    startup         Start up the cluster
+    login           Login to one of the nodes
+    shutdown        Shutdown the cluster
+    compose         Forward commands to underlying docker-compose call
 
-Options:
-    CLUSTER_TYPE                The type of cluster. Either base or kerberos.
-    --workdir WORKING_DIR       If specified, this directory will be mounted as
-                                a volume at /home/testuser/working
-    ARGS...                     All remaining arguments are forwarded to the
-                                underlying docker-compose command.
+Additionally, the following commands are aliases for
 
-Example:
+    hcluster compose base COMMAND ARGS...
 
-    To start a kerberos enabled cluster with the current directory mounted as a
-    working directory:
+since they work fine regardless of which cluster is running.
 
-    ./compose.sh kerberos --workdir . up -d
+Aliases:
+    kill            Kill containers
+    logs            View output from containers
+    pause           Pause services
+    ps              List containers
+    restart         Restart services
+    start           Start services
+    stop            Stop services
+    top             Display the running processes
+    unpause         Unpause services
 ```
 
 ### Starting a cluster
 
 ```
-./compose.sh CLUSTER_TYPE up -d
+./hcluster startup CLUSTER_TYPE
 ```
 
 ### Starting a cluster, mounting the java source as a working directory
 
 ```
-./compose.sh CLUSTER_TYPE --workdir ../../java/ up -d
+./hcluster startup CLUSTER_TYPE --workdir ../../java/
 ```
 
 ### Login to the edge node
 
 ```
-./compose.sh CLUSTER_TYPE exec -u testuser edge bash
+./hcluster login
 ```
 
 ### Shutdown the cluster
 
 ```
-./compose.sh CLUSTER_TYPE down
+./hcluster shutdown
 ```

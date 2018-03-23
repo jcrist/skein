@@ -3,12 +3,12 @@ version: "3.5"
 services:
   master:
     volumes:
-      - ${HADOOP_TESTING_WORKING_DIR}:/home/testuser/working
+      - ${HADOOP_TESTING_WORKING_DIR}:/home/testuser/workdir
 
   worker:
     volumes:
-      - ${HADOOP_TESTING_WORKING_DIR}:/home/testuser/working
+      - ${HADOOP_TESTING_WORKING_DIR}:/home/testuser/workdir
 
   edge:
     volumes:
-      - ${HADOOP_TESTING_WORKING_DIR}:/home/testuser/working
+      - ${HADOOP_TESTING_WORKING_DIR}:/home/testuser/workdir
