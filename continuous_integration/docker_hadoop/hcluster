@@ -1,0 +1,245 @@
+#! /bin/bash
+
+function unrecognized_argument {
+    echo "$1
+error: unrecognized argument: $2"
+    exit 2
+}
+
+
+function docker_compose_base {
+    # The image only matters on startup, can use base here
+    export HADOOP_TESTING_IMAGE=jcrist/hadoop-testing-base
+    docker-compose \
+        -f "${BASH_SOURCE%/*}/docker-compose.yml" \
+        "$@"
+}
+
+
+function parse_cluster_type {
+    ctype="$1"
+    usage="$2"
+    doc="$3"
+    case "$ctype" in
+        base)
+            export CLUSTER_TYPE='base'
+            export HADOOP_TESTING_IMAGE=jcrist/hadoop-testing-base
+            ;;
+        kerberos)
+            export CLUSTER_TYPE='kerberos'
+            export HADOOP_TESTING_IMAGE=jcrist/hadoop-testing-kerberos
+            ;;
+        -h|--help)
+            echo "$doc"
+            exit 0
+            ;;
+        "")
+            echo "$usage
+error: must specify CLUSTER_TYPE (one of [base|kerberos])"
+            exit 2
+            ;;
+        *)
+            unrecognized_argument "$usage" "$ctype"
+            ;;
+    esac
+}
+
+
+function hcluster_compose {
+    usage='usage: hcluster compose CLUSTER_TYPE ARGS...'
+    doc="$usage
+
+Forward commands to docker-compose with the correct files specified.
+
+Options:
+    CLUSTER_TYPE                The type of cluster. Either base or kerberos.
+    ARGS...                     All remaining arguments are forwarded to
+                                the underlying docker-compose command."
+
+    parse_cluster_type "$1" "$usage" "$doc"
+    shift
+
+    docker-compose \
+        -f "${BASH_SOURCE%/*}/docker-compose.yml" \
+        "$@"
+}
+
+
+function hcluster_startup {
+    usage='usage: hcluster startup CLUSTER_TYPE [-h] [--workdir PATH]'
+    doc="$usage
+
+Start up a hadoop cluster.
+
+Options:
+    CLUSTER_TYPE                The type of cluster. Either base or kerberos.
+    -w, --workdir PATH          If specified, this directory will be mounted
+                                at /home/testuser/workdir."
+
+    parse_cluster_type "$1" "$usage" "$doc"
+    shift
+
+    while (( "$#" )); do
+        case "$1" in
+            -w|--workdir)
+                workdir="$2"
+                shift
+                shift
+                ;;
+            -h|--help)
+                echo "$doc"
+                exit 0
+                ;;
+            *)
+                unrecognized_argument "$usage" "$1"
+                exit 1
+                ;;
+        esac
+    done
+
+    echo "Starting up $CLUSTER_TYPE cluster"
+
+    if [ -z ${workdir+x} ]; then
+        docker-compose \
+            -f "${BASH_SOURCE%/*}/docker-compose.yml" \
+            up -d
+    else
+        export HADOOP_TESTING_WORKING_DIR="$(cd "$workdir"; pwd)"
+        docker-compose \
+            -f "${BASH_SOURCE%/*}/docker-compose.yml" \
+            -f "${BASH_SOURCE%/*}/add-workdir.yml" \
+            up -d
+    fi
+}
+
+function hcluster_login {
+    usage='usage: hcluster login [-h] [user@][hostname]'
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                echo "$usage
+
+Login to a node in the cluster. By default logs in as 'testuser@edge'.
+
+Options:
+    user                    The user to login as. Defaults to testuser.
+    hostname                The host to login to. Defaults to edge.
+
+Examples:
+
+    hcluster login master        # login to master node as testuser
+    hcluster login root@edge     # login to edge node as root"
+exit 0;
+;;
+            -*)
+                unrecognized_argument "$usage" "$1"
+                ;;
+            *)
+                if [ -z "${userhost+x}" ]; then
+                    userhost="$1"
+                else
+                    unrecognized_argument "$usage" "$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    case "$userhost" in
+        "")
+            user="testuser"
+            host="edge"
+            ;;
+        *@*)
+            user="${userhost%@*}"
+            host="${userhost#*@}"
+            ;;
+        *)
+            user="testuser"
+            host="$userhost"
+            ;;
+    esac
+    docker_compose_base exec -u "$user" "$host" bash --init-file /root/init-shell.sh
+}
+
+function hcluster_shutdown {
+    usage='usage: hcluster shutdown [-h]'
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                echo "$usage
+
+Shuts down the cluster and removes the containers."
+exit 0;
+;;
+            *)
+                unrecognized_argument "$usage" "$1"
+                ;;
+        esac
+    done
+
+    echo "Shutting down cluster..."
+    docker_compose_base down
+}
+
+
+function hcluster_main {
+    usage="usage: hcluster -h command ..."
+    case "$1" in
+        startup)
+            shift;
+            hcluster_startup "$@";
+            ;;
+        login)
+            shift;
+            hcluster_login "$@";
+            ;;
+        shutdown)
+            shift;
+            hcluster_shutdown "$@";
+            ;;
+        compose)
+            shift;
+            hcluster_compose "$@";
+            ;;
+        kill|logs|pause|ps|restart|start|stop|top|unpause)
+            docker_compose_base "$@"
+            ;;
+        ""|-h|--help)
+            echo "$usage
+
+Helper script for working with dockerized hadoop clusters.
+
+Commands:
+    startup         Start up the cluster
+    login           Login to one of the nodes
+    shutdown        Shutdown the cluster
+    compose         Forward commands to underlying docker-compose call
+
+Additionally, the following commands are aliases for
+
+    hcluster compose base COMMAND ARGS...
+
+since they work fine regardless of which cluster is running.
+
+Aliases:
+    kill            Kill containers
+    logs            View output from containers
+    pause           Pause services
+    ps              List containers
+    restart         Restart services
+    start           Start services
+    stop            Stop services
+    top             Display the running processes
+    unpause         Unpause services"
+            exit 0
+            ;;
+        *)
+            unrecognized_argument "$usage" "$1"
+            ;;
+    esac
+}
+
+hcluster_main "$@"

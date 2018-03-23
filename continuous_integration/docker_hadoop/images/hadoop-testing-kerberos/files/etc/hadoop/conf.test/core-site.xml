@@ -23,6 +23,41 @@
     <property>
         <name>hadoop.security.authorization</name>
         <value>true</value>
-	</property>
+    </property>
+
+    <property>
+        <name>hadoop.http.filter.initializers</name>
+        <value>org.apache.hadoop.security.AuthenticationFilterInitializer</value>
+    </property>
+
+    <property>
+        <name>hadoop.http.authentication.type</name>
+        <value>kerberos</value>
+    </property>
+
+    <property>
+        <name>hadoop.http.authentication.signature.secret.file</name>
+        <value>/etc/hadoop/conf/http-secret-file</value>
+    </property>
+
+    <property>
+        <name>hadoop.http.authentication.cookie.domain</name>
+        <value>.example.com</value>
+    </property>
+
+    <property>
+        <name>hadoop.http.authentication.simple.anonymous.allowed</name>
+        <value>false</value>
+    </property>
+
+    <property>
+        <name>hadoop.http.authentication.kerberos.principal</name>
+        <value>HTTP/master.example.com@EXAMPLE.COM</value>
+    </property>
+
+    <property>
+        <name>hadoop.http.authentication.kerberos.keytab</name>
+        <value>/etc/hadoop/conf/master-keytabs/HTTP.keytab</value>
+    </property>
 
 </configuration>

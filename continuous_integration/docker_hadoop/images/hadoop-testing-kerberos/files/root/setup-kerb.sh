@@ -12,16 +12,19 @@ create_keytabs() {
     && kadmin.local -q "xst -norandkey -k $KEYTABS/mapred.keytab mapred/$HOST HTTP/$HOST" \
     && kadmin.local -q "xst -norandkey -k $KEYTABS/yarn.keytab yarn/$HOST HTTP/$HOST" \
     && kadmin.local -q "xst -norandkey -k $KEYTABS/HTTP.keytab HTTP/$HOST" \
-    && chown hdfs:mapred $KEYTABS/hdfs.keytab \
-    && chown mapred:mapred $KEYTABS/mapred.keytab \
-    && chown yarn:mapred $KEYTABS/yarn.keytab \
-    && chown hdfs:mapred $KEYTABS/HTTP.keytab \
-    && chmod 400 $KEYTABS/*.keytab
+    && chown hdfs:hadoop $KEYTABS/hdfs.keytab \
+    && chown mapred:hadoop $KEYTABS/mapred.keytab \
+    && chown yarn:hadoop $KEYTABS/yarn.keytab \
+    && chown hdfs:hadoop $KEYTABS/HTTP.keytab \
+    && chmod 440 $KEYTABS/*.keytab
 }
 
 kdb5_util create -s -P testpass \
 && create_keytabs master \
 && create_keytabs worker \
+&& dd if=/dev/urandom bs=64 count=1 > /etc/hadoop/conf/http-secret-file \
+&& chown hdfs:hadoop /etc/hadoop/conf/http-secret-file \
+&& chmod 440 /etc/hadoop/conf/http-secret-file \
 && kadmin.local -q "addprinc -pw testpass testuser" \
 && kadmin.local -q "xst -norandkey -k /home/testuser/testuser.keytab testuser" \
 && chown testuser:testuser /home/testuser/testuser.keytab
