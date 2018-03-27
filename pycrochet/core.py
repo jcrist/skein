@@ -2,8 +2,9 @@ from __future__ import print_function, division, absolute_import
 
 import hmac
 import json
-from hashlib import sha1, md5
 from base64 import b64encode
+from hashlib import sha1, md5
+from collections import MutableMapping
 
 import requests
 from requests.auth import AuthBase
@@ -45,11 +46,14 @@ class CrochetAuth(AuthBase):
         return r
 
 
-class Client(object):
-    def __init__(self, rest_address, secret=None):
-        self.rest_address = rest_address
-        self.secret = secret
-        self._auth = CrochetAuth(secret)
+class Configuration(MutableMapping):
+    """Represents configuration state stored on the server"""
+    def __init__(self, address, auth):
+        self._address = address
+        self._auth = auth
+
+    def __repr__(self):
+        return 'Configuration<address=%s>' % self._address
 
     def _handle_exceptions(self, resp):
         if resp.status_code == 401:
@@ -62,38 +66,52 @@ class Client(object):
         if not len(key):
             raise ValueError("len(key) must be > 0")
 
-    def list_config(self):
-        url = 'http://%s/keys/' % self.rest_address
+    def _list_keys(self):
+        url = 'http://%s/keys/' % self._address
         resp = requests.get(url, auth=self._auth)
         if resp.status_code != 200:
             self._handle_exceptions(resp)
         return json.loads(resp.content)['keys']
 
-    def set_config(self, key, value):
+    def __getitem__(self, key):
         self._check_key(key)
-        url = 'http://%s/keys/%s' % (self.rest_address, key)
-        resp = requests.put(url, auth=self._auth, data=value)
-        if resp.status_code != 204:
-            self._handle_exceptions(resp)
-
-    def get_config(self, key, default=None):
-        self._check_key(key)
-        url = 'http://%s/keys/%s' % (self.rest_address, key)
+        url = 'http://%s/keys/%s' % (self._address, key)
         resp = requests.get(url, auth=self._auth)
         if resp.status_code == 200:
             return resp.content.decode()
         elif resp.status_code == 404:
-            if default is None:
-                raise KeyError(key)
-            return default
+            raise KeyError(key)
         else:
             self._handle_exceptions(resp)
 
-    def del_config(self, key):
+    def __setitem__(self, key, value):
         self._check_key(key)
-        url = 'http://%s/keys/%s' % (self.rest_address, key)
+        url = 'http://%s/keys/%s' % (self._address, key)
+        resp = requests.put(url, auth=self._auth, data=value)
+        if resp.status_code != 204:
+            self._handle_exceptions(resp)
+
+    def __delitem__(self, key):
+        self._check_key(key)
+        url = 'http://%s/keys/%s' % (self._address, key)
         resp = requests.delete(url, auth=self._auth)
         if resp.status_code == 404:
             raise KeyError(key)
         elif resp.status_code != 204:
             self._handle_exceptions(resp)
+
+    def __iter__(self):
+        return iter(self._list_keys())
+
+    def __len__(self):
+        return len(self._list_keys())
+
+
+class Client(object):
+    def __init__(self, address, secret=None):
+        self.address = address
+        self._auth = CrochetAuth(secret)
+        self.configuration = Configuration(self.address, self._auth)
+
+    def __repr__(self):
+        return 'Client<address=%s>' % self.address
