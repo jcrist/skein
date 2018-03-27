@@ -24,7 +24,7 @@ public class RestServer {
         context.addServlet(new ServletHolder(new KeyValueServlet()), "/keys/*");
 
         // Start the server
-        Server server = new Server(0);
+        Server server = new Server(8080);
         server.setHandler(context);
         server.start();
 
