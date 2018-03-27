@@ -9,11 +9,7 @@ from collections import MutableMapping
 import requests
 from requests.auth import AuthBase
 
-
-def ensure_bytes(x):
-    if type(x) is not bytes:
-        x = x.encode('utf-8')
-    return x
+from .utils import normalize_address, ensure_bytes
 
 
 class ServerException(Exception):
@@ -67,7 +63,7 @@ class Configuration(MutableMapping):
             raise ValueError("len(key) must be > 0")
 
     def _list_keys(self):
-        url = 'http://%s/keys/' % self._address
+        url = '%s/keys/' % self._address
         resp = requests.get(url, auth=self._auth)
         if resp.status_code != 200:
             self._handle_exceptions(resp)
@@ -75,7 +71,7 @@ class Configuration(MutableMapping):
 
     def __getitem__(self, key):
         self._check_key(key)
-        url = 'http://%s/keys/%s' % (self._address, key)
+        url = '%s/keys/%s' % (self._address, key)
         resp = requests.get(url, auth=self._auth)
         if resp.status_code == 200:
             return resp.content.decode()
@@ -86,14 +82,14 @@ class Configuration(MutableMapping):
 
     def __setitem__(self, key, value):
         self._check_key(key)
-        url = 'http://%s/keys/%s' % (self._address, key)
+        url = '%s/keys/%s' % (self._address, key)
         resp = requests.put(url, auth=self._auth, data=value)
         if resp.status_code != 204:
             self._handle_exceptions(resp)
 
     def __delitem__(self, key):
         self._check_key(key)
-        url = 'http://%s/keys/%s' % (self._address, key)
+        url = '%s/keys/%s' % (self._address, key)
         resp = requests.delete(url, auth=self._auth)
         if resp.status_code == 404:
             raise KeyError(key)
@@ -109,7 +105,7 @@ class Configuration(MutableMapping):
 
 class Client(object):
     def __init__(self, address, secret=None):
-        self.address = address
+        self.address = normalize_address(address)
         self._auth = CrochetAuth(secret)
         self.configuration = Configuration(self.address, self._auth)
 
