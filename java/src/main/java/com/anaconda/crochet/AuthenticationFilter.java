@@ -1,8 +1,5 @@
 package com.anaconda.crochet;
 
-import org.eclipse.jetty.util.B64Code;
-import org.apache.commons.io.IOUtils;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -19,6 +16,9 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.io.IOUtils;
+import org.eclipse.jetty.util.B64Code;
 
 
 public class AuthenticationFilter implements Filter {

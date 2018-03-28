@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.ByteArrayInputStream;
+
 import javax.servlet.ServletInputStream;
 import javax.servlet.ReadListener;
 import javax.servlet.http.HttpServletRequestWrapper;
@@ -11,16 +12,16 @@ import javax.servlet.http.HttpServletRequest;
 
 
 public class RequestWrapper extends HttpServletRequestWrapper {
-    private byte[] body_;
+    private byte[] body;
 
     public RequestWrapper(HttpServletRequest request, byte[] body) {
         super(request);
-        body_ = body;
+        this.body = body;
     }
 
     @Override
     public ServletInputStream getInputStream() throws IOException {
-        return new CachedServletInputStream(body_);
+        return new CachedServletInputStream(body);
     }
 
     @Override

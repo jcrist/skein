@@ -1,6 +1,8 @@
 package com.anaconda.crochet;
 
 import java.util.EnumSet;
+import java.util.concurrent.ConcurrentHashMap;
+
 import javax.servlet.DispatcherType;
 
 import org.eclipse.jetty.server.Server;
@@ -12,6 +14,9 @@ import org.eclipse.jetty.servlet.ServletHolder;
 
 public class RestServer {
     private static final EnumSet<DispatcherType> REQUEST_SCOPE = EnumSet.of(DispatcherType.REQUEST);
+
+    private static final ConcurrentHashMap<String, byte[]> configuration
+        = new ConcurrentHashMap<String,byte[]>();
 
     public static Integer port = -1;
 
@@ -30,7 +35,7 @@ public class RestServer {
         holder.setInitParameter("secret", secret);
 
         // Add the key-value store servlet
-        context.addServlet(new ServletHolder(new KeyValueServlet()), "/keys/*");
+        context.addServlet(new ServletHolder(new KeyValueServlet(configuration)), "/keys/*");
 
         // Start the server
         Server server = new Server(8080);

@@ -1,10 +1,5 @@
 package com.anaconda.crochet;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.commons.io.IOUtils;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,9 +9,18 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.commons.io.IOUtils;
+
+
 public class KeyValueServlet extends HttpServlet {
-    private static final ConcurrentHashMap<String, byte[]> keystore
-        = new ConcurrentHashMap<String,byte[]>();
+    private static ConcurrentHashMap<String, byte[]> keystore;
+
+    public KeyValueServlet(ConcurrentHashMap<String, byte[]> keystore) {
+        this.keystore = keystore;
+    }
 
     private String getKey(HttpServletRequest req) {
         String key = req.getPathInfo();
