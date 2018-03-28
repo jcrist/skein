@@ -21,7 +21,7 @@ import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.util.B64Code;
 
 
-public class AuthenticationFilter implements Filter {
+public class HMACFilter implements Filter {
 
     private byte[] secret;
 

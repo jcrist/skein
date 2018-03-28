@@ -14,7 +14,8 @@ import org.eclipse.jetty.servlet.ServletHolder;
 
 
 public class RestServer {
-    private static final EnumSet<DispatcherType> REQUEST_SCOPE = EnumSet.of(DispatcherType.REQUEST);
+    private static final EnumSet<DispatcherType> REQUEST_SCOPE
+        = EnumSet.of(DispatcherType.REQUEST);
 
     private static String secret;
 
@@ -39,7 +40,8 @@ public class RestServer {
         server.setHandler(handlers);
 
         // Create the servlets once
-        ServletHolder keyVal = new ServletHolder(new KeyValueServlet(configuration));
+        ServletHolder keyVal
+            = new ServletHolder(new KeyValueServlet(configuration));
 
         // This connector serves content authenticated by the secret key
         ServerConnector privateConnector = new ServerConnector(server);
@@ -47,12 +49,13 @@ public class RestServer {
         privateConnector.setName("Private");
         server.addConnector(privateConnector);
 
-        ServletContextHandler privateContext = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        ServletContextHandler privateContext
+            = new ServletContextHandler(ServletContextHandler.SESSIONS);
         privateContext.setContextPath("/");
         privateContext.setVirtualHosts(new String[]{"@Private"});
         privateContext.addServlet(keyVal, "/keys/*");
-        FilterHolder holder = privateContext.addFilter(AuthenticationFilter.class,
-                                                       "/*", REQUEST_SCOPE);
+        FilterHolder holder = privateContext.addFilter(HMACFilter.class, "/*",
+                                                       REQUEST_SCOPE);
         holder.setInitParameter("secret", secret);
         handlers.addHandler(privateContext);
 
@@ -62,7 +65,8 @@ public class RestServer {
         publicConnector.setName("Public");
         server.addConnector(publicConnector);
 
-        ServletContextHandler publicContext = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        ServletContextHandler publicContext
+            = new ServletContextHandler(ServletContextHandler.SESSIONS);
         publicContext.setContextPath("/");
         publicContext.setVirtualHosts(new String[]{"@Public"});
         publicContext.addServlet(keyVal, "/keys/*");
