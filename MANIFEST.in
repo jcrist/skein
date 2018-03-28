@@ -1,0 +1,7 @@
+recursive-include pycrochet *.py
+include versioneer.py
+
+include setup.py
+include README.rst
+include LICENSE
+include MANIFEST.in
