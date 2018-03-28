@@ -14,87 +14,86 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.io.IOUtils;
 
-
 public class KeyValueServlet extends HttpServlet {
-    private static ConcurrentHashMap<String, byte[]> keystore;
+  private static ConcurrentHashMap<String, byte[]> keystore;
 
-    public KeyValueServlet(ConcurrentHashMap<String, byte[]> keystore) {
-        this.keystore = keystore;
+  public KeyValueServlet(ConcurrentHashMap<String, byte[]> keystore) {
+    this.keystore = keystore;
+  }
+
+  private String getKey(HttpServletRequest req) {
+    String key = req.getPathInfo();
+    // Strips leading `/` from keys, and replaces empty keys with null
+    // Ensures that /keys and /keys/ are treated the same
+    return (key == null || key.length() <= 1) ? null : key.substring(1);
+  }
+
+  @Override
+  protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+      throws ServletException, IOException {
+
+    String key = getKey(req);
+
+    if (key == null) {
+      // Handle /keys or /keys/
+      // Returns an object like {'keys': [key1, key2, ...]}
+      ObjectMapper mapper = new ObjectMapper();
+      ArrayNode arrayNode = mapper.createArrayNode();
+      ObjectNode objectNode = mapper.createObjectNode();
+      for (String key2 : keystore.keySet()) {
+        arrayNode.add(key2);
+      }
+      objectNode.putPOJO("keys", arrayNode);
+
+      OutputStream out = resp.getOutputStream();
+      mapper.writeValue(out, objectNode);
+      out.close();
+      return;
     }
 
-    private String getKey(HttpServletRequest req) {
-        String key = req.getPathInfo();
-        // Strips leading `/` from keys, and replaces empty keys with null
-        // Ensures that /keys and /keys/ are treated the same
-        return (key == null || key.length() <= 1) ? null : key.substring(1);
+    byte[] value = keystore.get(key);
+    if (value == null) {
+      resp.sendError(404);
+      return;
     }
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
+    OutputStream out = resp.getOutputStream();
+    out.write(value);
+    out.close();
+  }
 
-        String key = getKey(req);
+  @Override
+  protected void doPut(HttpServletRequest req, HttpServletResponse resp)
+      throws ServletException, IOException {
 
-        if (key == null) {
-            // Handle /keys or /keys/
-            // Returns an object like {'keys': [key1, key2, ...]}
-            ObjectMapper mapper = new ObjectMapper();
-            ArrayNode arrayNode = mapper.createArrayNode();
-            ObjectNode objectNode = mapper.createObjectNode();
-            for (String key2 : keystore.keySet()) {
-                arrayNode.add(key2);
-            }
-            objectNode.putPOJO("keys", arrayNode);
+    String key = getKey(req);
+    byte[] value = IOUtils.toByteArray(req.getInputStream());
 
-            OutputStream out = resp.getOutputStream();
-            mapper.writeValue(out, objectNode);
-            out.close();
-            return;
-        }
-
-        byte[] value = keystore.get(key);
-        if (value == null) {
-            resp.sendError(404);
-            return;
-        }
-
-        OutputStream out = resp.getOutputStream();
-        out.write(value);
-        out.close();
+    if (key == null || value.length == 0) {
+      resp.sendError(400);
+      return;
     }
 
-    @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
+    keystore.put(key, value);
+    resp.setStatus(204);
+  }
 
-        String key = getKey(req);
-        byte[] value = IOUtils.toByteArray(req.getInputStream());
+  @Override
+  protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
+      throws ServletException, IOException {
 
-        if (key == null || value.length == 0) {
-            resp.sendError(400);
-            return;
-        }
+    String key = getKey(req);
 
-        keystore.put(key, value);
-        resp.setStatus(204);
+    if (key == null) {
+      resp.sendError(400);
+      return;
     }
 
-    @Override
-    protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-
-        String key = getKey(req);
-
-        if (key == null) {
-            resp.sendError(400);
-            return;
-        }
-
-        if (keystore.remove(key) == null) {
-            resp.sendError(404);
-            return;
-        }
-
-        resp.setStatus(204);
+    if (keystore.remove(key) == null) {
+      resp.sendError(404);
+      return;
     }
+
+    resp.setStatus(204);
+  }
 }

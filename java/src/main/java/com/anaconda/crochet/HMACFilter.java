@@ -20,85 +20,81 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.util.B64Code;
 
-
 public class HMACFilter implements Filter {
 
-    private byte[] secret;
+  private byte[] secret;
 
-    private void unauthorized(HttpServletResponse resp)
-            throws IOException {
-        resp.setHeader("WWW-Authenticate", "crochet");
-        resp.sendError(401, "Unauthorized");
+  private void unauthorized(HttpServletResponse resp) throws IOException {
+    resp.setHeader("WWW-Authenticate", "crochet");
+    resp.sendError(401, "Unauthorized");
+  }
+
+  @Override
+  public void init(FilterConfig filterConfig) throws ServletException {
+    secret = filterConfig.getInitParameter("secret").getBytes();
+  }
+
+  @Override
+  public void doFilter(ServletRequest servletRequest,
+                       ServletResponse servletResponse, FilterChain filterChain)
+      throws IOException, ServletException {
+    HttpServletRequest req = (HttpServletRequest)servletRequest;
+    HttpServletResponse resp = (HttpServletResponse)servletResponse;
+
+    String authHeader = req.getHeader("Authorization");
+    String prefix = "crochet ";
+
+    if (authHeader == null || !authHeader.toLowerCase().startsWith(prefix)) {
+      unauthorized(resp);
+      return;
+    }
+    String req_signature = authHeader.substring(prefix.length());
+
+    Mac mac;
+    MessageDigest md;
+    try {
+      mac = Mac.getInstance("HmacSHA1");
+      mac.init(new SecretKeySpec(secret, "HmacSHA1"));
+      md = MessageDigest.getInstance("MD5");
+    } catch (NoSuchAlgorithmException ex) {
+      unauthorized(resp);
+      return;
+    } catch (InvalidKeyException ex) {
+      unauthorized(resp);
+      return;
     }
 
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
-        secret = filterConfig.getInitParameter("secret").getBytes();
+    mac.update(req.getMethod().getBytes(StandardCharsets.UTF_8));
+    mac.update((byte)'\n');
+
+    byte[] body = IOUtils.toByteArray(req.getInputStream());
+    if (body.length > 0) {
+      md.update(body);
+      mac.update(md.digest());
+    }
+    mac.update((byte)'\n');
+
+    String contentType = req.getContentType();
+    if (contentType != null) {
+      mac.update(contentType.getBytes(StandardCharsets.UTF_8));
+    }
+    mac.update((byte)'\n');
+
+    String path = req.getRequestURI();
+    if (path != null) {
+      mac.update(path.getBytes(StandardCharsets.UTF_8));
     }
 
-    @Override
-    public void doFilter(ServletRequest servletRequest,
-                         ServletResponse servletResponse,
-                         FilterChain filterChain)
-            throws IOException, ServletException {
-        HttpServletRequest req = (HttpServletRequest) servletRequest;
-        HttpServletResponse resp = (HttpServletResponse) servletResponse;
+    String computed_signature = new String(B64Code.encode(mac.doFinal()));
 
-        String authHeader = req.getHeader("Authorization");
-        String prefix = "crochet ";
-
-        if (authHeader == null || !authHeader.toLowerCase().startsWith(prefix)) {
-            unauthorized(resp);
-            return;
-        }
-        String req_signature = authHeader.substring(prefix.length());
-
-        Mac mac;
-        MessageDigest md;
-        try {
-            mac = Mac.getInstance("HmacSHA1");
-            mac.init(new SecretKeySpec(secret, "HmacSHA1"));
-            md = MessageDigest.getInstance("MD5");
-        } catch (NoSuchAlgorithmException ex) {
-            unauthorized(resp);
-            return;
-        } catch (InvalidKeyException ex) {
-            unauthorized(resp);
-            return;
-        }
-
-        mac.update(req.getMethod().getBytes(StandardCharsets.UTF_8));
-        mac.update((byte)'\n');
-
-        byte[] body = IOUtils.toByteArray(req.getInputStream());
-        if (body.length > 0) {
-            md.update(body);
-            mac.update(md.digest());
-        }
-        mac.update((byte)'\n');
-
-        String contentType = req.getContentType();
-        if (contentType != null) {
-            mac.update(contentType.getBytes(StandardCharsets.UTF_8));
-        }
-        mac.update((byte)'\n');
-
-        String path = req.getRequestURI();
-        if (path != null) {
-            mac.update(path.getBytes(StandardCharsets.UTF_8));
-        }
-
-        String computed_signature = new String(B64Code.encode(mac.doFinal()));
-
-        if (!req_signature.equals(computed_signature)) {
-            unauthorized(resp);
-            return;
-        }
-
-        filterChain.doFilter(new RequestWrapper(req, body), resp);
+    if (!req_signature.equals(computed_signature)) {
+      unauthorized(resp);
+      return;
     }
 
-    @Override
-    public void destroy() {
-    }
+    filterChain.doFilter(new RequestWrapper(req, body), resp);
+  }
+
+  @Override
+  public void destroy() {}
 }
