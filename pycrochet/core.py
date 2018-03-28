@@ -2,6 +2,7 @@ from __future__ import print_function, division, absolute_import
 
 import hmac
 import json
+import os
 from base64 import b64encode
 from hashlib import sha1, md5
 from collections import MutableMapping
@@ -10,6 +11,9 @@ import requests
 from requests.auth import AuthBase
 
 from .utils import normalize_address, ensure_bytes
+
+
+_SECRET_ENV_VAR = b'CROCHET_SECRET_ACCESS_KEY'
 
 
 class ServerException(Exception):
@@ -106,6 +110,13 @@ class Configuration(MutableMapping):
 class Client(object):
     def __init__(self, address, secret=None):
         self.address = normalize_address(address)
+
+        if secret is None:
+            secret = os.environb.get(_SECRET_ENV_VAR)
+            if secret is None:
+                raise ValueError("Secret not provided, and not found at "
+                                 "%r" % _SECRET_ENV_VAR.decode())
+
         self._auth = CrochetAuth(secret)
         self.configuration = Configuration(self.address, self._auth)
 

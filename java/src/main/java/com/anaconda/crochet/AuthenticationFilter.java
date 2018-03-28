@@ -23,7 +23,7 @@ import javax.servlet.http.HttpServletResponse;
 
 public class AuthenticationFilter implements Filter {
 
-    private byte[] secret = "be75fb6ad4b0468a8aea3c73618bca04".getBytes();
+    private byte[] secret;
 
     private void unauthorized(HttpServletResponse resp)
             throws IOException {
@@ -33,6 +33,7 @@ public class AuthenticationFilter implements Filter {
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
+        secret = filterConfig.getInitParameter("secret").getBytes();
     }
 
     @Override
