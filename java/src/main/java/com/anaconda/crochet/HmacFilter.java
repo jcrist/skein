@@ -1,5 +1,8 @@
 package com.anaconda.crochet;
 
+import org.apache.commons.io.IOUtils;
+import org.eclipse.jetty.util.B64Code;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -17,10 +20,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.io.IOUtils;
-import org.eclipse.jetty.util.B64Code;
-
-public class HMACFilter implements Filter {
+public class HmacFilter implements Filter {
 
   private byte[] secret;
 
@@ -48,7 +48,7 @@ public class HMACFilter implements Filter {
       unauthorized(resp);
       return;
     }
-    String req_signature = authHeader.substring(prefix.length());
+    final String reqSignature = authHeader.substring(prefix.length());
 
     Mac mac;
     MessageDigest md;
@@ -85,9 +85,9 @@ public class HMACFilter implements Filter {
       mac.update(path.getBytes(StandardCharsets.UTF_8));
     }
 
-    String computed_signature = new String(B64Code.encode(mac.doFinal()));
+    String computedSignature = new String(B64Code.encode(mac.doFinal()));
 
-    if (!req_signature.equals(computed_signature)) {
+    if (!reqSignature.equals(computedSignature)) {
       unauthorized(resp);
       return;
     }

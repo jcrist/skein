@@ -1,16 +1,16 @@
 package com.anaconda.crochet;
 
-import java.util.EnumSet;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.servlet.DispatcherType;
-
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+
+import java.util.EnumSet;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javax.servlet.DispatcherType;
 
 public class RestServer {
   private static final EnumSet<DispatcherType> REQUEST_SCOPE =
@@ -25,6 +25,7 @@ public class RestServer {
 
   private static Integer publicPort = -1;
 
+  /** Startup the server. **/
   public static void main(String[] args) throws Exception {
     secret = System.getenv("CROCHET_SECRET_ACCESS_KEY");
 
@@ -40,7 +41,7 @@ public class RestServer {
     server.setHandler(handlers);
 
     // Create the servlets once
-    ServletHolder keyVal =
+    final ServletHolder keyVal =
         new ServletHolder(new KeyValueServlet(configuration));
 
     // This connector serves content authenticated by the secret key
@@ -55,7 +56,7 @@ public class RestServer {
     privateContext.setVirtualHosts(new String[] {"@Private"});
     privateContext.addServlet(keyVal, "/keys/*");
     FilterHolder holder =
-        privateContext.addFilter(HMACFilter.class, "/*", REQUEST_SCOPE);
+        privateContext.addFilter(HmacFilter.class, "/*", REQUEST_SCOPE);
     holder.setInitParameter("secret", secret);
     handlers.addHandler(privateContext);
 

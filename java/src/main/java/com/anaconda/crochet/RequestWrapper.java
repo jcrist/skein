@@ -1,14 +1,14 @@
 package com.anaconda.crochet;
 
-import java.io.IOException;
 import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
-import javax.servlet.ServletInputStream;
 import javax.servlet.ReadListener;
-import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 
 public class RequestWrapper extends HttpServletRequestWrapper {
   private byte[] body;
