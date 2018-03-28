@@ -46,14 +46,14 @@ class CrochetAuth(AuthBase):
         return r
 
 
-class Configuration(MutableMapping):
-    """Represents configuration state stored on the server"""
+class KeyStore(MutableMapping):
+    """Wrapper for the Crochet KeyStore"""
     def __init__(self, address, auth):
         self._address = address
         self._auth = auth
 
     def __repr__(self):
-        return 'Configuration<address=%s>' % self._address
+        return 'KeyStore<address=%s>' % self._address
 
     def _handle_exceptions(self, resp):
         if resp.status_code == 401:
@@ -118,7 +118,7 @@ class Client(object):
                                  "%r" % _SECRET_ENV_VAR.decode())
 
         self._auth = CrochetAuth(secret)
-        self.configuration = Configuration(self.address, self._auth)
+        self.keystore = KeyStore(self.address, self._auth)
 
     def __repr__(self):
         return 'Client<address=%s>' % self.address
