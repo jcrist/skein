@@ -22,9 +22,6 @@ create_keytabs() {
 kdb5_util create -s -P testpass \
 && create_keytabs master \
 && create_keytabs worker \
-&& dd if=/dev/urandom bs=64 count=1 > /etc/hadoop/conf/http-secret-file \
-&& chown hdfs:hadoop /etc/hadoop/conf/http-secret-file \
-&& chmod 440 /etc/hadoop/conf/http-secret-file \
 && kadmin.local -q "addprinc -pw adminpass admin/admin" \
 && kadmin.local -q "addprinc -pw testpass testuser" \
 && kadmin.local -q "xst -norandkey -k /home/testuser/testuser.keytab testuser" \

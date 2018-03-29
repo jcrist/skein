@@ -11,6 +11,10 @@ cp /etc/hadoop/conf.empty/log4j.properties /etc/hadoop/conf.test/log4j.propertie
 mkdir -p /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs \
     && chown -R yarn:yarn /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs
 
+# Create secret key to authenticate web access
+dd if=/dev/urandom bs=64 count=1 > /etc/hadoop/conf/http-secret-file
+chown hdfs:hadoop /etc/hadoop/conf/http-secret-file
+chmod 440 /etc/hadoop/conf/http-secret-file
 
 # Format namenode
 sudo -u hdfs hdfs namenode -format -force
