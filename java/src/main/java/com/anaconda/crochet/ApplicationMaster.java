@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.DispatcherType;
 
-public class RestServer {
+public class ApplicationMaster {
   private static final EnumSet<DispatcherType> REQUEST_SCOPE =
       EnumSet.of(DispatcherType.REQUEST);
 
