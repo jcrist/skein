@@ -1,5 +1,7 @@
 package com.anaconda.crochet;
 
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.HandlerCollection;
@@ -13,6 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.DispatcherType;
 
 public class ApplicationMaster {
+  private static final Logger LOG = LogManager.getLogger(ApplicationMaster.class);
+
   private static final EnumSet<DispatcherType> REQUEST_SCOPE =
       EnumSet.of(DispatcherType.REQUEST);
 
@@ -25,20 +29,14 @@ public class ApplicationMaster {
 
   private static Integer publicPort = -1;
 
-  /** Startup the server. **/
-  public static void main(String[] args) throws Exception {
-    secret = System.getenv("CROCHET_SECRET_ACCESS_KEY");
+  private static Server server;
 
-    if (secret == null) {
-      System.err.println("Couldn't find secret token at "
-                         + "'CROCHET_SECRET_ACCESS_KEY' envar");
-      System.exit(1);
-    }
-
+  private void startupRestServer() throws Exception {
     // Configure the server
-    Server server = new Server();
+    server = new Server();
     HandlerCollection handlers = new HandlerCollection();
     server.setHandler(handlers);
+    server.setStopAtShutdown(true);
 
     // Create the servlets once
     final ServletHolder keyVal =
@@ -79,10 +77,30 @@ public class ApplicationMaster {
     // Determine ports
     privatePort = privateConnector.getLocalPort();
     publicPort = publicConnector.getLocalPort();
-    System.out.println("Private access at localhost:" + privatePort);
-    System.out.println("Public access at localhost:" + publicPort);
+  }
 
-    // Run until closing
+  /** Initialize the ApplicationMaster. **/
+  public void init() {
+    secret = System.getenv("CROCHET_SECRET_ACCESS_KEY");
+
+    if (secret == null) {
+      LOG.fatal("Couldn't find secret token at "
+                + "'CROCHET_SECRET_ACCESS_KEY' envar");
+      System.exit(1);
+    }
+  }
+
+  /** Run the ApplicationMaster. **/
+  public void run() throws Exception {
+    startupRestServer();
     server.join();
+  }
+
+  /** Main entrypoint for the ApplicationMaster. **/
+  public static void main(String[] args) throws Exception {
+    ApplicationMaster appMaster = new ApplicationMaster();
+
+    appMaster.init();
+    appMaster.run();
   }
 }

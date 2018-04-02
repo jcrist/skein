@@ -19,7 +19,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.anaconda.crochet.RestServer</mainClass>
+                            <mainClass>com.anaconda.crochet.ApplicationMaster</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
@@ -81,6 +81,12 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.9.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.11</version>
         </dependency>
 
         <dependency>
