@@ -6,6 +6,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -147,6 +148,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         numAllocated.decrementAndGet();
       }
     }
+    shutdown();
   }
 
   @Override
@@ -155,7 +157,11 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     numAllocated.addAndGet(newContainers.size());
 
     List<String> commands = new ArrayList<String>();
-    commands.add("sleep 180 ");
+    commands.add("hdfs dfs -ls / "
+                 + "1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+                 + "/container.stdout "
+                 + "2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+                 + "/container.stderr");
 
     ContainerLaunchContext ctx =
         ContainerLaunchContext.newInstance(null, null, commands, null,
@@ -308,6 +314,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       server.stop();
     } catch (Exception ex) {
       LOG.error("Failed to properly shutdown the jetty server");
+      LOG.error(ex);
+      System.exit(1);
     }
   }
 
