@@ -53,7 +53,7 @@ public class KeyValueServlet extends HttpServlet {
 
     byte[] value = keystore.get(key);
     if (value == null) {
-      resp.sendError(404);
+      ServletHelpers.sendError(resp, 404, "Missing key");
       return;
     }
 
@@ -70,7 +70,7 @@ public class KeyValueServlet extends HttpServlet {
     byte[] value = IOUtils.toByteArray(req.getInputStream());
 
     if (key == null || value.length == 0) {
-      resp.sendError(400);
+      ServletHelpers.sendError(resp, 400, "Malformed Request");
       return;
     }
 
@@ -85,12 +85,12 @@ public class KeyValueServlet extends HttpServlet {
     String key = getKey(req);
 
     if (key == null) {
-      resp.sendError(400);
+      ServletHelpers.sendError(resp, 400, "Malformed Request");
       return;
     }
 
     if (keystore.remove(key) == null) {
-      resp.sendError(404);
+      ServletHelpers.sendError(resp, 404, "Missing key");
       return;
     }
 

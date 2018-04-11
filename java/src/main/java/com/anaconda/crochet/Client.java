@@ -14,6 +14,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -28,23 +29,70 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.servlet.DispatcherType;
 
 public class Client {
 
   private static final Logger LOG = LogManager.getLogger(Client.class);
 
   private Configuration conf;
+
   private YarnClient yarnClient;
+
   private String amJar = "crochet-1.0-SNAPSHOT-jar-with-dependencies.jar";
-  int amMemory = 10;
-  int amVCores = 1;
+
+  private int amMemory = 10;
+
+  private int amVCores = 1;
+
+  private int port;
+
+  private static String secret = "foobar";
+
+  private static Server server;
+
+  private void startupRestServer() throws Exception {
+    // Configure the server
+    server = new Server();
+    HandlerCollection handlers = new HandlerCollection();
+    server.setHandler(handlers);
+    server.setStopAtShutdown(true);
+
+    ServerConnector connector = new ServerConnector(server);
+    connector.setHost("127.0.0.1");
+    connector.setPort(8080);
+    server.addConnector(connector);
+
+    ServletContextHandler context =
+        new ServletContextHandler(ServletContextHandler.SESSIONS);
+    context.setContextPath("/");
+    context.addServlet(new ServletHolder(new ClientServlet(this)), "/apps/*");
+    FilterHolder holder = context.addFilter(HmacFilter.class, "/*",
+                                            EnumSet.of(DispatcherType.REQUEST));
+    holder.setInitParameter("secret", secret);
+    handlers.addHandler(context);
+
+    // Startup the server
+    server.start();
+
+    // Determine port
+    port = connector.getLocalPort();
+  }
 
   /** Main Entry Point. **/
   public static void main(String[] args) {
@@ -66,7 +114,13 @@ public class Client {
     yarnClient.start();
   }
 
-  private void run() throws IOException, YarnException {
+  private void run() throws Exception {
+    startupRestServer();
+    server.join();
+  }
+
+  /** Start a new application. **/
+  public ApplicationId submit() throws IOException, YarnException {
     YarnClientApplication app = yarnClient.createApplication();
     ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
@@ -89,7 +143,7 @@ public class Client {
 
     Map<String, String> env = new HashMap<String, String>();
     env.put("CLASSPATH", classPath.toString());
-    env.put("CROCHET_SECRET_ACCESS_KEY", "foobar");
+    env.put("CROCHET_SECRET_ACCESS_KEY", secret);
 
     String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
     String command = (Environment.JAVA_HOME.$$() + "/bin/java "
@@ -129,7 +183,26 @@ public class Client {
     LOG.info("Submitting application...");
     yarnClient.submitApplication(appContext);
 
-    LOG.info("ApplicationID: " + appId);
+    return appId;
+  }
+
+  /** Get information on a running application. **/
+  public ApplicationReport getApplicationReport(ApplicationId appId) {
+    try {
+      return yarnClient.getApplicationReport(appId);
+    } catch (Throwable exc) {
+      return null;
+    }
+  }
+
+  /** Kill a running application. **/
+  public boolean killApplication(ApplicationId appId) {
+    try {
+      yarnClient.killApplication(appId);
+    } catch (Throwable exc) {
+      return false;
+    }
+    return true;
   }
 
   private void addFile(Map<String, LocalResource> localResources,
