@@ -241,6 +241,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   }
 
   /** Run the ApplicationMaster. **/
+  @SuppressWarnings("unchecked")
   public void run() throws Exception {
     startupRestServer();
 
@@ -320,10 +321,15 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   }
 
   /** Main entrypoint for the ApplicationMaster. **/
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) {
     ApplicationMaster appMaster = new ApplicationMaster();
 
     appMaster.init();
-    appMaster.run();
+    try {
+      appMaster.run();
+    } catch (Throwable exc) {
+      LOG.fatal("Error running ApplicationMaster", exc);
+      System.exit(1);
+    }
   }
 }
