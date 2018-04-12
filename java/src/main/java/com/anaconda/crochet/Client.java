@@ -36,14 +36,15 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.servlet.DispatcherType;
 
 public class Client {
@@ -60,6 +61,8 @@ public class Client {
 
   private int amVCores = 1;
 
+  private int callbackPort;
+
   private int port;
 
   private static String secret = "foobar";
@@ -75,7 +78,7 @@ public class Client {
 
     ServerConnector connector = new ServerConnector(server);
     connector.setHost("127.0.0.1");
-    connector.setPort(8080);
+    connector.setPort(0);
     server.addConnector(connector);
 
     ServletContextHandler context =
@@ -108,15 +111,41 @@ public class Client {
   }
 
   private void init() {
+    secret = System.getenv("CROCHET_SECRET_ACCESS_KEY");
+    if (secret == null) {
+      LOG.fatal("Couldn't find 'CROCHET_SECRET_ACCESS_KEY' envar");
+      System.exit(1);
+    }
+
+    String callbackPortEnv = System.getenv("CROCHET_CALLBACK_PORT");
+    if (callbackPortEnv == null) {
+      LOG.fatal("Couldn't find 'CROCHET_CALLBACK_PORT' envar");
+      System.exit(1);
+    }
+    callbackPort = Integer.valueOf(callbackPortEnv);
+
     conf = new YarnConfiguration();
-    yarnClient = YarnClient.createYarnClient();
-    yarnClient.init(conf);
-    yarnClient.start();
   }
 
   private void run() throws Exception {
+    // Start the yarn client
+    yarnClient = YarnClient.createYarnClient();
+    yarnClient.init(conf);
+    yarnClient.start();
+
+    // Start the rest server
     startupRestServer();
-    server.join();
+
+    // Report back the port we're listening on
+    Socket callback = new Socket("127.0.0.1", callbackPort);
+    DataOutputStream dos = new DataOutputStream(callback.getOutputStream());
+    dos.writeInt(port);
+    dos.close();
+    callback.close();
+
+    // Wait until EOF or broken pipe from stdin
+    while (System.in.read() != -1) {}
+    server.stop();
   }
 
   /** Start a new application. **/
