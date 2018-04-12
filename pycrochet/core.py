@@ -57,7 +57,7 @@ class CrochetAuth(requests.auth.AuthBase):
 
 
 class Client(object):
-    def __init__(self, secret=None):
+    def __init__(self, secret=None, verbose=False):
         if secret is None:
             secret = os.environb.get(_SECRET_ENV_VAR)
             if secret is None:
@@ -65,6 +65,7 @@ class Client(object):
                                  "%r" % _SECRET_ENV_VAR.decode())
 
         self._secret = secret
+        self._verbose = verbose
         self._auth = CrochetAuth(secret)
         self._init_client()
 
@@ -87,7 +88,12 @@ class Client(object):
             else:
                 popen_kwargs = dict(start_new_session=True)
 
-            proc = subprocess.Popen(command, stdin=subprocess.PIPE, env=env,
+            outfil = None if self._verbose else subprocess.DEVNULL
+            proc = subprocess.Popen(command,
+                                    stdin=subprocess.PIPE,
+                                    stdout=outfil,
+                                    stderr=outfil,
+                                    env=env,
                                     **popen_kwargs)
 
             while proc.poll() is None:
@@ -104,6 +110,23 @@ class Client(object):
 
         self._address = 'http://127.0.0.1:%d' % port
         self._proc = proc
+
+    def __repr__(self):
+        status = 'stopped' if self._proc.stdin.closed else 'running'
+        return 'Client<%s, status=%s>' % (self._address, status)
+
+    def restart(self):
+        self.close()
+        self._init_client()
+
+    def close(self):
+        self._proc.stdin.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     def _handle_exceptions(self, resp):
         if resp.status_code == 401:
