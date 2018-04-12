@@ -14,6 +14,7 @@ from hashlib import sha1, md5
 
 import requests
 
+from .compatibility import PY2
 from .exceptions import (UnauthorizedError, ResourceManagerError,
                          ApplicationMasterError)
 from .utils import ensure_bytes
@@ -81,8 +82,13 @@ class Client(object):
             env.update({'CROCHET_SECRET_ACCESS_KEY': self._secret,
                         'CROCHET_CALLBACK_PORT': str(callback_port)})
 
+            if PY2:
+                popen_kwargs = dict(preexec_fn=os.setsid)
+            else:
+                popen_kwargs = dict(start_new_session=True)
+
             proc = subprocess.Popen(command, stdin=subprocess.PIPE, env=env,
-                                    start_new_session=True)
+                                    **popen_kwargs)
 
             while proc.poll() is None:
                 readable, _, _ = select.select([callback], [], [], 1)
