@@ -55,7 +55,7 @@ public class Client {
 
   private YarnClient yarnClient;
 
-  private String amJar = "crochet-1.0-SNAPSHOT-jar-with-dependencies.jar";
+  private String amJar = "";
 
   private int amMemory = 10;
 
@@ -102,7 +102,7 @@ public class Client {
     boolean result = false;
     try {
       Client client = new Client();
-      client.init();
+      client.init(args);
       client.run();
     } catch (Throwable exc) {
       LOG.fatal("Error running Client", exc);
@@ -110,7 +110,7 @@ public class Client {
     }
   }
 
-  private void init() {
+  private void init(String[] args) {
     secret = System.getenv("CROCHET_SECRET_ACCESS_KEY");
     if (secret == null) {
       LOG.fatal("Couldn't find 'CROCHET_SECRET_ACCESS_KEY' envar");
@@ -123,6 +123,15 @@ public class Client {
       System.exit(1);
     }
     callbackPort = Integer.valueOf(callbackPortEnv);
+
+    if (args.length < 1) {
+      LOG.fatal("Must pass in path to this jar file");
+      System.exit(1);
+    } else if (args.length > 1) {
+      LOG.fatal("Unknown extra arguments");
+      System.exit(1);
+    }
+    amJar = args[0];
 
     conf = new YarnConfiguration();
   }

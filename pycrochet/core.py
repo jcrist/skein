@@ -1,5 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
+import glob
 import hmac
 import json
 import os
@@ -21,6 +22,15 @@ from .utils import cached_property, ensure_bytes
 
 
 _SECRET_ENV_VAR = b'CROCHET_SECRET_ACCESS_KEY'
+
+
+def _find_crochet_jar():
+    this_dir = os.path.dirname(os.path.relpath(__file__))
+    jars = glob.glob(os.path.join(this_dir, 'java', '*.jar'))
+    if not jars:
+        raise ValueError("Failed to find the crochet jar file")
+    assert len(jars) == 1
+    return jars[0]
 
 
 class SimpleAuth(requests.auth.AuthBase):
@@ -70,7 +80,8 @@ class Client(object):
         self._init_client()
 
     def _init_client(self):
-        command = ["yarn", "jar", "crochet-1.0-SNAPSHOT-jar-with-dependencies.jar"]
+        jar = _find_crochet_jar()
+        command = ["yarn", "jar", jar, jar]
 
         callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         callback.bind(('127.0.0.1', 0))
