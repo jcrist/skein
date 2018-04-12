@@ -66,6 +66,8 @@ public class ClientServlet extends HttpServlet {
     objectNode.put("finalStatus", report.getFinalApplicationStatus().toString());
     objectNode.put("user", report.getUser());
     objectNode.put("trackingURL", report.getTrackingUrl());
+    objectNode.put("host", report.getHost());
+    objectNode.put("rpcPort", report.getRpcPort());
 
     OutputStream out = resp.getOutputStream();
     mapper.writeValue(out, objectNode);

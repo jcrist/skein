@@ -17,7 +17,7 @@ import requests
 from .compatibility import PY2
 from .exceptions import (UnauthorizedError, ResourceManagerError,
                          ApplicationMasterError)
-from .utils import ensure_bytes
+from .utils import cached_property, ensure_bytes
 
 
 _SECRET_ENV_VAR = b'CROCHET_SECRET_ACCESS_KEY'
@@ -222,3 +222,17 @@ class Application(object):
 
     def __repr__(self):
         return 'Application<id=%r>' % self.app_id
+
+    @cached_property
+    def _address(self):
+        s = self.client.status(self.app_id)
+        if s['state'] != 'RUNNING':
+            raise ValueError("This operation requires state: RUNNING. "
+                             "Current state: %s." % s['state'])
+        host = s['host']
+        port = s['rpcPort']
+        return 'http://%s:%d' % (host, port)
+
+    @cached_property
+    def keystore(self):
+        return KeyStore(self._address, self.client._auth)

@@ -2,7 +2,6 @@ package com.anaconda.crochet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -37,6 +36,8 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -68,7 +69,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private static Integer privatePort = -1;
   private static Integer publicPort = -1;
   private String hostname = "";
-  private String trackingUrl = "";
 
   private int numTotal = 1;
   private AtomicInteger numCompleted = new AtomicInteger();
@@ -96,7 +96,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     // This connector serves content authenticated by the secret key
     ServerConnector privateConnector = new ServerConnector(server);
-    privateConnector.setPort(8080);
+    privateConnector.setPort(0);
     privateConnector.setName("Private");
     server.addConnector(privateConnector);
 
@@ -112,7 +112,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     // This connector serves content unauthenticated
     ServerConnector publicConnector = new ServerConnector(server);
-    publicConnector.setPort(8081);
+    publicConnector.setPort(0);
     publicConnector.setName("Public");
     server.addConnector(publicConnector);
 
@@ -157,7 +157,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     numAllocated.addAndGet(newContainers.size());
 
     List<String> commands = new ArrayList<String>();
-    commands.add("hdfs dfs -ls / "
+    commands.add("sleep 180 "
                  + "1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
                  + "/container.stdout "
                  + "2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
@@ -237,7 +237,12 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       System.exit(1);
     }
 
-    hostname = NetUtils.getHostname();
+    try {
+      hostname = InetAddress.getLocalHost().getHostAddress();
+    } catch (UnknownHostException exc) {
+      LOG.fatal("Couldn't determine hostname for appmaster");
+      System.exit(1);
+    }
   }
 
   /** Run the ApplicationMaster. **/
@@ -271,7 +276,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     nmClient.init(conf);
     nmClient.start();
 
-    rmClient.registerApplicationMaster(hostname, -1, trackingUrl);
+    rmClient.registerApplicationMaster(hostname, privatePort, "");
 
     for (int i = 0; i < numTotal; i++) {
       Priority priority = Priority.newInstance(0);
