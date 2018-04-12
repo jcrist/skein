@@ -1,4 +1,6 @@
 recursive-include pycrochet *.py
+graft java
+prune java/target
 include versioneer.py
 
 include setup.py
