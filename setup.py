@@ -77,8 +77,10 @@ class develop(_develop):
 
 class clean(_clean):
     def run(self):
-        if self.all and os.path.exists(JAVA_INPLACE_DIR):
-            remove_tree(JAVA_INPLACE_DIR, dry_run=self.dry_run)
+        if self.all:
+            for d in [JAVA_INPLACE_DIR, JAVA_TARGET_DIR]:
+                if os.path.exists(d):
+                    remove_tree(d, dry_run=self.dry_run)
         _clean.run(self)
 
 
