@@ -42,8 +42,8 @@ def get_config():
     cfg.VCS = "git"
     cfg.style = "pep440"
     cfg.tag_prefix = ""
-    cfg.parentdir_prefix = "pycrochet-"
-    cfg.versionfile_source = "pycrochet/_version.py"
+    cfg.parentdir_prefix = "skein-"
+    cfg.versionfile_source = "skein/_version.py"
     cfg.verbose = False
     return cfg
 

@@ -1,4 +1,4 @@
-package com.anaconda.crochet;
+package com.anaconda.skein;
 
 import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.util.B64Code;
@@ -25,7 +25,7 @@ public class HmacFilter implements Filter {
   private byte[] secret;
 
   private void unauthorized(HttpServletResponse resp) throws IOException {
-    resp.setHeader("WWW-Authenticate", "crochet");
+    resp.setHeader("WWW-Authenticate", "skein");
     resp.sendError(401, "Unauthorized");
   }
 
@@ -42,7 +42,7 @@ public class HmacFilter implements Filter {
     HttpServletResponse resp = (HttpServletResponse)servletResponse;
 
     String authHeader = req.getHeader("Authorization");
-    String prefix = "crochet ";
+    String prefix = "skein ";
 
     if (authHeader == null || !authHeader.toLowerCase().startsWith(prefix)) {
       unauthorized(resp);

@@ -15,7 +15,7 @@ import versioneer
 ROOT_DIR = os.path.dirname(os.path.relpath(__file__))
 JAVA_DIR = os.path.join(ROOT_DIR, 'java')
 JAVA_TARGET_DIR = os.path.join(JAVA_DIR, 'target')
-JAVA_INPLACE_DIR = os.path.join(ROOT_DIR, 'pycrochet', 'java')
+JAVA_INPLACE_DIR = os.path.join(ROOT_DIR, 'skein', 'java')
 
 
 def _get_jars(dir):
@@ -32,7 +32,7 @@ class build_java(Command):
     finalize_options = initialize_options
 
     def run(self):
-        # Compile the java code and copy the jar to pycrochet/java/
+        # Compile the java code and copy the jar to skein/java/
         # This will be picked up as package_data later
         self.mkpath(JAVA_INPLACE_DIR)
         code = subprocess.call(['mvn', '-f', os.path.join(JAVA_DIR, 'pom.xml'),
@@ -93,12 +93,12 @@ cmdclass.update({'build_java': build_java,  # directly build the java source
                  'clean': clean})           # extra cleanup
 
 
-setup(name='pycrochet',
+setup(name='skein',
       version=versioneer.get_version(),
       cmdclass=cmdclass,
       maintainer='Jim Crist',
       maintainer_email='jiminy.crist@gmail.com',
       license='BSD',
-      packages=['pycrochet'],
-      package_data={'pycrochet': ['java/*.jar']},
+      packages=['skein'],
+      package_data={'skein': ['java/*.jar']},
       install_requires=['requests'])

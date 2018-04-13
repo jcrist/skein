@@ -1,4 +1,4 @@
-package com.anaconda.crochet;
+package com.anaconda.skein;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;

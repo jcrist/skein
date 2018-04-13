@@ -1,4 +1,4 @@
-package com.anaconda.crochet;
+package com.anaconda.skein;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -111,15 +111,15 @@ public class Client {
   }
 
   private void init(String[] args) {
-    secret = System.getenv("CROCHET_SECRET_ACCESS_KEY");
+    secret = System.getenv("SKEIN_SECRET_ACCESS_KEY");
     if (secret == null) {
-      LOG.fatal("Couldn't find 'CROCHET_SECRET_ACCESS_KEY' envar");
+      LOG.fatal("Couldn't find 'SKEIN_SECRET_ACCESS_KEY' envar");
       System.exit(1);
     }
 
-    String callbackPortEnv = System.getenv("CROCHET_CALLBACK_PORT");
+    String callbackPortEnv = System.getenv("SKEIN_CALLBACK_PORT");
     if (callbackPortEnv == null) {
-      LOG.fatal("Couldn't find 'CROCHET_CALLBACK_PORT' envar");
+      LOG.fatal("Couldn't find 'SKEIN_CALLBACK_PORT' envar");
       System.exit(1);
     }
     callbackPort = Integer.valueOf(callbackPortEnv);
@@ -167,7 +167,7 @@ public class Client {
         new HashMap<String, LocalResource>();
 
     FileSystem fs = FileSystem.get(conf);
-    addFile(localResources, fs, amJar, "crochet.jar", appId.toString());
+    addFile(localResources, fs, amJar, "skein.jar", appId.toString());
 
     StringBuilder classPath = new StringBuilder(Environment.CLASSPATH.$$());
     classPath.append(ApplicationConstants.CLASS_PATH_SEPARATOR).append("./*");
@@ -181,12 +181,12 @@ public class Client {
 
     Map<String, String> env = new HashMap<String, String>();
     env.put("CLASSPATH", classPath.toString());
-    env.put("CROCHET_SECRET_ACCESS_KEY", secret);
+    env.put("SKEIN_SECRET_ACCESS_KEY", secret);
 
     String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
     String command = (Environment.JAVA_HOME.$$() + "/bin/java "
                       + "-Xmx" + amMemory + "m "
-                      + "com.anaconda.crochet.ApplicationMaster "
+                      + "com.anaconda.skein.ApplicationMaster "
                       + "1>" + logdir + "/appmaster.stdout "
                       + "2>" + logdir + "/appmaster.stderr");
 
@@ -213,7 +213,7 @@ public class Client {
         localResources, env, commands, null, fsTokens, null);
 
     appContext.setAMContainerSpec(amContainer);
-    appContext.setApplicationName("crochet");
+    appContext.setApplicationName("skein");
     appContext.setResource(Resource.newInstance(amMemory, amVCores));
     appContext.setPriority(Priority.newInstance(0));
     appContext.setQueue("default");
@@ -247,7 +247,7 @@ public class Client {
                        FileSystem fs, String source, String target,
                        String appId) throws IOException {
     Path dest = new Path(fs.getHomeDirectory(),
-                         ".crochet/" + appId + "/" + target);
+                         ".skein/" + appId + "/" + target);
     fs.copyFromLocalFile(new Path(source), dest);
     FileStatus status = fs.getFileStatus(dest);
     LocalResource resource = LocalResource.newInstance(

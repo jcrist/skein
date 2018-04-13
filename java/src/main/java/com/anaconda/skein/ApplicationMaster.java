@@ -1,4 +1,4 @@
-package com.anaconda.crochet;
+package com.anaconda.skein;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -229,11 +229,11 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   /** Initialize the ApplicationMaster. **/
   public void init() {
     conf = new YarnConfiguration();
-    secret = System.getenv("CROCHET_SECRET_ACCESS_KEY");
+    secret = System.getenv("SKEIN_SECRET_ACCESS_KEY");
 
     if (secret == null) {
       LOG.fatal("Couldn't find secret token at "
-                + "'CROCHET_SECRET_ACCESS_KEY' envar");
+                + "'SKEIN_SECRET_ACCESS_KEY' envar");
       System.exit(1);
     }
 

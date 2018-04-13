@@ -21,14 +21,14 @@ from .exceptions import (UnauthorizedError, ResourceManagerError,
 from .utils import cached_property, ensure_bytes
 
 
-_SECRET_ENV_VAR = b'CROCHET_SECRET_ACCESS_KEY'
+_SECRET_ENV_VAR = b'SKEIN_SECRET_ACCESS_KEY'
 
 
-def _find_crochet_jar():
+def _find_skein_jar():
     this_dir = os.path.dirname(os.path.relpath(__file__))
     jars = glob.glob(os.path.join(this_dir, 'java', '*.jar'))
     if not jars:
-        raise ValueError("Failed to find the crochet jar file")
+        raise ValueError("Failed to find the skein jar file")
     assert len(jars) == 1
     return jars[0]
 
@@ -44,7 +44,7 @@ class SimpleAuth(requests.auth.AuthBase):
         return r
 
 
-class CrochetAuth(requests.auth.AuthBase):
+class SkeinAuth(requests.auth.AuthBase):
     def __init__(self, secret):
         self.secret = secret
 
@@ -62,7 +62,7 @@ class CrochetAuth(requests.auth.AuthBase):
         mac = hmac.new(self.secret, msg=msg, digestmod=sha1)
         signature = b64encode(mac.digest())
 
-        r.headers['Authorization'] = b'CROCHET %s' % signature
+        r.headers['Authorization'] = b'SKEIN %s' % signature
         return r
 
 
@@ -76,11 +76,11 @@ class Client(object):
 
         self._secret = secret
         self._verbose = verbose
-        self._auth = CrochetAuth(secret)
+        self._auth = SkeinAuth(secret)
         self._init_client()
 
     def _init_client(self):
-        jar = _find_crochet_jar()
+        jar = _find_skein_jar()
         command = ["yarn", "jar", jar, jar]
 
         callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -91,8 +91,8 @@ class Client(object):
             _, callback_port = callback.getsockname()
 
             env = dict(os.environ)
-            env.update({'CROCHET_SECRET_ACCESS_KEY': self._secret,
-                        'CROCHET_CALLBACK_PORT': str(callback_port)})
+            env.update({'SKEIN_SECRET_ACCESS_KEY': self._secret,
+                        'SKEIN_CALLBACK_PORT': str(callback_port)})
 
             if PY2:
                 popen_kwargs = dict(preexec_fn=os.setsid)
@@ -164,7 +164,7 @@ class Client(object):
 
 
 class KeyStore(MutableMapping):
-    """Wrapper for the Crochet KeyStore"""
+    """Wrapper for the Skein KeyStore"""
     def __init__(self, address, auth):
         self._address = address
         self._auth = auth
