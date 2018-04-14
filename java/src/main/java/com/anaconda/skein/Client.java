@@ -1,10 +1,12 @@
 package com.anaconda.skein;
 
+
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -50,6 +52,11 @@ import javax.servlet.DispatcherType;
 public class Client {
 
   private static final Logger LOG = LogManager.getLogger(Client.class);
+
+  // Owner rwx (700)
+  private FsPermission SKEIN_DIR_PERM = FsPermission.createImmutable((short)448);
+  // Owner rw, world r (644)
+  private FsPermission SKEIN_FILE_PERM = FsPermission.createImmutable((short)420);
 
   private Configuration conf;
 
@@ -167,7 +174,12 @@ public class Client {
         new HashMap<String, LocalResource>();
 
     FileSystem fs = FileSystem.get(conf);
-    addFile(localResources, fs, amJar, "skein.jar", appId.toString());
+    // Make the ~/.skein/app_id dir
+    Path appDir = new Path(fs.getHomeDirectory(), ".skein/" + appId.toString());
+    FileSystem.mkdirs(fs, appDir, SKEIN_DIR_PERM);
+
+    // Add the application master jar
+    addFile(localResources, amJar, LocalResourceType.FILE, appDir, "skein.jar");
 
     StringBuilder classPath = new StringBuilder(Environment.CLASSPATH.$$());
     classPath.append(ApplicationConstants.CLASS_PATH_SEPARATOR).append("./*");
@@ -244,18 +256,31 @@ public class Client {
   }
 
   private void addFile(Map<String, LocalResource> localResources,
-                       FileSystem fs, String source, String target,
-                       String appId) throws IOException {
-    Path dest = new Path(fs.getHomeDirectory(),
-                         ".skein/" + appId + "/" + target);
-    fs.copyFromLocalFile(new Path(source), dest);
-    FileStatus status = fs.getFileStatus(dest);
+                       String source, LocalResourceType type,
+                       Path stagingDir, String dst) throws IOException {
+
+    Path srcPath = Utils.normalizePath(source);
+    Path dstPath = srcPath;
+
+    FileSystem dstFs = stagingDir.getFileSystem(conf);
+    FileSystem srcFs = srcPath.getFileSystem(conf);
+
+    if (!Utils.equalFs(srcFs, dstFs)) {
+      // File needs to be uploaded to the destination filesystem
+      dstPath = new Path(stagingDir, dst);
+      FileUtil.copy(srcFs, srcPath, dstFs, dstPath, false, conf);
+      dstFs.setPermission(dstPath, SKEIN_FILE_PERM);
+    }
+
+    FileStatus status = dstFs.getFileStatus(dstPath);
+
     LocalResource resource = LocalResource.newInstance(
-        ConverterUtils.getYarnUrlFromURI(dest.toUri()),
-        LocalResourceType.FILE,
+        ConverterUtils.getYarnUrlFromPath(dstPath),
+        type,
         LocalResourceVisibility.APPLICATION,
         status.getLen(),
         status.getModificationTime());
-    localResources.put(target, resource);
+
+    localResources.put(dst, resource);
   }
 }

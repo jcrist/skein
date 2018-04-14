@@ -48,14 +48,14 @@ public class ClientServlet extends HttpServlet {
     ApplicationId appId = getAppId(req);
 
     if (appId == null) {
-      ServletHelpers.sendError(resp, 404, "Malformed request");
+      Utils.sendError(resp, 404, "Malformed request");
       return;
     }
 
     ApplicationReport report = client.getApplicationReport(appId);
 
     if (report == null) {
-      ServletHelpers.sendError(resp, 404, "Unknown ApplicationID");
+      Utils.sendError(resp, 404, "Unknown ApplicationID");
       return;
     }
 
@@ -81,14 +81,14 @@ public class ClientServlet extends HttpServlet {
     ApplicationId appId = getAppId(req);
 
     if (appId != null) {
-      ServletHelpers.sendError(resp, 400, "Malformed Request");
+      Utils.sendError(resp, 400, "Malformed Request");
       return;
     }
 
     try {
       appId = client.submit();
     } catch (Exception exc) {
-      ServletHelpers.sendError(resp, 400, "Failed to launch application");
+      Utils.sendError(resp, 400, "Failed to launch application");
       return;
     }
     OutputStream out = resp.getOutputStream();
@@ -103,14 +103,14 @@ public class ClientServlet extends HttpServlet {
     ApplicationId appId = getAppId(req);
 
     if (appId == null) {
-      ServletHelpers.sendError(resp, 400, "Malformed Request");
+      Utils.sendError(resp, 400, "Malformed Request");
       return;
     }
 
     if (client.killApplication(appId)) {
       resp.setStatus(204);
     } else {
-      ServletHelpers.sendError(resp, 404, "Failed to kill application");
+      Utils.sendError(resp, 404, "Failed to kill application");
     }
   }
 }
