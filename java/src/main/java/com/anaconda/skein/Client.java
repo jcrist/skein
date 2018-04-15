@@ -1,9 +1,7 @@
 package com.anaconda.skein;
 
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -12,7 +10,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -54,9 +51,11 @@ public class Client {
   private static final Logger LOG = LogManager.getLogger(Client.class);
 
   // Owner rwx (700)
-  private FsPermission SKEIN_DIR_PERM = FsPermission.createImmutable((short)448);
+  private static final FsPermission SKEIN_DIR_PERM =
+      FsPermission.createImmutable((short)448);
   // Owner rw, world r (644)
-  private FsPermission SKEIN_FILE_PERM = FsPermission.createImmutable((short)420);
+  private static final FsPermission SKEIN_FILE_PERM =
+      FsPermission.createImmutable((short)420);
 
   private Configuration conf;
 
