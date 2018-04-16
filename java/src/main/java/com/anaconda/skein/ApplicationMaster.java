@@ -44,7 +44,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.servlet.DispatcherType;
 
-
 public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
        NMClientAsync.CallbackHandler {
 
