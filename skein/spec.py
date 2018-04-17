@@ -268,21 +268,20 @@ class Service(Base):
         Shell commands to startup the service. Commands are run in the order
         provided, with subsequent commands only run if the prior commands
         succeeded.
-    wait_for : list, optional
-        A list of string keys to wait for in the keystore before starting the
-        service.
+    depends : list, optional
+        A list of string keys in the keystore that this service depends on. The
+        service will not be started until these keys are present.
     """
-    __slots__ = ('instances', 'resources', 'files', 'env', 'commands',
-                 'wait_for')
+    __slots__ = ('instances', 'resources', 'files', 'env', 'commands', 'depends')
 
     def __init__(self, instances=1, resources=None, files=None,
-                 env=None, commands=None, wait_for=None):
+                 env=None, commands=None, depends=None):
         self.instances = instances
         self.resources = resources
         self.files = files
         self.env = env
         self.commands = commands
-        self.wait_for = wait_for
+        self.depends = depends
 
         self._validate()
 
@@ -306,8 +305,8 @@ class Service(Base):
         if not (self.commands is None or is_list_of(self.commands, str)):
             raise TypeError("commands must be a list of str, or None")
 
-        if not (self.wait_for is None or is_list_of(self.wait_for, str)):
-            raise TypeError("wait_for must be a list of str, or None")
+        if not (self.depends is None or is_list_of(self.depends, str)):
+            raise TypeError("depends must be a list of str, or None")
 
     @classmethod
     @implements(Base.from_dict)
@@ -326,7 +325,7 @@ class Service(Base):
                   'files': files,
                   'env': obj.get('env'),
                   'commands': obj.get('commands'),
-                  'wait_for': obj.get('wait_for')}
+                  'depends': obj.get('depends')}
 
         if 'instances' in obj:
             kwargs['instances'] = obj['instances']
