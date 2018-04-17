@@ -30,3 +30,10 @@ class cached_property(object):
 
         res = obj.__dict__[self.func.__name__] = self.func(obj)
         return res
+
+
+def implements(f):
+    def decorator(g):
+        g.__doc__ = f.__doc__
+        return g
+    return decorator
