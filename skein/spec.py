@@ -6,6 +6,8 @@ import os
 from .compatibility import urlparse
 from .utils import implements
 
+__all__ = ('Job', 'Service', 'Resources', 'File')
+
 
 def is_list_of(x, typ):
     return isinstance(x, list) and all(isinstance(i, typ) for i in x)
@@ -171,6 +173,9 @@ class Resources(Base):
 
         self._validate()
 
+    def __repr__(self):
+        return 'Resources<memory=%d, vcores=%d>' % (self.memory, self.vcores)
+
     def _validate(self):
         if not is_bounded_int(self.vcores, min=1):
             raise ValueError("vcores must be a positive integer")
@@ -204,6 +209,9 @@ class File(Base):
 
         self._validate()
 
+    def __repr__(self):
+        return 'File<source=%r, ...>' % self.source
+
     def _validate(self):
         if not isinstance(self.source, str):
             raise TypeError("source must be a str")
@@ -219,7 +227,12 @@ class File(Base):
         cls._check_keys(obj, [kind, 'dest'])
         path = obj[kind]
         if 'dest' not in obj:
-            dest = urlparse(path).path
+            path = urlparse(path).path
+            base, name = os.path.split(path)
+            if name is None:
+                raise ValueError("Distributed files must be files/archives, "
+                                 "not directories")
+            dest = name
         return cls(source=path, dest=dest, kind=kind.upper())
 
     @classmethod
@@ -272,6 +285,9 @@ class Service(Base):
         self.wait_for = wait_for
 
         self._validate()
+
+    def __repr__(self):
+        return 'Service<instances=%d, ...>' % self.instances
 
     def _validate(self):
         if not is_bounded_int(self.instances, min=0):
@@ -338,6 +354,9 @@ class Job(Base):
         self.services = services
 
         self._validate()
+
+    def __repr__(self):
+        return 'Job<name=%r, queue=%r, services=...>' % (self.name, self.queue)
 
     def _validate(self):
         if not isinstance(self.name, str):
