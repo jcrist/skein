@@ -1,6 +1,5 @@
 package com.anaconda.skein;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -14,11 +13,9 @@ import javax.servlet.http.HttpServletResponse;
 
 public class ClientServlet extends HttpServlet {
   private final Client client;
-  private final ObjectMapper mapper;
 
   public ClientServlet(Client client) {
     this.client = client;
-    this.mapper = new ObjectMapper();
   }
 
   private ApplicationId appIdFromString(String appId) {
@@ -58,7 +55,7 @@ public class ClientServlet extends HttpServlet {
       return;
     }
 
-    ObjectNode objectNode = mapper.createObjectNode();
+    ObjectNode objectNode = Msg.MAPPER.createObjectNode();
     objectNode.put("id", appId.toString());
     objectNode.put("state", report.getYarnApplicationState().toString());
     objectNode.put("finalStatus", report.getFinalApplicationStatus().toString());
@@ -68,7 +65,7 @@ public class ClientServlet extends HttpServlet {
     objectNode.put("rpcPort", report.getRpcPort());
 
     OutputStream out = resp.getOutputStream();
-    mapper.writeValue(out, objectNode);
+    Msg.MAPPER.writeValue(out, objectNode);
     out.close();
   }
 
@@ -85,7 +82,7 @@ public class ClientServlet extends HttpServlet {
 
     Msg.Job job;
     try {
-      job = mapper.readValue(req.getInputStream(), Msg.Job.class);
+      job = Msg.MAPPER.readValue(req.getInputStream(), Msg.Job.class);
       job.validate();
     } catch (IOException exc) {
       Utils.sendError(resp, 400, exc.getMessage());
