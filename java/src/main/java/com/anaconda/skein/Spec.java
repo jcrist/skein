@@ -5,6 +5,20 @@ import java.util.Map;
 
 public class Spec {
 
+  private static void throwIfNull(Object obj, String param)
+      throws IllegalArgumentException {
+    if (obj == null) {
+      throw new IllegalArgumentException(param + " must be non-null");
+    }
+  }
+
+  private static void throwIfNonPositive(Integer i, String param)
+      throws IllegalArgumentException {
+    if (i <= 0) {
+      throw new IllegalArgumentException(param + " must be > 0");
+    }
+  }
+
   public static class Resource {
     private Integer vcores;
     private Integer memory;
@@ -21,6 +35,14 @@ public class Spec {
 
     public Integer getMemory() {
       return memory;
+    }
+
+    public void validate() throws IllegalArgumentException {
+      throwIfNull(vcores, "vcores");
+      throwIfNonPositive(vcores, "vcores");
+
+      throwIfNull(memory, "memory");
+      throwIfNonPositive(memory, "memory");
     }
   }
 
@@ -47,10 +69,19 @@ public class Spec {
     public String getKind() {
       return kind;
     }
+
+    public void validate() throws IllegalArgumentException {
+      throwIfNull(source, "source");
+      throwIfNull(dest, "dest");
+      throwIfNull(kind, "kind");
+      if (!kind.equals("FILE") || !kind.equals("ARCHIVE")) {
+        throw new IllegalArgumentException("kind must be either FILE or ARCHIVE");
+      }
+    }
   }
 
   public static class Service {
-    private int instances;
+    private Integer instances;
     private Resource resources;
     private List<File> files;
     private Map<String, String> env;
@@ -67,7 +98,7 @@ public class Spec {
               + "depends: " + depends);
     }
 
-    public int getInstances() {
+    public Integer getInstances() {
       return instances;
     }
 
@@ -89,6 +120,20 @@ public class Spec {
 
     public List<String> getDepends() {
       return depends;
+    }
+
+    public void validate() throws IllegalArgumentException {
+      throwIfNull(instances, "instances");
+      throwIfNonPositive(instances, "instances");
+
+      throwIfNull(resources, "resources");
+      resources.validate();
+
+      if (files != null) {
+        for (File f: files) {
+          f.validate();
+        }
+      }
     }
   }
 
@@ -114,6 +159,17 @@ public class Spec {
 
     public Map<String, Service> getServices() {
       return services;
+    }
+
+    public void validate() throws IllegalArgumentException {
+      throwIfNull(name, "name");
+      throwIfNull(queue, "queue");
+
+      if (services != null) {
+        for (Service s: services.values()) {
+          s.validate();
+        }
+      }
     }
   }
 }
