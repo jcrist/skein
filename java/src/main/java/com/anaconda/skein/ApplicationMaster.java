@@ -49,28 +49,25 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   private static final Logger LOG = LogManager.getLogger(ApplicationMaster.class);
 
-  private static final EnumSet<DispatcherType> REQUEST_SCOPE =
-      EnumSet.of(DispatcherType.REQUEST);
-
   private Configuration conf;
 
-  private static String secret;
+  private String secret;
 
-  private static Server server;
+  private Server server;
 
   private final ConcurrentHashMap<String, byte[]> configuration =
       new ConcurrentHashMap<String, byte[]>();
 
-  private static Integer privatePort = -1;
-  private static Integer publicPort = -1;
-  private String hostname = "";
+  private Integer privatePort;
+  private Integer publicPort;
+  private String hostname;
 
   private int numTotal = 1;
   private AtomicInteger numCompleted = new AtomicInteger();
   private AtomicInteger numFailed = new AtomicInteger();
   private AtomicInteger numAllocated = new AtomicInteger();
 
-  private ConcurrentHashMap<ContainerId, Container> containers =
+  private final ConcurrentHashMap<ContainerId, Container> containers =
       new ConcurrentHashMap<ContainerId, Container>();
 
   private AMRMClientAsync rmClient;
@@ -101,7 +98,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     privateContext.setVirtualHosts(new String[] {"@Private"});
     privateContext.addServlet(keyVal, "/keys/*");
     FilterHolder holder =
-        privateContext.addFilter(HmacFilter.class, "/*", REQUEST_SCOPE);
+        privateContext.addFilter(HmacFilter.class, "/*",
+                                 EnumSet.of(DispatcherType.REQUEST));
     holder.setInitParameter("secret", secret);
     handlers.addHandler(privateContext);
 

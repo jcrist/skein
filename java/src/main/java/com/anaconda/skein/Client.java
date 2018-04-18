@@ -60,7 +60,7 @@ public class Client {
 
   private YarnClient yarnClient;
 
-  private String amJar = "";
+  private String amJar;
 
   private int amMemory = 10;
 
@@ -70,9 +70,9 @@ public class Client {
 
   private int port;
 
-  private static String secret = "foobar";
+  private String secret;
 
-  private static Server server;
+  private Server server;
 
   private void startupRestServer() throws Exception {
     // Configure the server

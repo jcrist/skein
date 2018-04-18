@@ -10,7 +10,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 
 public class RequestWrapper extends HttpServletRequestWrapper {
-  private byte[] body;
+  private final byte[] body;
 
   public RequestWrapper(HttpServletRequest request, byte[] body) {
     super(request);
@@ -27,10 +27,10 @@ public class RequestWrapper extends HttpServletRequestWrapper {
     return new BufferedReader(new InputStreamReader(getInputStream()));
   }
 
-  public class CachedServletInputStream extends ServletInputStream {
-    private ByteArrayInputStream input;
+  private static class CachedServletInputStream extends ServletInputStream {
+    private final ByteArrayInputStream input;
 
-    public CachedServletInputStream(byte[] body) {
+    private CachedServletInputStream(byte[] body) {
       input = new ByteArrayInputStream(body);
     }
 

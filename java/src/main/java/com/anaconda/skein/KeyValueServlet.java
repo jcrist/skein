@@ -14,7 +14,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class KeyValueServlet extends HttpServlet {
-  private static ConcurrentHashMap<String, byte[]> keystore;
+  private final ConcurrentHashMap<String, byte[]> keystore;
 
   public KeyValueServlet(ConcurrentHashMap<String, byte[]> keystore) {
     this.keystore = keystore;
