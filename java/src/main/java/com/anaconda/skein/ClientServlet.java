@@ -13,10 +13,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class ClientServlet extends HttpServlet {
-  private Client client;
+  private final Client client;
+  private final ObjectMapper mapper;
 
   public ClientServlet(Client client) {
     this.client = client;
+    this.mapper = new ObjectMapper();
   }
 
   private ApplicationId appIdFromString(String appId) {
@@ -56,7 +58,6 @@ public class ClientServlet extends HttpServlet {
       return;
     }
 
-    ObjectMapper mapper = new ObjectMapper();
     ObjectNode objectNode = mapper.createObjectNode();
     objectNode.put("id", appId.toString());
     objectNode.put("state", report.getYarnApplicationState().toString());
@@ -82,8 +83,20 @@ public class ClientServlet extends HttpServlet {
       return;
     }
 
+    Msg.Job job;
     try {
-      appId = client.submit();
+      job = mapper.readValue(req.getInputStream(), Msg.Job.class);
+      job.validate();
+    } catch (IOException exc) {
+      Utils.sendError(resp, 400, exc.getMessage());
+      return;
+    } catch (IllegalArgumentException exc) {
+      Utils.sendError(resp, 400, exc.getMessage());
+      return;
+    }
+
+    try {
+      appId = client.submit(job);
     } catch (Exception exc) {
       Utils.sendError(resp, 400, "Failed to launch application");
       return;

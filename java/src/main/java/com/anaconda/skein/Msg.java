@@ -3,7 +3,7 @@ package com.anaconda.skein;
 import java.util.List;
 import java.util.Map;
 
-public class Spec {
+public class Msg {
 
   private static void throwIfNull(Object obj, String param)
       throws IllegalArgumentException {
@@ -74,7 +74,7 @@ public class Spec {
       throwIfNull(source, "source");
       throwIfNull(dest, "dest");
       throwIfNull(kind, "kind");
-      if (!kind.equals("FILE") || !kind.equals("ARCHIVE")) {
+      if (!(kind.equals("FILE") || kind.equals("ARCHIVE"))) {
         throw new IllegalArgumentException("kind must be either FILE or ARCHIVE");
       }
     }

@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -12,13 +14,19 @@ import java.net.UnknownHostException;
 import javax.servlet.http.HttpServletResponse;
 
 public class Utils {
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
   /** Return a formatted error response. **/
   public static void sendError(HttpServletResponse resp, int code, String msg)
       throws IOException {
     resp.resetBuffer();
     resp.setStatus(code);
     resp.setHeader("Content-Type", "application/json");
-    resp.getOutputStream().print("{\"errorMessage\":\"" + msg + "\"}");
+
+    ObjectNode node = MAPPER.createObjectNode();
+    node.put("error", msg);
+    MAPPER.writeValue(resp.getOutputStream(), node);
+
     resp.flushBuffer();
   }
 

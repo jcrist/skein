@@ -142,13 +142,18 @@ class Client(object):
     def _handle_exceptions(self, resp):
         if resp.status_code == 401:
             raise UnauthorizedError("Failed to authenticate with Server")
-        else:
-            raise ResourceManagerError("Server responded with an unhandled "
-                                       "status code: %d" % resp.status_code)
 
-    def submit(self):
+        try:
+            msg = resp.json()['error']
+        except Exception:
+            msg = ("Server responded with an unhandled status "
+                   "code: %d" % resp.status_code)
+
+        raise ResourceManagerError(msg)
+
+    def submit(self, job):
         url = '%s/apps/' % self._address
-        resp = requests.post(url, auth=self._auth)
+        resp = requests.post(url, auth=self._auth, json=job.to_dict())
         if resp.status_code != 200:
             self._handle_exceptions(resp)
         app_id = resp.content.decode()

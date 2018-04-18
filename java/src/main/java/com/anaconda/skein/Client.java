@@ -163,7 +163,7 @@ public class Client {
   }
 
   /** Start a new application. **/
-  public ApplicationId submit() throws IOException, YarnException {
+  public ApplicationId submit(Msg.Job job) throws IOException, YarnException {
     YarnClientApplication app = yarnClient.createApplication();
     ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
