@@ -35,15 +35,15 @@ public class KeyValueServlet extends HttpServlet {
     if (key == null) {
       // Handle /keys or /keys/
       // Returns an object like {'keys': [key1, key2, ...]}
-      ArrayNode arrayNode = Msg.MAPPER.createArrayNode();
-      ObjectNode objectNode = Msg.MAPPER.createObjectNode();
+      ArrayNode arrayNode = Utils.MAPPER.createArrayNode();
+      ObjectNode objectNode = Utils.MAPPER.createObjectNode();
       for (String key2 : keystore.keySet()) {
         arrayNode.add(key2);
       }
       objectNode.putPOJO("keys", arrayNode);
 
       OutputStream out = resp.getOutputStream();
-      Msg.MAPPER.writeValue(out, objectNode);
+      Utils.MAPPER.writeValue(out, objectNode);
       out.close();
       return;
     }

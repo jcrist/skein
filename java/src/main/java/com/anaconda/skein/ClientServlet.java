@@ -55,7 +55,7 @@ public class ClientServlet extends HttpServlet {
       return;
     }
 
-    ObjectNode objectNode = Msg.MAPPER.createObjectNode();
+    ObjectNode objectNode = Utils.MAPPER.createObjectNode();
     objectNode.put("id", appId.toString());
     objectNode.put("state", report.getYarnApplicationState().toString());
     objectNode.put("finalStatus", report.getFinalApplicationStatus().toString());
@@ -65,7 +65,7 @@ public class ClientServlet extends HttpServlet {
     objectNode.put("rpcPort", report.getRpcPort());
 
     OutputStream out = resp.getOutputStream();
-    Msg.MAPPER.writeValue(out, objectNode);
+    Utils.MAPPER.writeValue(out, objectNode);
     out.close();
   }
 
@@ -80,9 +80,9 @@ public class ClientServlet extends HttpServlet {
       return;
     }
 
-    Msg.Job job;
+    Spec.Job job;
     try {
-      job = Msg.MAPPER.readValue(req.getInputStream(), Msg.Job.class);
+      job = Utils.MAPPER.readValue(req.getInputStream(), Spec.Job.class);
       job.validate();
     } catch (IOException exc) {
       Utils.sendError(resp, 400, exc.getMessage());
