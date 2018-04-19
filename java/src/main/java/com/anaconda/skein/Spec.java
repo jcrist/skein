@@ -1,6 +1,7 @@
 package com.anaconda.skein;
 
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.Resource;
 
 import java.util.List;
@@ -14,7 +15,7 @@ public class Spec {
     }
   }
 
-  private static void throwIfNonPositive(Integer i, String param)
+  private static void throwIfNonPositive(int i, String param)
       throws IllegalArgumentException {
     if (i <= 0) {
       throw new IllegalArgumentException(param + " must be > 0");
@@ -24,49 +25,71 @@ public class Spec {
   public static class File {
     private String source;
     private String dest;
-    private String kind;
+    private LocalResourceType type;
+
+    public File(String source, String dest, LocalResourceType type) {
+      this.source = source;
+      this.dest = dest;
+      this.type = type;
+    }
 
     public String toString() {
       return ("File<"
               + "source=" + source + ", "
               + "dest=" + dest + ", "
-              + "kind=" + kind + ">");
+              + "type=" + type + ">");
     }
 
-    public String getSource() {
-      return source;
-    }
+    public void setSource(String source) { this.source = source; }
+    public String getSource() { return source; }
 
-    public String getDest() {
-      return dest;
-    }
+    public void setDest(String dest) { this.dest = dest; }
+    public String getDest() { return dest; }
 
-    public String getKind() {
-      return kind;
-    }
+    public void setType(LocalResourceType type) { this.type = type; }
+    public LocalResourceType getType() { return type; }
 
     public void validate() throws IllegalArgumentException {
       throwIfNull(source, "source");
       throwIfNull(dest, "dest");
-      throwIfNull(kind, "kind");
-      if (!(kind.equals("FILE") || kind.equals("ARCHIVE"))) {
-        throw new IllegalArgumentException("kind must be either FILE or ARCHIVE");
+      throwIfNull(type, "type");
+      if (type.equals(LocalResourceType.PATTERN)) {
+        throw new IllegalArgumentException("PATTERN type not currently supported");
       }
     }
   }
 
   public static class Service {
-    private Integer instances;
+    private int instances;
     private Resource resources;
-
-    // User -> Client: files is set, localResources is null
-    // Client -> ApplicationMaster: localResources is set, files is null
     private List<File> files;
     private Map<String, LocalResource> localResources;
-
     private Map<String, String> env;
     private List<String> commands;
     private List<String> depends;
+
+    public Service(int instances, Resource resources, List<File> files,
+                   Map<String, String> env, List<String> commands,
+                   List<String> depends) {
+      this.instances = instances;
+      this.resources = resources;
+      this.files = files;
+      this.env = env;
+      this.commands = commands;
+      this.depends = depends;
+    }
+
+    public Service(int instances, Resource resources,
+                   Map<String, LocalResource> localResources,
+                   Map<String, String> env, List<String> commands,
+                   List<String> depends) {
+      this.instances = instances;
+      this.resources = resources;
+      this.localResources = localResources;
+      this.env = env;
+      this.commands = commands;
+      this.depends = depends;
+    }
 
     public String toString() {
       return ("Service:\n"
@@ -79,42 +102,36 @@ public class Spec {
               + "depends: " + depends);
     }
 
-    public Integer getInstances() {
-      return instances;
-    }
+    public void setInstances(int instances) { this.instances = instances; }
+    public int getInstances() { return instances; }
 
-    public Resource getResources() {
-      return resources;
-    }
+    public void setResources(Resource resources) { this.resources = resources; }
+    public Resource getResources() { return resources; }
 
-    public List<File> getFiles() {
-      return files;
-    }
+    public void setFiles(List<File> files) { this.files = files; }
+    public List<File> getFiles() { return files; }
 
-    public Map<String, LocalResource> getLocalResources() {
-      return localResources;
-    }
+    public void setLocalResources(Map<String, LocalResource> r) { this.localResources = r; }
+    public Map<String, LocalResource> getLocalResources() { return localResources; }
 
-    public Map<String, String> getEnv() {
-      return env;
-    }
+    public void setEnv(Map<String, String> env) { this.env = env; }
+    public Map<String, String> getEnv() { return env; }
 
-    public List<String> getCommands() {
-      return commands;
-    }
+    public void setCommands(List<String> commands) { this.commands = commands; }
+    public List<String> getCommands() { return commands; }
 
-    public List<String> getDepends() {
-      return depends;
-    }
+    public void setDepends(List<String> depends) { this.depends = depends; }
+    public List<String> getDepends() { return depends; }
 
     public void validate(boolean uploaded) throws IllegalArgumentException {
-      throwIfNull(instances, "instances");
       throwIfNonPositive(instances, "instances");
 
       throwIfNull(resources, "resources");
       throwIfNonPositive(resources.getMemory(), "resources.memory");
       throwIfNonPositive(resources.getVirtualCores(), "resources.vcores");
 
+      // User -> Client: files is set, localResources is null
+      // Client -> ApplicationMaster: localResources is set, files is null
       if (uploaded) {
         if (files != null) {
           throw new IllegalArgumentException("unexpected field: files");
@@ -137,6 +154,12 @@ public class Spec {
     private String queue;
     private Map<String, Service> services;
 
+    public Job(String name, String queue, Map<String, Service> services) {
+      this.name = name;
+      this.queue = queue;
+      this.services = services;
+    }
+
     public String toString() {
       return ("Job<"
               + "name: " + name + ", "
@@ -144,17 +167,14 @@ public class Spec {
               + "services: " + services + ">");
     }
 
-    public String getName() {
-      return name;
-    }
+    public void setName(String name) { this.name = name; }
+    public String getName() { return name; }
 
-    public String getQueue() {
-      return queue;
-    }
+    public void setQueue(String queue) { this.queue = queue; }
+    public String getQueue() { return queue; }
 
-    public Map<String, Service> getServices() {
-      return services;
-    }
+    public void setServices(Map<String, Service> services) { this.services = services; }
+    public Map<String, Service> getServices() { return services; }
 
     public void validate(boolean uploaded) throws IllegalArgumentException {
       throwIfNull(name, "name");

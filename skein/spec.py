@@ -195,17 +195,17 @@ class File(Base):
     dest : str, optional
         The localized path on the cluster to the file/archive. If not
         specified, the file name is used.
-    kind : {'FILE', 'ARCHIVE'}, optional
-        The kind of file to distribute. Archive's are automatically extracted
+    type : {'FILE', 'ARCHIVE'}, optional
+        The type of file to distribute. Archive's are automatically extracted
         by yarn into a directory with the same name as ``dest``. Default is
         ``'FILE'``.
     """
-    __slots__ = ('source', 'dest', 'kind')
+    __slots__ = ('source', 'dest', 'type')
 
-    def __init__(self, source, dest=None, kind='FILE'):
+    def __init__(self, source, dest=None, type='FILE'):
         self.source = source
         self.dest = dest
-        self.kind = kind
+        self.type = type
 
         self._validate()
 
@@ -219,13 +219,13 @@ class File(Base):
         if not isinstance(self.dest, str):
             raise TypeError("dest must be a str")
 
-        if self.kind not in {'FILE', 'ARCHIVE'}:
-            raise ValueError("kind must be 'File' or 'ARCHIVE'")
+        if self.type not in {'FILE', 'ARCHIVE'}:
+            raise ValueError("type must be 'File' or 'ARCHIVE'")
 
     @classmethod
-    def _from_dict_shorthand(cls, obj, kind):
-        cls._check_keys(obj, [kind, 'dest'])
-        path = obj[kind]
+    def _from_dict_shorthand(cls, obj, type):
+        cls._check_keys(obj, [type, 'dest'])
+        path = obj[type]
         if 'dest' not in obj:
             path = urlparse(path).path
             base, name = os.path.split(path)
@@ -233,7 +233,7 @@ class File(Base):
                 raise ValueError("Distributed files must be files/archives, "
                                  "not directories")
             dest = name
-        return cls(source=path, dest=dest, kind=kind.upper())
+        return cls(source=path, dest=dest, type=type.upper())
 
     @classmethod
     @implements(Base.from_dict)
