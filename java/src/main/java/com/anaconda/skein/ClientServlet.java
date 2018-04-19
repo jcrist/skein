@@ -83,7 +83,7 @@ public class ClientServlet extends HttpServlet {
     Spec.Job job;
     try {
       job = Utils.MAPPER.readValue(req.getInputStream(), Spec.Job.class);
-      job.validate();
+      job.validate(false);
     } catch (IOException exc) {
       Utils.sendError(resp, 400, exc.getMessage());
       return;

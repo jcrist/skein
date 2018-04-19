@@ -1,5 +1,6 @@
 package com.anaconda.skein;
 
+import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.Resource;
 
 import java.util.List;
@@ -57,7 +58,12 @@ public class Spec {
   public static class Service {
     private Integer instances;
     private Resource resources;
+
+    // User -> Client: files is set, localResources is null
+    // Client -> ApplicationMaster: localResources is set, files is null
     private List<File> files;
+    private Map<String, LocalResource> localResources;
+
     private Map<String, String> env;
     private List<String> commands;
     private List<String> depends;
@@ -67,6 +73,7 @@ public class Spec {
               + "instances: " + instances + "\n"
               + "resources: " + resources + "\n"
               + "files: " + files + "\n"
+              + "localResources: " + localResources + "\n"
               + "env: " + env + "\n"
               + "commands: " + commands + "\n"
               + "depends: " + depends);
@@ -84,6 +91,10 @@ public class Spec {
       return files;
     }
 
+    public Map<String, LocalResource> getLocalResources() {
+      return localResources;
+    }
+
     public Map<String, String> getEnv() {
       return env;
     }
@@ -96,7 +107,7 @@ public class Spec {
       return depends;
     }
 
-    public void validate() throws IllegalArgumentException {
+    public void validate(boolean uploaded) throws IllegalArgumentException {
       throwIfNull(instances, "instances");
       throwIfNonPositive(instances, "instances");
 
@@ -104,9 +115,18 @@ public class Spec {
       throwIfNonPositive(resources.getMemory(), "resources.memory");
       throwIfNonPositive(resources.getVirtualCores(), "resources.vcores");
 
-      if (files != null) {
-        for (File f: files) {
-          f.validate();
+      if (uploaded) {
+        if (files != null) {
+          throw new IllegalArgumentException("unexpected field: files");
+        }
+      } else {
+        if (localResources != null) {
+          throw new IllegalArgumentException("unexpected field: localResources");
+        }
+        if (files != null) {
+          for (File f : files) {
+            f.validate();
+          }
         }
       }
     }
@@ -136,7 +156,7 @@ public class Spec {
       return services;
     }
 
-    public void validate() throws IllegalArgumentException {
+    public void validate(boolean uploaded) throws IllegalArgumentException {
       throwIfNull(name, "name");
       throwIfNull(queue, "queue");
       throwIfNull(services, "services");
@@ -144,7 +164,7 @@ public class Spec {
         throw new IllegalArgumentException("There must be at least one service");
       }
       for (Service s: services.values()) {
-        s.validate();
+        s.validate(uploaded);
       }
     }
   }
