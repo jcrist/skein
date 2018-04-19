@@ -27,6 +27,8 @@ public class Spec {
     private String dest;
     private LocalResourceType type;
 
+    public File() {}
+
     public File(String source, String dest, LocalResourceType type) {
       this.source = source;
       this.dest = dest;
@@ -67,6 +69,8 @@ public class Spec {
     private Map<String, String> env;
     private List<String> commands;
     private List<String> depends;
+
+    public Service() {}
 
     public Service(int instances, Resource resources, List<File> files,
                    Map<String, String> env, List<String> commands,
@@ -153,6 +157,8 @@ public class Spec {
     private String name;
     private String queue;
     private Map<String, Service> services;
+
+    public Job() {}
 
     public Job(String name, String queue, Map<String, Service> services) {
       this.name = name;
