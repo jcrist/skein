@@ -16,6 +16,18 @@ import javax.servlet.http.HttpServletResponse;
 public class Utils {
   public static final ObjectMapper MAPPER = new SkeinObjectMapper();
 
+  private static final char[] HEX = "0123456789ABCDEF".toCharArray();
+
+  public static String hexEncode(byte[] bytes) {
+    char[] out = new char[bytes.length * 2];
+    for (int j = 0; j < bytes.length; j++) {
+      int v = bytes[j] & 0xFF;
+      out[j * 2] = HEX[v >>> 4];
+      out[j * 2 + 1] = HEX[v & 0x0F];
+    }
+    return new String(out);
+  }
+
   /** Return a formatted error response. **/
   public static void sendError(HttpServletResponse resp, int code, String msg)
       throws IOException {

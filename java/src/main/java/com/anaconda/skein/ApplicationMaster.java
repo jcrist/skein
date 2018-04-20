@@ -150,7 +150,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     numAllocated.addAndGet(newContainers.size());
 
     List<String> commands = new ArrayList<String>();
-    commands.add("sleep 180 "
+    commands.add("sleep 10 "
                  + "1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
                  + "/container.stdout "
                  + "2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR

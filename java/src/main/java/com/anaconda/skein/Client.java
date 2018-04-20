@@ -36,9 +36,12 @@ import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -58,7 +61,11 @@ public class Client {
 
   private Configuration conf;
 
+  private FileSystem defaultFs;
+
   private YarnClient yarnClient;
+
+  private String classpath;
 
   private String amJar;
 
@@ -115,7 +122,7 @@ public class Client {
     }
   }
 
-  private void init(String[] args) {
+  private void init(String[] args) throws IOException {
     secret = System.getenv("SKEIN_SECRET_ACCESS_KEY");
     if (secret == null) {
       LOG.fatal("Couldn't find 'SKEIN_SECRET_ACCESS_KEY' envar");
@@ -139,6 +146,18 @@ public class Client {
     amJar = args[0];
 
     conf = new YarnConfiguration();
+    defaultFs = FileSystem.get(conf);
+
+    // Build the classpath for running the appmaster
+    StringBuilder cpBuilder = new StringBuilder(Environment.CLASSPATH.$$());
+    cpBuilder.append(ApplicationConstants.CLASS_PATH_SEPARATOR).append("./*");
+    for (String c : conf.getStrings(
+          YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+          YarnConfiguration.DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH)) {
+      cpBuilder.append(ApplicationConstants.CLASS_PATH_SEPARATOR);
+      cpBuilder.append(c.trim());
+    }
+    classpath = cpBuilder.toString();
   }
 
   private void run() throws Exception {
@@ -162,78 +181,6 @@ public class Client {
     server.stop();
   }
 
-  /** Start a new application. **/
-  public ApplicationId submit(Spec.Job job) throws IOException, YarnException {
-    YarnClientApplication app = yarnClient.createApplication();
-    ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
-    ApplicationId appId = appContext.getApplicationId();
-
-    Map<String, LocalResource> localResources =
-        new HashMap<String, LocalResource>();
-
-    FileSystem fs = FileSystem.get(conf);
-    // Make the ~/.skein/app_id dir
-    Path appDir = new Path(fs.getHomeDirectory(), ".skein/" + appId.toString());
-    FileSystem.mkdirs(fs, appDir, SKEIN_DIR_PERM);
-
-    // Add the application master jar
-    addFile(localResources, amJar, LocalResourceType.FILE, appDir, "skein.jar");
-
-    StringBuilder classPath = new StringBuilder(Environment.CLASSPATH.$$());
-    classPath.append(ApplicationConstants.CLASS_PATH_SEPARATOR).append("./*");
-    for (String c : conf.getStrings(
-             YarnConfiguration.YARN_APPLICATION_CLASSPATH,
-             YarnConfiguration
-                 .DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH)) {
-      classPath.append(ApplicationConstants.CLASS_PATH_SEPARATOR);
-      classPath.append(c.trim());
-    }
-
-    Map<String, String> env = new HashMap<String, String>();
-    env.put("CLASSPATH", classPath.toString());
-    env.put("SKEIN_SECRET_ACCESS_KEY", secret);
-
-    String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
-    String command = (Environment.JAVA_HOME.$$() + "/bin/java "
-                      + "-Xmx" + amMemory + "m "
-                      + "com.anaconda.skein.ApplicationMaster "
-                      + "1>" + logdir + "/appmaster.stdout "
-                      + "2>" + logdir + "/appmaster.stderr");
-
-
-    List<String> commands = new ArrayList<String>();
-    commands.add(command);
-
-    ByteBuffer fsTokens = null;
-    if (UserGroupInformation.isSecurityEnabled()) {
-      Credentials credentials = new Credentials();
-      String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
-      if (tokenRenewer == null || tokenRenewer.length() == 0) {
-        throw new IOException("Can't determine Yarn ResourceManager Kerberos "
-                              + "principal for the RM to use as renewer");
-      }
-
-      fs.addDelegationTokens(tokenRenewer, credentials);
-      DataOutputBuffer dob = new DataOutputBuffer();
-      credentials.writeTokenStorageToStream(dob);
-      fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
-    }
-
-    ContainerLaunchContext amContainer = ContainerLaunchContext.newInstance(
-        localResources, env, commands, null, fsTokens, null);
-
-    appContext.setAMContainerSpec(amContainer);
-    appContext.setApplicationName("skein");
-    appContext.setResource(Resource.newInstance(amMemory, amVCores));
-    appContext.setPriority(Priority.newInstance(0));
-    appContext.setQueue("default");
-
-    LOG.info("Submitting application...");
-    yarnClient.submitApplication(appContext);
-
-    return appId;
-  }
-
   /** Get information on a running application. **/
   public ApplicationReport getApplicationReport(ApplicationId appId) {
     try {
@@ -253,32 +200,150 @@ public class Client {
     return true;
   }
 
-  private void addFile(Map<String, LocalResource> localResources,
-                       String source, LocalResourceType type,
-                       Path stagingDir, String dst) throws IOException {
+  /** Start a new application. **/
+  public ApplicationId submit(Spec.Job job) throws IOException, YarnException {
+    // First validate the job request
+    job.validate(false);
 
+    // Get an application id. This is needed before doing anything else so we
+    // can upload additional files to the application directory
+    YarnClientApplication app = yarnClient.createApplication();
+    ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
+    ApplicationId appId = appContext.getApplicationId();
+
+    // Setup the LocalResources for the appmaster and containers
+    Map<String, LocalResource> localResources = setupAppDir(job, appId);
+
+    // Setup the appmaster environment variables
+    Map<String, String> env = new HashMap<String, String>();
+    env.put("CLASSPATH", classpath);
+    env.put("SKEIN_SECRET_ACCESS_KEY", secret);
+
+    // Setup the appmaster commands
+    String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
+    List<String> commands = Arrays.asList(
+        (Environment.JAVA_HOME.$$() + "/bin/java "
+         + "-Xmx" + amMemory + "m "
+         + "com.anaconda.skein.ApplicationMaster "
+         + "1>" + logdir + "/appmaster.stdout "
+         + "2>" + logdir + "/appmaster.stderr"));
+
+    // Add security tokens as needed
+    ByteBuffer fsTokens = null;
+    if (UserGroupInformation.isSecurityEnabled()) {
+      Credentials credentials = new Credentials();
+      String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
+      if (tokenRenewer == null || tokenRenewer.length() == 0) {
+        throw new IOException("Can't determine Yarn ResourceManager Kerberos "
+                              + "principal for the RM to use as renewer");
+      }
+
+      defaultFs.addDelegationTokens(tokenRenewer, credentials);
+      DataOutputBuffer dob = new DataOutputBuffer();
+      credentials.writeTokenStorageToStream(dob);
+      fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    }
+
+    ContainerLaunchContext amContext = ContainerLaunchContext.newInstance(
+        localResources, env, commands, null, fsTokens, null);
+
+    appContext.setAMContainerSpec(amContext);
+    appContext.setApplicationName(job.getName());
+    appContext.setResource(Resource.newInstance(amMemory, amVCores));
+    appContext.setPriority(Priority.newInstance(0));
+    appContext.setQueue(job.getQueue());
+
+    LOG.info("Submitting application...");
+    yarnClient.submitApplication(appContext);
+
+    return appId;
+  }
+
+  private Map<String, LocalResource> setupAppDir(Spec.Job job,
+        ApplicationId appId) throws IOException {
+
+    // Make the ~/.skein/app_id dir
+    Path appDir = new Path(defaultFs.getHomeDirectory(), ".skein/" + appId.toString());
+    FileSystem.mkdirs(defaultFs, appDir, SKEIN_DIR_PERM);
+
+    Map<Path, Path> uploadCache = new HashMap<Path, Path>();
+
+    // Setup the LocalResources for the services
+    for (Spec.Service s: job.getServices().values()) {
+      finalizeService(s, uploadCache, appDir);
+    }
+    job.validate(true);
+
+    // Write the job specification to file
+    Path specPath = new Path(appDir, "spec.json");
+    LOG.info("Writing job specification to " + specPath);
+    OutputStream out = defaultFs.create(specPath);
+    try {
+      Utils.MAPPER.writeValue(out, job);
+    } finally {
+      out.close();
+    }
+
+    // Setup the LocalResources for the application master
+    Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
+    addFile(uploadCache, appDir, lr, amJar, "skein.jar", LocalResourceType.FILE);
+    lr.put("spec.json", localResourceFromPath(specPath, LocalResourceType.FILE));
+
+    return lr;
+  }
+
+  private void finalizeService(Spec.Service service, Map<Path, Path> uploadCache,
+                               Path appDir) throws IOException {
+    if (service.getFiles() != null) {
+      Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
+      for (Spec.File f : service.getFiles()) {
+        addFile(uploadCache, appDir, lr, f.getSource(), f.getDest(), f.getType());
+      }
+      service.setLocalResources(lr);
+    }
+    service.setFiles(null);
+  }
+
+  private LocalResource localResourceFromPath(Path path, LocalResourceType type)
+      throws IOException {
+    FileStatus status = defaultFs.getFileStatus(path);
+    return LocalResource.newInstance(ConverterUtils.getYarnUrlFromPath(path),
+                                     type,
+                                     LocalResourceVisibility.APPLICATION,
+                                     status.getLen(),
+                                     status.getModificationTime());
+  }
+
+  private void addFile(Map<Path, Path> uploadCache, Path appDir,
+                       Map<String, LocalResource> localResources,
+                       String source, String dst, LocalResourceType type)
+      throws IOException {
     Path srcPath = Utils.normalizePath(source);
     Path dstPath = srcPath;
 
-    FileSystem dstFs = stagingDir.getFileSystem(conf);
+    FileSystem dstFs = appDir.getFileSystem(conf);
     FileSystem srcFs = srcPath.getFileSystem(conf);
 
     if (!Utils.equalFs(srcFs, dstFs)) {
-      // File needs to be uploaded to the destination filesystem
-      dstPath = new Path(stagingDir, dst);
-      FileUtil.copy(srcFs, srcPath, dstFs, dstPath, false, conf);
-      dstFs.setPermission(dstPath, SKEIN_FILE_PERM);
+      dstPath = uploadCache.get(srcPath);
+      if (dstPath == null) {
+        // File needs to be uploaded to the destination filesystem
+        MessageDigest md;
+        try {
+          md = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException ex) {
+          throw new IllegalArgumentException("MD5 not supported on this platform");
+        }
+        md.update(srcPath.toString().getBytes());
+        String suffix = Utils.hexEncode(md.digest());
+        dstPath = new Path(appDir, srcPath.getName() + "-" + suffix);
+        LOG.info("Uploading " + srcPath + " to " + dstPath);
+        FileUtil.copy(srcFs, srcPath, dstFs, dstPath, false, conf);
+        dstFs.setPermission(dstPath, SKEIN_FILE_PERM);
+        uploadCache.put(srcPath, dstPath);
+      }
     }
 
-    FileStatus status = dstFs.getFileStatus(dstPath);
-
-    LocalResource resource = LocalResource.newInstance(
-        ConverterUtils.getYarnUrlFromPath(dstPath),
-        type,
-        LocalResourceVisibility.APPLICATION,
-        status.getLen(),
-        status.getModificationTime());
-
-    localResources.put(dst, resource);
+    localResources.put(dst, localResourceFromPath(dstPath, type));
   }
 }

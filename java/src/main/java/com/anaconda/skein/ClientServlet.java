@@ -83,11 +83,7 @@ public class ClientServlet extends HttpServlet {
     Spec.Job job;
     try {
       job = Utils.MAPPER.readValue(req.getInputStream(), Spec.Job.class);
-      job.validate(false);
-    } catch (IOException exc) {
-      Utils.sendError(resp, 400, exc.getMessage());
-      return;
-    } catch (IllegalArgumentException exc) {
+    } catch (Exception exc) {
       Utils.sendError(resp, 400, exc.getMessage());
       return;
     }
@@ -95,7 +91,7 @@ public class ClientServlet extends HttpServlet {
     try {
       appId = client.submit(job);
     } catch (Exception exc) {
-      Utils.sendError(resp, 400, "Failed to launch application");
+      Utils.sendError(resp, 400, exc.getMessage());
       return;
     }
     OutputStream out = resp.getOutputStream();
