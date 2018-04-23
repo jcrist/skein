@@ -198,7 +198,6 @@ public class Model {
   public static enum ContainerState {
     NEW,        // Just created
     WAITING,    // Waiting on service dependencies
-    READY,      // Ready to request
     REQUESTED,  // Container requested, waiting to run
     RUNNING,    // Currently running
     FINISHED,   // Successfully finished running

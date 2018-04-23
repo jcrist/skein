@@ -2,14 +2,13 @@ from __future__ import print_function, division, absolute_import
 
 import glob
 import hmac
-import json
 import os
 import select
 import socket
 import struct
 import subprocess
 from base64 import b64encode
-from collections import MutableMapping
+from collections import Mapping
 from contextlib import closing
 from hashlib import sha1, md5
 
@@ -168,7 +167,7 @@ class Client(object):
         self._handle_exceptions(resp)
 
 
-class KeyStore(MutableMapping):
+class KeyStore(Mapping):
     """Wrapper for the Skein KeyStore"""
     def __init__(self, address, auth):
         self._address = address
@@ -195,7 +194,7 @@ class KeyStore(MutableMapping):
         resp = requests.get(url, auth=self._auth)
         if resp.status_code != 200:
             self._handle_exceptions(resp)
-        return json.loads(resp.content)['keys']
+        return resp.json()['keys']
 
     def __getitem__(self, key):
         self._check_key(key)
@@ -212,16 +211,9 @@ class KeyStore(MutableMapping):
         self._check_key(key)
         url = '%s/keys/%s' % (self._address, key)
         resp = requests.put(url, auth=self._auth, data=value)
+        if resp.status_code == 403:
+            raise KeyError("key %r has already been set" % key)
         if resp.status_code != 204:
-            self._handle_exceptions(resp)
-
-    def __delitem__(self, key):
-        self._check_key(key)
-        url = '%s/keys/%s' % (self._address, key)
-        resp = requests.delete(url, auth=self._auth)
-        if resp.status_code == 404:
-            raise KeyError(key)
-        elif resp.status_code != 204:
             self._handle_exceptions(resp)
 
     def __iter__(self):

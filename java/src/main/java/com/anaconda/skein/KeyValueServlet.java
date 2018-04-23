@@ -6,6 +6,7 @@ import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -42,6 +43,7 @@ public class KeyValueServlet extends HttpServlet {
       }
       objectNode.putPOJO("keys", arrayNode);
 
+      resp.setHeader("Content-Type", "application/json");
       OutputStream out = resp.getOutputStream();
       Utils.MAPPER.writeValue(out, objectNode);
       out.close();
@@ -71,26 +73,15 @@ public class KeyValueServlet extends HttpServlet {
       return;
     }
 
+    byte[] current = keystore.get(key);
+
+    // If key exists and doesn't match value (allows for idempotent requests)
+    if (current != null && !Arrays.equals(value, current)) {
+      Utils.sendError(resp, 403, "Key already set");
+      return;
+    }
+
     keystore.put(key, value);
-    resp.setStatus(204);
-  }
-
-  @Override
-  protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
-      throws ServletException, IOException {
-
-    String key = getKey(req);
-
-    if (key == null) {
-      Utils.sendError(resp, 400, "Malformed Request");
-      return;
-    }
-
-    if (keystore.remove(key) == null) {
-      Utils.sendError(resp, 404, "Missing key");
-      return;
-    }
-
     resp.setStatus(204);
   }
 }
