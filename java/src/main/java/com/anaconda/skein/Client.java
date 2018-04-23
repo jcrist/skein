@@ -275,7 +275,7 @@ public class Client {
     job.validate(true);
 
     // Write the job specification to file
-    Path specPath = new Path(appDir, "spec.json");
+    Path specPath = new Path(appDir, ".skein.json");
     LOG.info("Writing job specification to " + specPath);
     OutputStream out = defaultFs.create(specPath);
     try {
@@ -287,7 +287,7 @@ public class Client {
     // Setup the LocalResources for the application master
     Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
     addFile(uploadCache, appDir, lr, amJar, "skein.jar", LocalResourceType.FILE);
-    lr.put("spec.json", localResourceFromPath(specPath, LocalResourceType.FILE));
+    lr.put(".skein.json", localResourceFromPath(specPath, LocalResourceType.FILE));
 
     return lr;
   }

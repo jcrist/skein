@@ -31,6 +31,7 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -54,6 +55,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private String secret;
 
   private Server server;
+
+  private Model.Job job;
 
   private final ConcurrentHashMap<String, byte[]> configuration =
       new ConcurrentHashMap<String, byte[]>();
@@ -219,29 +222,47 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     containers.remove(containerId);
   }
 
-  /** Initialize the ApplicationMaster. **/
-  public void init() {
-    conf = new YarnConfiguration();
-    secret = System.getenv("SKEIN_SECRET_ACCESS_KEY");
+  @SuppressWarnings("unchecked")
+  private void initializeServices() {
+    for (int i = 0; i < numTotal; i++) {
+      Priority priority = Priority.newInstance(0);
+      Resource resource = Resource.newInstance(10, 1);
+      rmClient.addContainerRequest(new ContainerRequest(resource,
+                                                        null,
+                                                        null,
+                                                        priority));
+    }
+  }
 
+  private static void fatal(String msg, Throwable exc) {
+    LOG.fatal(msg, exc);
+    System.exit(1);
+  }
+
+  private static void fatal(String msg) {
+    LOG.fatal(msg);
+    System.exit(1);
+  }
+
+  public void run() throws Exception {
+    conf = new YarnConfiguration();
+
+    secret = System.getenv("SKEIN_SECRET_ACCESS_KEY");
     if (secret == null) {
-      LOG.fatal("Couldn't find secret token at "
-                + "'SKEIN_SECRET_ACCESS_KEY' envar");
-      System.exit(1);
+      fatal("Couldn't find secret token at 'SKEIN_SECRET_ACCESS_KEY' envar");
+    }
+
+    try {
+      job = Utils.MAPPER.readValue(new File(".skein.json"), Model.Job.class);
+    } catch (IOException exc) {
+      fatal("Issue loading job specification", exc);
     }
 
     try {
       hostname = InetAddress.getLocalHost().getHostAddress();
     } catch (UnknownHostException exc) {
-      LOG.fatal("Couldn't determine hostname for appmaster");
-      System.exit(1);
+      fatal("Couldn't determine hostname for appmaster", exc);
     }
-  }
-
-  /** Run the ApplicationMaster. **/
-  @SuppressWarnings("unchecked")
-  public void run() throws Exception {
-    startupRestServer();
 
     Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
     DataOutputBuffer dob = new DataOutputBuffer();
@@ -261,6 +282,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     ugi = UserGroupInformation.createRemoteUser(userName);
     ugi.addCredentials(credentials);
 
+    startupRestServer();
+
     rmClient = AMRMClientAsync.createAMRMClientAsync(1000, this);
     rmClient.init(conf);
     rmClient.start();
@@ -271,14 +294,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     rmClient.registerApplicationMaster(hostname, privatePort, "");
 
-    for (int i = 0; i < numTotal; i++) {
-      Priority priority = Priority.newInstance(0);
-      Resource resource = Resource.newInstance(10, 1);
-      rmClient.addContainerRequest(new ContainerRequest(resource,
-                                                        null,
-                                                        null,
-                                                        priority));
-    }
+    initializeServices();
 
     server.join();
   }
@@ -311,10 +327,10 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     rmClient.stop();
     try {
       server.stop();
+    } catch (InterruptedException ex) {
+      // Raised by jetty to stop server
     } catch (Exception ex) {
-      LOG.error("Failed to properly shutdown the jetty server");
-      LOG.error(ex);
-      System.exit(1);
+      LOG.error("Failed to properly shutdown the jetty server", ex);
     }
   }
 
@@ -322,12 +338,10 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   public static void main(String[] args) {
     ApplicationMaster appMaster = new ApplicationMaster();
 
-    appMaster.init();
     try {
       appMaster.run();
     } catch (Throwable exc) {
-      LOG.fatal("Error running ApplicationMaster", exc);
-      System.exit(1);
+      fatal("Error running ApplicationMaster", exc);
     }
   }
 }
