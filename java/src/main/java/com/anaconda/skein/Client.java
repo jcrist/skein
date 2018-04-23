@@ -201,7 +201,7 @@ public class Client {
   }
 
   /** Start a new application. **/
-  public ApplicationId submit(Spec.Job job) throws IOException, YarnException {
+  public ApplicationId submit(Model.Job job) throws IOException, YarnException {
     // First validate the job request
     job.validate(false);
 
@@ -259,7 +259,7 @@ public class Client {
     return appId;
   }
 
-  private Map<String, LocalResource> setupAppDir(Spec.Job job,
+  private Map<String, LocalResource> setupAppDir(Model.Job job,
         ApplicationId appId) throws IOException {
 
     // Make the ~/.skein/app_id dir
@@ -269,7 +269,7 @@ public class Client {
     Map<Path, Path> uploadCache = new HashMap<Path, Path>();
 
     // Setup the LocalResources for the services
-    for (Spec.Service s: job.getServices().values()) {
+    for (Model.Service s: job.getServices().values()) {
       finalizeService(s, uploadCache, appDir);
     }
     job.validate(true);
@@ -292,11 +292,11 @@ public class Client {
     return lr;
   }
 
-  private void finalizeService(Spec.Service service, Map<Path, Path> uploadCache,
+  private void finalizeService(Model.Service service, Map<Path, Path> uploadCache,
                                Path appDir) throws IOException {
     if (service.getFiles() != null) {
       Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
-      for (Spec.File f : service.getFiles()) {
+      for (Model.File f : service.getFiles()) {
         addFile(uploadCache, appDir, lr, f.getSource(), f.getDest(), f.getType());
       }
       service.setLocalResources(lr);

@@ -80,9 +80,9 @@ public class ClientServlet extends HttpServlet {
       return;
     }
 
-    Spec.Job job;
+    Model.Job job;
     try {
-      job = Utils.MAPPER.readValue(req.getInputStream(), Spec.Job.class);
+      job = Utils.MAPPER.readValue(req.getInputStream(), Model.Job.class);
     } catch (Exception exc) {
       Utils.sendError(resp, 400, exc.getMessage());
       return;

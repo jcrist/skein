@@ -7,7 +7,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import java.util.List;
 import java.util.Map;
 
-public class Spec {
+public class Model {
   private static void throwIfNull(Object obj, String param)
       throws IllegalArgumentException {
     if (obj == null) {
@@ -192,6 +192,39 @@ public class Spec {
       for (Service s: services.values()) {
         s.validate(uploaded);
       }
+    }
+  }
+
+  public static enum ContainerState {
+    NEW,        // Just created
+    WAITING,    // Waiting on service dependencies
+    READY,      // Ready to request
+    REQUESTED,  // Container requested, waiting to run
+    RUNNING,    // Currently running
+    FINISHED,   // Successfully finished running
+    FAILED,     // Errored or was killed by yarn
+    STOPPED     // Stopped by user
+  }
+
+  public static class Container {
+    private String serviceName;
+    private Service service;
+    private ContainerState state;
+
+    public Container(Service service) {
+      this(service, ContainerState.NEW);
+    }
+
+    public Container(Service service, ContainerState state) {
+      this.service = service;
+      this.state = state;
+    }
+
+    public ContainerState getState() { return state; }
+    public void setState(ContainerState state) { this.state = state; }
+
+    public String toString() {
+      return "Container<service: " + serviceName + ", state: " + state + ">";
     }
   }
 }
