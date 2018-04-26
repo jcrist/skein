@@ -48,7 +48,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.servlet.DispatcherType;
@@ -73,8 +72,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private final ConcurrentHashMap<String, String> configuration =
       new ConcurrentHashMap<String, String>();
 
-  private final Map<String, List<Watcher>> waiting =
-      new HashMap<String, List<Watcher>>();
+  private final Map<String, List<Model.Service>> waiting =
+      new HashMap<String, List<Model.Service>>();
   private final List<RSPair> resourceToService = new ArrayList<RSPair>();
 
   private Integer privatePort;
@@ -105,25 +104,17 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     for (Map.Entry<String, Model.Service> entry : job.getServices().entrySet()) {
       Model.Service service = entry.getValue();
 
-      // For better exceptions/logging, service should know its name
-      service.setName(entry.getKey());
-
       resourceToService.add(new RSPair(service.getResources(), service));
 
-      // Set up watchers for services that depend on unset configuration keys
-      Set<String> depends = service.getDepends();
-      if (depends != null && depends.size() > 0) {
-        for (String key : depends) {
-          List<Watcher> lk = waiting.get(key);
+      if (!service.initialize(entry.getKey(), secret)) {
+        for (String key : service.getDepends()) {
+          List<Model.Service> lk = waiting.get(key);
           if (lk == null) {
-            lk = new ArrayList<Watcher>();
+            lk = new ArrayList<Model.Service>();
             waiting.put(key, lk);
           }
-          lk.add(new Watcher(service));
+          lk.add(service);
         }
-      } else {
-        // This service is ready to run, finish it up
-        service.prepare(configuration);
       }
     }
 
@@ -460,9 +451,9 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
       // Notify dependent services
       if (waiting.containsKey(key)) {
-        for (Watcher w: waiting.remove(key)) {
-          if (w.notifySet()) {
-            w.service.prepare(configuration);
+        for (Model.Service s: waiting.remove(key)) {
+          if (s.notifySet()) {
+            s.prepare(secret, configuration);
           }
         }
       }
@@ -484,20 +475,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     public int compareTo(RSPair other) {
       return resource.compareTo(other.resource);
-    }
-  }
-
-  public static class Watcher {
-    public final Model.Service service;
-    private final AtomicInteger numWaitingOn;
-
-    public Watcher(Model.Service s) {
-      service = s;
-      numWaitingOn = new AtomicInteger(service.getDepends().size());
-    }
-
-    public boolean notifySet() {
-      return numWaitingOn.decrementAndGet() == 0;
     }
   }
 }

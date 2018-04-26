@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Model {
   private static void throwIfNull(Object obj, String param)
@@ -69,7 +70,8 @@ public class Model {
   @JsonIgnoreProperties({"name",
                          "count",
                          "preparedCommands",
-                         "preparedEnv"})
+                         "preparedEnv",
+                         "numWaitingOn"})
   public static class Service {
     // Serialized state
     private int instances;
@@ -85,6 +87,7 @@ public class Model {
     private int count = 0;
     private List<String> preparedCommands;
     private Map<String, String> preparedEnv;
+    private AtomicInteger numWaitingOn;
 
     public Service() {}
 
@@ -152,7 +155,7 @@ public class Model {
       return val;
     }
 
-    public void prepare(Map<String, String> config) {
+    public void prepare(String secret, Map<String, String> config) {
       preparedCommands = new ArrayList<String>();
       String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
       String pipeLogs = (" 1>>" + logdir + "/" + name + ".stdout "
@@ -162,13 +165,25 @@ public class Model {
       }
 
       preparedEnv = new HashMap<String, String>();
+      preparedEnv.put("SKEIN_SECRET_ACCESS_KEY", secret);
       for (Map.Entry<String, String> item : env.entrySet()) {
         preparedEnv.put(item.getKey(), formatConfig(config, item.getValue()));
       }
     }
 
-    public void setName(String name) {
+    public boolean initialize(String name, String secret) {
       this.name = name;
+
+      if (depends != null && depends.size() > 0) {
+        numWaitingOn = new AtomicInteger(depends.size());
+        return false;
+      }
+      prepare(secret, null);
+      return true;
+    }
+
+    public boolean notifySet() {
+      return numWaitingOn.decrementAndGet() == 0;
     }
 
     public void validate(boolean uploaded) throws IllegalArgumentException {
