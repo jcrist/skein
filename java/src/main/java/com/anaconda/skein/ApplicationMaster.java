@@ -9,17 +9,13 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -76,7 +72,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       new HashMap<String, ServiceTracker>();
   private final Map<String, List<ServiceTracker>> waiting =
       new HashMap<String, List<ServiceTracker>>();
-  private final List<RSPair> resourceToService = new ArrayList<RSPair>();
+  private final List<ServiceTracker> trackers =
+      new ArrayList<ServiceTracker>();
 
   private Integer privatePort;
   private Integer publicPort;
@@ -95,21 +92,16 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private UserGroupInformation ugi;
   private ByteBuffer tokens;
 
-  private void loadJob() throws Exception {
-    try {
-      job = Utils.MAPPER.readValue(new File(".skein.json"), Model.Job.class);
-    } catch (IOException exc) {
-      fatal("Issue loading job specification", exc);
-    }
-    job.validate(true);
-
+  private void intializeServices() throws Exception {
     for (Map.Entry<String, Model.Service> entry : job.getServices().entrySet()) {
       Model.Service service = entry.getValue();
+
       ServiceTracker tracker = new ServiceTracker(entry.getKey(), service);
+      trackers.add(tracker);
 
-      resourceToService.add(new RSPair(service.getResources(), service));
-
-      if (!tracker.isReady()) {
+      if (tracker.isReady()) {
+        tracker.initialize(secret, configuration, tokens, rmClient);
+      } else {
         for (String key : service.getDepends()) {
           List<ServiceTracker> lk = waiting.get(key);
           if (lk == null) {
@@ -121,7 +113,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       }
     }
 
-    Collections.sort(resourceToService);
+    Collections.sort(trackers);
   }
 
   private void startupRestServer() throws Exception {
@@ -194,23 +186,19 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   @Override
   public void onContainersAllocated(List<Container> newContainers) {
-
-    numAllocated.addAndGet(newContainers.size());
-
-    List<String> commands = new ArrayList<String>();
-    commands.add("sleep 10 "
-                 + "1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
-                 + "/container.stdout "
-                 + "2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
-                 + "/container.stderr");
-
-    ContainerLaunchContext ctx =
-        ContainerLaunchContext.newInstance(null, null, commands, null,
-                                           tokens, null);
-
     for (Container c : newContainers) {
-      containers.put(c.getId(), c);
-      nmClient.startContainerAsync(c, ctx);
+      Resource cr = c.getResource();
+      ServiceTracker tracker = null;
+      for (ServiceTracker t : trackers) {
+        if (t.matches(c.getResource())) {
+          tracker = t;
+          break;
+        }
+      }
+      if (tracker == null) {
+        fatal("Shouldn't be able to get here");
+      }
+      tracker.launchContainer(c, nmClient);
     }
   }
 
@@ -267,18 +255,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     containers.remove(containerId);
   }
 
-  @SuppressWarnings("unchecked")
-  private void initializeServices() {
-    for (int i = 0; i < numTotal; i++) {
-      Priority priority = Priority.newInstance(0);
-      Resource resource = Resource.newInstance(10, 1);
-      rmClient.addContainerRequest(new ContainerRequest(resource,
-                                                        null,
-                                                        null,
-                                                        priority));
-    }
-  }
-
   private static void fatal(String msg, Throwable exc) {
     LOG.fatal(msg, exc);
     System.exit(1);
@@ -297,7 +273,12 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       fatal("Couldn't find secret token at 'SKEIN_SECRET_ACCESS_KEY' envar");
     }
 
-    loadJob();
+    try {
+      job = Utils.MAPPER.readValue(new File(".skein.json"), Model.Job.class);
+    } catch (IOException exc) {
+      fatal("Issue loading job specification", exc);
+    }
+    job.validate(true);
 
     try {
       hostname = InetAddress.getLocalHost().getHostAddress();
@@ -335,7 +316,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     rmClient.registerApplicationMaster(hostname, privatePort, "");
 
-    initializeServices();
+    intializeServices();
 
     server.join();
   }
@@ -455,28 +436,12 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       if (waiting.containsKey(key)) {
         for (ServiceTracker s: waiting.remove(key)) {
           if (s.notifySet()) {
-            s.prepare(secret, configuration);
+            s.initialize(secret, configuration, tokens, rmClient);
           }
         }
       }
 
       resp.setStatus(204);
-    }
-  }
-
-  /* Utilitiy inner classes */
-
-  public static class RSPair implements Comparable<RSPair> {
-    public final Resource resource;
-    public final Model.Service service;
-
-    public RSPair(Resource r, Model.Service s) {
-      resource = r;
-      service = s;
-    }
-
-    public int compareTo(RSPair other) {
-      return resource.compareTo(other.resource);
     }
   }
 }
