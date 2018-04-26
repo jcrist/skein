@@ -72,8 +72,10 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private final ConcurrentHashMap<String, String> configuration =
       new ConcurrentHashMap<String, String>();
 
-  private final Map<String, List<Model.Service>> waiting =
-      new HashMap<String, List<Model.Service>>();
+  private final Map<String, ServiceTracker> services =
+      new HashMap<String, ServiceTracker>();
+  private final Map<String, List<ServiceTracker>> waiting =
+      new HashMap<String, List<ServiceTracker>>();
   private final List<RSPair> resourceToService = new ArrayList<RSPair>();
 
   private Integer privatePort;
@@ -103,22 +105,22 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     for (Map.Entry<String, Model.Service> entry : job.getServices().entrySet()) {
       Model.Service service = entry.getValue();
+      ServiceTracker tracker = new ServiceTracker(entry.getKey(), service);
 
       resourceToService.add(new RSPair(service.getResources(), service));
 
-      if (!service.initialize(entry.getKey(), secret)) {
+      if (!tracker.isReady()) {
         for (String key : service.getDepends()) {
-          List<Model.Service> lk = waiting.get(key);
+          List<ServiceTracker> lk = waiting.get(key);
           if (lk == null) {
-            lk = new ArrayList<Model.Service>();
+            lk = new ArrayList<ServiceTracker>();
             waiting.put(key, lk);
           }
-          lk.add(service);
+          lk.add(tracker);
         }
       }
     }
 
-    // Sort resource lookup, so that resource matching works later
     Collections.sort(resourceToService);
   }
 
@@ -451,7 +453,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
       // Notify dependent services
       if (waiting.containsKey(key)) {
-        for (Model.Service s: waiting.remove(key)) {
+        for (ServiceTracker s: waiting.remove(key)) {
           if (s.notifySet()) {
             s.prepare(secret, configuration);
           }

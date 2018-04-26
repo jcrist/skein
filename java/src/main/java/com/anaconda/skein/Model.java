@@ -1,17 +1,12 @@
 package com.anaconda.skein;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.Resource;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class Model {
   private static void throwIfNull(Object obj, String param)
@@ -67,13 +62,7 @@ public class Model {
     }
   }
 
-  @JsonIgnoreProperties({"name",
-                         "count",
-                         "preparedCommands",
-                         "preparedEnv",
-                         "numWaitingOn"})
   public static class Service {
-    // Serialized state
     private int instances;
     private Resource resources;
     private List<File> files;
@@ -81,13 +70,6 @@ public class Model {
     private Map<String, String> env;
     private List<String> commands;
     private Set<String> depends;
-
-    // Runtime state
-    private String name;
-    private int count = 0;
-    private List<String> preparedCommands;
-    private Map<String, String> preparedEnv;
-    private AtomicInteger numWaitingOn;
 
     public Service() {}
 
@@ -145,46 +127,6 @@ public class Model {
 
     public void setDepends(Set<String> depends) { this.depends = depends; }
     public Set<String> getDepends() { return depends; }
-
-    private String formatConfig(Map<String, String> config, String val) {
-      if (config != null) {
-        for (Map.Entry<String, String> item : config.entrySet()) {
-          val = val.replace("%(" + item.getKey() + ")", item.getValue());
-        }
-      }
-      return val;
-    }
-
-    public void prepare(String secret, Map<String, String> config) {
-      preparedCommands = new ArrayList<String>();
-      String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
-      String pipeLogs = (" 1>>" + logdir + "/" + name + ".stdout "
-                         + "2>>" + logdir + "/" + name + ".stderr;");
-      for (String c : commands) {
-        preparedCommands.add(formatConfig(config, c) + pipeLogs);
-      }
-
-      preparedEnv = new HashMap<String, String>();
-      preparedEnv.put("SKEIN_SECRET_ACCESS_KEY", secret);
-      for (Map.Entry<String, String> item : env.entrySet()) {
-        preparedEnv.put(item.getKey(), formatConfig(config, item.getValue()));
-      }
-    }
-
-    public boolean initialize(String name, String secret) {
-      this.name = name;
-
-      if (depends != null && depends.size() > 0) {
-        numWaitingOn = new AtomicInteger(depends.size());
-        return false;
-      }
-      prepare(secret, null);
-      return true;
-    }
-
-    public boolean notifySet() {
-      return numWaitingOn.decrementAndGet() == 0;
-    }
 
     public void validate(boolean uploaded) throws IllegalArgumentException {
       throwIfNonPositive(instances, "instances");
@@ -251,32 +193,6 @@ public class Model {
       for (Service s: services.values()) {
         s.validate(uploaded);
       }
-    }
-  }
-
-  public static enum ContainerState {
-    WAITING,    // Waiting on service dependencies
-    REQUESTED,  // Container requested, waiting to run
-    RUNNING,    // Currently running
-    FINISHED,   // Successfully finished running
-    FAILED,     // Errored or was killed by yarn
-    STOPPED     // Stopped by user
-  }
-
-  public static class Container {
-    private Service service;
-    private ContainerState state;
-
-    public Container(Service service, ContainerState state) {
-      this.service = service;
-      this.state = state;
-    }
-
-    public ContainerState getState() { return state; }
-    public void setState(ContainerState state) { this.state = state; }
-
-    public String toString() {
-      return "Container<state: " + state + ">";
     }
   }
 }
