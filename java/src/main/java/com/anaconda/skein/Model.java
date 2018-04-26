@@ -1,11 +1,16 @@
 package com.anaconda.skein;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.Resource;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class Model {
   private static void throwIfNull(Object obj, String param)
@@ -61,20 +66,31 @@ public class Model {
     }
   }
 
+  @JsonIgnoreProperties({"name",
+                         "count",
+                         "preparedCommands",
+                         "preparedEnv"})
   public static class Service {
+    // Serialized state
     private int instances;
     private Resource resources;
     private List<File> files;
     private Map<String, LocalResource> localResources;
     private Map<String, String> env;
     private List<String> commands;
-    private List<String> depends;
+    private Set<String> depends;
+
+    // Runtime state
+    private String name;
+    private int count = 0;
+    private List<String> preparedCommands;
+    private Map<String, String> preparedEnv;
 
     public Service() {}
 
     public Service(int instances, Resource resources, List<File> files,
                    Map<String, String> env, List<String> commands,
-                   List<String> depends) {
+                   Set<String> depends) {
       this.instances = instances;
       this.resources = resources;
       this.files = files;
@@ -86,7 +102,7 @@ public class Model {
     public Service(int instances, Resource resources,
                    Map<String, LocalResource> localResources,
                    Map<String, String> env, List<String> commands,
-                   List<String> depends) {
+                   Set<String> depends) {
       this.instances = instances;
       this.resources = resources;
       this.localResources = localResources;
@@ -124,8 +140,36 @@ public class Model {
     public void setCommands(List<String> commands) { this.commands = commands; }
     public List<String> getCommands() { return commands; }
 
-    public void setDepends(List<String> depends) { this.depends = depends; }
-    public List<String> getDepends() { return depends; }
+    public void setDepends(Set<String> depends) { this.depends = depends; }
+    public Set<String> getDepends() { return depends; }
+
+    private String formatConfig(Map<String, String> config, String val) {
+      if (config != null) {
+        for (Map.Entry<String, String> item : config.entrySet()) {
+          val = val.replace("%(" + item.getKey() + ")", item.getValue());
+        }
+      }
+      return val;
+    }
+
+    public void prepare(Map<String, String> config) {
+      preparedCommands = new ArrayList<String>();
+      String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
+      String pipeLogs = (" 1>>" + logdir + "/" + name + ".stdout "
+                         + "2>>" + logdir + "/" + name + ".stderr;");
+      for (String c : commands) {
+        preparedCommands.add(formatConfig(config, c) + pipeLogs);
+      }
+
+      preparedEnv = new HashMap<String, String>();
+      for (Map.Entry<String, String> item : env.entrySet()) {
+        preparedEnv.put(item.getKey(), formatConfig(config, item.getValue()));
+      }
+    }
+
+    public void setName(String name) {
+      this.name = name;
+    }
 
     public void validate(boolean uploaded) throws IllegalArgumentException {
       throwIfNonPositive(instances, "instances");
@@ -196,7 +240,6 @@ public class Model {
   }
 
   public static enum ContainerState {
-    NEW,        // Just created
     WAITING,    // Waiting on service dependencies
     REQUESTED,  // Container requested, waiting to run
     RUNNING,    // Currently running
@@ -206,13 +249,8 @@ public class Model {
   }
 
   public static class Container {
-    private String serviceName;
     private Service service;
     private ContainerState state;
-
-    public Container(Service service) {
-      this(service, ContainerState.NEW);
-    }
 
     public Container(Service service, ContainerState state) {
       this.service = service;
@@ -223,7 +261,7 @@ public class Model {
     public void setState(ContainerState state) { this.state = state; }
 
     public String toString() {
-      return "Container<service: " + serviceName + ", state: " + state + ">";
+      return "Container<state: " + state + ">";
     }
   }
 }

@@ -1,12 +1,15 @@
 package com.anaconda.skein;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -33,17 +36,26 @@ import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
        NMClientAsync.CallbackHandler {
@@ -58,8 +70,12 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   private Model.Job job;
 
-  private final ConcurrentHashMap<String, byte[]> configuration =
-      new ConcurrentHashMap<String, byte[]>();
+  private final ConcurrentHashMap<String, String> configuration =
+      new ConcurrentHashMap<String, String>();
+
+  private final Map<String, List<Watcher>> waiting =
+      new HashMap<String, List<Watcher>>();
+  private final List<RSPair> resourceToService = new ArrayList<RSPair>();
 
   private Integer privatePort;
   private Integer publicPort;
@@ -78,6 +94,43 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private UserGroupInformation ugi;
   private ByteBuffer tokens;
 
+  private void loadJob() throws Exception {
+    try {
+      job = Utils.MAPPER.readValue(new File(".skein.json"), Model.Job.class);
+    } catch (IOException exc) {
+      fatal("Issue loading job specification", exc);
+    }
+    job.validate(true);
+
+    for (Map.Entry<String, Model.Service> entry : job.getServices().entrySet()) {
+      Model.Service service = entry.getValue();
+
+      // For better exceptions/logging, service should know its name
+      service.setName(entry.getKey());
+
+      resourceToService.add(new RSPair(service.getResources(), service));
+
+      // Set up watchers for services that depend on unset configuration keys
+      Set<String> depends = service.getDepends();
+      if (depends != null && depends.size() > 0) {
+        for (String key : depends) {
+          List<Watcher> lk = waiting.get(key);
+          if (lk == null) {
+            lk = new ArrayList<Watcher>();
+            waiting.put(key, lk);
+          }
+          lk.add(new Watcher(service));
+        }
+      } else {
+        // This service is ready to run, finish it up
+        service.prepare(configuration);
+      }
+    }
+
+    // Sort resource lookup, so that resource matching works later
+    Collections.sort(resourceToService);
+  }
+
   private void startupRestServer() throws Exception {
     // Configure the server
     server = new Server();
@@ -86,8 +139,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     server.setStopAtShutdown(true);
 
     // Create the servlets once
-    final ServletHolder keyVal =
-        new ServletHolder(new KeyValueServlet(configuration));
+    final ServletHolder keyVal = new ServletHolder(new KeyValueServlet());
 
     // This connector serves content authenticated by the secret key
     ServerConnector privateConnector = new ServerConnector(server);
@@ -252,11 +304,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       fatal("Couldn't find secret token at 'SKEIN_SECRET_ACCESS_KEY' envar");
     }
 
-    try {
-      job = Utils.MAPPER.readValue(new File(".skein.json"), Model.Job.class);
-    } catch (IOException exc) {
-      fatal("Issue loading job specification", exc);
-    }
+    loadJob();
 
     try {
       hostname = InetAddress.getLocalHost().getHostAddress();
@@ -342,6 +390,114 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       appMaster.run();
     } catch (Throwable exc) {
       fatal("Error running ApplicationMaster", exc);
+    }
+  }
+
+  private class KeyValueServlet extends HttpServlet {
+    private String getKey(HttpServletRequest req) {
+      String key = req.getPathInfo();
+      // Strips leading `/` from keys, and replaces empty keys with null
+      // Ensures that /keys and /keys/ are treated the same
+      return (key == null || key.length() <= 1) ? null : key.substring(1);
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+        throws ServletException, IOException {
+
+      String key = getKey(req);
+
+      if (key == null) {
+        // Handle /keys or /keys/
+        // Returns an object like {'keys': [key1, key2, ...]}
+        ArrayNode arrayNode = Utils.MAPPER.createArrayNode();
+        ObjectNode objectNode = Utils.MAPPER.createObjectNode();
+        for (String key2 : configuration.keySet()) {
+          arrayNode.add(key2);
+        }
+        objectNode.putPOJO("keys", arrayNode);
+
+        resp.setHeader("Content-Type", "application/json");
+        OutputStream out = resp.getOutputStream();
+        Utils.MAPPER.writeValue(out, objectNode);
+        out.close();
+        return;
+      }
+
+      String value = configuration.get(key);
+      if (value == null) {
+        Utils.sendError(resp, 404, "Missing key");
+        return;
+      }
+
+      OutputStream out = resp.getOutputStream();
+      out.write(value.getBytes(StandardCharsets.UTF_8));
+      out.close();
+    }
+
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp)
+        throws ServletException, IOException {
+
+      String key = getKey(req);
+      byte[] bytes = IOUtils.toByteArray(req.getInputStream());
+
+      if (key == null || bytes.length == 0) {
+        Utils.sendError(resp, 400, "Malformed Request");
+        return;
+      }
+
+      String value = new String(bytes, StandardCharsets.UTF_8);
+      String current = configuration.get(key);
+
+      // If key exists and doesn't match value (allows for idempotent requests)
+      if (current != null && !value.equals(current)) {
+        Utils.sendError(resp, 403, "Key already set");
+        return;
+      }
+
+      configuration.put(key, value);
+
+      // Notify dependent services
+      if (waiting.containsKey(key)) {
+        for (Watcher w: waiting.remove(key)) {
+          if (w.notifySet()) {
+            w.service.prepare(configuration);
+          }
+        }
+      }
+
+      resp.setStatus(204);
+    }
+  }
+
+  /* Utilitiy inner classes */
+
+  public static class RSPair implements Comparable<RSPair> {
+    public final Resource resource;
+    public final Model.Service service;
+
+    public RSPair(Resource r, Model.Service s) {
+      resource = r;
+      service = s;
+    }
+
+    public int compareTo(RSPair other) {
+      return resource.compareTo(other.resource);
+    }
+  }
+
+  public static class Watcher {
+    public final Model.Service service;
+    private final AtomicInteger numWaitingOn;
+
+    public Watcher(Model.Service s) {
+      service = s;
+      numWaitingOn = new AtomicInteger(service.getDepends().size());
+    }
+
+    public boolean notifySet() {
+      return numWaitingOn.decrementAndGet() == 0;
     }
   }
 }
