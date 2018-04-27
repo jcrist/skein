@@ -9,17 +9,20 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -42,8 +45,11 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.servlet.DispatcherType;
@@ -70,49 +76,67 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   private final Map<String, ServiceTracker> services =
       new HashMap<String, ServiceTracker>();
-  private final Map<String, List<ServiceTracker>> waiting =
+  private final Map<String, List<ServiceTracker>> waitingOn =
       new HashMap<String, List<ServiceTracker>>();
   private final List<ServiceTracker> trackers =
       new ArrayList<ServiceTracker>();
+  private final Map<ContainerId, TrackerUUID> containers =
+      new HashMap<ContainerId, TrackerUUID>();
 
   private Integer privatePort;
   private Integer publicPort;
   private String hostname;
 
-  private int numTotal = 1;
-  private AtomicInteger numCompleted = new AtomicInteger();
+  private AtomicInteger numTotal = new AtomicInteger();
+  private AtomicInteger numSucceeded = new AtomicInteger();
   private AtomicInteger numFailed = new AtomicInteger();
-  private AtomicInteger numAllocated = new AtomicInteger();
-
-  private final ConcurrentHashMap<ContainerId, Container> containers =
-      new ConcurrentHashMap<ContainerId, Container>();
+  private AtomicInteger numStopped = new AtomicInteger();
 
   private AMRMClientAsync rmClient;
   private NMClientAsync nmClient;
   private UserGroupInformation ugi;
   private ByteBuffer tokens;
 
+  private int loadJob() throws Exception {
+    try {
+      job = Utils.MAPPER.readValue(new File(".skein.json"), Model.Job.class);
+    } catch (IOException exc) {
+      fatal("Issue loading job specification", exc);
+    }
+    job.validate(true);
+    LOG.info("Job successfully loaded");
+
+    int total = 0;
+    for (Model.Service service : job.getServices().values()) {
+      total += service.getInstances();
+    }
+    LOG.info("total instances: " + total);
+    return total;
+  }
+
   private void intializeServices() throws Exception {
     for (Map.Entry<String, Model.Service> entry : job.getServices().entrySet()) {
+      String serviceName = entry.getKey();
       Model.Service service = entry.getValue();
 
-      ServiceTracker tracker = new ServiceTracker(entry.getKey(), service);
+      ServiceTracker tracker = new ServiceTracker(serviceName, service);
       trackers.add(tracker);
 
       if (tracker.isReady()) {
-        tracker.initialize(secret, configuration, tokens, rmClient);
+        LOG.info("SERVICE: " + tracker.name + " - initializing services");
+        initialize(tracker);
       } else {
+        LOG.info("SERVICE: " + tracker.name + " - waiting on runtime config");
         for (String key : service.getDepends()) {
-          List<ServiceTracker> lk = waiting.get(key);
+          List<ServiceTracker> lk = waitingOn.get(key);
           if (lk == null) {
             lk = new ArrayList<ServiceTracker>();
-            waiting.put(key, lk);
+            waitingOn.put(key, lk);
           }
           lk.add(tracker);
         }
       }
     }
-
     Collections.sort(trackers);
   }
 
@@ -164,86 +188,155 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     publicPort = publicConnector.getLocalPort();
   }
 
+  private void logstate(String service, UUID uuid, String state) {
+    LOG.info("SERVICE: " + service + " - " + uuid + " -> " + state);
+  }
+
+  private String formatConfig(Set<String> depends, String val) {
+    if (depends != null) {
+      for (String key : depends) {
+        val = val.replace("%(" + key + ")", configuration.get(key));
+      }
+    }
+    return val;
+  }
+
+  public void initialize(ServiceTracker tracker) {
+    Model.Service service = tracker.service;
+    Set<String> depends = service.getDepends();
+
+    List<String> commands = new ArrayList<String>();
+    String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
+    String pipeLogs = (" 1>>" + logdir + "/" + tracker.name + ".stdout "
+                        + "2>>" + logdir + "/" + tracker.name + ".stderr;");
+    for (String c : service.getCommands()) {
+      commands.add(formatConfig(depends, c) + pipeLogs);
+    }
+
+    Map<String, String> env = new HashMap<String, String>();
+    Map<String, String> specEnv = service.getEnv();
+    if (specEnv != null) {
+      for (Map.Entry<String, String> entry : specEnv.entrySet()) {
+        env.put(entry.getKey(), formatConfig(depends, entry.getValue()));
+      }
+    }
+
+    LOG.info("SERVICE: " + tracker.name + " - intiailizing...\n"
+             + "-- COMMANDS --\n" + commands + "\n"
+             + "-- ENV --\n" + env + "\n");
+
+    // Put the secret *AFTER* we log the environment
+    env.put("SKEIN_SECRET_ACCESS_KEY", secret);
+
+    tracker.ctx = ContainerLaunchContext.newInstance(
+        service.getLocalResources(), env, commands, null, tokens, null);
+
+    for (int i = 0; i < service.getInstances(); i++) {
+      addContainer(tracker);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public UUID addContainer(ServiceTracker tracker) {
+    UUID id = UUID.randomUUID();
+    if (!tracker.isReady()) {
+      logstate(tracker.name, id, "waiting");
+      tracker.waiting.add(id);
+    } else {
+      ContainerRequest req =
+          new ContainerRequest(tracker.service.getResources(),
+                               null, null, Priority.newInstance(0));
+      rmClient.addContainerRequest(req);
+      logstate(tracker.name, id, "requested");
+      tracker.requested.add(id);
+    }
+    return id;
+  }
+
   /* ResourceManager Callbacks */
 
   @Override
   public void onContainersCompleted(List<ContainerStatus> containerStatuses) {
     for (ContainerStatus status : containerStatuses) {
 
+      ContainerId cid = status.getContainerId();
       int exitStatus = status.getExitStatus();
 
-      if (exitStatus == 0) {
-        numCompleted.incrementAndGet();
-      } else if (exitStatus != ContainerExitStatus.ABORTED) {
-        numCompleted.incrementAndGet();
-        numFailed.incrementAndGet();
+      TrackerUUID pair = containers.get(cid);
+      Container c = pair.tracker.running.remove(pair.uuid);
+
+      if (exitStatus == ContainerExitStatus.SUCCESS) {
+        logstate(pair.tracker.name, pair.uuid, "succeeded");
+        pair.tracker.succeeded.put(pair.uuid, c);
+        numSucceeded.incrementAndGet();
+      } else if (exitStatus == ContainerExitStatus.KILLED_BY_APPMASTER) {
+        logstate(pair.tracker.name, pair.uuid, "stopped");
+        pair.tracker.stopped.put(pair.uuid, c);
+        numStopped.incrementAndGet();
       } else {
-        numAllocated.decrementAndGet();
+        logstate(pair.tracker.name, pair.uuid, "failed");
+        pair.tracker.failed.put(pair.uuid, c);
+        numFailed.incrementAndGet();
       }
     }
-    shutdown();
+
+    if ((numSucceeded.get() + numStopped.get()) == numTotal.get()
+        || numFailed.get() > 0) {
+      shutdown();
+    }
   }
 
   @Override
   public void onContainersAllocated(List<Container> newContainers) {
     for (Container c : newContainers) {
-      Resource cr = c.getResource();
-      ServiceTracker tracker = null;
+      boolean found = false;
+      LOG.info("Container " + c.getId() + " allocated, matching with service");
       for (ServiceTracker t : trackers) {
         if (t.matches(c.getResource())) {
-          tracker = t;
+          found = true;
+          UUID uuid = Utils.popfirst(t.requested);
+          t.running.put(uuid, c);
+          containers.put(c.getId(), new TrackerUUID(t, uuid));
+          nmClient.startContainerAsync(c, t.ctx);
+          logstate(t.name, uuid, "running");
           break;
         }
       }
-      if (tracker == null) {
-        fatal("Shouldn't be able to get here");
+      if (!found) {
+        fatal("No matching service round for resource: " + c.getResource());
       }
-      tracker.launchContainer(c, nmClient);
     }
   }
 
   @Override
-  public void onShutdownRequest() {
-    shutdown();
-  }
+  public void onShutdownRequest() { shutdown(); }
+
+  @Override
+  public void onError(Throwable exc) { shutdown(); }
 
   @Override
   public void onNodesUpdated(List<NodeReport> nodeReports) {}
 
   @Override
   public float getProgress() {
-    return (float)numCompleted.get() / numTotal;
-  }
-
-  @Override
-  public void onError(Throwable exc) {
-    shutdown();
+    return (float)(numSucceeded.get() + numStopped.get()) / numTotal.get();
   }
 
   /* NodeManager Callbacks */
 
   @Override
-  public void onContainerStarted(ContainerId containerId,
-                                 Map<String, ByteBuffer> allServiceResponse) {
-    Container container = containers.get(containerId);
-    if (container != null) {
-      nmClient.getContainerStatusAsync(containerId, container.getNodeId());
-    }
-  }
+  public void onContainerStarted(ContainerId cid, Map<String, ByteBuffer> resp) { }
 
   @Override
-  public void onContainerStatusReceived(ContainerId containerId,
-                                        ContainerStatus containerStatus) {}
+  public void onContainerStatusReceived(ContainerId cid, ContainerStatus status) { }
 
   @Override
-  public void onContainerStopped(ContainerId containerId) {
-    containers.remove(containerId);
-  }
+  public void onContainerStopped(ContainerId cid) { }
 
   @Override
   public void onStartContainerError(ContainerId containerId, Throwable exc) {
-    containers.remove(containerId);
-    numCompleted.incrementAndGet();
+    TrackerUUID pair = containers.remove(containerId);
+    pair.tracker.failed.put(pair.uuid, pair.tracker.running.remove(pair.uuid));
     numFailed.incrementAndGet();
   }
 
@@ -252,7 +345,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   @Override
   public void onStopContainerError(ContainerId containerId, Throwable exc) {
-    containers.remove(containerId);
+    onStartContainerError(containerId, exc);
   }
 
   private static void fatal(String msg, Throwable exc) {
@@ -273,12 +366,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       fatal("Couldn't find secret token at 'SKEIN_SECRET_ACCESS_KEY' envar");
     }
 
-    try {
-      job = Utils.MAPPER.readValue(new File(".skein.json"), Model.Job.class);
-    } catch (IOException exc) {
-      fatal("Issue loading job specification", exc);
-    }
-    job.validate(true);
+    int totalInstances = loadJob();
+    numTotal.set(totalInstances);
 
     try {
       hostname = InetAddress.getLocalHost().getHostAddress();
@@ -326,23 +415,22 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     nmClient.stop();
 
     FinalApplicationStatus status;
-    String msg = ("Diagnostics."
-                  + ", total=" + numTotal
-                  + ", completed=" + numCompleted.get()
-                  + ", allocated=" + numAllocated.get()
-                  + ", failed=" + numFailed.get());
-
-    if (numFailed.get() == 0 && numCompleted.get() == numTotal) {
+    if (numFailed.get() == 0
+        && (numSucceeded.get() + numStopped.get()) == numTotal.get()) {
       status = FinalApplicationStatus.SUCCEEDED;
     } else {
       status = FinalApplicationStatus.FAILED;
     }
 
+    String msg = ("Diagnostics."
+                  + ", total = " + numTotal.get()
+                  + ", succeeded = " + numSucceeded.get()
+                  + ", stopped = " + numStopped.get()
+                  + ", failed = " + numFailed.get());
+
     try {
       rmClient.unregisterApplicationMaster(status, msg, null);
-    } catch (YarnException ex) {
-      LOG.error("Failed to unregister application", ex);
-    } catch (IOException ex) {
+    } catch (Exception ex) {
       LOG.error("Failed to unregister application", ex);
     }
 
@@ -433,15 +521,61 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       configuration.put(key, value);
 
       // Notify dependent services
-      if (waiting.containsKey(key)) {
-        for (ServiceTracker s: waiting.remove(key)) {
+      if (waitingOn.containsKey(key)) {
+        for (ServiceTracker s: waitingOn.remove(key)) {
           if (s.notifySet()) {
-            s.initialize(secret, configuration, tokens, rmClient);
+            initialize(s);
           }
         }
       }
 
       resp.setStatus(204);
+    }
+  }
+
+  private static class ServiceTracker implements Comparable<ServiceTracker> {
+    public String name;
+    public Model.Service service;
+    public AtomicInteger numWaitingOn;
+    public ContainerLaunchContext ctx;
+    public final Set<UUID> waiting = new LinkedHashSet<UUID>();
+    public final Set<UUID> requested = new LinkedHashSet<UUID>();
+    public final Map<UUID, Container> running = new HashMap<UUID, Container>();
+    public final Map<UUID, Container> succeeded = new HashMap<UUID, Container>();
+    public final Map<UUID, Container> failed = new HashMap<UUID, Container>();
+    public final Map<UUID, Container> stopped = new HashMap<UUID, Container>();
+
+    public ServiceTracker(String name, Model.Service service) {
+      this.name = name;
+      this.service = service;
+      Set<String> depends = service.getDepends();
+      int size = (depends == null) ? 0 : depends.size();
+      numWaitingOn = new AtomicInteger(size);
+    }
+
+    public boolean isReady() { return numWaitingOn.get() == 0; }
+
+    public boolean matches(Resource r) {
+      // requested and requirement <= response
+      return requested.size() > 0 && service.getResources().compareTo(r) <= 0;
+    }
+
+    public boolean notifySet() {
+      return numWaitingOn.decrementAndGet() == 0;
+    }
+
+    public int compareTo(ServiceTracker other) {
+      return service.getResources().compareTo(other.service.getResources());
+    }
+  }
+
+  public static class TrackerUUID {
+    public ServiceTracker tracker;
+    public UUID uuid;
+
+    public TrackerUUID(ServiceTracker tracker, UUID uuid) {
+      this.tracker = tracker;
+      this.uuid = uuid;
     }
   }
 }

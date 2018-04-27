@@ -11,10 +11,19 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.Set;
 import javax.servlet.http.HttpServletResponse;
 
 public class Utils {
   public static final ObjectMapper MAPPER = new SkeinObjectMapper();
+
+  public static <T> T popfirst(Set<T> s) {
+    for (T out: s) {
+      s.remove(out);
+      return out;
+    }
+    return null;
+  }
 
   private static final char[] HEX = "0123456789ABCDEF".toCharArray();
 
