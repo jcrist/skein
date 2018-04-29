@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -16,6 +18,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -40,6 +44,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -201,18 +206,11 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     return val;
   }
 
-  public void initialize(ServiceTracker tracker) {
+  public void initialize(ServiceTracker tracker) throws IOException {
     Model.Service service = tracker.service;
     Set<String> depends = service.getDepends();
 
-    List<String> commands = new ArrayList<String>();
-    String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
-    String pipeLogs = (" 1>>" + logdir + "/" + tracker.name + ".stdout "
-                        + "2>>" + logdir + "/" + tracker.name + ".stderr;");
-    for (String c : service.getCommands()) {
-      commands.add(formatConfig(depends, c) + pipeLogs);
-    }
-
+    // Finalize environment variables
     Map<String, String> env = new HashMap<String, String>();
     Map<String, String> specEnv = service.getEnv();
     if (specEnv != null) {
@@ -220,17 +218,57 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         env.put(entry.getKey(), formatConfig(depends, entry.getValue()));
       }
     }
-
-    LOG.info("SERVICE: " + tracker.name + " - intiailizing...\n"
-             + "-- COMMANDS --\n" + commands + "\n"
-             + "-- ENV --\n" + env + "\n");
-
-    // Put the secret *AFTER* we log the environment
     env.put("SKEIN_SECRET_ACCESS_KEY", secret);
 
-    tracker.ctx = ContainerLaunchContext.newInstance(
-        service.getLocalResources(), env, commands, null, tokens, null);
+    // Finalize execution script
+    final StringBuilder script = new StringBuilder();
+    script.append("set -e -x");
+    for (String c : service.getCommands()) {
+      script.append("\n");
+      script.append(formatConfig(depends, c));
+    }
 
+    // Write the job script to file
+    final Path scriptPath =
+        new Path(job.getAppDir(), "services/" + tracker.name + ".sh");
+    LOG.info("SERVICE: " + tracker.name + " - writing script to " + scriptPath);
+
+    LocalResource scriptResource = null;
+    try {
+      scriptResource = ugi.doAs(
+        new PrivilegedExceptionAction<LocalResource>() {
+          public LocalResource run() throws IOException {
+            FileSystem fs = FileSystem.get(conf);
+            OutputStream out = fs.create(scriptPath);
+            try {
+              out.write(script.toString().getBytes(StandardCharsets.UTF_8));
+            } finally {
+              out.close();
+            }
+            return Utils.localResource(fs, scriptPath, LocalResourceType.FILE);
+          }
+        });
+    } catch (InterruptedException exc) { }
+
+    // Add script to localized files
+    Map<String, LocalResource> localResources;
+    Map<String, LocalResource> specLR = service.getLocalResources();
+    if (specLR != null) {
+      localResources = new HashMap<String, LocalResource>(specLR);
+    } else {
+      localResources = new HashMap<String, LocalResource>();
+    }
+    localResources.put(".script.sh", scriptResource);
+
+    // Build command to execute script
+    ArrayList<String> commands = new ArrayList<String>();
+    String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
+    commands.add("bash .script.sh >" + logdir + "/" + tracker.name + ".log 2>&1");
+
+    tracker.ctx = ContainerLaunchContext.newInstance(
+        localResources, env, commands, null, tokens, null);
+
+    // Request initial containers
     for (int i = 0; i < service.getInstances(); i++) {
       addContainer(tracker);
     }
@@ -375,6 +413,11 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       fatal("Couldn't determine hostname for appmaster", exc);
     }
 
+    // Create ugi and add original tokens to it
+    String userName = System.getenv(Environment.USER.name());
+    LOG.info("user: " + userName);
+    ugi = UserGroupInformation.createRemoteUser(userName);
+
     Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
@@ -388,9 +431,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
     tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 
-    // Create ugi and add original tokens to it
-    String userName = System.getenv(Environment.USER.name());
-    ugi = UserGroupInformation.createRemoteUser(userName);
     ugi.addCredentials(credentials);
 
     startupRestServer();

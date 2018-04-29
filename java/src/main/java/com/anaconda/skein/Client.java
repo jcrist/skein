@@ -1,7 +1,6 @@
 package com.anaconda.skein;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -17,14 +16,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
-import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Server;
@@ -262,9 +259,10 @@ public class Client {
   private Map<String, LocalResource> setupAppDir(Model.Job job,
         ApplicationId appId) throws IOException {
 
-    // Make the ~/.skein/app_id dir
+    // Make the ~/.skein/app_id and ~/.skein/app_id/services dirs
     Path appDir = new Path(defaultFs.getHomeDirectory(), ".skein/" + appId.toString());
     FileSystem.mkdirs(defaultFs, appDir, SKEIN_DIR_PERM);
+    FileSystem.mkdirs(defaultFs, new Path(appDir, "services"), SKEIN_DIR_PERM);
 
     Map<Path, Path> uploadCache = new HashMap<Path, Path>();
 
@@ -272,6 +270,7 @@ public class Client {
     for (Model.Service s: job.getServices().values()) {
       finalizeService(s, uploadCache, appDir);
     }
+    job.setAppDir(appDir.toString());
     job.validate(true);
 
     // Write the job specification to file
@@ -287,7 +286,8 @@ public class Client {
     // Setup the LocalResources for the application master
     Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
     addFile(uploadCache, appDir, lr, amJar, "skein.jar", LocalResourceType.FILE);
-    lr.put(".skein.json", localResourceFromPath(specPath, LocalResourceType.FILE));
+    lr.put(".skein.json", Utils.localResource(defaultFs, specPath,
+                                              LocalResourceType.FILE));
 
     return lr;
   }
@@ -302,16 +302,6 @@ public class Client {
       service.setLocalResources(lr);
     }
     service.setFiles(null);
-  }
-
-  private LocalResource localResourceFromPath(Path path, LocalResourceType type)
-      throws IOException {
-    FileStatus status = defaultFs.getFileStatus(path);
-    return LocalResource.newInstance(ConverterUtils.getYarnUrlFromPath(path),
-                                     type,
-                                     LocalResourceVisibility.APPLICATION,
-                                     status.getLen(),
-                                     status.getModificationTime());
   }
 
   private void addFile(Map<Path, Path> uploadCache, Path appDir,
@@ -344,6 +334,6 @@ public class Client {
       }
     }
 
-    localResources.put(dst, localResourceFromPath(dstPath, type));
+    localResources.put(dst, Utils.localResource(defaultFs, dstPath, type));
   }
 }

@@ -157,6 +157,7 @@ public class Model {
   public static class Job {
     private String name;
     private String queue;
+    private String appDir;
     private Map<String, Service> services;
 
     public Job() {}
@@ -180,6 +181,9 @@ public class Model {
     public void setQueue(String queue) { this.queue = queue; }
     public String getQueue() { return queue; }
 
+    public void setAppDir(String appDir) { this.appDir = appDir; }
+    public String getAppDir() { return appDir; }
+
     public void setServices(Map<String, Service> services) { this.services = services; }
     public Map<String, Service> getServices() { return services; }
 
@@ -192,6 +196,9 @@ public class Model {
       }
       for (Service s: services.values()) {
         s.validate(uploaded);
+      }
+      if (uploaded) {
+        throwIfNull(appDir, "appDir");
       }
     }
   }

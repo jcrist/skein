@@ -2,8 +2,13 @@ package com.anaconda.skein;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,6 +59,16 @@ public class Utils {
   public static void sendError(HttpServletResponse resp, int code)
       throws IOException {
     sendError(resp, code, "unknown error");
+  }
+
+  public static LocalResource localResource(FileSystem fs, Path path,
+        LocalResourceType type) throws IOException {
+    FileStatus status = fs.getFileStatus(path);
+    return LocalResource.newInstance(ConverterUtils.getYarnUrlFromPath(path),
+                                     type,
+                                     LocalResourceVisibility.APPLICATION,
+                                     status.getLen(),
+                                     status.getModificationTime());
   }
 
   /** Given a path as a String, convert it to a Path. Also converts
