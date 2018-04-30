@@ -293,12 +293,21 @@ public class Client {
 
   private void finalizeService(Model.Service service, Map<Path, Path> uploadCache,
                                Path appDir) throws IOException {
+    // Upload files/archives as necessary
     if (service.getFiles() != null) {
       Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
       for (Model.File f : service.getFiles()) {
         addFile(uploadCache, appDir, lr, f.getSource(), f.getDest(), f.getType());
       }
       service.setLocalResources(lr);
+    }
+    // Add LANG if present
+    String lang = System.getenv("LANG");
+    if (lang != null) {
+      if (service.getEnv() == null) {
+        service.setEnv(new HashMap<String, String>());
+      }
+      service.getEnv().put("LANG", lang);
     }
     service.setFiles(null);
   }
