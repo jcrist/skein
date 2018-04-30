@@ -118,5 +118,5 @@ setup(name='skein',
       keywords='YARN HDFS hadoop distributed cluster',
       packages=['skein'],
       package_data={'skein': ['java/*.jar']},
-      install_requires=['requests'],
+      install_requires=['requests', 'pyyaml'],
       zip_safe=False)

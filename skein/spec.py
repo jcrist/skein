@@ -3,6 +3,8 @@ from __future__ import absolute_import, print_function, division
 import json
 import os
 
+import yaml
+
 from .compatibility import urlparse
 from .utils import implements
 
@@ -48,13 +50,6 @@ def _infer_format(path, format='infer'):
                              "specify manually" % path)
     elif format not in {'json', 'yaml'}:
         raise ValueError("Unknown file format: %r" % format)
-
-    if format == 'yaml':
-        try:
-            import yaml  # noqa
-        except ImportError:
-            raise ImportError("PyYaml is required to use yaml functionality, "
-                              "please install it.")
     return format
 
 
@@ -109,7 +104,6 @@ class Base(object):
                 data = f.read()
             return cls.from_json(data)
         else:
-            import yaml
             with open(path) as f:
                 data = yaml.safe_load(f)
             return cls.from_dict(data)
@@ -150,7 +144,6 @@ class Base(object):
             with open(path, mode='w') as f:
                 json.dump(obj, f)
         else:
-            import yaml
             with open(path, mode='w') as f:
                 yaml.dump(obj, f, default_flow_style=False)
 
