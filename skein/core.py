@@ -21,6 +21,7 @@ from .utils import cached_property, ensure_bytes
 
 
 _SECRET_ENV_VAR = b'SKEIN_SECRET_ACCESS_KEY'
+_ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'
 
 
 def _find_skein_jar():
@@ -44,7 +45,12 @@ class SimpleAuth(requests.auth.AuthBase):
 
 
 class SkeinAuth(requests.auth.AuthBase):
-    def __init__(self, secret):
+    def __init__(self, secret=None):
+        if secret is None:
+            secret = os.environb.get(_SECRET_ENV_VAR)
+            if secret is None:
+                raise ValueError("Secret not provided, and not found at "
+                                 "%r" % _SECRET_ENV_VAR.decode())
         self.secret = secret
 
     def __call__(self, r):
@@ -67,15 +73,8 @@ class SkeinAuth(requests.auth.AuthBase):
 
 class Client(object):
     def __init__(self, secret=None, verbose=False):
-        if secret is None:
-            secret = os.environb.get(_SECRET_ENV_VAR)
-            if secret is None:
-                raise ValueError("Secret not provided, and not found at "
-                                 "%r" % _SECRET_ENV_VAR.decode())
-
-        self._secret = secret
-        self._verbose = verbose
         self._auth = SkeinAuth(secret)
+        self._verbose = verbose
         self._init_client()
 
     def _init_client(self):
@@ -90,7 +89,7 @@ class Client(object):
             _, callback_port = callback.getsockname()
 
             env = dict(os.environ)
-            env.update({'SKEIN_SECRET_ACCESS_KEY': self._secret,
+            env.update({'SKEIN_SECRET_ACCESS_KEY': self._auth.secret,
                         'SKEIN_CALLBACK_PORT': str(callback_port)})
 
             if PY2:
@@ -223,6 +222,24 @@ class KeyStore(Mapping):
         return len(self._list_keys())
 
 
+class AMClient(object):
+    def __init__(self, address, auth):
+        self._address = address
+        self._auth = auth
+
+    @cached_property
+    def keystore(self):
+        return KeyStore(self._address, self._auth)
+
+    @classmethod
+    def from_env(cls):
+        address = os.environ.get(_ADDRESS_ENV_VAR)
+        if address is None:
+            raise ValueError("Address not found at %r" % _ADDRESS_ENV_VAR)
+        auth = SkeinAuth()
+        return cls(address, auth)
+
+
 class Application(object):
     def __init__(self, client, app_id):
         self.client = client
@@ -232,15 +249,16 @@ class Application(object):
         return 'Application<id=%r>' % self.app_id
 
     @cached_property
-    def _address(self):
+    def _am_client(self):
         s = self.client.status(self.app_id)
         if s['state'] != 'RUNNING':
             raise ValueError("This operation requires state: RUNNING. "
                              "Current state: %s." % s['state'])
         host = s['host']
         port = s['rpcPort']
-        return 'http://%s:%d' % (host, port)
+        address = 'http://%s:%d' % (host, port)
+        return AMClient(address, self.client._auth)
 
-    @cached_property
+    @property
     def keystore(self):
-        return KeyStore(self._address, self.client._auth)
+        return self._am_client.keystore

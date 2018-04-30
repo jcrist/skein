@@ -91,6 +91,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private Integer privatePort;
   private Integer publicPort;
   private String hostname;
+  private String address;
 
   private AtomicInteger numTotal = new AtomicInteger();
   private AtomicInteger numSucceeded = new AtomicInteger();
@@ -127,11 +128,10 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       ServiceTracker tracker = new ServiceTracker(serviceName, service);
       trackers.add(tracker);
 
+      LOG.info("INTIALIZING: " + tracker.name);
       if (tracker.isReady()) {
-        LOG.info("SERVICE: " + tracker.name + " - initializing services");
         initialize(tracker);
       } else {
-        LOG.info("SERVICE: " + tracker.name + " - waiting on runtime config");
         for (String key : service.getDepends()) {
           List<ServiceTracker> lk = waitingOn.get(key);
           if (lk == null) {
@@ -191,10 +191,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     // Determine ports
     privatePort = privateConnector.getLocalPort();
     publicPort = publicConnector.getLocalPort();
-  }
-
-  private void logstate(String service, UUID uuid, String state) {
-    LOG.info("SERVICE: " + service + " - " + uuid + " -> " + state);
+    address = "http://" + hostname + ":" + privatePort;
   }
 
   private String formatConfig(Set<String> depends, String val) {
@@ -219,6 +216,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       }
     }
     env.put("SKEIN_SECRET_ACCESS_KEY", secret);
+    env.put("SKEIN_APPMASTER_ADDRESS", address);
 
     // Finalize execution script
     final StringBuilder script = new StringBuilder();
@@ -278,15 +276,15 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   public UUID addContainer(ServiceTracker tracker) {
     UUID id = UUID.randomUUID();
     if (!tracker.isReady()) {
-      logstate(tracker.name, id, "waiting");
+      LOG.info("WAITING: " + tracker.name + " - " + id);
       tracker.waiting.add(id);
     } else {
       ContainerRequest req =
           new ContainerRequest(tracker.service.getResources(),
                                null, null, Priority.newInstance(0));
-      rmClient.addContainerRequest(req);
-      logstate(tracker.name, id, "requested");
       tracker.requested.add(id);
+      rmClient.addContainerRequest(req);
+      LOG.info("REQUESTED: " + tracker.name + " - " + id);
     }
     return id;
   }
@@ -294,25 +292,28 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   /* ResourceManager Callbacks */
 
   @Override
-  public void onContainersCompleted(List<ContainerStatus> containerStatuses) {
+  public synchronized void onContainersCompleted(List<ContainerStatus> containerStatuses) {
     for (ContainerStatus status : containerStatuses) {
 
       ContainerId cid = status.getContainerId();
       int exitStatus = status.getExitStatus();
 
       TrackerUUID pair = containers.get(cid);
+      if (pair == null) {
+        return;  // release container that was never started
+      }
       Container c = pair.tracker.running.remove(pair.uuid);
 
       if (exitStatus == ContainerExitStatus.SUCCESS) {
-        logstate(pair.tracker.name, pair.uuid, "succeeded");
+        LOG.info("SUCCEEDED: " + pair.tracker.name + " - " + pair.uuid);
         pair.tracker.succeeded.put(pair.uuid, c);
         numSucceeded.incrementAndGet();
       } else if (exitStatus == ContainerExitStatus.KILLED_BY_APPMASTER) {
-        logstate(pair.tracker.name, pair.uuid, "stopped");
+        LOG.info("STOPPED: " + pair.tracker.name + " - " + pair.uuid);
         pair.tracker.stopped.put(pair.uuid, c);
         numStopped.incrementAndGet();
       } else {
-        logstate(pair.tracker.name, pair.uuid, "failed");
+        LOG.info("FAILED: " + pair.tracker.name + " - " + pair.uuid);
         pair.tracker.failed.put(pair.uuid, c);
         numFailed.incrementAndGet();
       }
@@ -325,10 +326,9 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   }
 
   @Override
-  public void onContainersAllocated(List<Container> newContainers) {
+  public synchronized void onContainersAllocated(List<Container> newContainers) {
     for (Container c : newContainers) {
       boolean found = false;
-      LOG.info("Container " + c.getId() + " allocated, matching with service");
       for (ServiceTracker t : trackers) {
         if (t.matches(c.getResource())) {
           found = true;
@@ -336,12 +336,17 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
           t.running.put(uuid, c);
           containers.put(c.getId(), new TrackerUUID(t, uuid));
           nmClient.startContainerAsync(c, t.ctx);
-          logstate(t.name, uuid, "running");
+          LOG.info("RUNNING: " + t.name + " - " + uuid + " on " + c.getId());
           break;
         }
       }
       if (!found) {
-        fatal("No matching service round for resource: " + c.getResource());
+        // TODO: For some reason YARN allocates extra containers *sometimes*.
+        // It's not clear yet if this is a bug in skein or in YARN, for now
+        // release extra containers and log the discrepancy.
+        LOG.warn("No matching service round for resource: " + c.getResource()
+                 + " releasing " + c.getId());
+        rmClient.releaseAssignedContainer(c.getId());
       }
     }
   }
@@ -372,7 +377,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   public void onContainerStopped(ContainerId cid) { }
 
   @Override
-  public void onStartContainerError(ContainerId containerId, Throwable exc) {
+  public synchronized void onStartContainerError(ContainerId containerId, Throwable exc) {
     TrackerUUID pair = containers.remove(containerId);
     pair.tracker.failed.put(pair.uuid, pair.tracker.running.remove(pair.uuid));
     numFailed.incrementAndGet();

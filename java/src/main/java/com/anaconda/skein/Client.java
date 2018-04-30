@@ -222,8 +222,7 @@ public class Client {
         (Environment.JAVA_HOME.$$() + "/bin/java "
          + "-Xmx" + amMemory + "m "
          + "com.anaconda.skein.ApplicationMaster "
-         + "1>" + logdir + "/appmaster.stdout "
-         + "2>" + logdir + "/appmaster.stderr"));
+         + ">" + logdir + "/appmaster.log 2>&1"));
 
     // Add security tokens as needed
     ByteBuffer fsTokens = null;
@@ -325,8 +324,8 @@ public class Client {
           throw new IllegalArgumentException("MD5 not supported on this platform");
         }
         md.update(srcPath.toString().getBytes());
-        String suffix = Utils.hexEncode(md.digest());
-        dstPath = new Path(appDir, srcPath.getName() + "-" + suffix);
+        String prefix = Utils.hexEncode(md.digest());
+        dstPath = new Path(appDir, prefix + "-" + srcPath.getName());
         LOG.info("Uploading " + srcPath + " to " + dstPath);
         FileUtil.copy(srcFs, srcPath, dstFs, dstPath, false, conf);
         dstFs.setPermission(dstPath, SKEIN_FILE_PERM);
