@@ -226,6 +226,7 @@ class File(Base):
     def _from_dict_shorthand(cls, obj, type):
         cls._check_keys(obj, [type, 'dest'])
         path = obj[type]
+        type = type.upper()
         if 'dest' not in obj:
             path = urlparse(path).path
             base, name = os.path.split(path)
@@ -233,7 +234,12 @@ class File(Base):
                 raise ValueError("Distributed files must be files/archives, "
                                  "not directories")
             dest = name
-        return cls(source=path, dest=dest, type=type.upper())
+            if type == 'ARCHIVE':
+                for ext in ['.zip', '.tar.gz', '.tgz']:
+                    if name.endswith(ext):
+                        dest = name[:-len(ext)]
+                        break
+        return cls(source=path, dest=dest, type=type)
 
     @classmethod
     @implements(Base.from_dict)
@@ -296,14 +302,21 @@ class Service(Base):
                 isinstance(self.resources, Resources)):
             raise TypeError("resources must be Resources or None")
 
-        if not (self.files is None or is_list_of(self.files, File)):
+        self.resources._validate()
+
+        if is_list_of(self.files, File):
+            for f in self.files:
+                f._validate()
+        elif self.files is not None:
             raise TypeError("files must be a list of Files or None")
 
         if not (self.env is None or is_dict_of(self.env, str, str)):
             raise TypeError("env must be a dict of str -> str, or None")
 
-        if not (self.commands is None or is_list_of(self.commands, str)):
-            raise TypeError("commands must be a list of str, or None")
+        if not is_list_of(self.commands, str):
+            raise TypeError("commands must be a list of str")
+        if not self.commands:
+            raise ValueError("There must be at least one command")
 
         if not (self.depends is None or is_list_of(self.depends, str)):
             raise TypeError("depends must be a list of str, or None")
@@ -364,10 +377,13 @@ class Job(Base):
         if not (self.queue is None or isinstance(self.queue, str)):
             raise TypeError("queue must be a str or None")
 
-        if not (self.services is None or
-                is_dict_of(self.services, str, Service)):
-            raise TypeError("services must be a dict of str -> Service, "
-                            "or None")
+        if not is_dict_of(self.services, str, Service):
+            raise TypeError("services must be a dict of str -> Service")
+        if not self.services:
+            raise ValueError("There must be at least one service")
+
+        for s in self.services.values():
+            s._validate()
 
     @classmethod
     @implements(Base.from_dict)
