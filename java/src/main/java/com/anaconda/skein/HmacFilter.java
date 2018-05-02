@@ -30,7 +30,7 @@ public class HmacFilter implements Filter {
 
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
-    secret = filterConfig.getInitParameter("secret").getBytes();
+    secret = B64Code.decode(filterConfig.getInitParameter("secret"));
   }
 
   @Override

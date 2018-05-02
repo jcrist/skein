@@ -7,7 +7,7 @@ import select
 import socket
 import struct
 import subprocess
-from base64 import b64encode
+from base64 import b64encode, b64decode
 from collections import Mapping
 from contextlib import closing
 from hashlib import sha1, md5
@@ -17,11 +17,8 @@ import requests
 from .compatibility import PY2
 from .exceptions import (UnauthorizedError, ResourceManagerError,
                          ApplicationMasterError)
-from .utils import cached_property, ensure_bytes
-
-
-_SECRET_ENV_VAR = b'SKEIN_SECRET_ACCESS_KEY'
-_ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'
+from .utils import (cached_property, ensure_bytes, load_config,
+                    _SECRET_ENV_VAR, _ADDRESS_ENV_VAR)
 
 
 def _find_skein_jar():
@@ -46,11 +43,6 @@ class SimpleAuth(requests.auth.AuthBase):
 
 class SkeinAuth(requests.auth.AuthBase):
     def __init__(self, secret=None):
-        if secret is None:
-            secret = os.environb.get(_SECRET_ENV_VAR)
-            if secret is None:
-                raise ValueError("Secret not provided, and not found at "
-                                 "%r" % _SECRET_ENV_VAR.decode())
         self.secret = secret
 
     def __call__(self, r):
@@ -64,7 +56,7 @@ class SkeinAuth(requests.auth.AuthBase):
             body_md5 = b''
 
         msg = b'\n'.join([method, body_md5, content_type, path])
-        mac = hmac.new(self.secret, msg=msg, digestmod=sha1)
+        mac = hmac.new(b64decode(self.secret), msg=msg, digestmod=sha1)
         signature = b64encode(mac.digest())
 
         r.headers['Authorization'] = b'SKEIN %s' % signature
@@ -72,8 +64,9 @@ class SkeinAuth(requests.auth.AuthBase):
 
 
 class Client(object):
-    def __init__(self, secret=None, verbose=False):
-        self._auth = SkeinAuth(secret)
+    def __init__(self, verbose=False):
+        config = load_config()
+        self._auth = SkeinAuth(config['skein.secret'])
         self._verbose = verbose
         self._init_client()
 
@@ -236,8 +229,12 @@ class AMClient(object):
         address = os.environ.get(_ADDRESS_ENV_VAR)
         if address is None:
             raise ValueError("Address not found at %r" % _ADDRESS_ENV_VAR)
-        auth = SkeinAuth()
-        return cls(address, auth)
+
+        secret = os.environ.get(_SECRET_ENV_VAR)
+        if secret is None:
+            raise ValueError("Secret not found at %r" % _ADDRESS_ENV_VAR)
+
+        return cls(address, SkeinAuth(secret))
 
 
 class Application(object):
