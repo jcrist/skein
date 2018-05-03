@@ -8,9 +8,8 @@ import sys
 import requests
 
 from . import __version__
-from .core import (start_java_client, read_daemon_file, get_daemon_path,
-                   SkeinAuth, Client)
-from .utils import load_config
+from .core import start_java_client, SkeinAuth, Client
+from .utils import read_secret, read_daemon, daemon_path
 
 
 def add_help(parser):
@@ -46,8 +45,6 @@ entry.add_argument("--version", action='version',
                    help="Show version then exit")
 entry_subs = entry.add_subparsers(metavar='command')
 
-verbose = arg("--verbose", "-v", action="count", default=0)
-
 
 @subcommand(entry_subs,
             'daemon', 'Interact with the skein daemon')
@@ -61,8 +58,8 @@ daemon.subs = daemon.parser.add_subparsers(metavar='command')
 @subcommand(daemon.subs,
             'start', 'Start the skein daemon')
 def daemon_start():
-    secret = load_config()['skein.secret']
-    address, pid = read_daemon_file()
+    secret = read_secret()
+    address, pid = read_daemon()
     if address is not None:
         try:
             resp = requests.get("%s/skein" % address, auth=SkeinAuth(secret))
@@ -82,7 +79,7 @@ def daemon_start():
 @subcommand(daemon.subs,
             'address', 'The address of the running daemon')
 def daemon_address():
-    address, _ = read_daemon_file()
+    address, _ = read_daemon()
     if address is None:
         print("No skein daemon is running")
     else:
@@ -92,8 +89,8 @@ def daemon_address():
 @subcommand(daemon.subs,
             'stop', 'Stop the skein daemon')
 def daemon_stop(verbose=True):
-    secret = load_config()['skein.secret']
-    address, pid = read_daemon_file()
+    secret = read_secret()
+    address, pid = read_daemon()
     if address is None:
         if verbose:
             print("No skein daemon is running")
@@ -108,7 +105,7 @@ def daemon_stop(verbose=True):
         if resp.status_code == 401:
             # Skein daemon started with a different secret, kill it manually
             os.kill(pid, signal.SIGTERM)
-    os.unlink(get_daemon_path())
+    os.unlink(daemon_path())
     if verbose:
         print("Daemon stopped")
 
@@ -123,8 +120,7 @@ def get_client():
 
 @subcommand(entry_subs,
             'start', 'Start a Skein Job',
-            arg('spec', type=str, help='the specification file'),
-            verbose)
+            arg('spec', type=str, help='the specification file'))
 def do_start(spec, verbose):
     client = get_client()
     app = client.submit(spec)

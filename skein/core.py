@@ -1,9 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
-import errno
 import glob
 import hmac
-import json
 import os
 import select
 import socket
@@ -21,8 +19,8 @@ from .compatibility import PY2
 from .exceptions import (UnauthorizedError, ResourceManagerError,
                          ApplicationMasterError)
 from .spec import Job
-from .utils import (cached_property, ensure_bytes, load_config,
-                    _SECRET_ENV_VAR, _ADDRESS_ENV_VAR)
+from .utils import (cached_property, ensure_bytes, read_secret, read_daemon,
+                    write_daemon, _SECRET_ENV_VAR, _ADDRESS_ENV_VAR)
 
 
 def _find_skein_jar():
@@ -65,10 +63,6 @@ class SkeinAuth(requests.auth.AuthBase):
 
         r.headers['Authorization'] = b'SKEIN %s' % signature
         return r
-
-
-def get_daemon_path():
-    return os.sep.join([os.path.expanduser('~'), '.skein', 'daemon'])
 
 
 def start_java_client(secret, daemon=False, verbose=False):
@@ -120,34 +114,14 @@ def start_java_client(secret, daemon=False, verbose=False):
     address = 'http://127.0.0.1:%d' % port
 
     if daemon:
-        daemon_path = get_daemon_path()
-        try:
-            with open(daemon_path, 'w') as fil:
-                json.dump({'pid': proc.pid, 'address': address}, fil)
-        except OSError as e:
-            if e.errno == errno.EEXIST:
-                raise ValueError("daemon file already exists")
-            raise
+        write_daemon(address, proc.pid)
 
     return address, proc
 
 
-def read_daemon_file():
-    path = get_daemon_path()
-    try:
-        with open(path, 'r') as fil:
-            data = json.load(fil)
-            address = data['address']
-            pid = data['pid']
-    except Exception:
-        address = pid = None
-    return address, pid
-
-
 class Client(object):
     def __init__(self, start_java=None):
-        config = load_config()
-        self._auth = SkeinAuth(config['skein.secret'])
+        self._auth = SkeinAuth(read_secret())
 
         if start_java is None:
             try:
@@ -165,7 +139,7 @@ class Client(object):
         self._address, self._proc = start_java_client(self._auth.secret)
 
     def _connect(self):
-        address, _ = read_daemon_file()
+        address, _ = read_daemon()
         if address is None:
             raise ValueError("No daemon currently running")
 

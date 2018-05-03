@@ -1,11 +1,10 @@
 from __future__ import print_function, division, absolute_import
 
+import errno
+import json
 import os
 
-import yaml
-
 from .compatibility import urlparse
-from .hadoop_config import HadoopConfiguration
 
 
 _SECRET_ENV_VAR = 'SKEIN_SECRET_ACCESS_KEY'
@@ -45,55 +44,42 @@ def implements(f):
     return decorator
 
 
-def _flatten(d):
-    if type(d) is dict:
-        out = {}
-        for k, v in d.items():
-            if type(v) is dict:
-                out2 = _flatten({'.'.join((k, k2)): v2 for k2, v2 in v.items()})
-                out.update(out2)
-            else:
-                out[k] = v
-        return out
-    else:
-        return d
-
-
-def load_config():
-    path = os.sep.join([os.path.expanduser('~'), '.skein', 'config.yaml'])
-    if os.path.exists(path):
+def read_secret():
+    path = os.path.join(os.path.expanduser('~'), '.skein', 'secret')
+    try:
         with open(path) as fil:
-            out = _flatten(yaml.load(fil))
-    else:
-        out = {}
+            secret = fil.read()
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            raise
 
-    secret_key = 'skein.secret'
-    rest_key = 'resourcemanager.rest.address'
-    keys = {secret_key, rest_key}
-
-    extra = set(out).difference(keys)
-    if False:
-        raise ValueError("Unknown configuration keys:\n"
-                         "%s" % '\n'.join("- %r" % k for k in extra))
-
-    config = HadoopConfiguration()
-
-    if rest_key not in out:
-        if config.get('yarn.http.policy') == 'HTTP_ONLY':
-            key = 'yarn.resourcemanager.webapp.address'
-            scheme = 'http'
-        else:
-            key = 'yarn.resourcemanager.webapp.https.address'
-            scheme = 'https'
-        out[rest_key] = normalize_address(config.get(key), scheme)
-
-    out['hadoop.security'] = config.get('hadoop.http.authentication.type')
-
-    if secret_key not in out:
         secret = os.environ.get(_SECRET_ENV_VAR)
         if secret is None:
             raise ValueError("Secret key not found in config file or "
                              "%r envar" % _SECRET_ENV_VAR)
-        out[secret_key] = secret
+    return secret
 
-    return out
+
+def daemon_path():
+    return os.sep.join([os.path.expanduser('~'), '.skein', 'daemon'])
+
+
+def read_daemon():
+    path = daemon_path()
+    try:
+        with open(path, 'r') as fil:
+            data = json.load(fil)
+            address = data['address']
+            pid = data['pid']
+    except Exception:
+        address = pid = None
+    return address, pid
+
+
+def write_daemon(address, pid):
+    # Ensure the config dir exists
+    os.makedirs(os.path.join(os.path.expanduser('~'), '.skein'), exist_ok=True)
+    # Write to the daemon file
+    path = daemon_path()
+    with open(path, 'w') as fil:
+        json.dump({'address': address, 'pid': pid}, fil)
