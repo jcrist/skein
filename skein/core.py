@@ -170,6 +170,9 @@ class Client(object):
 
         raise ResourceManagerError(msg)
 
+    def application(self, app_id):
+        return Application(self, app_id)
+
     def submit(self, job):
         if isinstance(job, str):
             job = Job.from_file(job)
@@ -181,15 +184,15 @@ class Client(object):
 
         return Application(self, app_id)
 
-    def status(self, appid):
-        url = '%s/apps/%s' % (self._address, appid)
+    def status(self, app_id):
+        url = '%s/apps/%s' % (self._address, app_id)
         resp = self._rm.get(url)
         if resp.status_code == 200:
             return resp.json()
         self._handle_exceptions(resp)
 
-    def kill(self, appid):
-        url = '%s/apps/%s' % (self._address, appid)
+    def kill(self, app_id):
+        url = '%s/apps/%s' % (self._address, app_id)
         resp = self._rm.delete(url)
         if resp.status_code != 204:
             self._handle_exceptions(resp)
@@ -239,6 +242,21 @@ class AMClient(object):
         elif resp.status_code != 204:
             self._handle_exceptions(resp)
 
+    def inspect(self, service=None):
+        if service is None:
+            url = '%s/job' % self._address
+        else:
+            url = '%s/job/%s' % (self._address, service)
+        try:
+            resp = self._am.get(url)
+        except requests.ConnectionError:
+            raise ValueError("Application no longer running")
+        if resp.ok:
+            return resp.json()
+        elif resp.status_code == 404 and service is not None:
+            raise ValueError("Unknown service %r" % service)
+        self._handle_exceptions(resp)
+
     @classmethod
     def from_env(cls):
         address = os.environ.get(_ADDRESS_ENV_VAR)
@@ -271,6 +289,14 @@ class Application(object):
 
     def __repr__(self):
         return 'Application<id=%r>' % self.app_id
+
+    def status(self):
+        status = self.client.status(self.app_id)
+        return {'state': status['state'],
+                'status': status['finalStatus']}
+
+    def inspect(self, service=None):
+        return self._am_client.inspect(service=service)
 
     @cached_property
     def _am_client(self):

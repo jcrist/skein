@@ -368,23 +368,22 @@ public class Client {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
         throws ServletException, IOException {
-      String path = req.getPathInfo();
-      if (!daemon || path == null || !path.equals("/shutdown")) {
-        Utils.sendError(resp, 404);
-        return;
-      }
-      new Thread() {
-        @Override
-        public void run() {
-          try {
-            LOG.info("Shutdown signal received, shutting down");
-            server.stop();
-          } catch (Exception ex) {
-            LOG.info("Failed to stop Jetty", ex);
-            System.exit(0);
+      if (daemon && "shutdown".equals(Utils.getPath(req))) {
+        new Thread() {
+          @Override
+          public void run() {
+            try {
+              LOG.info("Shutdown signal received, shutting down");
+              server.stop();
+            } catch (Exception ex) {
+              LOG.info("Failed to stop Jetty", ex);
+              System.exit(0);
+            }
           }
-        }
-      }.start();
+        }.start();
+      } else {
+        Utils.sendError(resp, 404);
+      }
     }
 
     @Override

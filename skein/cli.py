@@ -6,6 +6,7 @@ import signal
 import sys
 
 import requests
+import yaml
 
 from . import __version__
 from .core import start_java_client, SkeinAuth, Client
@@ -36,23 +37,38 @@ def subcommand(subparsers, name, help, *args):
     return _
 
 
+def node(subs, name, help):
+    @subcommand(subs, name, help)
+    def f():
+        f.parser.print_usage()
+    f.subs = f.parser.add_subparsers(metavar='command')
+    return f
+
+
 entry = argparse.ArgumentParser(prog="skein",
-                                description="Interact with YARN jobs via skein",
+                                description="Define and run YARN jobs",
                                 add_help=False)
 add_help(entry)
 entry.add_argument("--version", action='version',
                    version='%(prog)s ' + __version__,
                    help="Show version then exit")
+entry.set_defaults(func=lambda: entry.print_usage())
 entry_subs = entry.add_subparsers(metavar='command')
 
+# Sub command nodes
+daemon = node(entry_subs, 'daemon', 'Manage the skein daemon')
 
-@subcommand(entry_subs,
-            'daemon', 'Interact with the skein daemon')
-def daemon():
-    daemon.parser.print_usage()
+# Common arguments
+app_id = arg('app_id', type=str, help='The application id')
+spec = arg('spec', type=str, help='The specification file')
 
 
-daemon.subs = daemon.parser.add_subparsers(metavar='command')
+def get_client():
+    try:
+        return Client(start_java=False)
+    except ValueError:
+        print("Skein daemon not found, please run `skein daemon start`")
+        sys.exit(1)
 
 
 @subcommand(daemon.subs,
@@ -110,17 +126,9 @@ def daemon_stop(verbose=True):
         print("Daemon stopped")
 
 
-def get_client():
-    try:
-        return Client(start_java=False)
-    except ValueError:
-        print("Skein daemon not found, please run `skein daemon start`")
-        sys.exit(1)
-
-
 @subcommand(entry_subs,
             'start', 'Start a Skein Job',
-            arg('spec', type=str, help='the specification file'))
+            spec)
 def do_start(spec):
     client = get_client()
     app = client.submit(spec)
@@ -129,18 +137,26 @@ def do_start(spec):
 
 @subcommand(entry_subs,
             'status', 'Status of a Skein Job',
-            arg('id', type=str, help='the application id'))
-def do_status(id):
+            app_id)
+def do_status(app_id):
     client = get_client()
-    resp = client.status(id)
-    state = resp['state']
-    status = resp['finalStatus']
-    print("State: %r, Status: %r" % (state, status))
+    status = client.application(app_id).status()
+    print("State: {state}, Status: {status}".format(**status))
+
+
+@subcommand(entry_subs,
+            'inspect', 'Information about a Skein Job',
+            app_id,
+            arg('--service', type=str, help='Service name'))
+def do_inspect(app_id, service=None):
+    client = get_client()
+    resp = client.application(app_id).inspect(service=service)
+    print(yaml.dump(resp, default_flow_style=False))
 
 
 @subcommand(entry_subs,
             'kill', 'Kill a Skein Job',
-            arg('id', type=str, help='the application id'))
+            app_id)
 def do_kill(id):
     client = get_client()
     client.kill(id)

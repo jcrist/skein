@@ -17,6 +17,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Set;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class Utils {
@@ -59,6 +60,13 @@ public class Utils {
   public static void sendError(HttpServletResponse resp, int code)
       throws IOException {
     sendError(resp, code, "unknown error");
+  }
+
+  public static String getPath(HttpServletRequest req) {
+    String path = req.getPathInfo();
+    // Strips leading `/` from paths, and replaces empty paths with null
+    // Ensures that /path and /path/ are treated the same
+    return (path == null || path.length() <= 1) ? null : path.substring(1);
   }
 
   public static LocalResource localResource(FileSystem fs, Path path,
