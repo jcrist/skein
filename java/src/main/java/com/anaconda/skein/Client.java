@@ -1,5 +1,6 @@
 package com.anaconda.skein;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -44,6 +45,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 public class Client {
 
@@ -65,6 +70,8 @@ public class Client {
   private String classpath;
 
   private String amJar;
+
+  private boolean daemon = false;
 
   private int amMemory = 10;
 
@@ -93,7 +100,8 @@ public class Client {
     ServletContextHandler context =
         new ServletContextHandler(ServletContextHandler.SESSIONS);
     context.setContextPath("/");
-    context.addServlet(new ServletHolder(new ClientServlet(this)), "/apps/*");
+    context.addServlet(new ServletHolder(new AppsServlet()), "/apps/*");
+    context.addServlet(new ServletHolder(new SkeinServlet()), "/skein/*");
     FilterHolder holder = context.addFilter(HmacFilter.class, "/*",
                                             EnumSet.of(DispatcherType.REQUEST));
     holder.setInitParameter("secret", secret);
@@ -133,14 +141,21 @@ public class Client {
     }
     callbackPort = Integer.valueOf(callbackPortEnv);
 
-    if (args.length < 1) {
-      LOG.fatal("Must pass in path to this jar file");
-      System.exit(1);
-    } else if (args.length > 1) {
+    if (args.length > 2) {
       LOG.fatal("Unknown extra arguments");
       System.exit(1);
     }
-    amJar = args[0];
+    for (String arg : args) {
+      if (arg.equals("--daemon")) {
+        daemon = true;
+      } else {
+        amJar = arg;
+      }
+    }
+    if (amJar == null) {
+      LOG.fatal("Must pass in path to this jar file");
+      System.exit(1);
+    }
 
     conf = new YarnConfiguration();
     defaultFs = FileSystem.get(conf);
@@ -173,9 +188,13 @@ public class Client {
     dos.close();
     callback.close();
 
-    // Wait until EOF or broken pipe from stdin
-    while (System.in.read() != -1) {}
-    server.stop();
+    if (daemon) {
+      server.join();
+    } else {
+      // Wait until EOF or broken pipe from stdin
+      while (System.in.read() != -1) {}
+      server.stop();
+    }
   }
 
   /** Get information on a running application. **/
@@ -343,5 +362,139 @@ public class Client {
     }
 
     localResources.put(dst, Utils.localResource(defaultFs, dstPath, type));
+  }
+
+  private final class SkeinServlet extends HttpServlet {
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+        throws ServletException, IOException {
+      String path = req.getPathInfo();
+      if (!daemon || path == null || !path.equals("/shutdown")) {
+        Utils.sendError(resp, 404);
+        return;
+      }
+      new Thread() {
+        @Override
+        public void run() {
+          try {
+            LOG.info("Shutdown signal received, shutting down");
+            server.stop();
+          } catch (Exception ex) {
+            LOG.info("Failed to stop Jetty", ex);
+            System.exit(0);
+          }
+        }
+      }.start();
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+        throws ServletException, IOException {
+      if (req.getPathInfo() != null) {
+        Utils.sendError(resp, 404);
+        return;
+      }
+    }
+  }
+
+  private final class AppsServlet extends HttpServlet {
+    private ApplicationId appIdFromString(String appId) {
+      // Parse applicationId_{timestamp}_{id}
+      String[] parts = appId.split("_");
+      if (parts.length < 3) {
+        return null;
+      }
+      long timestamp = Long.valueOf(parts[1]);
+      int id = Integer.valueOf(parts[2]);
+      return ApplicationId.newInstance(timestamp, id);
+    }
+
+    private ApplicationId getAppId(HttpServletRequest req) {
+      String appId = req.getPathInfo();
+      if (appId == null || appId.length() <= 1) {
+        return null;
+      }
+      return appIdFromString(appId.substring(1));
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+        throws ServletException, IOException {
+
+      ApplicationId appId = getAppId(req);
+
+      if (appId == null) {
+        Utils.sendError(resp, 404, "Malformed request");
+        return;
+      }
+
+      ApplicationReport report = getApplicationReport(appId);
+
+      if (report == null) {
+        Utils.sendError(resp, 404, "Unknown ApplicationID");
+        return;
+      }
+
+      ObjectNode objectNode = Utils.MAPPER.createObjectNode();
+      objectNode.put("id", appId.toString());
+      objectNode.put("state", report.getYarnApplicationState().toString());
+      objectNode.put("finalStatus", report.getFinalApplicationStatus().toString());
+      objectNode.put("user", report.getUser());
+      objectNode.put("trackingURL", report.getTrackingUrl());
+      objectNode.put("host", report.getHost());
+      objectNode.put("rpcPort", report.getRpcPort());
+
+      OutputStream out = resp.getOutputStream();
+      Utils.MAPPER.writeValue(out, objectNode);
+      out.close();
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+        throws ServletException, IOException {
+
+      ApplicationId appId = getAppId(req);
+
+      if (appId != null) {
+        Utils.sendError(resp, 400, "Malformed Request");
+        return;
+      }
+
+      Model.Job job;
+      try {
+        job = Utils.MAPPER.readValue(req.getInputStream(), Model.Job.class);
+      } catch (Exception exc) {
+        Utils.sendError(resp, 400, exc.getMessage());
+        return;
+      }
+
+      try {
+        appId = submit(job);
+      } catch (Exception exc) {
+        Utils.sendError(resp, 400, exc.getMessage());
+        return;
+      }
+      OutputStream out = resp.getOutputStream();
+      out.write(appId.toString().getBytes());
+      resp.setStatus(200);
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
+        throws ServletException, IOException {
+
+      ApplicationId appId = getAppId(req);
+
+      if (appId == null) {
+        Utils.sendError(resp, 400, "Malformed Request");
+        return;
+      }
+
+      if (killApplication(appId)) {
+        resp.setStatus(204);
+      } else {
+        Utils.sendError(resp, 404, "Failed to kill application");
+      }
+    }
   }
 }

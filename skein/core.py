@@ -1,12 +1,15 @@
 from __future__ import print_function, division, absolute_import
 
+import errno
 import glob
 import hmac
+import json
 import os
 import select
 import socket
 import struct
 import subprocess
+import warnings
 from base64 import b64encode, b64decode
 from collections import Mapping
 from contextlib import closing
@@ -63,66 +66,127 @@ class SkeinAuth(requests.auth.AuthBase):
         return r
 
 
-class Client(object):
-    def __init__(self, verbose=False):
-        config = load_config()
-        self._auth = SkeinAuth(config['skein.secret'])
-        self._verbose = verbose
-        self._init_client()
+def get_daemon_path():
+    return os.sep.join([os.path.expanduser('~'), '.skein', 'daemon'])
 
-    def _init_client(self):
-        jar = _find_skein_jar()
+
+def start_java_client(secret, daemon=False, verbose=False):
+    jar = _find_skein_jar()
+
+    if daemon:
+        command = ["yarn", "jar", jar, jar, '--daemon']
+    else:
         command = ["yarn", "jar", jar, jar]
 
-        callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        callback.bind(('127.0.0.1', 0))
-        callback.listen(1)
+    callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    callback.bind(('127.0.0.1', 0))
+    callback.listen(1)
 
-        with closing(callback):
-            _, callback_port = callback.getsockname()
+    with closing(callback):
+        _, callback_port = callback.getsockname()
 
-            env = dict(os.environ)
-            env.update({'SKEIN_SECRET_ACCESS_KEY': self._auth.secret,
-                        'SKEIN_CALLBACK_PORT': str(callback_port)})
+        env = dict(os.environ)
+        env.update({'SKEIN_SECRET_ACCESS_KEY': secret,
+                    'SKEIN_CALLBACK_PORT': str(callback_port)})
 
-            if PY2:
-                popen_kwargs = dict(preexec_fn=os.setsid)
-            else:
-                popen_kwargs = dict(start_new_session=True)
+        if PY2:
+            popen_kwargs = dict(preexec_fn=os.setsid)
+        else:
+            popen_kwargs = dict(start_new_session=True)
 
-            outfil = None if self._verbose else subprocess.DEVNULL
-            proc = subprocess.Popen(command,
-                                    stdin=subprocess.PIPE,
-                                    stdout=outfil,
-                                    stderr=outfil,
-                                    env=env,
-                                    **popen_kwargs)
+        outfil = None if verbose else subprocess.DEVNULL
+        infil = None if daemon else subprocess.PIPE
 
-            while proc.poll() is None:
-                readable, _, _ = select.select([callback], [], [], 1)
-                if callback in readable:
-                    connection = callback.accept()[0]
-                    with closing(connection):
-                        stream = connection.makefile(mode="rb")
-                        msg = stream.read(4)
-                        if not msg:
-                            raise ValueError("Failed to read in client port")
-                        port = struct.unpack("!i", msg)[0]
-                        break
+        proc = subprocess.Popen(command,
+                                stdin=infil,
+                                stdout=outfil,
+                                stderr=outfil,
+                                env=env,
+                                **popen_kwargs)
 
-        self._address = 'http://127.0.0.1:%d' % port
-        self._proc = proc
+        while proc.poll() is None:
+            readable, _, _ = select.select([callback], [], [], 1)
+            if callback in readable:
+                connection = callback.accept()[0]
+                with closing(connection):
+                    stream = connection.makefile(mode="rb")
+                    msg = stream.read(4)
+                    if not msg:
+                        raise ValueError("Failed to read in client port")
+                    port = struct.unpack("!i", msg)[0]
+                    break
+
+    address = 'http://127.0.0.1:%d' % port
+
+    if daemon:
+        daemon_path = get_daemon_path()
+        try:
+            with open(daemon_path, 'w') as fil:
+                json.dump({'pid': proc.pid, 'address': address}, fil)
+        except OSError as e:
+            if e.errno == errno.EEXIST:
+                raise ValueError("daemon file already exists")
+            raise
+
+    return address, proc
+
+
+def read_daemon_file():
+    path = get_daemon_path()
+    try:
+        with open(path, 'r') as fil:
+            data = json.load(fil)
+            address = data['address']
+            pid = data['pid']
+    except Exception:
+        address = pid = None
+    return address, pid
+
+
+class Client(object):
+    def __init__(self, new_daemon=None):
+        config = load_config()
+        self._auth = SkeinAuth(config['skein.secret'])
+
+        if new_daemon is None:
+            try:
+                self._connect()
+            except Exception as e:
+                warnings.warn("Failed to connect to daemon, starting new server. "
+                              "Exception message: %s", e)
+                self._create()
+        elif new_daemon:
+            self._create()
+        else:
+            self._connect()
+
+    def _create(self):
+        self._address, self._proc = start_java_client(self._auth.secret)
+
+    def _connect(self):
+        address, _ = read_daemon_file()
+        if address is None:
+            raise ValueError("No daemon currently running")
+
+        try:
+            resp = requests.get("%s/skein" % address, auth=self._auth)
+        except requests.ConnectionError:
+            raise ValueError("Daemon no longer running at %s" % address)
+
+        if resp.status_code == 401:
+            raise ValueError("Daemon started with different secret key")
+        elif not resp.ok:
+            raise ValueError("Daemon returned http status %d" % resp.status_code)
+
+        self._address = address
+        self._proc = None
 
     def __repr__(self):
-        status = 'stopped' if self._proc.stdin.closed else 'running'
-        return 'Client<%s, status=%s>' % (self._address, status)
-
-    def restart(self):
-        self.close()
-        self._init_client()
+        return 'Client<%s>' % self._address
 
     def close(self):
-        self._proc.stdin.close()
+        if self._proc is not None:
+            self._proc.stdin.close()
 
     def __enter__(self):
         return self
