@@ -121,7 +121,8 @@ def start_java_client(secret, daemon=False, verbose=False):
 
 class Client(object):
     def __init__(self, start_java=None):
-        self._auth = SkeinAuth(read_secret())
+        self._rm = requests.Session()
+        self._rm.auth = SkeinAuth(read_secret())
 
         if start_java is None:
             try:
@@ -136,7 +137,7 @@ class Client(object):
             self._connect()
 
     def _create(self):
-        self._address, self._proc = start_java_client(self._auth.secret)
+        self._address, self._proc = start_java_client(self._rm.auth.secret)
 
     def _connect(self):
         address, _ = read_daemon()
@@ -144,7 +145,7 @@ class Client(object):
             raise ValueError("No daemon currently running")
 
         try:
-            resp = requests.get("%s/skein" % address, auth=self._auth)
+            resp = self._rm.get("%s/skein" % address)
         except requests.ConnectionError:
             raise ValueError("Daemon no longer running at %s" % address)
 
@@ -185,7 +186,7 @@ class Client(object):
         if isinstance(job, str):
             job = Job.from_file(job)
         url = '%s/apps/' % self._address
-        resp = requests.post(url, auth=self._auth, json=job.to_dict())
+        resp = self._rm.post(url, json=job.to_dict())
         if resp.status_code != 200:
             self._handle_exceptions(resp)
         app_id = resp.content.decode()
@@ -194,14 +195,14 @@ class Client(object):
 
     def status(self, appid):
         url = '%s/apps/%s' % (self._address, appid)
-        resp = requests.get(url, auth=self._auth)
+        resp = self._rm.get(url)
         if resp.status_code == 200:
             return resp.json()
         self._handle_exceptions(resp)
 
     def kill(self, appid):
         url = '%s/apps/%s' % (self._address, appid)
-        resp = requests.delete(url, auth=self._auth)
+        resp = self._rm.delete(url)
         if resp.status_code != 204:
             self._handle_exceptions(resp)
 
@@ -301,7 +302,7 @@ class Application(object):
         host = s['host']
         port = s['rpcPort']
         address = 'http://%s:%d' % (host, port)
-        return AMClient(address, self.client._auth)
+        return AMClient(address, self.client._rm.auth)
 
     @property
     def keystore(self):
