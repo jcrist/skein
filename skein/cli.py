@@ -121,7 +121,7 @@ def get_client():
 @subcommand(entry_subs,
             'start', 'Start a Skein Job',
             arg('spec', type=str, help='the specification file'))
-def do_start(spec, verbose):
+def do_start(spec):
     client = get_client()
     app = client.submit(spec)
     print(app.app_id)
@@ -136,6 +136,14 @@ def do_status(id):
     state = resp['state']
     status = resp['finalStatus']
     print("State: %r, Status: %r" % (state, status))
+
+
+@subcommand(entry_subs,
+            'kill', 'Kill a Skein Job',
+            arg('id', type=str, help='the application id'))
+def do_kill(id):
+    client = get_client()
+    client.kill(id)
 
 
 def main(args=None):

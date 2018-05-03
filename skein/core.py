@@ -199,6 +199,12 @@ class Client(object):
             return resp.json()
         self._handle_exceptions(resp)
 
+    def kill(self, appid):
+        url = '%s/apps/%s' % (self._address, appid)
+        resp = requests.delete(url, auth=self._auth)
+        if resp.status_code != 204:
+            self._handle_exceptions(resp)
+
 
 class KeyStore(Mapping):
     """Wrapper for the Skein KeyStore"""
