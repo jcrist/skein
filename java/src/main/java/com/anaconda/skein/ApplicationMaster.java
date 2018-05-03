@@ -1,7 +1,5 @@
 package com.anaconda.skein;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -165,7 +163,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         new ServletContextHandler(ServletContextHandler.SESSIONS);
     privateContext.setContextPath("/");
     privateContext.setVirtualHosts(new String[] {"@Private"});
-    privateContext.addServlet(keyVal, "/keys/*");
+    privateContext.addServlet(keyVal, "/keystore/*");
     FilterHolder holder =
         privateContext.addFilter(HmacFilter.class, "/*",
                                  EnumSet.of(DispatcherType.REQUEST));
@@ -182,7 +180,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         new ServletContextHandler(ServletContextHandler.SESSIONS);
     publicContext.setContextPath("/");
     publicContext.setVirtualHosts(new String[] {"@Public"});
-    publicContext.addServlet(keyVal, "/keys/*");
+    publicContext.addServlet(keyVal, "/keystore/*");
     handlers.addHandler(publicContext);
 
     // Startup the server
@@ -504,7 +502,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     private String getKey(HttpServletRequest req) {
       String key = req.getPathInfo();
       // Strips leading `/` from keys, and replaces empty keys with null
-      // Ensures that /keys and /keys/ are treated the same
+      // Ensures that /keystore and /keystore/ are treated the same
       return (key == null || key.length() <= 1) ? null : key.substring(1);
     }
 
@@ -515,18 +513,10 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       String key = getKey(req);
 
       if (key == null) {
-        // Handle /keys or /keys/
-        // Returns an object like {'keys': [key1, key2, ...]}
-        ArrayNode arrayNode = Utils.MAPPER.createArrayNode();
-        ObjectNode objectNode = Utils.MAPPER.createObjectNode();
-        for (String key2 : configuration.keySet()) {
-          arrayNode.add(key2);
-        }
-        objectNode.putPOJO("keys", arrayNode);
-
+        // Handle /keystore or /keystore/
         resp.setHeader("Content-Type", "application/json");
         OutputStream out = resp.getOutputStream();
-        Utils.MAPPER.writeValue(out, objectNode);
+        Utils.MAPPER.writeValue(out, configuration);
         out.close();
         return;
       }

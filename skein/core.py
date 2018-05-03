@@ -9,7 +9,6 @@ import struct
 import subprocess
 import warnings
 from base64 import b64encode, b64decode
-from collections import Mapping
 from contextlib import closing
 from hashlib import sha1, md5
 
@@ -207,14 +206,11 @@ class Client(object):
             self._handle_exceptions(resp)
 
 
-class KeyStore(Mapping):
-    """Wrapper for the Skein KeyStore"""
+class AMClient(object):
     def __init__(self, address, auth):
         self._address = address
-        self._auth = auth
-
-    def __repr__(self):
-        return 'KeyStore<address=%s>' % self._address
+        self._am = requests.Session()
+        self._am.auth = auth
 
     def _handle_exceptions(self, resp):
         if resp.status_code == 401:
@@ -225,21 +221,19 @@ class KeyStore(Mapping):
                                          "unhandled status code: "
                                          "%d" % resp.status_code)
 
-    def _check_key(self, key):
+    def get_key(self, key=None):
+        if key is None:
+            resp = self._am.get('%s/keystore/' % self._address)
+            if resp.status_code == 200:
+                return resp.json()
+            else:
+                self._handle_exceptions(resp)
+
         if not len(key):
             raise ValueError("len(key) must be > 0")
 
-    def _list_keys(self):
-        url = '%s/keys/' % self._address
-        resp = requests.get(url, auth=self._auth)
-        if resp.status_code != 200:
-            self._handle_exceptions(resp)
-        return resp.json()['keys']
+        resp = self._am.get('%s/keystore/%s' % (self._address, key))
 
-    def __getitem__(self, key):
-        self._check_key(key)
-        url = '%s/keys/%s' % (self._address, key)
-        resp = requests.get(url, auth=self._auth)
         if resp.status_code == 200:
             return resp.content.decode()
         elif resp.status_code == 404:
@@ -247,30 +241,14 @@ class KeyStore(Mapping):
         else:
             self._handle_exceptions(resp)
 
-    def __setitem__(self, key, value):
-        self._check_key(key)
-        url = '%s/keys/%s' % (self._address, key)
-        resp = requests.put(url, auth=self._auth, data=value)
+    def set_key(self, key, value):
+        if not len(key):
+            raise ValueError("len(key) must be > 0")
+        resp = self._am.put('%s/keystore/%s' % (self._address, key), data=value)
         if resp.status_code == 403:
             raise KeyError("key %r has already been set" % key)
-        if resp.status_code != 204:
+        elif resp.status_code != 204:
             self._handle_exceptions(resp)
-
-    def __iter__(self):
-        return iter(self._list_keys())
-
-    def __len__(self):
-        return len(self._list_keys())
-
-
-class AMClient(object):
-    def __init__(self, address, auth):
-        self._address = address
-        self._auth = auth
-
-    @cached_property
-    def keystore(self):
-        return KeyStore(self._address, self._auth)
 
     @classmethod
     def from_env(cls):
@@ -283,6 +261,18 @@ class AMClient(object):
             raise ValueError("Secret not found at %r" % _ADDRESS_ENV_VAR)
 
         return cls(address, SkeinAuth(secret))
+
+    @classmethod
+    def from_id(cls, app_id):
+        client = Client(start_java=False)
+        s = client.status(app_id)
+        if s['state'] not in {"RUNNING", "FINISHED", "FAILED", "KILLED"}:
+            raise ValueError("This application hasn't started yet, "
+                             "current state: %s." % s['state'])
+        host = s['host']
+        port = s['rpcPort']
+        address = 'http://%s:%d' % (host, port)
+        return cls(address, client._rm.auth)
 
 
 class Application(object):
@@ -303,7 +293,3 @@ class Application(object):
         port = s['rpcPort']
         address = 'http://%s:%d' % (host, port)
         return AMClient(address, self.client._rm.auth)
-
-    @property
-    def keystore(self):
-        return self._am_client.keystore
