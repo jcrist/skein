@@ -20,6 +20,7 @@ import requests
 from .compatibility import PY2
 from .exceptions import (UnauthorizedError, ResourceManagerError,
                          ApplicationMasterError)
+from .spec import Job
 from .utils import (cached_property, ensure_bytes, load_config,
                     _SECRET_ENV_VAR, _ADDRESS_ENV_VAR)
 
@@ -144,18 +145,18 @@ def read_daemon_file():
 
 
 class Client(object):
-    def __init__(self, new_daemon=None):
+    def __init__(self, start_java=None):
         config = load_config()
         self._auth = SkeinAuth(config['skein.secret'])
 
-        if new_daemon is None:
+        if start_java is None:
             try:
                 self._connect()
             except Exception as e:
                 warnings.warn("Failed to connect to daemon, starting new server. "
                               "Exception message: %s", e)
                 self._create()
-        elif new_daemon:
+        elif start_java:
             self._create()
         else:
             self._connect()
@@ -207,6 +208,8 @@ class Client(object):
         raise ResourceManagerError(msg)
 
     def submit(self, job):
+        if isinstance(job, str):
+            job = Job.from_file(job)
         url = '%s/apps/' % self._address
         resp = requests.post(url, auth=self._auth, json=job.to_dict())
         if resp.status_code != 200:

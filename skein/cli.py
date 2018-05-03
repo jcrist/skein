@@ -3,12 +3,13 @@ from __future__ import print_function, division, absolute_import
 import argparse
 import os
 import signal
+import sys
 
 import requests
 
 from . import __version__
 from .core import (start_java_client, read_daemon_file, get_daemon_path,
-                   SkeinAuth)
+                   SkeinAuth, Client)
 from .utils import load_config
 
 
@@ -112,11 +113,12 @@ def daemon_stop(verbose=True):
         print("Daemon stopped")
 
 
-@subcommand(entry_subs,
-            'list', 'List all Skein jobs',
-            verbose)
-def do_list(verbose):
-    pass
+def get_client():
+    try:
+        return Client(start_java=False)
+    except ValueError:
+        print("Skein daemon not found, please run `skein daemon start`")
+        sys.exit(1)
 
 
 @subcommand(entry_subs,
@@ -124,23 +126,20 @@ def do_list(verbose):
             arg('spec', type=str, help='the specification file'),
             verbose)
 def do_start(spec, verbose):
-    pass
+    client = get_client()
+    app = client.submit(spec)
+    print(app.app_id)
 
 
 @subcommand(entry_subs,
-            'stop', 'Stop a Skein Job',
-            arg('id', type=str, help='the application id'),
-            verbose)
-def do_stop(id, verbose):
-    pass
-
-
-@subcommand(entry_subs,
-            'kill', 'Kill a Skein Job',
-            arg('id', type=str, help='the application id'),
-            verbose)
-def do_kill(id, verbose):
-    pass
+            'status', 'Status of a Skein Job',
+            arg('id', type=str, help='the application id'))
+def do_status(id):
+    client = get_client()
+    resp = client.status(id)
+    state = resp['state']
+    status = resp['finalStatus']
+    print("State: %r, Status: %r" % (state, status))
 
 
 def main(args=None):
