@@ -31,17 +31,6 @@ def _find_skein_jar():
     return jars[0]
 
 
-class SimpleAuth(requests.auth.AuthBase):
-    """Implement simple authentication for the yarn REST api"""
-    def __init__(self, user):
-        self.user = user
-
-    def __call__(self, r):
-        sym = '&' if '?' in r.url else '?'
-        r.url += '{sym}user.name={user}'.format(sym=sym, user=self.user)
-        return r
-
-
 class SkeinAuth(requests.auth.AuthBase):
     def __init__(self, secret=None):
         self.secret = secret
