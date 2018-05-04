@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -32,6 +34,7 @@ public class SkeinObjectMapper extends ObjectMapper {
       addSerializer(Resource.class, new ResourceSerializer());
       addDeserializer(LocalResource.class, new LocalResourceDeserializer());
       addSerializer(LocalResource.class, new LocalResourceSerializer());
+      addSerializer(ApplicationReport.class, new ApplicationReportSerializer());
     }
   }
 
@@ -190,6 +193,43 @@ public class SkeinObjectMapper extends ObjectMapper {
       jg.writeNumberField("size", r.getSize());
       jg.writeNumberField("timestamp", r.getTimestamp());
       jg.writeEndObject();
+    }
+  }
+
+  private static class ApplicationReportSerializer
+      extends JsonSerializer<ApplicationReport> {
+    @Override
+    public void serialize(ApplicationReport r, JsonGenerator jg,
+                          SerializerProvider s)
+          throws IOException {
+
+      jg.writeStartObject();
+      jg.writeStringField("id", r.getApplicationId().toString());
+      jg.writeStringField("name", r.getName());
+      jg.writeStringField("user", r.getUser());
+      jg.writeStringField("queue", r.getQueue());
+      jg.writeStringField("host", r.getHost());
+      jg.writeNumberField("port", r.getRpcPort());
+      jg.writeStringField("trackingUrl", r.getTrackingUrl());
+      jg.writeStringField("state", r.getYarnApplicationState().toString());
+      jg.writeStringField("finalStatus", r.getFinalApplicationStatus().toString());
+      jg.writeNumberField("progress", r.getProgress());
+      jg.writeStringField("diagnostics", r.getDiagnostics());
+      jg.writeNumberField("startTime", r.getStartTime());
+      jg.writeNumberField("finishTime", r.getFinishTime());
+      s.defaultSerializeField("tags", r.getApplicationTags(), jg);
+
+      ApplicationResourceUsageReport usage = r.getApplicationResourceUsageReport();
+      jg.writeObjectFieldStart("usage");
+      jg.writeNumberField("memorySeconds", usage.getMemorySeconds());
+      jg.writeNumberField("vcoreSeconds", usage.getVcoreSeconds());
+      jg.writeNumberField("numUsedContainers", usage.getNumUsedContainers());
+      s.defaultSerializeField("reservedResources", usage.getReservedResources(), jg);
+      s.defaultSerializeField("usedResources", usage.getUsedResources(), jg);
+      s.defaultSerializeField("neededResources", usage.getNeededResources(), jg);
+      jg.writeEndObject(); // usage
+
+      jg.writeEndObject(); // application report
     }
   }
 }

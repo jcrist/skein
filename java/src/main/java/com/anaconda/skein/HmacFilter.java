@@ -83,6 +83,12 @@ public class HmacFilter implements Filter {
     if (path != null) {
       mac.update(path.getBytes(StandardCharsets.UTF_8));
     }
+    mac.update((byte)'\n');
+
+    String query = req.getQueryString();
+    if (query != null) {
+      mac.update(query.getBytes(StandardCharsets.UTF_8));
+    }
 
     String computedSignature = new String(B64Code.encode(mac.doFinal()));
 

@@ -2,11 +2,12 @@ from __future__ import absolute_import, print_function, division
 
 import json
 import os
+from datetime import datetime, timedelta
 
 import yaml
 
 from .compatibility import urlparse
-from .utils import implements
+from .utils import implements, format_list
 
 __all__ = ('Job', 'Service', 'Resources', 'File')
 
@@ -21,12 +22,6 @@ def is_dict_of(x, ktyp, vtyp):
             all(isinstance(v, vtyp) for v in x.values()))
 
 
-def is_bounded_int(x, min=None, max=None):
-    return (isinstance(x, int) and
-            (min is None or min <= x) and
-            (max is None or x <= max))
-
-
 def _to_dict(x, skip_nulls):
     if hasattr(x, 'to_dict'):
         return x.to_dict(skip_nulls=skip_nulls)
@@ -34,6 +29,8 @@ def _to_dict(x, skip_nulls):
         return [_to_dict(i, skip_nulls) for i in x]
     elif type(x) is dict:
         return {k: _to_dict(v, skip_nulls) for k, v in x.items()}
+    elif type(x) is datetime:
+        return int(x.timestamp() * 1000)
     else:
         return x
 
@@ -63,9 +60,40 @@ class Base(object):
             raise TypeError("Expected mapping for %r" % cls.__name__)
         extra = set(obj).difference(keys)
         if extra:
-            extra = "\n".join("- %s" % e for e in extra)
-            raise ValueError(("Unknown extra keys for {cls}:\n"
-                              "{extra}").format(cls=cls.__name__, extra=extra))
+            raise ValueError("Unknown extra keys for %s:\n"
+                             "%s" % (cls.__name__, format_list(extra)))
+
+    def _check_is_type(self, field, type, nullable=False):
+        val = getattr(self, field)
+        if not (isinstance(val, type) or (nullable and val is None)):
+            if nullable:
+                msg = "%s must be an instance of %s, or None"
+            else:
+                msg = "%s must be an instance of %s"
+            raise TypeError(msg % (field, type.__name__))
+
+    def _check_is_list_of(self, field, type, nullable=False):
+        val = getattr(self, field)
+        if not (is_list_of(val, type) or (nullable and val is None)):
+            if nullable:
+                msg = "%s must be a list of %s, or None"
+            else:
+                msg = "%s must be a list of %s"
+            raise TypeError(msg % (field, type.__name__))
+
+    def _check_is_dict_of(self, field, key, val, nullable=False):
+        attr = getattr(self, field)
+        if not (is_dict_of(attr, key, val) or (nullable and attr is None)):
+            if nullable:
+                msg = "%s must be a dict of %s -> %s, or None"
+            else:
+                msg = "%s must be a list of %s -> %s"
+            raise TypeError(msg % (field, key.__name__, val.__name__))
+
+    def _check_is_bounded_int(self, field, min=0):
+        x = getattr(self, field)
+        if not (isinstance(x, int) and min <= x):
+            raise ValueError("%s must be an integer >= %d" % (field, min))
 
     def _validate(self):
         pass
@@ -168,12 +196,10 @@ class Resources(Base):
     def __repr__(self):
         return 'Resources<memory=%d, vcores=%d>' % (self.memory, self.vcores)
 
-    def _validate(self):
-        if not is_bounded_int(self.vcores, min=1):
-            raise ValueError("vcores must be a positive integer")
-
-        if not is_bounded_int(self.memory, min=1):
-            raise ValueError("memory must be a positive integer")
+    def _validate(self, is_request=False):
+        min = 1 if is_request else 0
+        self._check_is_bounded_int('vcores', min=min)
+        self._check_is_bounded_int('memory', min=min)
 
 
 class File(Base):
@@ -205,12 +231,8 @@ class File(Base):
         return 'File<source=%r, ...>' % self.source
 
     def _validate(self):
-        if not isinstance(self.source, str):
-            raise TypeError("source must be a str")
-
-        if not isinstance(self.dest, str):
-            raise TypeError("dest must be a str")
-
+        self._check_is_type('source', str)
+        self._check_is_type('dest', str)
         if self.type not in {'FILE', 'ARCHIVE'}:
             raise ValueError("type must be 'File' or 'ARCHIVE'")
 
@@ -296,31 +318,23 @@ class Service(Base):
         return 'Service<instances=%d, ...>' % self.instances
 
     def _validate(self):
-        if not is_bounded_int(self.instances, min=0):
-            raise ValueError("instances must be an integer >= 1")
+        self._check_is_bounded_int('instances', min=0)
 
-        if not (self.resources is None or
-                isinstance(self.resources, Resources)):
-            raise TypeError("resources must be Resources or None")
+        self._check_is_type('resources', Resources)
+        self.resources._validate(is_request=True)
 
-        self.resources._validate()
-
-        if is_list_of(self.files, File):
+        self._check_is_list_of('files', File, nullable=True)
+        if self.files is not None:
             for f in self.files:
                 f._validate()
-        elif self.files is not None:
-            raise TypeError("files must be a list of Files or None")
 
-        if not (self.env is None or is_dict_of(self.env, str, str)):
-            raise TypeError("env must be a dict of str -> str, or None")
+        self._check_is_dict_of('env', str, str, nullable=True)
 
-        if not is_list_of(self.commands, str):
-            raise TypeError("commands must be a list of str")
+        self._check_is_list_of('commands', str)
         if not self.commands:
             raise ValueError("There must be at least one command")
 
-        if not (self.depends is None or is_list_of(self.depends, str)):
-            raise TypeError("depends must be a list of str, or None")
+        self._check_is_list_of('depends', str, nullable=True)
 
     @classmethod
     @implements(Base.from_dict)
@@ -384,17 +398,11 @@ class Job(Base):
         return 'Job<name=%r, queue=%r, services=...>' % (self.name, self.queue)
 
     def _validate(self):
-        if not isinstance(self.name, str):
-            raise TypeError("name must be a str")
-
-        if not (self.queue is None or isinstance(self.queue, str)):
-            raise TypeError("queue must be a str or None")
-
-        if not is_dict_of(self.services, str, Service):
-            raise TypeError("services must be a dict of str -> Service")
+        self._check_is_type('name', str)
+        self._check_is_type('queue', str, nullable=True)
+        self._check_is_dict_of('services', str, Service)
         if not self.services:
             raise ValueError("There must be at least one service")
-
         for s in self.services.values():
             s._validate()
 
@@ -411,3 +419,110 @@ class Job(Base):
             services = {k: Service.from_dict(v) for k, v in services.items()}
 
         return cls(name=name, queue=queue, services=services)
+
+
+def _to_camel_case(x):
+    parts = x.split('_')
+    return parts[0] + ''.join(x.title() for x in parts[1:])
+
+
+class Usage(Base):
+    __slots__ = ('memory_seconds', 'vcore_seconds', 'num_used_containers',
+                 'needed_resources', 'reserved_resources', 'used_resources')
+    _keys = tuple(_to_camel_case(k) for k in __slots__)
+
+    def __init__(self, memory_seconds, vcore_seconds, num_used_containers,
+                 needed_resources, reserved_resources, used_resources):
+        self.memory_seconds = memory_seconds
+        self.vcore_seconds = vcore_seconds
+        self.num_used_containers = num_used_containers
+        self.needed_resources = needed_resources
+        self.reserved_resources = reserved_resources
+        self.used_resources = used_resources
+
+        self._validate()
+
+    def __repr__(self):
+        return 'Usage<...>'
+
+    def _validate(self):
+        for k in ['memory_seconds', 'vcore_seconds', 'num_used_containers']:
+            self._check_is_bounded_int(k)
+        for k in ['needed_resources', 'reserved_resources', 'used_resources']:
+            self._check_is_type(k, Resources)
+            getattr(self, k)._validate()
+
+    @classmethod
+    @implements(Base.from_dict)
+    def from_dict(cls, obj):
+        cls._check_keys(obj, cls._keys)
+        kwargs = dict(memory_seconds=obj['memorySeconds'],
+                      vcore_seconds=obj['vcoreSeconds'],
+                      num_used_containers=max(0, obj['numUsedContainers']))
+        for k, k2 in [('needed_resources', 'neededResources'),
+                      ('reserved_resources', 'reservedResources'),
+                      ('used_resources', 'usedResources')]:
+            val = obj[k2]
+            kwargs[k] = Resources(vcores=max(0, val['vcores']),
+                                  memory=max(0, val['memory']))
+        return cls(**kwargs)
+
+
+class ApplicationReport(Base):
+    __slots__ = ('id', 'name', 'user', 'queue', 'tags', 'host', 'port',
+                 'tracking_url', 'state', 'final_status', 'progress', 'usage',
+                 'diagnostics', 'start_time', 'finish_time')
+    _keys = tuple(_to_camel_case(k) for k in __slots__)
+    _epoch = datetime(1970, 1, 1)
+
+    def __init__(self, id, name, user, queue, tags, host, port,
+                 tracking_url, state, final_status, progress, usage,
+                 diagnostics, start_time, finish_time):
+        self.id = id
+        self.name = name
+        self.user = user
+        self.queue = queue
+        self.tags = tags
+        self.host = host
+        self.port = port
+        self.tracking_url = tracking_url
+        self.state = state
+        self.final_status = final_status
+        self.progress = progress
+        self.usage = usage
+        self.diagnostics = diagnostics
+        self.start_time = start_time
+        self.finish_time = finish_time
+
+        self._validate()
+
+    def __repr__(self):
+        return 'ApplicationReport<name=%r>' % self.name
+
+    def _validate(self):
+        self._check_is_type('id', str)
+        self._check_is_type('name', str)
+        self._check_is_type('user', str)
+        self._check_is_type('queue', str)
+        self._check_is_list_of('tags', str, nullable=True)
+        self._check_is_type('host', str, nullable=True)
+        self._check_is_type('port', int, nullable=True)
+        self._check_is_type('tracking_url', str, nullable=True)
+        self._check_is_type('state', str)
+        self._check_is_type('final_status', str)
+        self._check_is_type('progress', float)
+        self._check_is_type('usage', Usage)
+        self.usage._validate()
+        self._check_is_type('diagnostics', str, nullable=True)
+        self._check_is_type('start_time', datetime)
+        self._check_is_type('finish_time', datetime)
+
+    @classmethod
+    @implements(Base.from_dict)
+    def from_dict(cls, obj):
+        cls._check_keys(obj, cls._keys)
+        kwargs = {k: obj.get(k2) for k, k2 in zip(cls.__slots__, cls._keys)}
+        kwargs['usage'] = Usage.from_dict(kwargs['usage'])
+        for k in ['start_time', 'finish_time']:
+            kwargs[k] = cls._epoch + timedelta(milliseconds=kwargs[k])
+        return cls(**kwargs)

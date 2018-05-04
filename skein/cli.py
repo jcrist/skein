@@ -13,7 +13,7 @@ import yaml
 from . import __version__
 from .core import start_java_client, SkeinAuth, Client, AMClient
 from .utils import (read_secret, read_daemon, CONFIG_PATH, DAEMON_PATH,
-                    SECRET_PATH)
+                    SECRET_PATH, format_table)
 
 
 def eprint(x):
@@ -69,6 +69,10 @@ keystore = node(entry_subs, 'keystore', 'Manage the skein keystore')
 # Common arguments
 app_id = arg('app_id', type=str, help='The application id')
 spec = arg('spec', type=str, help='The specification file')
+app_id_optional = arg('--id', dest='app_id', type=str,
+                      help='The application id. If used in a container during '
+                           'a skein job, omit this to have it inferred from '
+                           'the environment')
 
 
 def get_client():
@@ -134,15 +138,9 @@ def daemon_stop(verbose=True):
         print("Daemon stopped")
 
 
-_config_id = arg('--id', dest='app_id', type=str,
-                 help='The application id. If used in a container during a '
-                      'skein job, omit this to have it inferred from the '
-                      'environment')
-
-
 @subcommand(keystore.subs,
             'get', 'Get a value from the keystore',
-            _config_id,
+            app_id_optional,
             arg('key', type=str, help='The key to get'))
 def keystore_get(key, app_id=None):
     if app_id is None:
@@ -155,7 +153,7 @@ def keystore_get(key, app_id=None):
 
 @subcommand(keystore.subs,
             'set', 'Set a value in the keystore',
-            _config_id,
+            app_id_optional,
             arg('key', type=str, help='The key to set'),
             arg('val', type=str, help='The value to set'))
 def keystore_set(key, val, app_id=None):
@@ -177,12 +175,23 @@ def do_start(spec):
 
 
 @subcommand(entry_subs,
-            'status', 'Status of a Skein Job',
-            app_id)
-def do_status(app_id):
+            'status', 'Status of Skein Jobs',
+            app_id_optional,
+            arg("--state", "-s", action='append'))
+def do_status(app_id=None, state=None):
     client = get_client()
-    status = client.application(app_id).status()
-    print("State: {state}, Status: {status}".format(**status))
+    apps = client.status(app_id=app_id, state=state)
+    if app_id is not None:
+        apps = [apps]
+    header = ['application_id', 'name', 'state', 'status', 'containers',
+              'vcores', 'memory']
+    data = []
+    for a in apps:
+        data.append((a.id, a.name, a.state, a.final_status,
+                     a.usage.num_used_containers,
+                     a.usage.used_resources.vcores,
+                     a.usage.used_resources.memory))
+    print(format_table(header, sorted(data)))
 
 
 @subcommand(entry_subs,

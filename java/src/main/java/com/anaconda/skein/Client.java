@@ -1,6 +1,5 @@
 package com.anaconda.skein;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -19,6 +18,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -42,8 +42,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -197,15 +199,6 @@ public class Client {
     }
   }
 
-  /** Get information on a running application. **/
-  public ApplicationReport getApplicationReport(ApplicationId appId) {
-    try {
-      return yarnClient.getApplicationReport(appId);
-    } catch (Throwable exc) {
-      return null;
-    }
-  }
-
   /** Kill a running application. **/
   public boolean killApplication(ApplicationId appId) {
     try {
@@ -262,6 +255,7 @@ public class Client {
     ContainerLaunchContext amContext = ContainerLaunchContext.newInstance(
         localResources, env, commands, null, fsTokens, null);
 
+    appContext.setApplicationType("skein");
     appContext.setAMContainerSpec(amContext);
     appContext.setApplicationName(job.getName());
     appContext.setResource(Resource.newInstance(amMemory, amVCores));
@@ -396,6 +390,9 @@ public class Client {
   }
 
   private final class AppsServlet extends HttpServlet {
+    private final Set<String> skeinSet =
+        new HashSet<String>(Arrays.asList("skein"));
+
     private ApplicationId appIdFromString(String appId) {
       // Parse applicationId_{timestamp}_{id}
       String[] parts = appId.split("_");
@@ -422,29 +419,47 @@ public class Client {
       ApplicationId appId = getAppId(req);
 
       if (appId == null) {
-        Utils.sendError(resp, 404, "Malformed request");
-        return;
+        String[] statesReq = req.getParameterValues("state");
+        EnumSet<YarnApplicationState> states;
+        if (statesReq == null) {
+          states = EnumSet.of(YarnApplicationState.SUBMITTED,
+                              YarnApplicationState.ACCEPTED,
+                              YarnApplicationState.RUNNING);
+        } else {
+          states = EnumSet.noneOf(YarnApplicationState.class);
+          for (String s : statesReq) {
+            try {
+              states.add(YarnApplicationState.valueOf(s));
+            } catch (IllegalArgumentException exc) { }
+          }
+        }
+
+        List<ApplicationReport> reports;
+        try {
+          reports = yarnClient.getApplications(skeinSet, states);
+        } catch (YarnException exc) {
+          Utils.sendError(resp, 500, exc.toString());
+          return;
+        }
+
+        OutputStream out = resp.getOutputStream();
+        Utils.MAPPER.writeValue(out, reports);
+        out.close();
+      } else {
+        ApplicationReport report;
+        try {
+          report = yarnClient.getApplicationReport(appId);
+        } catch (YarnException exc) {
+          Utils.sendError(resp, 404, "Unknown ApplicationID");
+          return;
+        }
+        if (!report.getApplicationType().equals("skein")) {
+          Utils.sendError(resp, 404, "Not a skein application");
+        }
+        OutputStream out = resp.getOutputStream();
+        Utils.MAPPER.writeValue(out, report);
+        out.close();
       }
-
-      ApplicationReport report = getApplicationReport(appId);
-
-      if (report == null) {
-        Utils.sendError(resp, 404, "Unknown ApplicationID");
-        return;
-      }
-
-      ObjectNode objectNode = Utils.MAPPER.createObjectNode();
-      objectNode.put("id", appId.toString());
-      objectNode.put("state", report.getYarnApplicationState().toString());
-      objectNode.put("finalStatus", report.getFinalApplicationStatus().toString());
-      objectNode.put("user", report.getUser());
-      objectNode.put("trackingURL", report.getTrackingUrl());
-      objectNode.put("host", report.getHost());
-      objectNode.put("rpcPort", report.getRpcPort());
-
-      OutputStream out = resp.getOutputStream();
-      Utils.MAPPER.writeValue(out, objectNode);
-      out.close();
     }
 
     @Override

@@ -14,12 +14,12 @@ from hashlib import sha1, md5
 
 import requests
 
-from .compatibility import PY2
+from .compatibility import PY2, urlsplit
 from .exceptions import (UnauthorizedError, ResourceManagerError,
                          ApplicationMasterError)
-from .spec import Job, Service
+from .spec import Job, Service, ApplicationReport
 from .utils import (cached_property, ensure_bytes, read_secret, read_daemon,
-                    write_daemon, SECRET_ENV_VAR, ADDRESS_ENV_VAR)
+                    write_daemon, SECRET_ENV_VAR, ADDRESS_ENV_VAR, format_list)
 
 
 def _find_skein_jar():
@@ -38,14 +38,16 @@ class SkeinAuth(requests.auth.AuthBase):
     def __call__(self, r):
         method = ensure_bytes(r.method)
         content_type = ensure_bytes(r.headers.get('content-type', b''))
-        path = ensure_bytes(r.path_url)
+        url = urlsplit(r.url)
+        path = ensure_bytes(url.path)
+        query = ensure_bytes(url.query)
         if r.body is not None:
             body = ensure_bytes(r.body)
             body_md5 = md5(body).digest()
         else:
             body_md5 = b''
 
-        msg = b'\n'.join([method, body_md5, content_type, path])
+        msg = b'\n'.join([method, body_md5, content_type, path, query])
         mac = hmac.new(b64decode(self.secret), msg=msg, digestmod=sha1)
         signature = b64encode(mac.digest())
 
@@ -184,12 +186,35 @@ class Client(object):
 
         return Application(self, app_id)
 
-    def status(self, app_id):
-        url = '%s/apps/%s' % (self._address, app_id)
-        resp = self._rm.get(url)
-        if resp.status_code == 200:
-            return resp.json()
-        self._handle_exceptions(resp)
+    def status(self, app_id=None, state=None):
+        if app_id is not None and state is not None:
+            raise ValueError("Cannot provide both app_id and state")
+        if app_id is not None:
+            url = '%s/apps/%s' % (self._address, app_id)
+            resp = self._rm.get(url)
+            if resp.status_code != 200:
+                self._handle_exceptions(resp)
+            return ApplicationReport.from_dict(resp.json())
+
+        if state is not None:
+            valid = {'ACCEPTED', 'FAILED', 'FINISHED', 'KILLED', 'NEW',
+                     'NEW_SAVING', 'RUNNING', 'SUBMITTED'}
+            if isinstance(state, str):
+                state = [state]
+
+            states = {s.upper() for s in state}
+            invalid = states.difference(valid)
+            if invalid:
+                raise ValueError("Invalid application states:\n"
+                                 "%s" % format_list(invalid))
+            params = {'state': list(states)}
+        else:
+            params = None
+
+        resp = self._rm.get('%s/apps' % self._address, params=params)
+        if resp.status_code != 200:
+            self._handle_exceptions(resp)
+        return [ApplicationReport.from_dict(d) for d in resp.json()]
 
     def kill(self, app_id):
         url = '%s/apps/%s' % (self._address, app_id)
@@ -279,12 +304,10 @@ class AMClient(object):
     def from_id(cls, app_id, client=None):
         client = client or Client()
         s = client.status(app_id)
-        if s['state'] != 'RUNNING':
+        if s.state != 'RUNNING':
             raise ValueError("This operation requires state: RUNNING. "
-                             "Current state: %s." % s['state'])
-        host = s['host']
-        port = s['rpcPort']
-        address = 'http://%s:%d' % (host, port)
+                             "Current state: %s." % s.state)
+        address = 'http://%s:%d' % (s.host, s.port)
         return cls(address, client._rm.auth)
 
 
@@ -297,20 +320,11 @@ class Application(object):
         return 'Application<id=%r>' % self.app_id
 
     def status(self):
-        status = self.client.status(self.app_id)
-        return {'state': status['state'],
-                'status': status['finalStatus']}
+        return self.client.status(self.app_id)
 
     def inspect(self, service=None):
         return self._am_client.inspect(service=service)
 
     @cached_property
     def _am_client(self):
-        s = self.client.status(self.app_id)
-        if s['state'] != 'RUNNING':
-            raise ValueError("This operation requires state: RUNNING. "
-                             "Current state: %s." % s['state'])
-        host = s['host']
-        port = s['rpcPort']
-        address = 'http://%s:%d' % (host, port)
-        return AMClient(address, self.client._rm.auth)
+        return AMClient.from_id(self.app_id, client=self.client)
