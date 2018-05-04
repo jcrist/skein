@@ -1,6 +1,8 @@
 from __future__ import print_function, division, absolute_import
 
 import argparse
+import base64
+import errno
 import os
 import signal
 import sys
@@ -10,7 +12,12 @@ import yaml
 
 from . import __version__
 from .core import start_java_client, SkeinAuth, Client
-from .utils import read_secret, read_daemon, daemon_path
+from .utils import (read_secret, read_daemon, CONFIG_PATH, DAEMON_PATH,
+                    SECRET_PATH)
+
+
+def eprint(x):
+    print(x, file=sys.stderr)
 
 
 def add_help(parser):
@@ -67,7 +74,7 @@ def get_client():
     try:
         return Client(start_java=False)
     except ValueError:
-        print("Skein daemon not found, please run `skein daemon start`")
+        eprint("Skein daemon not found, please run `skein daemon start`")
         sys.exit(1)
 
 
@@ -121,7 +128,7 @@ def daemon_stop(verbose=True):
         if resp.status_code == 401:
             # Skein daemon started with a different secret, kill it manually
             os.kill(pid, signal.SIGTERM)
-    os.unlink(daemon_path())
+    os.unlink(DAEMON_PATH)
     if verbose:
         print("Daemon stopped")
 
@@ -147,7 +154,7 @@ def do_status(app_id):
 @subcommand(entry_subs,
             'inspect', 'Information about a Skein Job',
             app_id,
-            arg('--service', type=str, help='Service name'))
+            arg('--service', '-s', type=str, help='Service name'))
 def do_inspect(app_id, service=None):
     client = get_client()
     resp = client.application(app_id).inspect(service=service)
@@ -163,6 +170,23 @@ def do_inspect(app_id, service=None):
 def do_kill(app_id):
     client = get_client()
     client.kill(app_id)
+
+
+@subcommand(entry_subs,
+            'config', 'Initialize skein configuration',
+            arg('--force', '-f', action='store_true',
+                help='Overwrite existing configuration'))
+def do_config(force):
+    os.makedirs(CONFIG_PATH, exist_ok=True)
+    secret = base64.b64encode(os.urandom(30))
+    try:
+        mode = 'wb' if force else 'xb'
+        with open(SECRET_PATH, mode=mode) as fil:
+            fil.write(secret)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST:
+            eprint("secret file already exists, use --force to override")
+            sys.exit(1)
 
 
 def main(args=None):

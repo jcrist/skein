@@ -19,7 +19,7 @@ from .exceptions import (UnauthorizedError, ResourceManagerError,
                          ApplicationMasterError)
 from .spec import Job, Service
 from .utils import (cached_property, ensure_bytes, read_secret, read_daemon,
-                    write_daemon, _SECRET_ENV_VAR, _ADDRESS_ENV_VAR)
+                    write_daemon, SECRET_ENV_VAR, ADDRESS_ENV_VAR)
 
 
 def _find_skein_jar():
@@ -265,13 +265,13 @@ class AMClient(object):
 
     @classmethod
     def from_env(cls):
-        address = os.environ.get(_ADDRESS_ENV_VAR)
+        address = os.environ.get(ADDRESS_ENV_VAR)
         if address is None:
-            raise ValueError("Address not found at %r" % _ADDRESS_ENV_VAR)
+            raise ValueError("Address not found at %r" % ADDRESS_ENV_VAR)
 
-        secret = os.environ.get(_SECRET_ENV_VAR)
+        secret = os.environ.get(SECRET_ENV_VAR)
         if secret is None:
-            raise ValueError("Secret not found at %r" % _ADDRESS_ENV_VAR)
+            raise ValueError("Secret not found at %r" % ADDRESS_ENV_VAR)
 
         return cls(address, SkeinAuth(secret))
 

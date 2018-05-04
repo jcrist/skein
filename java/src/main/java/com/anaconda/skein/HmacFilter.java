@@ -25,7 +25,7 @@ public class HmacFilter implements Filter {
 
   private void unauthorized(HttpServletResponse resp) throws IOException {
     resp.setHeader("WWW-Authenticate", "skein");
-    resp.sendError(401, "Unauthorized");
+    Utils.sendError(resp, 401, "Unauthorized");
   }
 
   @Override
