@@ -11,7 +11,7 @@ import requests
 import yaml
 
 from . import __version__
-from .core import start_java_client, SkeinAuth, Client
+from .core import start_java_client, SkeinAuth, Client, AMClient
 from .utils import (read_secret, read_daemon, CONFIG_PATH, DAEMON_PATH,
                     SECRET_PATH)
 
@@ -64,6 +64,7 @@ entry_subs = entry.add_subparsers(metavar='command')
 
 # Sub command nodes
 daemon = node(entry_subs, 'daemon', 'Manage the skein daemon')
+keystore = node(entry_subs, 'keystore', 'Manage the skein keystore')
 
 # Common arguments
 app_id = arg('app_id', type=str, help='The application id')
@@ -131,6 +132,39 @@ def daemon_stop(verbose=True):
     os.unlink(DAEMON_PATH)
     if verbose:
         print("Daemon stopped")
+
+
+_config_id = arg('--id', dest='app_id', type=str,
+                 help='The application id. If used in a container during a '
+                      'skein job, omit this to have it inferred from the '
+                      'environment')
+
+
+@subcommand(keystore.subs,
+            'get', 'Get a value from the keystore',
+            _config_id,
+            arg('key', type=str, help='The key to get'))
+def keystore_get(key, app_id=None):
+    if app_id is None:
+        am_client = AMClient.from_env()
+    else:
+        client = get_client()
+        am_client = AMClient.from_id(app_id, client=client)
+    print(am_client.get_key(key))
+
+
+@subcommand(keystore.subs,
+            'set', 'Set a value in the keystore',
+            _config_id,
+            arg('key', type=str, help='The key to set'),
+            arg('val', type=str, help='The value to set'))
+def keystore_set(key, val, app_id=None):
+    if app_id is None:
+        am_client = AMClient.from_env()
+    else:
+        client = get_client()
+        am_client = AMClient.from_id(app_id, client=client)
+    return am_client.set_key(key, val)
 
 
 @subcommand(entry_subs,

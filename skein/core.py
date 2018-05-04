@@ -276,12 +276,12 @@ class AMClient(object):
         return cls(address, SkeinAuth(secret))
 
     @classmethod
-    def from_id(cls, app_id):
-        client = Client(start_java=False)
+    def from_id(cls, app_id, client=None):
+        client = client or Client()
         s = client.status(app_id)
-        if s['state'] not in {"RUNNING", "FINISHED", "FAILED", "KILLED"}:
-            raise ValueError("This application hasn't started yet, "
-                             "current state: %s." % s['state'])
+        if s['state'] != 'RUNNING':
+            raise ValueError("This operation requires state: RUNNING. "
+                             "Current state: %s." % s['state'])
         host = s['host']
         port = s['rpcPort']
         address = 'http://%s:%d' % (host, port)
