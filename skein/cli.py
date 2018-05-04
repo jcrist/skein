@@ -151,15 +151,18 @@ def do_status(app_id):
 def do_inspect(app_id, service=None):
     client = get_client()
     resp = client.application(app_id).inspect(service=service)
-    print(yaml.dump(resp, default_flow_style=False))
+    if service is not None:
+        resp = {service: resp}
+    data = {k: v.to_dict() for k, v in resp.items()}
+    print(yaml.dump(data, default_flow_style=False))
 
 
 @subcommand(entry_subs,
             'kill', 'Kill a Skein Job',
             app_id)
-def do_kill(id):
+def do_kill(app_id):
     client = get_client()
-    client.kill(id)
+    client.kill(app_id)
 
 
 def main(args=None):

@@ -17,7 +17,7 @@ import requests
 from .compatibility import PY2
 from .exceptions import (UnauthorizedError, ResourceManagerError,
                          ApplicationMasterError)
-from .spec import Job
+from .spec import Job, Service
 from .utils import (cached_property, ensure_bytes, read_secret, read_daemon,
                     write_daemon, _SECRET_ENV_VAR, _ADDRESS_ENV_VAR)
 
@@ -244,18 +244,24 @@ class AMClient(object):
 
     def inspect(self, service=None):
         if service is None:
-            url = '%s/job' % self._address
+            url = '%s/services' % self._address
         else:
-            url = '%s/job/%s' % (self._address, service)
+            url = '%s/services/%s' % (self._address, service)
         try:
             resp = self._am.get(url)
         except requests.ConnectionError:
             raise ValueError("Application no longer running")
+
         if resp.ok:
-            return resp.json()
+            data = resp.json()
         elif resp.status_code == 404 and service is not None:
             raise ValueError("Unknown service %r" % service)
-        self._handle_exceptions(resp)
+        else:
+            self._handle_exceptions(resp)
+
+        if service is None:
+            return {k: Service.from_dict(v) for k, v in data.items()}
+        return Service.from_dict(data)
 
     @classmethod
     def from_env(cls):

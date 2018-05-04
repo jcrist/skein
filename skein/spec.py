@@ -119,8 +119,13 @@ class Base(object):
         return out
 
     def to_json(self, skip_nulls=True):
-        """Convert object to a json object"""
-        return json.dumps(self.to_dict())
+        """Convert object to a json string"""
+        return json.dumps(self.to_dict(skip_nulls=skip_nulls))
+
+    def to_yaml(self, skip_nulls=True):
+        """Convert object to a yaml string"""
+        return yaml.dump(self.to_dict(skip_nulls=skip_nulls),
+                         default_flow_style=False)
 
     def to_file(self, path, format='infer', skip_nulls=True):
         """Write object to a file.
@@ -137,15 +142,9 @@ class Base(object):
             output all fields.
         """
         format = _infer_format(path, format=format)
-
-        obj = self.to_dict(skip_nulls=skip_nulls)
-
-        if format == 'json':
-            with open(path, mode='w') as f:
-                json.dump(obj, f)
-        else:
-            with open(path, mode='w') as f:
-                yaml.dump(obj, f, default_flow_style=False)
+        data = getattr(self, 'to_' + format)(skip_nulls=skip_nulls)
+        with open(path, mode='w') as f:
+            f.write(data)
 
 
 class Resources(Base):
@@ -195,7 +194,7 @@ class File(Base):
     """
     __slots__ = ('source', 'dest', 'type')
 
-    def __init__(self, source, dest=None, type='FILE'):
+    def __init__(self, source, dest, type='FILE'):
         self.source = source
         self.dest = dest
         self.type = type
@@ -214,6 +213,15 @@ class File(Base):
 
         if self.type not in {'FILE', 'ARCHIVE'}:
             raise ValueError("type must be 'File' or 'ARCHIVE'")
+
+    @classmethod
+    def _from_local_resource(cls, key, val):
+        url = val['url']
+        host = url.get('host', '')
+        port = str(url.get('port', ''))
+        address = ':'.join(filter(bool, [host, host and port]))
+        source = '%s://%s%s' % (url['scheme'], address, url['file'])
+        return cls(source=source, dest=key, type=val['type'])
 
     @classmethod
     def _from_dict_shorthand(cls, obj, type):
@@ -317,15 +325,27 @@ class Service(Base):
     @classmethod
     @implements(Base.from_dict)
     def from_dict(cls, obj):
-        cls._check_keys(obj)
+        cls._check_keys(obj, cls.__slots__ + ('localResources',))
 
         resources = obj.get('resources')
         if resources is not None:
             resources = Resources.from_dict(resources)
 
+        local_resources = obj.get('localResources')
         files = obj.get('files')
-        if files is not None and isinstance(files, list):
-            files = [File.from_dict(f) for f in files]
+
+        if files is not None and local_resources is not None:
+            raise ValueError("Unknown extra keys for Service:\n"
+                             "- localResources")
+        elif files is not None:
+            if isinstance(files, list):
+                files = [File.from_dict(f) for f in files]
+        elif local_resources is not None:
+            if isinstance(local_resources, dict):
+                files = [File._from_local_resource(k, v)
+                         for k, v in local_resources.items()]
+            else:
+                files = None
 
         kwargs = {'resources': resources,
                   'files': files,

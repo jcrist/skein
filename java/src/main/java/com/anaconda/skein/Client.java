@@ -277,10 +277,9 @@ public class Client {
   private Map<String, LocalResource> setupAppDir(Model.Job job,
         ApplicationId appId) throws IOException {
 
-    // Make the ~/.skein/app_id and ~/.skein/app_id/services dirs
+    // Make the ~/.skein/app_id dir
     Path appDir = new Path(defaultFs.getHomeDirectory(), ".skein/" + appId.toString());
     FileSystem.mkdirs(defaultFs, appDir, SKEIN_DIR_PERM);
-    FileSystem.mkdirs(defaultFs, new Path(appDir, "services"), SKEIN_DIR_PERM);
 
     Map<Path, Path> uploadCache = new HashMap<Path, Path>();
 
@@ -353,7 +352,7 @@ public class Client {
         }
         md.update(srcPath.toString().getBytes());
         String prefix = Utils.hexEncode(md.digest());
-        dstPath = new Path(appDir, prefix + "-" + srcPath.getName());
+        dstPath = new Path(new Path(appDir, prefix), srcPath.getName());
         LOG.info("Uploading " + srcPath + " to " + dstPath);
         FileUtil.copy(srcFs, srcPath, dstFs, dstPath, false, conf);
         dstFs.setPermission(dstPath, SKEIN_FILE_PERM);

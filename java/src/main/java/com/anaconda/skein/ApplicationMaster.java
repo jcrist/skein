@@ -151,7 +151,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     // Create the servlets once
     final ServletHolder keystore = new ServletHolder(new KeyValueServlet());
-    final ServletHolder job = new ServletHolder(new JobServlet());
+    final ServletHolder services = new ServletHolder(new ServicesServlet());
 
     // This connector serves content authenticated by the secret key
     ServerConnector privateConnector = new ServerConnector(server);
@@ -164,7 +164,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     privateContext.setContextPath("/");
     privateContext.setVirtualHosts(new String[] {"@Private"});
     privateContext.addServlet(keystore, "/keystore/*");
-    privateContext.addServlet(job, "/job/*");
+    privateContext.addServlet(services, "/services/*");
     FilterHolder holder =
         privateContext.addFilter(HmacFilter.class, "/*",
                                  EnumSet.of(DispatcherType.REQUEST));
@@ -182,7 +182,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     publicContext.setContextPath("/");
     publicContext.setVirtualHosts(new String[] {"@Public"});
     publicContext.addServlet(keystore, "/keystore/*");
-    publicContext.addServlet(job, "/job/*");
+    publicContext.addServlet(services, "/services/*");
     handlers.addHandler(publicContext);
 
     // Startup the server
@@ -227,8 +227,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     // Write the job script to file
-    final Path scriptPath =
-        new Path(job.getAppDir(), "services/" + tracker.name + ".sh");
+    final Path scriptPath = new Path(job.getAppDir(), tracker.name + ".sh");
     LOG.info("SERVICE: " + tracker.name + " - writing script to " + scriptPath);
 
     LocalResource scriptResource = null;
@@ -500,22 +499,23 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
   }
 
-  private class JobServlet extends HttpServlet {
+  private class ServicesServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
         throws ServletException, IOException {
 
       String path = Utils.getPath(req);
+      Map<String, Model.Service> services = job.getServices();
 
       if (path == null) {
         resp.setHeader("Content-Type", "application/json");
         OutputStream out = resp.getOutputStream();
-        Utils.MAPPER.writeValue(out, job);
+        Utils.MAPPER.writeValue(out, services);
         out.close();
         return;
       }
 
-      Model.Service service = job.getServices().get(path);
+      Model.Service service = services.get(path);
       if (service == null) {
         Utils.sendError(resp, 404, "Unknown service");
         return;
