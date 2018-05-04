@@ -42,6 +42,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -457,6 +458,22 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private void shutdown() {
     // wait for completion.
     nmClient.stop();
+
+    // Delete the app directory
+    ugi.doAs(
+        new PrivilegedAction<Void>() {
+          public Void run() {
+            Path appDir = new Path(job.getAppDir());
+            try {
+              FileSystem fs = FileSystem.get(conf);
+              fs.delete(appDir, true);
+              LOG.info("Deleted application directory " + appDir);
+            } catch (IOException exc) {
+              LOG.warn("Failed to delete application directory " + appDir, exc);
+            }
+            return null;
+          }
+        });
 
     FinalApplicationStatus status;
     if (numFailed.get() == 0
