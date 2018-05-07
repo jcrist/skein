@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import pkg_resources
 from distutils.command.build import build as _build
 from distutils.command.clean import clean as _clean
 from distutils.dir_util import remove_tree
@@ -15,12 +16,39 @@ import versioneer
 ROOT_DIR = os.path.dirname(os.path.relpath(__file__))
 JAVA_DIR = os.path.join(ROOT_DIR, 'java')
 JAVA_TARGET_DIR = os.path.join(JAVA_DIR, 'target')
-JAVA_INPLACE_DIR = os.path.join(ROOT_DIR, 'skein', 'java')
+JAVA_PROTO_DIR = os.path.join(ROOT_DIR, "java", "src", "main", "proto")
+SKEIN_JAVA_DIR = os.path.join(ROOT_DIR, 'skein', 'java')
+SKEIN_PROTO_DIR = os.path.join(ROOT_DIR, 'skein', 'proto')
 
 
 def _get_jars(dir):
     return [f for f in glob(os.path.join(dir, '*.jar'))
             if f.endswith('-jar-with-dependencies.jar')]
+
+
+class build_proto(Command):
+    description = "build protobuf artifacts"
+
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    finalize_options = initialize_options
+
+    def run(self):
+        from grpc_tools import protoc
+        include = pkg_resources.resource_filename('grpc_tools', '_proto')
+        for src in glob(os.path.join(JAVA_PROTO_DIR, "*.proto")):
+            command = ['grpc_tools.protoc',
+                       '--proto_path=%s' % JAVA_PROTO_DIR,
+                       '--proto_path=%s' % include,
+                       '--python_out=%s' % SKEIN_PROTO_DIR,
+                       '--grpc_python_out=%s' % SKEIN_PROTO_DIR,
+                       src]
+            if protoc.main(command) != 0:
+                self.warn('Command: `%s` failed'.format(command))
+                sys.exit(1)
 
 
 class build_java(Command):
@@ -34,7 +62,7 @@ class build_java(Command):
     def run(self):
         # Compile the java code and copy the jar to skein/java/
         # This will be picked up as package_data later
-        self.mkpath(JAVA_INPLACE_DIR)
+        self.mkpath(SKEIN_JAVA_DIR)
         code = subprocess.call(['mvn', '-f', os.path.join(JAVA_DIR, 'pom.xml'),
                                 'assembly:assembly'])
         if code:
@@ -47,24 +75,34 @@ class build_java(Command):
             sys.exit(1)
 
         for jar_file in jar_files:
-            self.announce("copying %s -> %s" % (jar_file, JAVA_INPLACE_DIR))
-            self.copy_file(jar_file, JAVA_INPLACE_DIR)
+            self.copy_file(jar_file, SKEIN_JAVA_DIR)
 
 
 def _ensure_java(command):
-    if not _get_jars(JAVA_INPLACE_DIR):
+    if not _get_jars(SKEIN_JAVA_DIR):
         command.run_command('build_java')
+
+
+def _compiled_protos():
+    return glob(os.path.join(SKEIN_PROTO_DIR, '*_pb2*.py'))
+
+
+def _ensure_proto(command):
+    if not _compiled_protos():
+        command.run_command('build_proto')
 
 
 class build(_build):
     def run(self):
         _ensure_java(self)
+        _ensure_proto(self)
         _build.run(self)
 
 
 class install(_install):
     def run(self):
         _ensure_java(self)
+        _ensure_proto(self)
         _install.run(self)
 
 
@@ -72,27 +110,32 @@ class develop(_develop):
     def run(self):
         if not self.uninstall:
             _ensure_java(self)
+            _ensure_proto(self)
         _develop.run(self)
 
 
 class clean(_clean):
     def run(self):
         if self.all:
-            for d in [JAVA_INPLACE_DIR, JAVA_TARGET_DIR]:
+            for d in [SKEIN_JAVA_DIR, JAVA_TARGET_DIR]:
                 if os.path.exists(d):
                     remove_tree(d, dry_run=self.dry_run)
+            for fil in _compiled_protos():
+                if not self.dry_run:
+                    os.unlink(fil)
         _clean.run(self)
 
 
 # Due to quirks in setuptools/distutils dependency ordering, to get the java
-# source to build automatically in most cases, we need to check for it in
-# multiple locations. This is unfortunate, but seems necessary.
+# and protobuf sources to build automatically in most cases, we need to check
+# for them in multiple locations. This is unfortunate, but seems necessary.
 cmdclass = versioneer.get_cmdclass()
-cmdclass.update({'build_java': build_java,  # directly build the java source
-                 'build': build,            # bdist_wheel or pip install .
-                 'install': install,        # python setup.py install
-                 'develop': develop,        # python setup.py develop
-                 'clean': clean})           # extra cleanup
+cmdclass.update({'build_java': build_java,    # directly build the java source
+                 'build_proto': build_proto,  # directly build the proto source
+                 'build': build,              # bdist_wheel or pip install .
+                 'install': install,          # python setup.py install
+                 'develop': develop,          # python setup.py develop
+                 'clean': clean})             # extra cleanup
 
 
 setup(name='skein',
@@ -116,11 +159,12 @@ setup(name='skein',
                    "Topic :: System :: Systems Administration",
                    "Topic :: System :: Distributed Computing"],
       keywords='YARN HDFS hadoop distributed cluster',
-      packages=['skein'],
+      packages=['skein', 'skein.proto'],
       package_data={'skein': ['java/*.jar']},
       entry_points='''
         [console_scripts]
         skein=skein.cli:main
       ''',
-      install_requires=['requests', 'pyyaml'],
+      install_requires=['grpcio', 'pyyaml'],
+      setup_requires=['grpcio-tools'],
       zip_safe=False)
