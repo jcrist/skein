@@ -38,7 +38,7 @@ message Resources {
 }
 
 
-message LocalResource {
+message File {
   enum Type {
     FILE = 0;
     ARCHIVE = 1;
@@ -61,16 +61,17 @@ message LocalResource {
 message Service {
   int64 instances = 1;
   Resources resources = 2;
-  map<string, string> env = 3;
-  repeated string commands = 4;
-  repeated string depends = 5;
+  map<string, File> files = 3;
+  map<string, string> env = 4;
+  repeated string commands = 5;
+  repeated string depends = 6;
 }
 
 
 message Job {
   string name = 1;
   string queue = 2;
-  repeated Service services = 3;
+  map<string, Service> services = 3;
 }
 
 
@@ -93,8 +94,8 @@ message ApplicationReport {
   string host = 6;
   int32 port = 7;
   string tracking_url = 8;
-  ApplicationState state = 9;
-  FinalStatus final_status = 10;
+  ApplicationState.Type state = 9;
+  FinalStatus.Type final_status = 10;
   float progress = 11;
   ResourceUsageReport usage = 12;
   string diagnostics = 13;

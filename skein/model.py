@@ -6,10 +6,22 @@ from datetime import datetime, timedelta
 
 import yaml
 
+from . import proto as _proto
 from .compatibility import urlparse
 from .utils import implements, format_list
 
 __all__ = ('Job', 'Service', 'Resources', 'File')
+
+
+_EPOCH = datetime(1970, 1, 1)
+
+
+def _datetime_from_millis(x):
+    return _EPOCH + timedelta(milliseconds=x)
+
+
+def _if_none(x, y):
+    return x if x is not None else y
 
 
 def is_list_of(x, typ):
@@ -22,13 +34,13 @@ def is_dict_of(x, ktyp, vtyp):
             all(isinstance(v, vtyp) for v in x.values()))
 
 
-def _to_dict(x, skip_nulls):
-    if hasattr(x, 'to_dict'):
-        return x.to_dict(skip_nulls=skip_nulls)
+def _convert(x, method, *args):
+    if hasattr(x, method):
+        return getattr(x, method)(*args)
     elif type(x) is list:
-        return [_to_dict(i, skip_nulls) for i in x]
+        return [_convert(i, method, *args) for i in x]
     elif type(x) is dict:
-        return {k: _to_dict(v, skip_nulls) for k, v in x.items()}
+        return {k: _convert(v, method, *args) for k, v in x.items()}
     elif type(x) is datetime:
         return int(x.timestamp() * 1000)
     else:
@@ -103,6 +115,15 @@ class Base(object):
         pass
 
     @classmethod
+    def from_protobuf(cls, msg):
+        """Create an instance from a protobuf message."""
+        if not isinstance(msg, cls._protobuf_cls):
+            raise TypeError("Expected message of type "
+                            "%r" % cls._protobuf_cls.__name__)
+        kwargs = {k: getattr(msg, k) for k in cls.__slots__}
+        return cls(**kwargs)
+
+    @classmethod
     def from_dict(cls, obj):
         """Create an instance from a dict.
 
@@ -140,6 +161,13 @@ class Base(object):
                 data = yaml.safe_load(f)
             return cls.from_dict(data)
 
+    def to_protobuf(self):
+        """Convert object to a protobuf message"""
+        self._validate()
+        kwargs = {k: _convert(getattr(self, k), 'to_protobuf')
+                  for k in self.__slots__}
+        return self._protobuf_cls(**kwargs)
+
     def to_dict(self, skip_nulls=True):
         """Convert object to a dict"""
         self._validate()
@@ -147,7 +175,7 @@ class Base(object):
         for k in self.__slots__:
             val = getattr(self, k)
             if not skip_nulls or val is not None:
-                out[k] = _to_dict(val, skip_nulls)
+                out[k] = _convert(val, 'to_dict', skip_nulls)
         return out
 
     def to_json(self, skip_nulls=True):
@@ -186,12 +214,13 @@ class Resources(Base):
     ----------
     memory : int
         The memory to request, in MB
-    vcores : int, optional
-        The number of virtual cores to request. Default is 1.
+    vcores : int
+        The number of virtual cores to request.
     """
     __slots__ = ('vcores', 'memory')
+    _protobuf_cls = _proto.Resources
 
-    def __init__(self, memory, vcores=1):
+    def __init__(self, memory, vcores):
         self.memory = memory
         self.vcores = vcores
 
@@ -229,6 +258,7 @@ class File(Base):
     """
     __slots__ = ('source', 'type', 'visibility', 'size', 'timestamp')
     _shorthand = ('visibility', 'size', 'timestamp')
+    _protobuf_cls = _proto.File
 
     def __init__(self, source, type='FILE', visibility='APPLICATION',
                  size=None, timestamp=None):
@@ -252,6 +282,18 @@ class File(Base):
                              "'PRIVATE'")
         self._check_is_bounded_int('size', nullable=True)
         self._check_is_bounded_int('timestamp', nullable=True)
+
+    @classmethod
+    def from_protobuf(cls, obj):
+        """Create an instance from a protobuf message."""
+        if not isinstance(obj, cls._protobuf_cls):
+            raise TypeError("Expected message of type "
+                            "%r" % cls._protobuf_cls.__name__)
+        return cls(source=obj.source,
+                   type=_proto.File.Type.Name(obj.type),
+                   visibility=_proto.File.Visibility.Name(obj.visibility),
+                   size=obj.size,
+                   timestamp=obj.timestamp)
 
     @classmethod
     def _parse_file_spec(cls, obj):
@@ -306,36 +348,36 @@ class Service(Base):
 
     Parameters
     ----------
+    commands : list
+        Shell commands to startup the service. Commands are run in the order
+        provided, with subsequent commands only run if the prior commands
+        succeeded. At least one command must be provided
+    resources : Resources
+        Describes the resources needed to run the service.
     instances : int, optional
         The number of instances to create on startup. Default is 1.
-    resources : Resources, optional
-        Describes the resources needed to run the service. If not provided, 1
-        vcore and the minimal memory request for the cluster will be used.
     files : dict, optional
         Describes any files needed to run the service. A mapping of destination
         relative paths to ``File`` objects describing the sources for these
         paths.
     env : dict, optional
         A mapping of environment variables needed to run the service.
-    commands : list, optional
-        Shell commands to startup the service. Commands are run in the order
-        provided, with subsequent commands only run if the prior commands
-        succeeded.
     depends : list, optional
         A list of string keys in the keystore that this service depends on. The
         service will not be started until these keys are present.
     """
-    __slots__ = ('instances', 'resources', 'files', 'env', 'commands',
+    __slots__ = ('commands', 'resources', 'instances', 'files', 'env',
                  'depends')
+    _protobuf_cls = _proto.Service
 
-    def __init__(self, instances=1, resources=None, files=None,
-                 env=None, commands=None, depends=None):
-        self.instances = instances
-        self.resources = resources
-        self.files = files
-        self.env = env
+    def __init__(self, commands, resources, instances=1, files=None,
+                 env=None, depends=None):
         self.commands = commands
-        self.depends = depends
+        self.resources = resources
+        self.instances = instances
+        self.files = _if_none(files, {})
+        self.env = _if_none(env, {})
+        self.depends = _if_none(depends, [])
 
         self._validate()
 
@@ -348,18 +390,17 @@ class Service(Base):
         self._check_is_type('resources', Resources)
         self.resources._validate(is_request=True)
 
-        self._check_is_dict_of('files', str, File, nullable=True)
-        if self.files is not None:
-            for f in self.files.values():
-                f._validate()
+        self._check_is_dict_of('files', str, File)
+        for f in self.files.values():
+            f._validate()
 
-        self._check_is_dict_of('env', str, str, nullable=True)
+        self._check_is_dict_of('env', str, str)
 
         self._check_is_list_of('commands', str)
         if not self.commands:
             raise ValueError("There must be at least one command")
 
-        self._check_is_list_of('depends', str, nullable=True)
+        self._check_is_list_of('depends', str)
 
     @classmethod
     @implements(Base.from_dict)
@@ -389,25 +430,39 @@ class Service(Base):
 
         return cls(**kwargs)
 
+    @classmethod
+    @implements(Base.from_protobuf)
+    def from_protobuf(cls, obj):
+        resources = Resources.from_protobuf(obj.resources)
+        files = {k: File.from_protobuf(v) for k, v in obj.files.items()}
+        kwargs = {'instances': obj.instances,
+                  'resources': resources,
+                  'files': files,
+                  'env': dict(obj.env),
+                  'commands': list(obj.commands),
+                  'depends': list(obj.depends)}
+        return cls(**kwargs)
+
 
 class Job(Base):
     """A single Skein job.
 
     Parameters
     ----------
+    services : dict
+        A mapping of service-name to services. At least one service is required.
     name : string, optional
         The name of the application, defaults to 'skein'.
     queue : string, optional
         The queue to submit to. Defaults to the default queue.
-    services : dict, optional
-        A mapping of service-name to services.
     """
     __slots__ = ('name', 'queue', 'services')
+    _protobuf_cls = _proto.Job
 
-    def __init__(self, name='skein', queue=None, services=None):
+    def __init__(self, services=None, name='skein', queue=None):
+        self.services = services
         self.name = name
         self.queue = queue
-        self.services = services
 
         self._validate()
 
@@ -437,15 +492,26 @@ class Job(Base):
 
         return cls(name=name, queue=queue, services=services)
 
+    @classmethod
+    @implements(Base.from_protobuf)
+    def from_protobuf(cls, obj):
+        services = {k: Service.from_protobuf(v)
+                    for k, v in obj.services.items()}
+        return cls(name=obj.name,
+                   queue=obj.queue,
+                   services=services)
+
 
 def _to_camel_case(x):
     parts = x.split('_')
     return parts[0] + ''.join(x.title() for x in parts[1:])
 
 
-class Usage(Base):
+class ResourceUsageReport(Base):
     __slots__ = ('memory_seconds', 'vcore_seconds', 'num_used_containers',
                  'needed_resources', 'reserved_resources', 'used_resources')
+    _protobuf_cls = _proto.ResourceUsageReport
+
     _keys = tuple(_to_camel_case(k) for k in __slots__)
 
     def __init__(self, memory_seconds, vcore_seconds, num_used_containers,
@@ -460,7 +526,7 @@ class Usage(Base):
         self._validate()
 
     def __repr__(self):
-        return 'Usage<...>'
+        return 'ResourceUsageReport<...>'
 
     def _validate(self):
         for k in ['memory_seconds', 'vcore_seconds', 'num_used_containers']:
@@ -484,13 +550,24 @@ class Usage(Base):
                                   memory=max(0, val['memory']))
         return cls(**kwargs)
 
+    @classmethod
+    @implements(Base.from_protobuf)
+    def from_protobuf(cls, obj):
+        kwargs = dict(memory_seconds=obj.memory_seconds,
+                      vcore_seconds=obj.vcore_seconds,
+                      num_used_containers=obj.num_used_containers)
+        for k in ['needed_resources', 'reserved_resources', 'used_resources']:
+            kwargs[k] = Resources.from_protobuf(getattr(obj, k))
+        return cls(**kwargs)
+
 
 class ApplicationReport(Base):
     __slots__ = ('id', 'name', 'user', 'queue', 'tags', 'host', 'port',
                  'tracking_url', 'state', 'final_status', 'progress', 'usage',
                  'diagnostics', 'start_time', 'finish_time')
+    _protobuf_cls = _proto.ApplicationReport
+
     _keys = tuple(_to_camel_case(k) for k in __slots__)
-    _epoch = datetime(1970, 1, 1)
 
     def __init__(self, id, name, user, queue, tags, host, port,
                  tracking_url, state, final_status, progress, usage,
@@ -521,14 +598,14 @@ class ApplicationReport(Base):
         self._check_is_type('name', str)
         self._check_is_type('user', str)
         self._check_is_type('queue', str)
-        self._check_is_list_of('tags', str, nullable=True)
+        self._check_is_list_of('tags', str)
         self._check_is_type('host', str, nullable=True)
         self._check_is_type('port', int, nullable=True)
         self._check_is_type('tracking_url', str, nullable=True)
         self._check_is_type('state', str)
         self._check_is_type('final_status', str)
         self._check_is_type('progress', float)
-        self._check_is_type('usage', Usage)
+        self._check_is_type('usage', ResourceUsageReport)
         self.usage._validate()
         self._check_is_type('diagnostics', str, nullable=True)
         self._check_is_type('start_time', datetime)
@@ -539,7 +616,26 @@ class ApplicationReport(Base):
     def from_dict(cls, obj):
         cls._check_keys(obj, cls._keys)
         kwargs = {k: obj.get(k2) for k, k2 in zip(cls.__slots__, cls._keys)}
-        kwargs['usage'] = Usage.from_dict(kwargs['usage'])
+        kwargs['usage'] = ResourceUsageReport.from_dict(kwargs['usage'])
         for k in ['start_time', 'finish_time']:
-            kwargs[k] = cls._epoch + timedelta(milliseconds=kwargs[k])
+            kwargs[k] = _datetime_from_millis(kwargs[k])
         return cls(**kwargs)
+
+    @classmethod
+    @implements(Base.from_protobuf)
+    def from_protobuf(cls, obj):
+        return cls(id=obj.id,
+                   name=obj.name,
+                   user=obj.user,
+                   queue=obj.queue,
+                   tags=list(obj.tags),
+                   host=obj.host,
+                   port=obj.port,
+                   tracking_url=obj.tracking_url,
+                   state=_proto.ApplicationState.Type.Name(obj.state),
+                   final_status=_proto.FinalStatus.Type.Name(obj.final_status),
+                   progress=obj.progress,
+                   usage=ResourceUsageReport.from_protobuf(obj.usage),
+                   diagnostics=obj.diagnostics,
+                   start_time=_datetime_from_millis(obj.start_time),
+                   finish_time=_datetime_from_millis(obj.finish_time))
