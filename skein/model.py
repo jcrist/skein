@@ -90,10 +90,14 @@ class Base(object):
                 msg = "%s must be a list of %s -> %s"
             raise TypeError(msg % (field, key.__name__, val.__name__))
 
-    def _check_is_bounded_int(self, field, min=0):
+    def _check_is_bounded_int(self, field, min=0, nullable=False):
         x = getattr(self, field)
-        if not (isinstance(x, int) and min <= x):
-            raise ValueError("%s must be an integer >= %d" % (field, min))
+        if not ((nullable and x is None) or isinstance(x, int) and min <= x):
+            if nullable:
+                msg = "%s must be an integer >= %d, or None"
+            else:
+                msg = "%s must be an integer >= %d"
+            raise ValueError(msg % (field, min))
 
     def _validate(self):
         pass
@@ -210,49 +214,71 @@ class File(Base):
     source : str
         The path to the file/archive. If no scheme is specified, path is
         assumed to be on the local filesystem (``file://`` scheme).
-    dest : str, optional
-        The localized path on the cluster to the file/archive. If not
-        specified, the file name is used.
     type : {'FILE', 'ARCHIVE'}, optional
         The type of file to distribute. Archive's are automatically extracted
         by yarn into a directory with the same name as ``dest``. Default is
         ``'FILE'``.
+    visibility : {'APPLICATION', 'PUBLIC', 'PRIVATE'}, optional
+        The resource visibility, default is ``'APPLICATION'``
+    size : int, optional
+        The resource size in bytes. If not provided will be determined by the
+        file system.
+    timestamp : int, optional
+        The time the resource was last modified. If not provided will be
+        determined by teh file system.
     """
-    __slots__ = ('source', 'dest', 'type')
+    __slots__ = ('source', 'type', 'visibility', 'size', 'timestamp')
+    _shorthand = ('visibility', 'size', 'timestamp')
 
-    def __init__(self, source, dest, type='FILE'):
+    def __init__(self, source, type='FILE', visibility='APPLICATION',
+                 size=None, timestamp=None):
         self.source = source
-        self.dest = dest
         self.type = type
+        self.visibility = visibility
+        self.size = size
+        self.timestamp = timestamp
 
         self._validate()
 
     def __repr__(self):
-        return 'File<source=%r, ...>' % self.source
+        return 'File<source=%r, type=%r>' % (self.source, self.type)
 
     def _validate(self):
         self._check_is_type('source', str)
-        self._check_is_type('dest', str)
         if self.type not in {'FILE', 'ARCHIVE'}:
             raise ValueError("type must be 'File' or 'ARCHIVE'")
+        if self.visibility not in {'APPLICATION', 'PUBLIC', 'PRIVATE'}:
+            raise ValueError("type must be 'APPLICATION', 'PUBLIC', or "
+                             "'PRIVATE'")
+        self._check_is_bounded_int('size', nullable=True)
+        self._check_is_bounded_int('timestamp', nullable=True)
 
     @classmethod
-    def _from_local_resource(cls, key, val):
-        url = val['url']
-        host = url.get('host', '')
-        port = str(url.get('port', ''))
-        address = ':'.join(filter(bool, [host, host and port]))
-        source = '%s://%s%s' % (url['scheme'], address, url['file'])
-        return cls(source=source, dest=key, type=val['type'])
+    def _parse_file_spec(cls, obj):
+        if not isinstance(obj, dict):
+            raise TypeError("Expected mapping for File")
 
-    @classmethod
-    def _from_dict_shorthand(cls, obj, type):
-        cls._check_keys(obj, [type, 'dest'])
-        path = obj[type]
-        type = type.upper()
+        if 'file' in obj:
+            if 'archive' in obj:
+                raise ValueError("Both 'archive' and 'file' specified")
+            type = 'file'
+        elif 'archive' in obj:
+            type = 'archive'
+        else:
+            type = None
+
+        if type is None:
+            cls._check_keys(obj, cls.__slots__ + ('dest',))
+            source = obj['source']
+            type = obj.get('type', 'FILE').upper()
+        else:
+            cls._check_keys(obj, cls._shorthand + (type, 'dest',))
+            source = obj[type]
+            type = type.upper()
+
         if 'dest' not in obj:
-            path = urlparse(path).path
-            base, name = os.path.split(path)
+            source = urlparse(source).path
+            base, name = os.path.split(source)
             if name is None:
                 raise ValueError("Distributed files must be files/archives, "
                                  "not directories")
@@ -262,21 +288,17 @@ class File(Base):
                     if name.endswith(ext):
                         dest = name[:-len(ext)]
                         break
-        return cls(source=path, dest=dest, type=type)
+        else:
+            dest = obj['dest']
 
-    @classmethod
-    @implements(Base.from_dict)
-    def from_dict(cls, obj):
-        if not isinstance(obj, dict):
-            raise TypeError("Expected mapping for File")
+        visibility = obj.get('visibility', 'APPLICATION')
+        size = obj.get('size')
+        timestamp = obj.get('timestamp')
 
-        # Handle shorthands
-        if 'file' in obj:
-            return cls._from_dict_shorthand(obj, 'file')
-        elif 'archive' in obj:
-            return cls._from_dict_shorthand(obj, 'archive')
-        cls._check_keys(obj)
-        return cls(**obj)
+        resource = cls(source=source, type=type, visibility=visibility,
+                       size=size, timestamp=timestamp)
+
+        return dest, resource
 
 
 class Service(Base):
@@ -289,8 +311,10 @@ class Service(Base):
     resources : Resources, optional
         Describes the resources needed to run the service. If not provided, 1
         vcore and the minimal memory request for the cluster will be used.
-    files : list, optional
-        A list of ``File`` objects needed to run the service.
+    files : dict, optional
+        Describes any files needed to run the service. A mapping of destination
+        relative paths to ``File`` objects describing the sources for these
+        paths.
     env : dict, optional
         A mapping of environment variables needed to run the service.
     commands : list, optional
@@ -301,7 +325,8 @@ class Service(Base):
         A list of string keys in the keystore that this service depends on. The
         service will not be started until these keys are present.
     """
-    __slots__ = ('instances', 'resources', 'files', 'env', 'commands', 'depends')
+    __slots__ = ('instances', 'resources', 'files', 'env', 'commands',
+                 'depends')
 
     def __init__(self, instances=1, resources=None, files=None,
                  env=None, commands=None, depends=None):
@@ -323,9 +348,9 @@ class Service(Base):
         self._check_is_type('resources', Resources)
         self.resources._validate(is_request=True)
 
-        self._check_is_list_of('files', File, nullable=True)
+        self._check_is_dict_of('files', str, File, nullable=True)
         if self.files is not None:
-            for f in self.files:
+            for f in self.files.values():
                 f._validate()
 
         self._check_is_dict_of('env', str, str, nullable=True)
@@ -339,27 +364,19 @@ class Service(Base):
     @classmethod
     @implements(Base.from_dict)
     def from_dict(cls, obj):
-        cls._check_keys(obj, cls.__slots__ + ('localResources',))
+        cls._check_keys(obj, cls.__slots__)
 
         resources = obj.get('resources')
         if resources is not None:
             resources = Resources.from_dict(resources)
 
-        local_resources = obj.get('localResources')
         files = obj.get('files')
 
-        if files is not None and local_resources is not None:
-            raise ValueError("Unknown extra keys for Service:\n"
-                             "- localResources")
-        elif files is not None:
+        if files is not None:
             if isinstance(files, list):
-                files = [File.from_dict(f) for f in files]
-        elif local_resources is not None:
-            if isinstance(local_resources, dict):
-                files = [File._from_local_resource(k, v)
-                         for k, v in local_resources.items()]
-            else:
-                files = None
+                files = dict(File._parse_file_spec(v) for v in files)
+            elif isinstance(files, dict):
+                files = {k: File.from_dict(v) for k, v in files.items()}
 
         kwargs = {'resources': resources,
                   'files': files,

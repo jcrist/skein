@@ -17,7 +17,7 @@ import requests
 from .compatibility import PY2, urlsplit
 from .exceptions import (UnauthorizedError, ResourceManagerError,
                          ApplicationMasterError)
-from .spec import Job, Service, ApplicationReport
+from .model import Job, Service, ApplicationReport
 from .utils import (cached_property, ensure_bytes, read_secret, read_daemon,
                     write_daemon, SECRET_ENV_VAR, ADDRESS_ENV_VAR, format_list)
 

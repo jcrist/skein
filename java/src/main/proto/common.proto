@@ -50,7 +50,7 @@ message LocalResource {
     APPLICATION = 2;
   }
 
-  string url = 1;
+  string source = 1;
   Type type = 2;
   Visibility visibility = 3;
   int64 size = 4;
