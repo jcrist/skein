@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.anaconda.skein";
+option java_outer_classname = "CommonProto";
+
+
+message Empty {
+}
+
+
+message FinalStatus {
+  enum Type {
+    UNDEFINED = 0;
+    SUCCEDED = 1;
+    FAILED = 2;
+    KILLED = 3;
+  }
+}
+
+message ApplicationState {
+  enum Type {
+    NEW = 0;
+    NEW_SAVING = 1;
+    SUBMITTED = 2;
+    ACCEPTED = 3;
+    RUNNING = 4;
+    FINISHED = 5;
+    FAILED = 6;
+    KILLED = 7;
+  }
+}
+
+
+message Resources {
+  int64 memory = 1;
+  int64 vcores = 2;
+}
+
+
+message LocalResource {
+  enum Type {
+    FILE = 0;
+    ARCHIVE = 1;
+  }
+
+  enum Visibility {
+    PUBLIC = 0;
+    PRIVATE = 1;
+    APPLICATION = 2;
+  }
+
+  string url = 1;
+  Type type = 2;
+  Visibility visibility = 3;
+  int64 size = 4;
+  int64 timestamp = 5;
+}
+
+
+message Service {
+  int64 instances = 1;
+  Resources resources = 2;
+  map<string, string> env = 3;
+  repeated string commands = 4;
+  repeated string depends = 5;
+}
+
+
+message Job {
+  string name = 1;
+  string queue = 2;
+  repeated Service services = 3;
+}
+
+
+message ResourceUsageReport {
+  int64 memory_seconds = 1;
+  int64 vcore_seconds = 2;
+  int64 num_used_containers = 3;
+  Resources needed_resources = 4;
+  Resources reserved_resources = 5;
+  Resources used_resources = 6;
+}
+
+
+message ApplicationReport {
+  string id = 1;
+  string name = 2;
+  string user = 3;
+  string queue = 4;
+  repeated string tags = 5;
+  string host = 6;
+  int32 port = 7;
+  string tracking_url = 8;
+  ApplicationState state = 9;
+  FinalStatus final_status = 10;
+  float progress = 11;
+  ResourceUsageReport usage = 12;
+  string diagnostics = 13;
+  int64 start_time = 14;
+  int64 finish_time = 15;
+}

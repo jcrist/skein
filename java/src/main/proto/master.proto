@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.anaconda.skein";
+option java_outer_classname = "MasterProto";
+
+import "common.proto";
+
+package skein;
+
+service Master {
+  rpc getKey (GetKeyRequest) returns (GetKeyResponse);
+
+  rpc setKey (SetKeyRequest) returns (Empty);
+
+  rpc getKeystore (Empty) returns (KeystoreResponse);
+
+  rpc getService (ServiceRequest) returns (Service);
+
+  rpc getJob (Empty) returns (Job);
+}
+
+
+message GetKeyRequest {
+  string key = 1;
+  bool wait = 2;
+}
+
+
+message GetKeyResponse {
+  string val = 1;
+}
+
+
+message SetKeyRequest {
+  string key = 1;
+  string val = 2;
+}
+
+
+message KeystoreResponse {
+  map<string, string> items = 1;
+}
+
+
+message ServiceRequest {
+  string service_name = 1;
+}

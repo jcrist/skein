@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.anaconda.skein";
+option java_outer_classname = "DaemonProto";
+
+import "common.proto";
+
+package skein;
+
+service Daemon {
+  rpc shutdown (Empty) returns (Empty);
+
+  rpc health (Empty) returns (Empty);
+
+  rpc getStatus (Application) returns (ApplicationReport);
+
+  rpc getApplications (ApplicationsRequest) returns (ApplicationsResponse);
+
+  rpc submit (Job) returns (Application);
+
+  rpc kill (Application) returns (Empty);
+}
+
+
+message Application {
+  string app_id = 1;
+}
+
+
+message ApplicationsRequest {
+  repeated ApplicationState states = 1;
+}
+
+
+message ApplicationsResponse {
+  repeated ApplicationReport report = 1;
+}
