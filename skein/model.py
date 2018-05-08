@@ -10,7 +10,12 @@ from . import proto as _proto
 from .compatibility import urlparse
 from .utils import implements, format_list
 
-__all__ = ('Job', 'Service', 'Resources', 'File')
+__all__ = ('Job', 'Service', 'Resources', 'File', 'ResourceUsageReport',
+           'ApplicationReport')
+
+
+required = type('required', (object,),
+                {'__repr__': lambda s: 'required'})()
 
 
 _EPOCH = datetime(1970, 1, 1)
@@ -65,6 +70,11 @@ def _infer_format(path, format='infer'):
 class Base(object):
     __slots__ = ()
 
+    def __eq__(self, other):
+        return (type(self) == type(other) and
+                all(getattr(self, k) == getattr(other, k)
+                    for k in self.__slots__))
+
     @classmethod
     def _check_keys(cls, obj, keys=None):
         keys = keys or cls.__slots__
@@ -74,6 +84,16 @@ class Base(object):
         if extra:
             raise ValueError("Unknown extra keys for %s:\n"
                              "%s" % (cls.__name__, format_list(extra)))
+
+    def _check_required(self):
+        for k in self.__slots__:
+            if getattr(self, k) is required:
+                raise TypeError("parameter %r is required but wasn't "
+                                "provided" % k)
+
+    def _check_in_set(self, field, values):
+        if getattr(self, field) not in values:
+            raise ValueError("%s must be in %r" % (field, values))
 
     def _check_is_type(self, field, type, nullable=False):
         val = getattr(self, field)
@@ -104,15 +124,9 @@ class Base(object):
 
     def _check_is_bounded_int(self, field, min=0, nullable=False):
         x = getattr(self, field)
-        if not ((nullable and x is None) or isinstance(x, int) and min <= x):
-            if nullable:
-                msg = "%s must be an integer >= %d, or None"
-            else:
-                msg = "%s must be an integer >= %d"
-            raise ValueError(msg % (field, min))
-
-    def _validate(self):
-        pass
+        self._check_is_type(field, int, nullable=nullable)
+        if x is not None and x < min:
+            raise ValueError("%s must be >= %d" % (field, min))
 
     @classmethod
     def from_protobuf(cls, msg):
@@ -133,10 +147,15 @@ class Base(object):
 
     @classmethod
     def from_json(cls, b):
-        """Create an instance from a json object.
+        """Create an instance from a json string.
 
         Keys in the json object should match parameter names"""
         return cls.from_dict(json.loads(b))
+
+    @classmethod
+    def from_yaml(cls, b):
+        """Create an instance from a yaml string."""
+        return cls.from_dict(yaml.safe_load(b))
 
     @classmethod
     def from_file(cls, path, format='infer'):
@@ -217,13 +236,14 @@ class Resources(Base):
     vcores : int
         The number of virtual cores to request.
     """
-    __slots__ = ('vcores', 'memory')
+    __slots__ = ('memory', 'vcores')
     _protobuf_cls = _proto.Resources
 
-    def __init__(self, memory, vcores):
+    def __init__(self, memory=required, vcores=required):
         self.memory = memory
         self.vcores = vcores
 
+        self._check_required()
         self._validate()
 
     def __repr__(self):
@@ -257,17 +277,17 @@ class File(Base):
         determined by teh file system.
     """
     __slots__ = ('source', 'type', 'visibility', 'size', 'timestamp')
-    _shorthand = ('visibility', 'size', 'timestamp')
     _protobuf_cls = _proto.File
 
-    def __init__(self, source, type='FILE', visibility='APPLICATION',
-                 size=None, timestamp=None):
+    def __init__(self, source=required, type='FILE', visibility='APPLICATION',
+                 size=0, timestamp=0):
         self.source = source
         self.type = type
         self.visibility = visibility
         self.size = size
         self.timestamp = timestamp
 
+        self._check_required()
         self._validate()
 
     def __repr__(self):
@@ -275,17 +295,14 @@ class File(Base):
 
     def _validate(self):
         self._check_is_type('source', str)
-        if self.type not in {'FILE', 'ARCHIVE'}:
-            raise ValueError("type must be 'File' or 'ARCHIVE'")
-        if self.visibility not in {'APPLICATION', 'PUBLIC', 'PRIVATE'}:
-            raise ValueError("type must be 'APPLICATION', 'PUBLIC', or "
-                             "'PRIVATE'")
-        self._check_is_bounded_int('size', nullable=True)
-        self._check_is_bounded_int('timestamp', nullable=True)
+        self._check_in_set('type', {'FILE', 'ARCHIVE'})
+        self._check_in_set('visibility', {'APPLICATION', 'PUBLIC', 'PRIVATE'})
+        self._check_is_bounded_int('size')
+        self._check_is_bounded_int('timestamp')
 
     @classmethod
+    @implements(Base.from_protobuf)
     def from_protobuf(cls, obj):
-        """Create an instance from a protobuf message."""
         if not isinstance(obj, cls._protobuf_cls):
             raise TypeError("Expected message of type "
                             "%r" % cls._protobuf_cls.__name__)
@@ -314,7 +331,8 @@ class File(Base):
             source = obj['source']
             type = obj.get('type', 'FILE').upper()
         else:
-            cls._check_keys(obj, cls._shorthand + (type, 'dest',))
+            cls._check_keys(obj, ('visibility', 'size', 'timestamp',
+                                  type, 'dest'))
             source = obj[type]
             type = type.upper()
 
@@ -334,8 +352,8 @@ class File(Base):
             dest = obj['dest']
 
         visibility = obj.get('visibility', 'APPLICATION')
-        size = obj.get('size')
-        timestamp = obj.get('timestamp')
+        size = obj.get('size', 0)
+        timestamp = obj.get('timestamp', 0)
 
         resource = cls(source=source, type=type, visibility=visibility,
                        size=size, timestamp=timestamp)
@@ -370,8 +388,8 @@ class Service(Base):
                  'depends')
     _protobuf_cls = _proto.Service
 
-    def __init__(self, commands, resources, instances=1, files=None,
-                 env=None, depends=None):
+    def __init__(self, commands=required, resources=required, instances=1,
+                 files=None, env=None, depends=None):
         self.commands = commands
         self.resources = resources
         self.instances = instances
@@ -379,6 +397,7 @@ class Service(Base):
         self.env = _if_none(env, {})
         self.depends = _if_none(depends, [])
 
+        self._check_required()
         self._validate()
 
     def __repr__(self):
@@ -459,11 +478,12 @@ class Job(Base):
     __slots__ = ('name', 'queue', 'services')
     _protobuf_cls = _proto.Job
 
-    def __init__(self, services=None, name='skein', queue=None):
+    def __init__(self, services=required, name='skein', queue=''):
         self.services = services
         self.name = name
         self.queue = queue
 
+        self._check_required()
         self._validate()
 
     def __repr__(self):
