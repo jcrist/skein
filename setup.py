@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import sys
 import pkg_resources
@@ -36,6 +37,17 @@ class build_proto(Command):
 
     finalize_options = initialize_options
 
+    def _fix_imports(self, path):
+        new = ['from __future__ import absolute_import']
+        with open(path) as fil:
+            for line in fil:
+                if re.match("^import [^ ]*_pb2 as [^ ]*$", line):
+                    line = 'from . ' + line
+                new.append(line)
+
+        with open(path, 'w') as fil:
+            fil.write(''.join(new))
+
     def run(self):
         from grpc_tools import protoc
         include = pkg_resources.resource_filename('grpc_tools', '_proto')
@@ -49,6 +61,9 @@ class build_proto(Command):
             if protoc.main(command) != 0:
                 self.warn('Command: `%s` failed'.format(command))
                 sys.exit(1)
+
+        for path in _compiled_protos():
+            self._fix_imports(path)
 
 
 class build_java(Command):
