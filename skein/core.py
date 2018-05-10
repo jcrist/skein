@@ -191,14 +191,13 @@ class Client(object):
             if invalid:
                 raise ValueError("Invalid application states:\n"
                                  "%s" % format_list(invalid))
-            params = {'state': list(states)}
+            states = list(states)
         else:
-            params = None
+            states = []
 
-        resp = self._rm.get('%s/apps' % self._address, params=params)
-        if resp.status_code != 200:
-            self._handle_exceptions(resp)
-        return [ApplicationReport.from_dict(d) for d in resp.json()]
+        req = proto.ApplicationsRequest(states=states)
+        resp = self._stub.getApplications(req)
+        return [ApplicationReport.from_protobuf(r) for r in resp.reports]
 
     def kill(self, app_id):
         url = '%s/apps/%s' % (self._address, app_id)

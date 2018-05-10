@@ -22,6 +22,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -37,7 +38,9 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -337,7 +340,7 @@ public class Client {
   class DaemonImpl extends DaemonGrpc.DaemonImplBase {
     @Override
     public void ping(Msg.Empty req, StreamObserver<Msg.Empty> resp) {
-      resp.onNext(Msg.Empty.newBuilder().build());
+      resp.onNext(MsgUtils.EMPTY);
       resp.onCompleted();
     }
 
@@ -372,7 +375,39 @@ public class Client {
         return;
       }
 
-      resp.onNext(MsgUtils.writeApplicationReport(report).build());
+      resp.onNext(MsgUtils.writeApplicationReport(report));
+      resp.onCompleted();
+    }
+
+    @Override
+    public void getApplications(Msg.ApplicationsRequest req,
+        StreamObserver<Msg.ApplicationsResponse> resp) {
+
+      EnumSet<YarnApplicationState> states;
+      if (req.getStatesCount() == 0) {
+        states = EnumSet.of(YarnApplicationState.SUBMITTED,
+                            YarnApplicationState.ACCEPTED,
+                            YarnApplicationState.RUNNING);
+      } else {
+        states = EnumSet.noneOf(YarnApplicationState.class);
+        for (Msg.ApplicationState.Type s : req.getStatesList()) {
+          states.add(MsgUtils.readApplicationState(s));
+        }
+      }
+
+      List<ApplicationReport> reports;
+      try {
+        reports = yarnClient.getApplications(
+          new HashSet<String>(Arrays.asList("skein")), states);
+      } catch (Exception exc) {
+        resp.onError(Status.INTERNAL
+            .withDescription("Failed to get applications, exception:\n"
+                            + exc.getMessage())
+            .asRuntimeException());
+        return;
+      }
+
+      resp.onNext(MsgUtils.writeApplicationsResponse(reports));
       resp.onCompleted();
     }
   }
