@@ -345,41 +345,6 @@ public class Client {
     }
 
     @Override
-    public void getStatus(Msg.Application req,
-        StreamObserver<Msg.ApplicationReport> resp) {
-
-      ApplicationId appId = Utils.appIdFromString(req.getId());
-
-      if (appId == null) {
-        resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("Invalid ApplicationId " + req.getId())
-            .asRuntimeException());
-        return;
-      }
-
-      ApplicationReport report;
-      try {
-        report = yarnClient.getApplicationReport(appId);
-      } catch (Exception exc) {
-        resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("Unknown ApplicationId " + req.getId())
-            .asRuntimeException());
-        return;
-      }
-
-      if (!report.getApplicationType().equals("skein")) {
-        resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("ApplicationId " + req.getId()
-                             + " is not a skein application")
-            .asRuntimeException());
-        return;
-      }
-
-      resp.onNext(MsgUtils.writeApplicationReport(report));
-      resp.onCompleted();
-    }
-
-    @Override
     public void getApplications(Msg.ApplicationsRequest req,
         StreamObserver<Msg.ApplicationsResponse> resp) {
 
@@ -408,6 +373,74 @@ public class Client {
       }
 
       resp.onNext(MsgUtils.writeApplicationsResponse(reports));
+      resp.onCompleted();
+    }
+
+    private ApplicationReport getReport(Msg.Application req,
+        StreamObserver<?> resp) {
+
+      ApplicationId appId = Utils.appIdFromString(req.getId());
+
+      if (appId == null) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Invalid ApplicationId '" + req.getId() + "'")
+            .asRuntimeException());
+        return null;
+      }
+
+      ApplicationReport report;
+      try {
+        report = yarnClient.getApplicationReport(appId);
+      } catch (Exception exc) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Unknown ApplicationId '" + req.getId() + "'")
+            .asRuntimeException());
+        return null;
+      }
+
+      if (!report.getApplicationType().equals("skein")) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("ApplicationId '" + req.getId()
+                             + "' is not a skein application")
+            .asRuntimeException());
+        return null;
+      }
+
+      return report;
+    }
+
+    @Override
+    public void getStatus(Msg.Application req,
+        StreamObserver<Msg.ApplicationReport> resp) {
+
+      ApplicationReport report = getReport(req, resp);
+      if (report != null) {
+        resp.onNext(MsgUtils.writeApplicationReport(report));
+        resp.onCompleted();
+      }
+    }
+
+    @Override
+    public void kill(Msg.Application req, StreamObserver<Msg.Empty> resp) {
+      // Check if the id is a valid skein id
+      ApplicationReport report = getReport(req, resp);
+      if (report == null) {
+        return;
+      }
+
+      try {
+        yarnClient.killApplication(report.getApplicationId());
+      } catch (Exception exc) {
+        resp.onError(Status.INTERNAL
+            .withDescription("Failed to kill application '"
+                             + report.getApplicationId()
+                             + "' , exception:\n"
+                             + exc.getMessage())
+            .asRuntimeException());
+        return;
+      }
+
+      resp.onNext(MsgUtils.EMPTY);
       resp.onCompleted();
     }
   }

@@ -8,14 +8,13 @@ import socket
 import struct
 import subprocess
 import warnings
-from contextlib import closing
+from contextlib import closing, contextmanager
 
 import grpc
 import requests
 
 from . import proto
 from .compatibility import PY2, ConnectionError
-from .exceptions import UnauthorizedError, ApplicationMasterError
 from .model import Job, Service, ApplicationReport
 from .utils import (cached_property, read_daemon, write_daemon,
                     ADDRESS_ENV_VAR, DAEMON_PATH, format_list)
@@ -28,6 +27,34 @@ def _find_skein_jar():
         raise ValueError("Failed to find the skein jar file")
     assert len(jars) == 1
     return jars[0]
+
+
+class DaemonError(object):
+    pass
+
+
+class ApplicationMasterError(object):
+    pass
+
+
+@contextmanager
+def convert_errors(daemon=True):
+    exc = None
+    try:
+        yield
+    except grpc.RpcError as _exc:
+        exc = _exc
+
+    if exc is not None:
+        code = exc.code()
+        if code == grpc.StatusCode.UNAVAILABLE:
+            server_name = 'daemon' if daemon else 'application master'
+            raise ConnectionError("Unable to connect to %s" % server_name)
+        elif code == grpc.StatusCode.INVALID_ARGUMENT:
+            raise ValueError(exc.details())
+        else:
+            cls = DaemonError if daemon else ApplicationMasterError
+            raise cls(exc.details())
 
 
 class Client(object):
@@ -57,14 +84,10 @@ class Client(object):
             stub = proto.DaemonStub(grpc.insecure_channel(address))
 
             # Ping server to check connection
-            try:
+            with convert_errors(daemon=True):
                 stub.ping(proto.Empty())
-            except grpc.RpcError as exc:
-                # If it wasn't unavailable, raise the error
-                if exc.code() != grpc.StatusCode.UNAVAILABLE:
-                    raise
-            else:
-                return address, None
+
+            return address, None
 
         raise ConnectionError("No daemon currently running")
 
@@ -177,7 +200,8 @@ class Client(object):
             raise ValueError("Cannot provide both app_id and state")
 
         if app_id is not None:
-            resp = self._stub.getStatus(proto.Application(id=app_id))
+            with convert_errors(daemon=True):
+                resp = self._stub.getStatus(proto.Application(id=app_id))
             return ApplicationReport.from_protobuf(resp)
 
         if state is not None:
@@ -196,14 +220,13 @@ class Client(object):
             states = []
 
         req = proto.ApplicationsRequest(states=states)
-        resp = self._stub.getApplications(req)
+        with convert_errors(daemon=True):
+            resp = self._stub.getApplications(req)
         return [ApplicationReport.from_protobuf(r) for r in resp.reports]
 
     def kill(self, app_id):
-        url = '%s/apps/%s' % (self._address, app_id)
-        resp = self._rm.delete(url)
-        if resp.status_code != 204:
-            self._handle_exceptions(resp)
+        with convert_errors(daemon=True):
+            self._stub.kill(proto.Application(id=app_id))
 
 
 class AMClient(object):
@@ -211,15 +234,6 @@ class AMClient(object):
         self._address = address
         self._am = requests.Session()
         self._am.auth = auth
-
-    def _handle_exceptions(self, resp):
-        if resp.status_code == 401:
-            raise UnauthorizedError("Failed to authenticate with "
-                                    "ApplicationMaster")
-        else:
-            raise ApplicationMasterError("ApplicationMaster responded with an "
-                                         "unhandled status code: "
-                                         "%d" % resp.status_code)
 
     def get_key(self, key=None):
         if key is None:
