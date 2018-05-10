@@ -1,6 +1,7 @@
 package com.anaconda.skein;
 
 import io.grpc.Server;
+import io.grpc.Status;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 import org.apache.hadoop.conf.Configuration;
@@ -14,6 +15,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -334,8 +336,43 @@ public class Client {
 
   class DaemonImpl extends DaemonGrpc.DaemonImplBase {
     @Override
-    public void ping(Empty req, StreamObserver<Empty> resp) {
-      resp.onNext(Empty.newBuilder().build());
+    public void ping(Msg.Empty req, StreamObserver<Msg.Empty> resp) {
+      resp.onNext(Msg.Empty.newBuilder().build());
+      resp.onCompleted();
+    }
+
+    @Override
+    public void getStatus(Msg.Application req,
+        StreamObserver<Msg.ApplicationReport> resp) {
+
+      ApplicationId appId = Utils.appIdFromString(req.getId());
+
+      if (appId == null) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Invalid ApplicationId " + req.getId())
+            .asRuntimeException());
+        return;
+      }
+
+      ApplicationReport report;
+      try {
+        report = yarnClient.getApplicationReport(appId);
+      } catch (Exception exc) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Unknown ApplicationId " + req.getId())
+            .asRuntimeException());
+        return;
+      }
+
+      if (!report.getApplicationType().equals("skein")) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("ApplicationId " + req.getId()
+                             + " is not a skein application")
+            .asRuntimeException());
+        return;
+      }
+
+      resp.onNext(MsgUtils.writeApplicationReport(report).build());
       resp.onCompleted();
     }
   }

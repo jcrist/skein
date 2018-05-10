@@ -13,9 +13,7 @@ from contextlib import closing
 import grpc
 import requests
 
-from .proto import Empty
-from .proto.daemon_pb2_grpc import DaemonStub
-
+from . import proto
 from .compatibility import PY2, ConnectionError
 from .exceptions import UnauthorizedError, ApplicationMasterError
 from .model import Job, Service, ApplicationReport
@@ -50,17 +48,17 @@ class Client(object):
 
         self.address = address
         self._proc = proc
-        self._stub = DaemonStub(grpc.insecure_channel(address))
+        self._stub = proto.DaemonStub(grpc.insecure_channel(address))
 
     @staticmethod
     def _connect():
         address, _ = read_daemon()
         if address is not None:
-            stub = DaemonStub(grpc.insecure_channel(address))
+            stub = proto.DaemonStub(grpc.insecure_channel(address))
 
             # Ping server to check connection
             try:
-                stub.ping(Empty())
+                stub.ping(proto.Empty())
             except grpc.RpcError as exc:
                 # If it wasn't unavailable, raise the error
                 if exc.code() != grpc.StatusCode.UNAVAILABLE:
@@ -76,10 +74,10 @@ class Client(object):
         if address is None:
             return
 
-        stub = DaemonStub(grpc.insecure_channel(address))
+        stub = proto.DaemonStub(grpc.insecure_channel(address))
 
         try:
-            stub.ping(Empty())
+            stub.ping(proto.Empty())
         except:
             pass
         else:
@@ -91,7 +89,7 @@ class Client(object):
             pass
 
     @staticmethod
-    def _create(verbose=False, persist=False):
+    def _create(verbose=True, persist=False):
         jar = _find_skein_jar()
 
         if persist:
@@ -177,12 +175,10 @@ class Client(object):
     def status(self, app_id=None, state=None):
         if app_id is not None and state is not None:
             raise ValueError("Cannot provide both app_id and state")
+
         if app_id is not None:
-            url = '%s/apps/%s' % (self._address, app_id)
-            resp = self._rm.get(url)
-            if resp.status_code != 200:
-                self._handle_exceptions(resp)
-            return ApplicationReport.from_dict(resp.json())
+            resp = self._stub.getStatus(proto.Application(id=app_id))
+            return ApplicationReport.from_protobuf(resp)
 
         if state is not None:
             valid = {'ACCEPTED', 'FAILED', 'FINISHED', 'KILLED', 'NEW',

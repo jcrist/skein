@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -67,6 +68,17 @@ public class Utils {
     // Strips leading `/` from paths, and replaces empty paths with null
     // Ensures that /path and /path/ are treated the same
     return (path == null || path.length() <= 1) ? null : path.substring(1);
+  }
+
+  public static ApplicationId appIdFromString(String appId) {
+    // Parse applicationId_{timestamp}_{id}
+    String[] parts = appId.split("_");
+    if (parts.length < 3) {
+      return null;
+    }
+    long timestamp = Long.valueOf(parts[1]);
+    int id = Integer.valueOf(parts[2]);
+    return ApplicationId.newInstance(timestamp, id);
   }
 
   public static LocalResource localResource(FileSystem fs, Path path,

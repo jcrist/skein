@@ -1,8 +1,13 @@
 syntax = "proto3";
 
-option java_multiple_files = true;
 option java_package = "com.anaconda.skein";
-option java_outer_classname = "CommonProto";
+option java_outer_classname = "Msg";
+
+
+package skein;
+
+
+// Common definitions
 
 
 message Empty {
@@ -12,7 +17,7 @@ message Empty {
 message FinalStatus {
   enum Type {
     UNDEFINED = 0;
-    SUCCEDED = 1;
+    SUCCEEDED = 1;
     FAILED = 2;
     KILLED = 3;
   }
@@ -101,4 +106,78 @@ message ApplicationReport {
   string diagnostics = 13;
   int64 start_time = 14;
   int64 finish_time = 15;
+}
+
+
+// Daemon only definitions
+
+
+service Daemon {
+  rpc ping (Empty) returns (Empty);
+
+  rpc getStatus (Application) returns (ApplicationReport);
+
+  rpc getApplications (ApplicationsRequest) returns (ApplicationsResponse);
+
+  rpc submit (Job) returns (Application);
+
+  rpc kill (Application) returns (Empty);
+}
+
+
+message Application {
+  string id = 1;
+}
+
+
+message ApplicationsRequest {
+  repeated ApplicationState states = 1;
+}
+
+
+message ApplicationsResponse {
+  repeated ApplicationReport report = 1;
+}
+
+
+// Master only definitions
+
+
+service Master {
+  rpc getKey (GetKeyRequest) returns (GetKeyResponse);
+
+  rpc setKey (SetKeyRequest) returns (Empty);
+
+  rpc getKeystore (Empty) returns (KeystoreResponse);
+
+  rpc getService (ServiceRequest) returns (Service);
+
+  rpc getJob (Empty) returns (Job);
+}
+
+
+message GetKeyRequest {
+  string key = 1;
+  bool wait = 2;
+}
+
+
+message GetKeyResponse {
+  string val = 1;
+}
+
+
+message SetKeyRequest {
+  string key = 1;
+  string val = 2;
+}
+
+
+message KeystoreResponse {
+  map<string, string> items = 1;
+}
+
+
+message ServiceRequest {
+  string service_name = 1;
 }
