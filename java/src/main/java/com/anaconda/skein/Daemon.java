@@ -44,9 +44,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-public class Client {
+public class Daemon {
 
-  private static final Logger LOG = LogManager.getLogger(Client.class);
+  private static final Logger LOG = LogManager.getLogger(Daemon.class);
 
   // Owner rwx (700)
   private static final FsPermission SKEIN_DIR_PERM =
@@ -91,7 +91,7 @@ public class Client {
           @Override
           public void run() {
             System.err.println("*** shutting down gRPC server");
-            Client.this.stopServer();
+            Daemon.this.stopServer();
             System.err.println("*** gRPC server shut down");
           }
         });
@@ -107,11 +107,11 @@ public class Client {
   public static void main(String[] args) {
     boolean result = false;
     try {
-      Client client = new Client();
-      client.init(args);
-      client.run();
+      Daemon daemon = new Daemon();
+      daemon.init(args);
+      daemon.run();
     } catch (Throwable exc) {
-      LOG.fatal("Error running Client", exc);
+      LOG.fatal("Error running Daemon", exc);
       System.exit(1);
     }
   }
