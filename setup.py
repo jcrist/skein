@@ -23,8 +23,7 @@ SKEIN_PROTO_DIR = os.path.join(ROOT_DIR, 'skein', 'proto')
 
 
 def _get_jars(dir):
-    return [f for f in glob(os.path.join(dir, '*.jar'))
-            if f.endswith('-jar-with-dependencies.jar')]
+    return glob(os.path.join(dir, 'skein-*.jar'))
 
 
 class build_proto(Command):
@@ -79,7 +78,7 @@ class build_java(Command):
         # This will be picked up as package_data later
         self.mkpath(SKEIN_JAVA_DIR)
         code = subprocess.call(['mvn', '-f', os.path.join(JAVA_DIR, 'pom.xml'),
-                                'assembly:assembly'])
+                                'package'])
         if code:
             sys.exit(code)
 

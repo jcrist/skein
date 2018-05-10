@@ -1,154 +1,154 @@
 from __future__ import print_function, division, absolute_import
 
 import glob
-import hmac
 import os
 import select
+import signal
 import socket
 import struct
 import subprocess
 import warnings
-from base64 import b64encode, b64decode
 from contextlib import closing
-from hashlib import sha1, md5
 
+import grpc
 import requests
 
-from .compatibility import PY2, urlsplit
-from .exceptions import (UnauthorizedError, ResourceManagerError,
-                         ApplicationMasterError)
+from .proto import Empty
+from .proto.daemon_pb2_grpc import DaemonStub
+
+from .compatibility import PY2, ConnectionError
+from .exceptions import UnauthorizedError, ApplicationMasterError
 from .model import Job, Service, ApplicationReport
-from .utils import (cached_property, ensure_bytes, read_secret, read_daemon,
-                    write_daemon, SECRET_ENV_VAR, ADDRESS_ENV_VAR, format_list)
+from .utils import (cached_property, read_daemon, write_daemon,
+                    ADDRESS_ENV_VAR, DAEMON_PATH, format_list)
 
 
 def _find_skein_jar():
     this_dir = os.path.dirname(os.path.relpath(__file__))
-    jars = glob.glob(os.path.join(this_dir, 'java', '*.jar'))
+    jars = glob.glob(os.path.join(this_dir, 'java', 'skein-*.jar'))
     if not jars:
         raise ValueError("Failed to find the skein jar file")
     assert len(jars) == 1
     return jars[0]
 
 
-class SkeinAuth(requests.auth.AuthBase):
-    def __init__(self, secret=None):
-        self.secret = secret
-
-    def __call__(self, r):
-        method = ensure_bytes(r.method)
-        content_type = ensure_bytes(r.headers.get('content-type', b''))
-        url = urlsplit(r.url)
-        path = ensure_bytes(url.path)
-        query = ensure_bytes(url.query)
-        if r.body is not None:
-            body = ensure_bytes(r.body)
-            body_md5 = md5(body).digest()
-        else:
-            body_md5 = b''
-
-        msg = b'\n'.join([method, body_md5, content_type, path, query])
-        mac = hmac.new(b64decode(self.secret), msg=msg, digestmod=sha1)
-        signature = b64encode(mac.digest())
-
-        r.headers['Authorization'] = b'SKEIN %s' % signature
-        return r
-
-
-def start_java_client(secret, daemon=False, verbose=False):
-    jar = _find_skein_jar()
-
-    if daemon:
-        command = ["yarn", "jar", jar, jar, '--daemon']
-    else:
-        command = ["yarn", "jar", jar, jar]
-
-    callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    callback.bind(('127.0.0.1', 0))
-    callback.listen(1)
-
-    with closing(callback):
-        _, callback_port = callback.getsockname()
-
-        env = dict(os.environ)
-        env.update({'SKEIN_SECRET_ACCESS_KEY': secret,
-                    'SKEIN_CALLBACK_PORT': str(callback_port)})
-
-        if PY2:
-            popen_kwargs = dict(preexec_fn=os.setsid)
-        else:
-            popen_kwargs = dict(start_new_session=True)
-
-        outfil = None if verbose else subprocess.DEVNULL
-        infil = None if daemon else subprocess.PIPE
-
-        proc = subprocess.Popen(command,
-                                stdin=infil,
-                                stdout=outfil,
-                                stderr=outfil,
-                                env=env,
-                                **popen_kwargs)
-
-        while proc.poll() is None:
-            readable, _, _ = select.select([callback], [], [], 1)
-            if callback in readable:
-                connection = callback.accept()[0]
-                with closing(connection):
-                    stream = connection.makefile(mode="rb")
-                    msg = stream.read(4)
-                    if not msg:
-                        raise ValueError("Failed to read in client port")
-                    port = struct.unpack("!i", msg)[0]
-                    break
-
-    address = 'http://127.0.0.1:%d' % port
-
-    if daemon:
-        write_daemon(address, proc.pid)
-
-    return address, proc
-
-
 class Client(object):
-    def __init__(self, start_java=None):
-        self._rm = requests.Session()
-        self._rm.auth = SkeinAuth(read_secret())
-
-        if start_java is None:
+    def __init__(self, new_daemon=None, persist=False):
+        if new_daemon is None:
             try:
-                self._connect()
-            except Exception as e:
-                warnings.warn("Failed to connect to daemon, starting new server. "
-                              "Exception message: %s", e)
-                self._create()
-        elif start_java:
-            self._create()
+                # Try to connect
+                address, proc = self._connect()
+            except ConnectionError:
+                kind = 'persistent' if persist else 'temporary'
+                warnings.warn("Failed to connect to global daemon, starting new "
+                              "%s daemon." % kind)
+                address, proc = self._create(persist=persist)
+        elif new_daemon:
+            address, proc = self._create(persist=persist)
         else:
-            self._connect()
+            address, proc = self._connect()
 
-    def _create(self):
-        self._address, self._proc = start_java_client(self._rm.auth.secret)
+        self.address = address
+        self._proc = proc
+        self._stub = DaemonStub(grpc.insecure_channel(address))
 
-    def _connect(self):
+    @staticmethod
+    def _connect():
         address, _ = read_daemon()
+        if address is not None:
+            stub = DaemonStub(grpc.insecure_channel(address))
+
+            # Ping server to check connection
+            try:
+                stub.ping(Empty())
+            except grpc.RpcError as exc:
+                # If it wasn't unavailable, raise the error
+                if exc.code() != grpc.StatusCode.UNAVAILABLE:
+                    raise
+            else:
+                return address, None
+
+        raise ConnectionError("No daemon currently running")
+
+    @staticmethod
+    def _clear_global_daemon():
+        address, pid = read_daemon()
         if address is None:
-            raise ValueError("No daemon currently running")
+            return
+
+        stub = DaemonStub(grpc.insecure_channel(address))
 
         try:
-            resp = self._rm.get("%s/skein" % address)
-        except requests.ConnectionError:
-            raise ValueError("Daemon no longer running at %s" % address)
+            stub.ping(Empty())
+        except:
+            pass
+        else:
+            os.kill(pid, signal.SIGTERM)
 
-        if resp.status_code == 401:
-            raise ValueError("Daemon started with different secret key")
-        elif not resp.ok:
-            raise ValueError("Daemon returned http status %d" % resp.status_code)
+        try:
+            os.remove(DAEMON_PATH)
+        except OSError:
+            pass
 
-        self._address = address
-        self._proc = None
+    @staticmethod
+    def _create(verbose=False, persist=False):
+        jar = _find_skein_jar()
+
+        if persist:
+            command = ["yarn", "jar", jar, jar, '--daemon']
+        else:
+            command = ["yarn", "jar", jar, jar]
+
+        callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        callback.bind(('127.0.0.1', 0))
+        callback.listen(1)
+
+        with closing(callback):
+            _, callback_port = callback.getsockname()
+
+            env = dict(os.environ)
+            env.update({'SKEIN_CALLBACK_PORT': str(callback_port)})
+
+            if PY2:
+                popen_kwargs = dict(preexec_fn=os.setsid)
+            else:
+                popen_kwargs = dict(start_new_session=True)
+
+            outfil = None if verbose else subprocess.DEVNULL
+            infil = None if persist else subprocess.PIPE
+
+            proc = subprocess.Popen(command,
+                                    stdin=infil,
+                                    stdout=outfil,
+                                    stderr=outfil,
+                                    env=env,
+                                    **popen_kwargs)
+
+            while proc.poll() is None:
+                readable, _, _ = select.select([callback], [], [], 1)
+                if callback in readable:
+                    connection = callback.accept()[0]
+                    with closing(connection):
+                        stream = connection.makefile(mode="rb")
+                        msg = stream.read(4)
+                        if not msg:
+                            raise ValueError("Failed to read in client port")
+                        port = struct.unpack("!i", msg)[0]
+                        break
+            else:
+                raise ValueError("Failed to start java process")
+
+        address = '127.0.0.1:%d' % port
+
+        if persist:
+            Client._clear_global_daemon()
+            write_daemon(address, proc.pid)
+            proc = None
+
+        return address, proc
 
     def __repr__(self):
-        return 'Client<%s>' % self._address
+        return 'Client<%s>' % self.address
 
     def close(self):
         if self._proc is not None:
@@ -159,18 +159,6 @@ class Client(object):
 
     def __exit__(self, *args):
         self.close()
-
-    def _handle_exceptions(self, resp):
-        if resp.status_code == 401:
-            raise UnauthorizedError("Failed to authenticate with Server")
-
-        try:
-            msg = resp.json()['error']
-        except Exception:
-            msg = ("Server responded with an unhandled status "
-                   "code: %d" % resp.status_code)
-
-        raise ResourceManagerError(msg)
 
     def application(self, app_id):
         return Application(self, app_id)
@@ -294,11 +282,7 @@ class AMClient(object):
         if address is None:
             raise ValueError("Address not found at %r" % ADDRESS_ENV_VAR)
 
-        secret = os.environ.get(SECRET_ENV_VAR)
-        if secret is None:
-            raise ValueError("Secret not found at %r" % ADDRESS_ENV_VAR)
-
-        return cls(address, SkeinAuth(secret))
+        return cls(address)
 
     @classmethod
     def from_id(cls, app_id, client=None):

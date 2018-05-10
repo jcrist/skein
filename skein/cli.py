@@ -4,16 +4,14 @@ import argparse
 import base64
 import errno
 import os
-import signal
 import sys
 
-import requests
 import yaml
 
 from . import __version__
-from .core import start_java_client, SkeinAuth, Client, AMClient
-from .utils import (read_secret, read_daemon, CONFIG_PATH, DAEMON_PATH,
-                    SECRET_PATH, format_table)
+from .core import Client, AMClient
+from .compatibility import ConnectionError
+from .utils import CONFIG_PATH, SECRET_PATH, format_table
 
 
 def eprint(x):
@@ -77,8 +75,8 @@ app_id_optional = arg('--id', dest='app_id', type=str,
 
 def get_client():
     try:
-        return Client(start_java=False)
-    except ValueError:
+        return Client(new_daemon=False)
+    except ConnectionError:
         eprint("Skein daemon not found, please run `skein daemon start`")
         sys.exit(1)
 
@@ -86,56 +84,31 @@ def get_client():
 @subcommand(daemon.subs,
             'start', 'Start the skein daemon')
 def daemon_start():
-    secret = read_secret()
-    address, pid = read_daemon()
-    if address is not None:
-        try:
-            resp = requests.get("%s/skein" % address, auth=SkeinAuth(secret))
-        except requests.ConnectionError:
-            ok = False
-        else:
-            ok = resp.ok
-    else:
-        ok = False
-
-    if not ok:
-        daemon_stop(verbose=False)
-        address, _ = start_java_client(secret, daemon=True)
-    print(address)
+    try:
+        client = Client(new_daemon=False)
+    except ConnectionError:
+        client = Client(new_daemon=True, persist=True)
+    print(client.address)
 
 
 @subcommand(daemon.subs,
             'address', 'The address of the running daemon')
 def daemon_address():
-    address, _ = read_daemon()
-    if address is None:
+    try:
+        client = Client(new_daemon=False)
+        print(client.address)
+    except ConnectionError:
         print("No skein daemon is running")
-    else:
-        print(address)
 
 
 @subcommand(daemon.subs,
             'stop', 'Stop the skein daemon')
-def daemon_stop(verbose=True):
-    secret = read_secret()
-    address, pid = read_daemon()
-    if address is None:
-        if verbose:
-            print("No skein daemon is running")
-        return
-
+def daemon_stop():
     try:
-        resp = requests.post("%s/skein/shutdown" % address,
-                             auth=SkeinAuth(secret))
-    except requests.ConnectionError:
-        pass
-    else:
-        if resp.status_code == 401:
-            # Skein daemon started with a different secret, kill it manually
-            os.kill(pid, signal.SIGTERM)
-    os.unlink(DAEMON_PATH)
-    if verbose:
-        print("Daemon stopped")
+        Client(new_daemon=False)
+    except ConnectionError:
+        print("No skein daemon is running")
+    Client._clear_global_daemon()
 
 
 @subcommand(keystore.subs,

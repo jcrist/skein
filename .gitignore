@@ -5,3 +5,6 @@ dist/
 skein/java/
 skein/proto/*_pb2*.py
 .cache/
+.coverage
+.pytest_cache/
+.eggs/

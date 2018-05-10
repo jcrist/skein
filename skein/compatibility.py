@@ -8,5 +8,10 @@ PY3 = not PY2
 
 if PY2:
     from urlparse import urlparse, urlsplit
+
+    class ConnectionError(OSError):
+        pass
+
 else:
     from urllib.parse import urlparse, urlsplit
+    ConnectionError = ConnectionError

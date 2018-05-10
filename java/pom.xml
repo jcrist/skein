@@ -23,19 +23,33 @@
             </extension>
         </extensions>
         <plugins>
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>com.anaconda.skein.Client</mainClass>
-                        </manifest>
-                    </archive>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
-            </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.1.1</version>
+				<executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                        <transformers>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <mainClass>com.anaconda.skein.Client</mainClass>
+                            </transformer>
+                        </transformers>
+                        <relocations>
+                            <relocation>
+                                <pattern>com.google</pattern>
+                                <shadedPattern>shaded.com.google</shadedPattern>
+                            </relocation>
+                        </relocations>
+                        <minimizeJar>true</minimizeJar>
+                        </configuration>
+                    </execution>
+				</executions>
+			</plugin>
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>

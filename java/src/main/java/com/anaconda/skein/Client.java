@@ -1,5 +1,8 @@
 package com.anaconda.skein;
 
+import io.grpc.Server;
+import io.grpc.netty.NettyServerBuilder;
+import io.grpc.stub.StreamObserver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -11,26 +14,18 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -40,17 +35,9 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 public class Client {
 
@@ -81,39 +68,34 @@ public class Client {
 
   private int callbackPort;
 
-  private int port;
-
   private String secret;
 
   private Server server;
 
-  private void startupRestServer() throws Exception {
-    // Configure the server
-    server = new Server();
-    HandlerCollection handlers = new HandlerCollection();
-    server.setHandler(handlers);
-    server.setStopAtShutdown(true);
+  private void startServer() throws IOException {
+    // Setup and start the server
+    server = NettyServerBuilder.forPort(0)
+        .addService(new DaemonImpl())
+        .build()
+        .start();
 
-    ServerConnector connector = new ServerConnector(server);
-    connector.setHost("127.0.0.1");
-    connector.setPort(0);
-    server.addConnector(connector);
+    LOG.info("Server started, listening on " + server.getPort());
 
-    ServletContextHandler context =
-        new ServletContextHandler(ServletContextHandler.SESSIONS);
-    context.setContextPath("/");
-    context.addServlet(new ServletHolder(new AppsServlet()), "/apps/*");
-    context.addServlet(new ServletHolder(new SkeinServlet()), "/skein/*");
-    FilterHolder holder = context.addFilter(HmacFilter.class, "/*",
-                                            EnumSet.of(DispatcherType.REQUEST));
-    holder.setInitParameter("secret", secret);
-    handlers.addHandler(context);
+    Runtime.getRuntime().addShutdownHook(
+        new Thread() {
+          @Override
+          public void run() {
+            System.err.println("*** shutting down gRPC server");
+            Client.this.stopServer();
+            System.err.println("*** gRPC server shut down");
+          }
+        });
+  }
 
-    // Startup the server
-    server.start();
-
-    // Determine port
-    port = connector.getLocalPort();
+  private void stopServer() {
+    if (server != null) {
+      server.shutdown();
+    }
   }
 
   /** Main Entry Point. **/
@@ -130,12 +112,6 @@ public class Client {
   }
 
   private void init(String[] args) throws IOException {
-    secret = System.getenv("SKEIN_SECRET_ACCESS_KEY");
-    if (secret == null) {
-      LOG.fatal("Couldn't find 'SKEIN_SECRET_ACCESS_KEY' envar");
-      System.exit(1);
-    }
-
     String callbackPortEnv = System.getenv("SKEIN_CALLBACK_PORT");
     if (callbackPortEnv == null) {
       LOG.fatal("Couldn't find 'SKEIN_CALLBACK_PORT' envar");
@@ -180,22 +156,22 @@ public class Client {
     yarnClient.init(conf);
     yarnClient.start();
 
-    // Start the rest server
-    startupRestServer();
+    // Start the server
+    startServer();
 
     // Report back the port we're listening on
     Socket callback = new Socket("127.0.0.1", callbackPort);
     DataOutputStream dos = new DataOutputStream(callback.getOutputStream());
-    dos.writeInt(port);
+    dos.writeInt(server.getPort());
     dos.close();
     callback.close();
 
     if (daemon) {
-      server.join();
+      server.awaitTermination();
     } else {
       // Wait until EOF or broken pipe from stdin
       while (System.in.read() != -1) {}
-      server.stop();
+      stopServer();
     }
   }
 
@@ -226,7 +202,6 @@ public class Client {
     // Setup the appmaster environment variables
     Map<String, String> env = new HashMap<String, String>();
     env.put("CLASSPATH", classpath);
-    env.put("SKEIN_SECRET_ACCESS_KEY", secret);
 
     // Setup the appmaster commands
     String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
@@ -357,157 +332,11 @@ public class Client {
     localResources.put(dst, Utils.localResource(defaultFs, dstPath, type));
   }
 
-  private final class SkeinServlet extends HttpServlet {
+  class DaemonImpl extends DaemonGrpc.DaemonImplBase {
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-        throws ServletException, IOException {
-      if (daemon && "shutdown".equals(Utils.getPath(req))) {
-        new Thread() {
-          @Override
-          public void run() {
-            try {
-              LOG.info("Shutdown signal received, shutting down");
-              server.stop();
-            } catch (Exception ex) {
-              LOG.info("Failed to stop Jetty", ex);
-              System.exit(0);
-            }
-          }
-        }.start();
-      } else {
-        Utils.sendError(resp, 404);
-      }
-    }
-
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-        throws ServletException, IOException {
-      if (req.getPathInfo() != null) {
-        Utils.sendError(resp, 404);
-        return;
-      }
-    }
-  }
-
-  private final class AppsServlet extends HttpServlet {
-    private final Set<String> skeinSet =
-        new HashSet<String>(Arrays.asList("skein"));
-
-    private ApplicationId appIdFromString(String appId) {
-      // Parse applicationId_{timestamp}_{id}
-      String[] parts = appId.split("_");
-      if (parts.length < 3) {
-        return null;
-      }
-      long timestamp = Long.valueOf(parts[1]);
-      int id = Integer.valueOf(parts[2]);
-      return ApplicationId.newInstance(timestamp, id);
-    }
-
-    private ApplicationId getAppId(HttpServletRequest req) {
-      String appId = req.getPathInfo();
-      if (appId == null || appId.length() <= 1) {
-        return null;
-      }
-      return appIdFromString(appId.substring(1));
-    }
-
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-        throws ServletException, IOException {
-
-      ApplicationId appId = getAppId(req);
-
-      if (appId == null) {
-        String[] statesReq = req.getParameterValues("state");
-        EnumSet<YarnApplicationState> states;
-        if (statesReq == null) {
-          states = EnumSet.of(YarnApplicationState.SUBMITTED,
-                              YarnApplicationState.ACCEPTED,
-                              YarnApplicationState.RUNNING);
-        } else {
-          states = EnumSet.noneOf(YarnApplicationState.class);
-          for (String s : statesReq) {
-            try {
-              states.add(YarnApplicationState.valueOf(s));
-            } catch (IllegalArgumentException exc) { }
-          }
-        }
-
-        List<ApplicationReport> reports;
-        try {
-          reports = yarnClient.getApplications(skeinSet, states);
-        } catch (YarnException exc) {
-          Utils.sendError(resp, 500, exc.toString());
-          return;
-        }
-
-        OutputStream out = resp.getOutputStream();
-        Utils.MAPPER.writeValue(out, reports);
-        out.close();
-      } else {
-        ApplicationReport report;
-        try {
-          report = yarnClient.getApplicationReport(appId);
-        } catch (YarnException exc) {
-          Utils.sendError(resp, 404, "Unknown ApplicationID");
-          return;
-        }
-        if (!report.getApplicationType().equals("skein")) {
-          Utils.sendError(resp, 404, "Not a skein application");
-        }
-        OutputStream out = resp.getOutputStream();
-        Utils.MAPPER.writeValue(out, report);
-        out.close();
-      }
-    }
-
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-        throws ServletException, IOException {
-
-      ApplicationId appId = getAppId(req);
-
-      if (appId != null) {
-        Utils.sendError(resp, 400, "Malformed Request");
-        return;
-      }
-
-      Model.Job job;
-      try {
-        job = Utils.MAPPER.readValue(req.getInputStream(), Model.Job.class);
-      } catch (Exception exc) {
-        Utils.sendError(resp, 400, exc.getMessage());
-        return;
-      }
-
-      try {
-        appId = submit(job);
-      } catch (Exception exc) {
-        Utils.sendError(resp, 400, exc.getMessage());
-        return;
-      }
-      OutputStream out = resp.getOutputStream();
-      out.write(appId.toString().getBytes());
-      resp.setStatus(200);
-    }
-
-    @Override
-    protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
-        throws ServletException, IOException {
-
-      ApplicationId appId = getAppId(req);
-
-      if (appId == null) {
-        Utils.sendError(resp, 400, "Malformed Request");
-        return;
-      }
-
-      if (killApplication(appId)) {
-        resp.setStatus(204);
-      } else {
-        Utils.sendError(resp, 404, "Failed to kill application");
-      }
+    public void ping(Empty req, StreamObserver<Empty> resp) {
+      resp.onNext(Empty.newBuilder().build());
+      resp.onCompleted();
     }
   }
 }
