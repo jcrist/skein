@@ -111,6 +111,13 @@ def daemon_stop():
     Client._clear_global_daemon()
 
 
+@subcommand(daemon.subs,
+            'restart', 'Restart the skein daemon')
+def daemon_restart():
+    Client._clear_global_daemon()
+    daemon_start()
+
+
 @subcommand(keystore.subs,
             'get', 'Get a value from the keystore',
             app_id_optional,
