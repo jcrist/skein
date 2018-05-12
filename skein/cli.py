@@ -81,13 +81,19 @@ def get_client():
         sys.exit(1)
 
 
+log = arg("--log", default=False,
+          help="If provided, the daemon will write logs here.")
+
+
 @subcommand(daemon.subs,
-            'start', 'Start the skein daemon')
-def daemon_start():
+            'start', 'Start the skein daemon',
+            log)
+def daemon_start(log=False):
     try:
         client = Client(new_daemon=False)
+        print("Skein daemon already running")
     except ConnectionError:
-        client = Client(new_daemon=True, persist=True)
+        client = Client(new_daemon=True, persist=True, log=log)
     print(client.address)
 
 
@@ -112,10 +118,11 @@ def daemon_stop():
 
 
 @subcommand(daemon.subs,
-            'restart', 'Restart the skein daemon')
-def daemon_restart():
+            'restart', 'Restart the skein daemon',
+            log)
+def daemon_restart(log=False):
     Client._clear_global_daemon()
-    daemon_start()
+    daemon_start(log=log)
 
 
 @subcommand(keystore.subs,

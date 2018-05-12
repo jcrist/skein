@@ -59,18 +59,18 @@ def convert_errors(daemon=True):
 
 
 class Client(object):
-    def __init__(self, new_daemon=None, persist=False):
+    def __init__(self, new_daemon=None, persist=False, log=None):
         if new_daemon is None:
             try:
                 # Try to connect
                 address, proc = self._connect()
             except ConnectionError:
                 kind = 'persistent' if persist else 'temporary'
-                warnings.warn("Failed to connect to global daemon, starting new "
-                              "%s daemon." % kind)
-                address, proc = self._create(persist=persist)
+                warnings.warn("Failed to connect to global daemon, starting "
+                              "new %s daemon." % kind)
+                address, proc = self._create(persist=persist, log=log)
         elif new_daemon:
-            address, proc = self._create(persist=persist)
+            address, proc = self._create(persist=persist, log=log)
         else:
             address, proc = self._connect()
 
@@ -81,16 +81,16 @@ class Client(object):
     @staticmethod
     def _connect():
         address, _ = read_daemon()
-        if address is not None:
-            stub = proto.DaemonStub(grpc.insecure_channel(address))
+        if address is None:
+            raise ConnectionError("No daemon currently running")
 
-            # Ping server to check connection
-            with convert_errors(daemon=True):
-                stub.ping(proto.Empty())
+        stub = proto.DaemonStub(grpc.insecure_channel(address))
 
-            return address, None
+        # Ping server to check connection
+        with convert_errors(daemon=True):
+            stub.ping(proto.Empty())
 
-        raise ConnectionError("No daemon currently running")
+        return address, None
 
     @staticmethod
     def _clear_global_daemon():
@@ -113,7 +113,7 @@ class Client(object):
             pass
 
     @staticmethod
-    def _create(verbose=True, persist=False):
+    def _create(log=None, persist=False):
         jar = _find_skein_jar()
 
         if persist:
@@ -136,7 +136,12 @@ class Client(object):
             else:
                 popen_kwargs = dict(start_new_session=True)
 
-            outfil = None if verbose else subprocess.DEVNULL
+            if log is None:
+                outfil = None
+            elif log is False:
+                outfil = subprocess.DEVNULL
+            else:
+                outfil = open(log, mode='w')
             infil = None if persist else subprocess.PIPE
 
             proc = subprocess.Popen(command,
