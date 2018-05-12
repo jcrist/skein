@@ -28,11 +28,11 @@ def _find_skein_jar():
     return jars[0]
 
 
-class DaemonError(object):
+class DaemonError(Exception):
     pass
 
 
-class ApplicationMasterError(object):
+class ApplicationMasterError(Exception):
     pass
 
 
@@ -49,7 +49,9 @@ def convert_errors(daemon=True):
         if code == grpc.StatusCode.UNAVAILABLE:
             server_name = 'daemon' if daemon else 'application master'
             raise ConnectionError("Unable to connect to %s" % server_name)
-        elif code == grpc.StatusCode.INVALID_ARGUMENT:
+        elif code in (grpc.StatusCode.INVALID_ARGUMENT,
+                      grpc.StatusCode.NOT_FOUND,
+                      grpc.StatusCode.ALREADY_EXISTS):
             raise ValueError(exc.details())
         else:
             cls = DaemonError if daemon else ApplicationMasterError
@@ -231,34 +233,23 @@ class AMClient(object):
         self._address = address
         self._stub = proto.MasterStub(grpc.insecure_channel(address))
 
-    def get_key(self, key=None):
+    def get_key(self, key=None, wait=False):
         if key is None:
-            resp = self._am.get('%s/keystore/' % self._address)
-            if resp.status_code == 200:
-                return resp.json()
-            else:
-                self._handle_exceptions(resp)
+            with convert_errors(daemon=False):
+                resp = self._stub.keystore(proto.Empty())
+            return dict(resp.items)
 
-        if not len(key):
-            raise ValueError("len(key) must be > 0")
-
-        resp = self._am.get('%s/keystore/%s' % (self._address, key))
-
-        if resp.status_code == 200:
-            return resp.content.decode()
-        elif resp.status_code == 404:
-            raise KeyError(key)
-        else:
-            self._handle_exceptions(resp)
+        with convert_errors(daemon=False):
+            req = proto.GetKeyRequest(key=key, wait=wait)
+            resp = self._stub.keystoreGet(req)
+        return resp.val
 
     def set_key(self, key, value):
         if not len(key):
             raise ValueError("len(key) must be > 0")
-        resp = self._am.put('%s/keystore/%s' % (self._address, key), data=value)
-        if resp.status_code == 403:
-            raise KeyError("key %r has already been set" % key)
-        elif resp.status_code != 204:
-            self._handle_exceptions(resp)
+
+        with convert_errors(daemon=False):
+            self._stub.keystoreSet(proto.SetKeyRequest(key=key, val=value))
 
     def inspect(self, service=None):
         if service is None:
@@ -301,6 +292,12 @@ class Application(object):
 
     def inspect(self, service=None):
         return self._am_client.inspect(service=service)
+
+    def get_key(self, key=None, wait=False):
+        return self._am_client.get_key(key=key, wait=wait)
+
+    def set_key(self, key, value):
+        return self._am_client.set_key(key, value)
 
     @cached_property
     def _am_client(self):

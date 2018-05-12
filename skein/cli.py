@@ -121,14 +121,16 @@ def daemon_restart():
 @subcommand(keystore.subs,
             'get', 'Get a value from the keystore',
             app_id_optional,
+            arg('--wait', action='store_true',
+                help='If true, will block until the key is set'),
             arg('key', type=str, help='The key to get'))
-def keystore_get(key, app_id=None):
+def keystore_get(key, wait=False, app_id=None):
     if app_id is None:
         am_client = AMClient.from_env()
     else:
         client = get_client()
         am_client = AMClient.from_id(app_id, client=client)
-    print(am_client.get_key(key))
+    print(am_client.get_key(key, wait=wait))
 
 
 @subcommand(keystore.subs,

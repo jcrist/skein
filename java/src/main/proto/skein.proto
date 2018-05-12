@@ -152,11 +152,11 @@ message ApplicationsResponse {
 
 
 service Master {
-  rpc getKey (GetKeyRequest) returns (GetKeyResponse);
+  rpc keystoreGet (GetKeyRequest) returns (GetKeyResponse);
 
-  rpc setKey (SetKeyRequest) returns (Empty);
+  rpc keystoreSet (SetKeyRequest) returns (Empty);
 
-  rpc getKeystore (Empty) returns (KeystoreResponse);
+  rpc keystore (Empty) returns (KeystoreResponse);
 
   rpc getService (ServiceRequest) returns (Service);
 

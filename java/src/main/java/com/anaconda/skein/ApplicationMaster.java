@@ -2,6 +2,7 @@ package com.anaconda.skein;
 
 import io.grpc.Server;
 import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 import org.apache.hadoop.conf.Configuration;
@@ -65,6 +66,9 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   private final ConcurrentHashMap<String, String> configuration =
       new ConcurrentHashMap<String, String>();
+
+  private final ConcurrentHashMap<String, List<StreamObserver<Msg.GetKeyResponse>>> alerts =
+      new ConcurrentHashMap<String, List<StreamObserver<Msg.GetKeyResponse>>>();
 
   private final Map<String, ServiceTracker> services =
       new HashMap<String, ServiceTracker>();
@@ -551,6 +555,79 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         return;
       }
       resp.onNext(MsgUtils.writeService(service));
+      resp.onCompleted();
+    }
+
+    @Override
+    public void keystoreGet(Msg.GetKeyRequest req,
+        StreamObserver<Msg.GetKeyResponse> resp) {
+      String key = req.getKey();
+      String val = configuration.get(key);
+      if (val == null) {
+        if (req.getWait()) {
+          if (alerts.get(key) == null) {
+            alerts.put(key, new ArrayList<StreamObserver<Msg.GetKeyResponse>>());
+          }
+          alerts.get(key).add(resp);
+        } else {
+          resp.onError(Status.NOT_FOUND
+              .withDescription(key)
+              .asRuntimeException());
+        }
+      } else {
+        resp.onNext(Msg.GetKeyResponse.newBuilder().setVal(val).build());
+        resp.onCompleted();
+      }
+    }
+
+    @Override
+    public void keystoreSet(Msg.SetKeyRequest req,
+        StreamObserver<Msg.Empty> resp) {
+      String key = req.getKey();
+      String val = req.getVal();
+      configuration.put(key, val);
+
+      String current = configuration.get(key);
+
+      if (current != null && !val.equals(current)) {
+        resp.onError(Status.ALREADY_EXISTS
+            .withDescription("Key '" + key + "' already exists")
+            .asRuntimeException());
+        return;
+      }
+
+      configuration.put(key, val);
+
+      resp.onNext(MsgUtils.EMPTY);
+      resp.onCompleted();
+
+      // Handle alerts
+      List<StreamObserver<Msg.GetKeyResponse>> callbacks = alerts.get(key);
+      if (callbacks != null) {
+        Msg.GetKeyResponse cbResp =
+            Msg.GetKeyResponse.newBuilder().setVal(val).build();
+        for (StreamObserver<Msg.GetKeyResponse> cb : callbacks) {
+          try {
+            cb.onNext(cbResp);
+            cb.onCompleted();
+          } catch (StatusRuntimeException exc) {
+            if (exc.getStatus().getCode() != Status.Code.CANCELLED) {
+              LOG.info("Callback failed on key: " + key
+                       + ", status: " + exc.getStatus());
+            }
+          }
+        }
+        alerts.remove(key);
+      }
+    }
+
+    @Override
+    public void keystore(Msg.Empty req,
+        StreamObserver<Msg.KeystoreResponse> resp) {
+      resp.onNext(Msg.KeystoreResponse
+          .newBuilder()
+          .putAllItems(configuration)
+          .build());
       resp.onCompleted();
     }
   }
