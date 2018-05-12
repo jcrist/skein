@@ -140,6 +140,16 @@ class clean(_clean):
         _clean.run(self)
 
 
+is_build_step = bool({'build', 'install', 'develop',
+                      'bdist_wheel'}.intersection(sys.argv))
+protos_built = bool(_compiled_protos()) and 'clean' not in sys.argv
+
+if 'build_proto' in sys.argv or (is_build_step and not protos_built):
+    setup_requires = ['grpcio-tools']
+else:
+    setup_requires = None
+
+
 # Due to quirks in setuptools/distutils dependency ordering, to get the java
 # and protobuf sources to build automatically in most cases, we need to check
 # for them in multiple locations. This is unfortunate, but seems necessary.
@@ -180,5 +190,5 @@ setup(name='skein',
         skein=skein.cli:main
       ''',
       install_requires=['grpcio', 'pyyaml'],
-      setup_requires=['grpcio-tools'],
+      setup_requires=setup_requires,
       zip_safe=False)
