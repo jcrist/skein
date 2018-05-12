@@ -619,6 +619,21 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         }
         alerts.remove(key);
       }
+
+      // Notify dependent services
+      synchronized (ApplicationMaster.this) {
+        if (waitingOn.containsKey(key)) {
+          for (ServiceTracker s: waitingOn.remove(key)) {
+            if (s.notifySet()) {
+              try {
+                initialize(s);
+              } catch (IOException exc) {
+                LOG.warn("Failed to initialize service " + s.name, exc);
+              }
+            }
+          }
+        }
+      }
     }
 
     @Override
