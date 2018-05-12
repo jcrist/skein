@@ -1,6 +1,7 @@
 package com.anaconda.skein;
 
-import org.apache.commons.io.IOUtils;
+import io.grpc.Server;
+import io.grpc.netty.NettyServerBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -28,14 +29,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 
-import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
@@ -46,7 +41,6 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -55,11 +49,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
        NMClientAsync.CallbackHandler {
@@ -68,11 +57,9 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   private Configuration conf;
 
-  private String secret;
-
-  private Server server;
-
   private Model.Job job;
+
+  private Path appDir;
 
   private final ConcurrentHashMap<String, String> configuration =
       new ConcurrentHashMap<String, String>();
@@ -86,10 +73,9 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private final Map<ContainerId, TrackerID> containers =
       new HashMap<ContainerId, TrackerID>();
 
-  private Integer privatePort;
-  private Integer publicPort;
+  private Server server;
   private String hostname;
-  private String address;
+  private int port = -1;
 
   private AtomicInteger numTotal = new AtomicInteger();
   private AtomicInteger numSucceeded = new AtomicInteger();
@@ -101,13 +87,41 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private UserGroupInformation ugi;
   private ByteBuffer tokens;
 
+  private void startServer() throws IOException {
+    // Setup and start the server
+    server = NettyServerBuilder.forPort(0)
+        .addService(new MasterImpl())
+        .build()
+        .start();
+
+    port = server.getPort();
+
+    LOG.info("Server started, listening on " + port);
+
+    Runtime.getRuntime().addShutdownHook(
+        new Thread() {
+          @Override
+          public void run() {
+            System.err.println("*** shutting down gRPC server");
+            ApplicationMaster.this.stopServer();
+            System.err.println("*** gRPC server shut down");
+          }
+        });
+  }
+
+  private void stopServer() {
+    if (server != null) {
+      server.shutdown();
+    }
+  }
+
   private int loadJob() throws Exception {
     try {
-      job = Utils.MAPPER.readValue(new File(".skein.json"), Model.Job.class);
+      job = MsgUtils.readJob(Msg.Job.parseFrom(new FileInputStream(".skein.proto")));
     } catch (IOException exc) {
       fatal("Issue loading job specification", exc);
     }
-    job.validate(true);
+    job.validate();
     LOG.info("Job successfully loaded");
 
     int total = 0;
@@ -143,58 +157,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     Collections.sort(trackers);
   }
 
-  private void startupRestServer() throws Exception {
-    // Configure the server
-    server = new Server();
-    HandlerCollection handlers = new HandlerCollection();
-    server.setHandler(handlers);
-    server.setStopAtShutdown(true);
-
-    // Create the servlets once
-    final ServletHolder keystore = new ServletHolder(new KeyValueServlet());
-    final ServletHolder services = new ServletHolder(new ServicesServlet());
-
-    // This connector serves content authenticated by the secret key
-    ServerConnector privateConnector = new ServerConnector(server);
-    privateConnector.setPort(0);
-    privateConnector.setName("Private");
-    server.addConnector(privateConnector);
-
-    ServletContextHandler privateContext =
-        new ServletContextHandler(ServletContextHandler.SESSIONS);
-    privateContext.setContextPath("/");
-    privateContext.setVirtualHosts(new String[] {"@Private"});
-    privateContext.addServlet(keystore, "/keystore/*");
-    privateContext.addServlet(services, "/services/*");
-    FilterHolder holder =
-        privateContext.addFilter(HmacFilter.class, "/*",
-                                 EnumSet.of(DispatcherType.REQUEST));
-    holder.setInitParameter("secret", secret);
-    handlers.addHandler(privateContext);
-
-    // This connector serves content unauthenticated
-    ServerConnector publicConnector = new ServerConnector(server);
-    publicConnector.setPort(0);
-    publicConnector.setName("Public");
-    server.addConnector(publicConnector);
-
-    ServletContextHandler publicContext =
-        new ServletContextHandler(ServletContextHandler.SESSIONS);
-    publicContext.setContextPath("/");
-    publicContext.setVirtualHosts(new String[] {"@Public"});
-    publicContext.addServlet(keystore, "/keystore/*");
-    publicContext.addServlet(services, "/services/*");
-    handlers.addHandler(publicContext);
-
-    // Startup the server
-    server.start();
-
-    // Determine ports
-    privatePort = privateConnector.getLocalPort();
-    publicPort = publicConnector.getLocalPort();
-    address = "http://" + hostname + ":" + privatePort;
-  }
-
   private String formatConfig(Set<String> depends, String val) {
     if (depends != null) {
       for (String key : depends) {
@@ -216,8 +178,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         env.put(entry.getKey(), formatConfig(depends, entry.getValue()));
       }
     }
-    env.put("SKEIN_SECRET_ACCESS_KEY", secret);
-    env.put("SKEIN_APPMASTER_ADDRESS", address);
+    env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
 
     // Finalize execution script
     final StringBuilder script = new StringBuilder();
@@ -228,7 +189,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     // Write the job script to file
-    final Path scriptPath = new Path(job.getAppDir(), tracker.name + ".sh");
+    final Path scriptPath = new Path(appDir, tracker.name + ".sh");
     LOG.info("SERVICE: " + tracker.name + " - writing script to " + scriptPath);
 
     LocalResource scriptResource = null;
@@ -401,13 +362,16 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     System.exit(1);
   }
 
+  public void init(String[] args) {
+    if (args.length == 0 || args.length > 1) {
+      LOG.fatal("Usage: <command> applicationDirectory");
+      System.exit(1);
+    }
+    appDir = new Path(args[0]);
+  }
+
   public void run() throws Exception {
     conf = new YarnConfiguration();
-
-    secret = System.getenv("SKEIN_SECRET_ACCESS_KEY");
-    if (secret == null) {
-      fatal("Couldn't find secret token at 'SKEIN_SECRET_ACCESS_KEY' envar");
-    }
 
     int totalInstances = loadJob();
     numTotal.set(totalInstances);
@@ -438,8 +402,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     ugi.addCredentials(credentials);
 
-    startupRestServer();
-
     rmClient = AMRMClientAsync.createAMRMClientAsync(1000, this);
     rmClient.init(conf);
     rmClient.start();
@@ -448,11 +410,13 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     nmClient.init(conf);
     nmClient.start();
 
-    rmClient.registerApplicationMaster(hostname, privatePort, "");
+    startServer();
+
+    rmClient.registerApplicationMaster(hostname, port, "");
 
     intializeServices();
 
-    server.join();
+    server.awaitTermination();
   }
 
   private void shutdown() {
@@ -463,7 +427,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     ugi.doAs(
         new PrivilegedAction<Void>() {
           public Void run() {
-            Path appDir = new Path(job.getAppDir());
             try {
               FileSystem fs = FileSystem.get(conf);
               fs.delete(appDir, true);
@@ -496,117 +459,20 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     rmClient.stop();
-    try {
-      server.stop();
-    } catch (InterruptedException ex) {
-      // Raised by jetty to stop server
-    } catch (Exception ex) {
-      LOG.error("Failed to properly shutdown the jetty server", ex);
-    }
+
+    stopServer();
   }
 
   /** Main entrypoint for the ApplicationMaster. **/
   public static void main(String[] args) {
     ApplicationMaster appMaster = new ApplicationMaster();
 
+    appMaster.init(args);
+
     try {
       appMaster.run();
     } catch (Throwable exc) {
       fatal("Error running ApplicationMaster", exc);
-    }
-  }
-
-  private class ServicesServlet extends HttpServlet {
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-        throws ServletException, IOException {
-
-      String path = Utils.getPath(req);
-      Map<String, Model.Service> services = job.getServices();
-
-      if (path == null) {
-        resp.setHeader("Content-Type", "application/json");
-        OutputStream out = resp.getOutputStream();
-        Utils.MAPPER.writeValue(out, services);
-        out.close();
-        return;
-      }
-
-      Model.Service service = services.get(path);
-      if (service == null) {
-        Utils.sendError(resp, 404, "Unknown service");
-        return;
-      }
-
-      resp.setHeader("Content-Type", "application/json");
-      OutputStream out = resp.getOutputStream();
-      Utils.MAPPER.writeValue(out, service);
-      out.close();
-    }
-  }
-
-  private class KeyValueServlet extends HttpServlet {
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-        throws ServletException, IOException {
-
-      String key = Utils.getPath(req);
-
-      if (key == null) {
-        // Handle /keystore or /keystore/
-        resp.setHeader("Content-Type", "application/json");
-        OutputStream out = resp.getOutputStream();
-        Utils.MAPPER.writeValue(out, configuration);
-        out.close();
-        return;
-      }
-
-      String value = configuration.get(key);
-      if (value == null) {
-        Utils.sendError(resp, 404, "Missing key");
-        return;
-      }
-
-      OutputStream out = resp.getOutputStream();
-      out.write(value.getBytes(StandardCharsets.UTF_8));
-      out.close();
-    }
-
-    @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse resp)
-        throws ServletException, IOException {
-
-      String key = Utils.getPath(req);
-      byte[] bytes = IOUtils.toByteArray(req.getInputStream());
-
-      if (key == null || bytes.length == 0) {
-        Utils.sendError(resp, 400, "Malformed Request");
-        return;
-      }
-
-      String value = new String(bytes, StandardCharsets.UTF_8);
-      String current = configuration.get(key);
-
-      // If key exists and doesn't match value (allows for idempotent requests)
-      if (current != null && !value.equals(current)) {
-        Utils.sendError(resp, 403, "Key already set");
-        return;
-      }
-
-      configuration.put(key, value);
-
-      // Notify dependent services
-      synchronized (ApplicationMaster.this) {
-        if (waitingOn.containsKey(key)) {
-          for (ServiceTracker s: waitingOn.remove(key)) {
-            if (s.notifySet()) {
-              initialize(s);
-            }
-          }
-        }
-      }
-
-      resp.setStatus(204);
     }
   }
 
@@ -661,5 +527,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       this.tracker = tracker;
       this.id = id;
     }
+  }
+
+  class MasterImpl extends MasterGrpc.MasterImplBase {
   }
 }

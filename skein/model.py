@@ -29,6 +29,14 @@ def _if_none(x, y):
     return x if x is not None else y
 
 
+def _pop_origin(kwargs):
+    _origin = kwargs.pop('_origin', None)
+    if kwargs:
+        raise TypeError("from_dict() got an unexpected keyword argument "
+                        "%s" % next(iter(kwargs)))
+    return _origin
+
+
 def is_list_of(x, typ):
     return isinstance(x, list) and all(isinstance(i, typ) for i in x)
 
@@ -76,20 +84,24 @@ class Base(object):
                     for k in self.__slots__))
 
     @classmethod
+    def _get_params(cls):
+        return getattr(cls, '_params', cls.__slots__)
+
+    def _assign_required(self, name, val):
+        if val is required:
+            raise TypeError("parameter %r is required but wasn't "
+                            "provided" % name)
+        setattr(self, name, val)
+
+    @classmethod
     def _check_keys(cls, obj, keys=None):
-        keys = keys or cls.__slots__
+        keys = keys or cls._get_params()
         if not isinstance(obj, dict):
             raise TypeError("Expected mapping for %r" % cls.__name__)
         extra = set(obj).difference(keys)
         if extra:
             raise ValueError("Unknown extra keys for %s:\n"
                              "%s" % (cls.__name__, format_list(extra)))
-
-    def _check_required(self):
-        for k in self.__slots__:
-            if getattr(self, k) is required:
-                raise TypeError("parameter %r is required but wasn't "
-                                "provided" % k)
 
     def _check_in_set(self, field, values):
         if getattr(self, field) not in values:
@@ -134,7 +146,7 @@ class Base(object):
         if not isinstance(msg, cls._protobuf_cls):
             raise TypeError("Expected message of type "
                             "%r" % cls._protobuf_cls.__name__)
-        kwargs = {k: getattr(msg, k) for k in cls.__slots__}
+        kwargs = {k: getattr(msg, k) for k in cls._get_params()}
         return cls(**kwargs)
 
     @classmethod
@@ -157,41 +169,18 @@ class Base(object):
         """Create an instance from a yaml string."""
         return cls.from_dict(yaml.safe_load(b))
 
-    @classmethod
-    def from_file(cls, path, format='infer'):
-        """Create an instance from a json or yaml file.
-
-        Parameter
-        ---------
-        path : str
-            The path to the file to load.
-        format : {'infer', 'json', 'yaml'}, optional
-            The file format. By default the format is inferred from the file
-            extension.
-        """
-        format = _infer_format(path, format=format)
-
-        if format == 'json':
-            with open(path) as f:
-                data = f.read()
-            return cls.from_json(data)
-        else:
-            with open(path) as f:
-                data = yaml.safe_load(f)
-            return cls.from_dict(data)
-
     def to_protobuf(self):
         """Convert object to a protobuf message"""
         self._validate()
         kwargs = {k: _convert(getattr(self, k), 'to_protobuf')
-                  for k in self.__slots__}
+                  for k in self._get_params()}
         return self._protobuf_cls(**kwargs)
 
     def to_dict(self, skip_nulls=True):
         """Convert object to a dict"""
         self._validate()
         out = {}
-        for k in self.__slots__:
+        for k in self._get_params():
             val = getattr(self, k)
             if not skip_nulls or val is not None:
                 out[k] = _convert(val, 'to_dict', skip_nulls)
@@ -205,25 +194,6 @@ class Base(object):
         """Convert object to a yaml string"""
         return yaml.dump(self.to_dict(skip_nulls=skip_nulls),
                          default_flow_style=False)
-
-    def to_file(self, path, format='infer', skip_nulls=True):
-        """Write object to a file.
-
-        Parameter
-        ---------
-        path : str
-            The path to the file to load.
-        format : {'infer', 'json', 'yaml'}, optional
-            The file format. By default the format is inferred from the file
-            extension.
-        skip_nulls : bool, optional
-            By default null values are skipped in the output. Set to True to
-            output all fields.
-        """
-        format = _infer_format(path, format=format)
-        data = getattr(self, 'to_' + format)(skip_nulls=skip_nulls)
-        with open(path, mode='w') as f:
-            f.write(data)
 
 
 class Resources(Base):
@@ -240,10 +210,8 @@ class Resources(Base):
     _protobuf_cls = _proto.Resources
 
     def __init__(self, memory=required, vcores=required):
-        self.memory = memory
-        self.vcores = vcores
-
-        self._check_required()
+        self._assign_required('memory', memory)
+        self._assign_required('vcores', vcores)
         self._validate()
 
     def __repr__(self):
@@ -274,20 +242,19 @@ class File(Base):
         file system.
     timestamp : int, optional
         The time the resource was last modified. If not provided will be
-        determined by teh file system.
+        determined by the file system.
     """
-    __slots__ = ('source', 'type', 'visibility', 'size', 'timestamp')
+    __slots__ = ('_source', 'type', 'visibility', 'size', 'timestamp')
+    _params = ('source', 'type', 'visibility', 'size', 'timestamp')
     _protobuf_cls = _proto.File
 
     def __init__(self, source=required, type='FILE', visibility='APPLICATION',
                  size=0, timestamp=0):
-        self.source = source
+        self._assign_required('source', source)
         self.type = type
         self.visibility = visibility
         self.size = size
         self.timestamp = timestamp
-
-        self._check_required()
         self._validate()
 
     def __repr__(self):
@@ -300,20 +267,76 @@ class File(Base):
         self._check_is_bounded_int('size')
         self._check_is_bounded_int('timestamp')
 
+    @property
+    def source(self):
+        return self._source
+
+    @source.setter
+    def source(self, val):
+        if not isinstance(val, str):
+            raise TypeError("'source' must be an instance of 'str'")
+        self._source = self._normpath(val)
+
+    @staticmethod
+    def _normpath(path, origin=None):
+        url = urlparse(path)
+        if not url.scheme:
+            if not os.path.isabs(url.path):
+                if origin is not None:
+                    path = os.path.normpath(os.path.join(origin, url.path))
+                else:
+                    raise ValueError("paths must be absolute")
+            else:
+                path = url.path
+            return 'file://%s%s' % (url.netloc, path)
+        return path
+
+    @implements(Base.to_protobuf)
+    def to_protobuf(self):
+        self._validate()
+        url = urlparse(self.source)
+        urlmsg = _proto.Url(scheme=url.scheme,
+                            host=url.hostname,
+                            port=url.port,
+                            file=url.path)
+        return _proto.File(source=urlmsg,
+                           type=self.type,
+                           visibility=self.visibility,
+                           size=self.size,
+                           timestamp=self.timestamp)
+
+    @classmethod
+    def from_dict(cls, obj, **kwargs):
+        """Create an instance from a dict.
+
+        Keys in the dict should match parameter names"""
+        _origin = _pop_origin(kwargs)
+        cls._check_keys(obj)
+        if _origin:
+            if 'source' not in obj:
+                raise TypeError("parameter 'source' is required but wasn't "
+                                "provided")
+            obj = dict(obj)
+            obj['source'] = cls._normpath(obj['source'], _origin)
+        return cls(**obj)
+
     @classmethod
     @implements(Base.from_protobuf)
     def from_protobuf(cls, obj):
         if not isinstance(obj, cls._protobuf_cls):
             raise TypeError("Expected message of type "
                             "%r" % cls._protobuf_cls.__name__)
-        return cls(source=obj.source,
+        url = obj.source
+        netloc = '%s:%d' % (url.host, url.port) if url.host else ''
+        source = '%s://%s%s' % (url.scheme, netloc, url.file)
+        return cls(source=source,
                    type=_proto.File.Type.Name(obj.type),
                    visibility=_proto.File.Visibility.Name(obj.visibility),
                    size=obj.size,
                    timestamp=obj.timestamp)
 
     @classmethod
-    def _parse_file_spec(cls, obj):
+    def _parse_file_spec(cls, obj, _origin=None):
         if not isinstance(obj, dict):
             raise TypeError("Expected mapping for File")
 
@@ -327,7 +350,7 @@ class File(Base):
             type = None
 
         if type is None:
-            cls._check_keys(obj, cls.__slots__ + ('dest',))
+            cls._check_keys(obj, cls._params + ('dest',))
             source = obj['source']
             type = obj.get('type', 'FILE').upper()
         else:
@@ -351,6 +374,7 @@ class File(Base):
         else:
             dest = obj['dest']
 
+        source = cls._normpath(source, origin=_origin)
         visibility = obj.get('visibility', 'APPLICATION')
         size = obj.get('size', 0)
         timestamp = obj.get('timestamp', 0)
@@ -390,14 +414,12 @@ class Service(Base):
 
     def __init__(self, commands=required, resources=required, instances=1,
                  files=None, env=None, depends=None):
-        self.commands = commands
-        self.resources = resources
+        self._assign_required('commands', commands)
+        self._assign_required('resources', resources)
         self.instances = instances
         self.files = _if_none(files, {})
         self.env = _if_none(env, {})
         self.depends = _if_none(depends, [])
-
-        self._check_required()
         self._validate()
 
     def __repr__(self):
@@ -423,7 +445,8 @@ class Service(Base):
 
     @classmethod
     @implements(Base.from_dict)
-    def from_dict(cls, obj):
+    def from_dict(cls, obj, **kwargs):
+        _origin = _pop_origin(kwargs)
         cls._check_keys(obj, cls.__slots__)
 
         resources = obj.get('resources')
@@ -434,9 +457,11 @@ class Service(Base):
 
         if files is not None:
             if isinstance(files, list):
-                files = dict(File._parse_file_spec(v) for v in files)
+                files = dict(File._parse_file_spec(v, _origin=_origin)
+                             for v in files)
             elif isinstance(files, dict):
-                files = {k: File.from_dict(v) for k, v in files.items()}
+                files = {k: File.from_dict(v, _origin=_origin)
+                         for k, v in files.items()}
 
         kwargs = {'resources': resources,
                   'files': files,
@@ -479,11 +504,9 @@ class Job(Base):
     _protobuf_cls = _proto.Job
 
     def __init__(self, services=required, name='skein', queue=''):
-        self.services = services
+        self._assign_required('services', services)
         self.name = name
         self.queue = queue
-
-        self._check_required()
         self._validate()
 
     def __repr__(self):
@@ -500,7 +523,8 @@ class Job(Base):
 
     @classmethod
     @implements(Base.from_dict)
-    def from_dict(cls, obj):
+    def from_dict(cls, obj, **kwargs):
+        _origin = _pop_origin(kwargs)
         cls._check_keys(obj)
 
         name = obj.get('name')
@@ -508,7 +532,8 @@ class Job(Base):
 
         services = obj.get('services')
         if services is not None and isinstance(services, dict):
-            services = {k: Service.from_dict(v) for k, v in services.items()}
+            services = {k: Service.from_dict(v, _origin=_origin)
+                        for k, v in services.items()}
 
         return cls(name=name, queue=queue, services=services)
 
@@ -520,6 +545,48 @@ class Job(Base):
         return cls(name=obj.name,
                    queue=obj.queue,
                    services=services)
+
+    @classmethod
+    def from_file(cls, path, format='infer'):
+        """Create an instance from a json or yaml file.
+
+        Parameter
+        ---------
+        path : str
+            The path to the file to load.
+        format : {'infer', 'json', 'yaml'}, optional
+            The file format. By default the format is inferred from the file
+            extension.
+        """
+        format = _infer_format(path, format=format)
+        origin = os.path.abspath(os.path.dirname(path))
+
+        with open(path) as f:
+            data = f.read()
+        if format == 'json':
+            obj = json.loads(data)
+        else:
+            obj = yaml.safe_load(data)
+        return cls.from_dict(obj, _origin=origin)
+
+    def to_file(self, path, format='infer', skip_nulls=True):
+        """Write object to a file.
+
+        Parameter
+        ---------
+        path : str
+            The path to the file to load.
+        format : {'infer', 'json', 'yaml'}, optional
+            The file format. By default the format is inferred from the file
+            extension.
+        skip_nulls : bool, optional
+            By default null values are skipped in the output. Set to True to
+            output all fields.
+        """
+        format = _infer_format(path, format=format)
+        data = getattr(self, 'to_' + format)(skip_nulls=skip_nulls)
+        with open(path, mode='w') as f:
+            f.write(data)
 
 
 def _to_camel_case(x):

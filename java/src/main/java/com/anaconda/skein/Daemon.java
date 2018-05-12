@@ -5,6 +5,7 @@ import io.grpc.Status;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -20,13 +21,16 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
@@ -63,7 +67,7 @@ public class Daemon {
 
   private String classpath;
 
-  private String amJar;
+  private URL amJar;
 
   private boolean daemon = false;
 
@@ -132,7 +136,7 @@ public class Daemon {
       if (arg.equals("--daemon")) {
         daemon = true;
       } else {
-        amJar = arg;
+        amJar = Utils.urlFromString(arg);
       }
     }
     if (amJar == null) {
@@ -191,9 +195,10 @@ public class Daemon {
   }
 
   /** Start a new application. **/
-  public ApplicationId submit(Model.Job job) throws IOException, YarnException {
+  public ApplicationId submitApplication(Model.Job job)
+      throws IOException, YarnException {
     // First validate the job request
-    job.validate(false);
+    job.validate();
 
     // Get an application id. This is needed before doing anything else so we
     // can upload additional files to the application directory
@@ -202,7 +207,9 @@ public class Daemon {
     ApplicationId appId = appContext.getApplicationId();
 
     // Setup the LocalResources for the appmaster and containers
-    Map<String, LocalResource> localResources = setupAppDir(job, appId);
+    Path appDir = new Path(defaultFs.getHomeDirectory(),
+                           ".skein/" + appId.toString());
+    Map<String, LocalResource> localResources = setupAppDir(job, appDir);
 
     // Setup the appmaster environment variables
     Map<String, String> env = new HashMap<String, String>();
@@ -214,7 +221,8 @@ public class Daemon {
         (Environment.JAVA_HOME.$$() + "/bin/java "
          + "-Xmx" + amMemory + "m "
          + "com.anaconda.skein.ApplicationMaster "
-         + ">" + logdir + "/appmaster.log 2>&1"));
+         + appDir
+         + " >" + logdir + "/appmaster.log 2>&1"));
 
     // Add security tokens as needed
     ByteBuffer fsTokens = null;
@@ -249,10 +257,9 @@ public class Daemon {
   }
 
   private Map<String, LocalResource> setupAppDir(Model.Job job,
-        ApplicationId appId) throws IOException {
+        Path appDir) throws IOException {
 
     // Make the ~/.skein/app_id dir
-    Path appDir = new Path(defaultFs.getHomeDirectory(), ".skein/" + appId.toString());
     FileSystem.mkdirs(defaultFs, appDir, SKEIN_DIR_PERM);
 
     Map<Path, Path> uploadCache = new HashMap<Path, Path>();
@@ -261,54 +268,54 @@ public class Daemon {
     for (Model.Service s: job.getServices().values()) {
       finalizeService(s, uploadCache, appDir);
     }
-    job.setAppDir(appDir.toString());
-    job.validate(true);
+    job.validate();
 
     // Write the job specification to file
-    Path specPath = new Path(appDir, ".skein.json");
+    Path specPath = new Path(appDir, ".skein.proto");
     LOG.info("Writing job specification to " + specPath);
     OutputStream out = defaultFs.create(specPath);
     try {
-      Utils.MAPPER.writeValue(out, job);
+      MsgUtils.writeJob(job).writeTo(out);
     } finally {
       out.close();
     }
+    FileStatus status = defaultFs.getFileStatus(specPath);
+    LocalResource spec = LocalResource.newInstance(
+        ConverterUtils.getYarnUrlFromPath(specPath),
+        LocalResourceType.FILE,
+        LocalResourceVisibility.APPLICATION,
+        status.getLen(),
+        status.getModificationTime());
 
     // Setup the LocalResources for the application master
+    LocalResource jar = LocalResource.newInstance(amJar,
+                                                  LocalResourceType.FILE,
+                                                  LocalResourceVisibility.APPLICATION,
+                                                  0, 0);
+    finalizeLocalResource(uploadCache, appDir, jar);
     Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
-    addFile(uploadCache, appDir, lr, amJar, "skein.jar", LocalResourceType.FILE);
-    lr.put(".skein.json", Utils.localResource(defaultFs, specPath,
-                                              LocalResourceType.FILE));
-
+    lr.put("skein.jar", jar);
+    lr.put(".skein.proto", spec);
     return lr;
   }
 
-  private void finalizeService(Model.Service service, Map<Path, Path> uploadCache,
-                               Path appDir) throws IOException {
+  private void finalizeService(Model.Service service,
+      Map<Path, Path> uploadCache, Path appDir) throws IOException {
     // Upload files/archives as necessary
-    if (service.getFiles() != null) {
-      Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
-      for (Model.File f : service.getFiles()) {
-        addFile(uploadCache, appDir, lr, f.getSource(), f.getDest(), f.getType());
-      }
-      service.setLocalResources(lr);
+    for (LocalResource resource : service.getLocalResources().values()) {
+      finalizeLocalResource(uploadCache, appDir, resource);
     }
     // Add LANG if present
     String lang = System.getenv("LANG");
     if (lang != null) {
-      if (service.getEnv() == null) {
-        service.setEnv(new HashMap<String, String>());
-      }
       service.getEnv().put("LANG", lang);
     }
-    service.setFiles(null);
   }
 
-  private void addFile(Map<Path, Path> uploadCache, Path appDir,
-                       Map<String, LocalResource> localResources,
-                       String source, String dst, LocalResourceType type)
-      throws IOException {
-    Path srcPath = Utils.normalizePath(source);
+  private void finalizeLocalResource(Map<Path, Path> uploadCache,
+      Path appDir, LocalResource file) throws IOException {
+
+    Path srcPath = Utils.pathFromUrl(file.getResource());
     Path dstPath = srcPath;
 
     FileSystem dstFs = appDir.getFileSystem(conf);
@@ -332,9 +339,11 @@ public class Daemon {
         dstFs.setPermission(dstPath, SKEIN_FILE_PERM);
         uploadCache.put(srcPath, dstPath);
       }
+      FileStatus status = dstFs.getFileStatus(dstPath);
+      file.setResource(ConverterUtils.getYarnUrlFromPath(dstPath));
+      file.setSize(status.getLen());
+      file.setTimestamp(status.getModificationTime());
     }
-
-    localResources.put(dst, Utils.localResource(defaultFs, dstPath, type));
   }
 
   class DaemonImpl extends DaemonGrpc.DaemonImplBase {
@@ -418,6 +427,27 @@ public class Daemon {
         resp.onNext(MsgUtils.writeApplicationReport(report));
         resp.onCompleted();
       }
+    }
+
+    @Override
+    public void submit(Msg.Job req,
+        StreamObserver<Msg.Application> resp) {
+
+      Model.Job job = MsgUtils.readJob(req);
+
+      ApplicationId appId = null;
+      try {
+        appId = submitApplication(job);
+      } catch (Exception exc) {
+        resp.onError(Status.INTERNAL
+            .withDescription("Failed to submit application, "
+                             + "exception:\n"
+                             + exc.getMessage())
+            .asRuntimeException());
+        return;
+      }
+      resp.onNext(Msg.Application.newBuilder().setId(appId.toString()).build());
+      resp.onCompleted();
     }
 
     @Override

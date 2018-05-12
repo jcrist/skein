@@ -18,9 +18,9 @@ resources:
     vcores: 1
     memory: 1024
 files:
-    - file: path/to/testfile
-    - archive: path/to/testarchive.zip
-    - source: path/to/other
+    - file: /path/to/testfile
+    - archive: /path/to/testarchive.zip
+    - source: /path/to/other
       dest: otherpath
       type: FILE
 env:
@@ -83,8 +83,8 @@ def test_resources_invariants():
 
 
 def test_file():
-    fil = File(source='test/path')
-    fil2 = File(source='test/path', size=1024)
+    fil = File(source='/test/path')
+    fil2 = File(source='/test/path', size=1024)
     check_basic_methods(fil, fil2)
 
 
@@ -96,19 +96,22 @@ def test_file_invariants():
         File(1)
 
     with pytest.raises(ValueError):
-        File('foo/bar.zip', type='invalid')
+        File('/foo/bar.zip', type='invalid')
 
     with pytest.raises(ValueError):
-        File('foo/bar.zip', visibility='invalid')
+        File('/foo/bar.zip', visibility='invalid')
+
+    with pytest.raises(ValueError):
+        File('foo/bar.zip')
 
 
 def test_service():
     r = Resources(memory=1024, vcores=1)
     c = ['commands']
     s1 = Service(resources=r, commands=c,
-                 files={'file': File(source='test/path')})
+                 files={'file': File(source='/test/path')})
     s2 = Service(resources=r, commands=c,
-                 files={'file': File(source='test/path', size=1024)})
+                 files={'file': File(source='/test/path', size=1024)})
     check_basic_methods(s1, s2)
 
 
@@ -143,9 +146,9 @@ def test_job():
     r = Resources(memory=1024, vcores=1)
     c = ['commands']
     s1 = Service(resources=r, commands=c,
-                 files={'file': File(source='test/path')})
+                 files={'file': File(source='/test/path')})
     s2 = Service(resources=r, commands=c,
-                 files={'file': File(source='test/path', size=1024)})
+                 files={'file': File(source='/test/path', size=1024)})
     j1 = Job(services={'service': s1})
     j2 = Job(services={'service': s2})
     check_basic_methods(j1, j2)
@@ -176,13 +179,13 @@ def test_service_from_yaml():
 
     assert isinstance(s.files, dict)
     fil = s.files['testfile']
-    assert fil.source == 'path/to/testfile'
+    assert fil.source == 'file:///path/to/testfile'
     assert fil.type == 'FILE'
     archive = s.files['testarchive']
-    assert archive.source == 'path/to/testarchive.zip'
+    assert archive.source == 'file:///path/to/testarchive.zip'
     assert archive.type == 'ARCHIVE'
     other = s.files['otherpath']
-    assert other.source == 'path/to/other'
+    assert other.source == 'file:///path/to/other'
     assert other.type == 'FILE'
 
     assert s.env == {'key1': 'val1', 'key2': 'val2'}

@@ -184,16 +184,14 @@ class Client(object):
     def application(self, app_id):
         return Application(self, app_id)
 
-    def submit(self, job):
-        if isinstance(job, str):
-            job = Job.from_file(job)
-        url = '%s/apps/' % self._address
-        resp = self._rm.post(url, json=job.to_dict())
-        if resp.status_code != 200:
-            self._handle_exceptions(resp)
-        app_id = resp.content.decode()
-
-        return Application(self, app_id)
+    def submit(self, job_or_path):
+        if isinstance(job_or_path, str):
+            job = Job.from_file(job_or_path)
+        else:
+            job = job_or_path
+        with convert_errors(daemon=True):
+            resp = self._stub.submit(job.to_protobuf())
+        return Application(self, resp.id)
 
     def status(self, app_id=None, state=None):
         if app_id is not None and state is not None:

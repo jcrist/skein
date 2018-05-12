@@ -38,8 +38,16 @@ message ApplicationState {
 
 
 message Resources {
-  int64 memory = 1;
-  int64 vcores = 2;
+  int32 memory = 1;
+  int32 vcores = 2;
+}
+
+
+message Url {
+  string scheme = 1;
+  string host = 2;
+  int32 port = 3;
+  string file = 4;
 }
 
 
@@ -55,7 +63,7 @@ message File {
     APPLICATION = 2;
   }
 
-  string source = 1;
+  Url source = 1;
   Type type = 2;
   Visibility visibility = 3;
   int64 size = 4;
@@ -64,7 +72,7 @@ message File {
 
 
 message Service {
-  int64 instances = 1;
+  int32 instances = 1;
   Resources resources = 2;
   map<string, File> files = 3;
   map<string, string> env = 4;

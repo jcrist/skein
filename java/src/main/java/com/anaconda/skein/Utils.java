@@ -1,7 +1,5 @@
 package com.anaconda.skein;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -9,6 +7,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.io.File;
@@ -18,12 +17,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Set;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 public class Utils {
-  public static final ObjectMapper MAPPER = new SkeinObjectMapper();
-
   public static <T> T popfirst(Set<T> s) {
     for (T out: s) {
       s.remove(out);
@@ -42,32 +37,6 @@ public class Utils {
       out[j * 2 + 1] = HEX[v & 0x0F];
     }
     return new String(out);
-  }
-
-  /** Return a formatted error response. **/
-  public static void sendError(HttpServletResponse resp, int code, String msg)
-      throws IOException {
-    resp.resetBuffer();
-    resp.setStatus(code);
-    resp.setHeader("Content-Type", "application/json");
-
-    ObjectNode node = MAPPER.createObjectNode();
-    node.put("error", msg);
-    MAPPER.writeValue(resp.getOutputStream(), node);
-
-    resp.flushBuffer();
-  }
-
-  public static void sendError(HttpServletResponse resp, int code)
-      throws IOException {
-    sendError(resp, code, "unknown error");
-  }
-
-  public static String getPath(HttpServletRequest req) {
-    String path = req.getPathInfo();
-    // Strips leading `/` from paths, and replaces empty paths with null
-    // Ensures that /path and /path/ are treated the same
-    return (path == null || path.length() <= 1) ? null : path.substring(1);
   }
 
   public static ApplicationId appIdFromString(String appId) {
@@ -91,22 +60,28 @@ public class Utils {
                                      status.getModificationTime());
   }
 
-  /** Given a path as a String, convert it to a Path. Also converts
-   * all local paths to absolute. **/
-  public static Path normalizePath(String path) {
-    URI uri;
+  public static URL urlFromString(String path) {
+    URI uri = null;
     try {
       uri = new URI(path);
       if (uri.getScheme() == null) {
         uri = null;
       }
-    } catch (URISyntaxException exc) {
-      uri = null;
-    }
+    } catch (URISyntaxException exc) { }
     if (uri == null) {
       uri = new File(path).getAbsoluteFile().toURI();
     }
-    return new Path(uri);
+    return ConverterUtils.getYarnUrlFromURI(uri);
+  }
+
+  public static Path pathFromUrl(URL url) {
+    Path path = null;
+    try {
+      path = ConverterUtils.getPathFromYarnURL(url);
+    } catch (URISyntaxException exc) {
+      throw new IllegalArgumentException(exc.getMessage());
+    };
+    return path;
   }
 
   /** Compare two filesystems for equality.

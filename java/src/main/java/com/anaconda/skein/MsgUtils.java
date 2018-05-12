@@ -3,10 +3,18 @@ package com.anaconda.skein;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 public class MsgUtils {
   public static final Msg.Empty EMPTY = Msg.Empty.newBuilder().build();
@@ -83,6 +91,52 @@ public class MsgUtils {
     return null; // appease the compiler, but can't get here
   }
 
+  public static Msg.File.Type writeFileType(LocalResourceType typ) {
+    switch (typ) {
+      case FILE:
+        return Msg.File.Type.FILE;
+      case ARCHIVE:
+        return Msg.File.Type.ARCHIVE;
+      case PATTERN:
+        throw new IllegalArgumentException("Invalid resource type: " + typ);
+    }
+    return null; // appease the compiler, but can't get here
+  }
+
+  public static LocalResourceType readFileType(Msg.File.Type typ) {
+    switch (typ) {
+      case FILE:
+        return LocalResourceType.FILE;
+      case ARCHIVE:
+        return LocalResourceType.ARCHIVE;
+    }
+    return null; // appease the compiler, but can't get here
+  }
+
+  public static Msg.File.Visibility writeFileVisibility(LocalResourceVisibility vis) {
+    switch (vis) {
+      case PUBLIC:
+        return Msg.File.Visibility.PUBLIC;
+      case PRIVATE:
+        return Msg.File.Visibility.PRIVATE;
+      case APPLICATION:
+        return Msg.File.Visibility.APPLICATION;
+    }
+    return null; // appease the compiler, but can't get here
+  }
+
+  public static LocalResourceVisibility readFileVisibility(Msg.File.Visibility vis) {
+    switch (vis) {
+      case PUBLIC:
+        return LocalResourceVisibility.PUBLIC;
+      case PRIVATE:
+        return LocalResourceVisibility.PRIVATE;
+      case APPLICATION:
+        return LocalResourceVisibility.APPLICATION;
+    }
+    return null; // appease the compiler, but can't get here
+  }
+
   public static Msg.ApplicationReport writeApplicationReport(
       ApplicationReport r) {
     return Msg.ApplicationReport.newBuilder()
@@ -116,6 +170,10 @@ public class MsgUtils {
       .build();
   }
 
+  public static Resource readResources(Msg.Resources r) {
+    return Resource.newInstance(r.getMemory(), r.getVcores());
+  }
+
   public static Msg.Resources writeResources(Resource r) {
     return Msg.Resources.newBuilder()
       .setMemory(Math.max(0, r.getMemory()))
@@ -130,5 +188,85 @@ public class MsgUtils {
       builder.addReports(writeApplicationReport(report));
     }
     return builder.build();
+  }
+
+  public static URL readUrl(Msg.Url url) {
+    return URL.newInstance(
+        url.getScheme(), url.getHost(), url.getPort(), url.getFile());
+  }
+
+  public static Msg.Url writeUrl(URL url) {
+    return Msg.Url.newBuilder()
+        .setScheme(url.getScheme())
+        .setHost(url.getHost())
+        .setPort(url.getPort())
+        .setFile(url.getFile())
+        .build();
+  }
+
+  public static Msg.File writeFile(LocalResource r) {
+    return Msg.File.newBuilder()
+        .setSource(writeUrl(r.getResource()))
+        .setType(writeFileType(r.getType()))
+        .setVisibility(writeFileVisibility(r.getVisibility()))
+        .setSize(r.getSize())
+        .setTimestamp(r.getTimestamp())
+        .build();
+  }
+
+  public static LocalResource readFile(Msg.File f) {
+    return LocalResource.newInstance(
+        readUrl(f.getSource()),
+        readFileType(f.getType()),
+        readFileVisibility(f.getVisibility()),
+        f.getSize(),
+        f.getTimestamp());
+  }
+
+  public static Msg.Service writeService(Model.Service service) {
+    Msg.Service.Builder builder = Msg.Service.newBuilder()
+        .setInstances(service.getInstances())
+        .setResources(writeResources(service.getResources()))
+        .putAllEnv(service.getEnv())
+        .addAllCommands(service.getCommands())
+        .addAllDepends(service.getDepends());
+
+    for (Map.Entry<String, LocalResource> entry : service.getLocalResources().entrySet()) {
+      builder.putFiles(entry.getKey(), writeFile(entry.getValue()));
+    }
+    return builder.build();
+  }
+
+  public static Model.Service readService(Msg.Service service) {
+    Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
+    for (Map.Entry<String, Msg.File> entry : service.getFilesMap().entrySet()) {
+      localResources.put(entry.getKey(), readFile(entry.getValue()));
+    }
+    return new Model.Service(
+        service.getInstances(),
+        readResources(service.getResources()),
+        localResources,
+        new HashMap<String, String>(service.getEnvMap()),
+        new ArrayList<String>(service.getCommandsList()),
+        new HashSet<String>(service.getDependsList()));
+  }
+
+  public static Msg.Job writeJob(Model.Job job) {
+    Msg.Job.Builder builder = Msg.Job.newBuilder()
+        .setName(job.getName())
+        .setQueue(job.getQueue());
+
+    for (Map.Entry<String, Model.Service> entry : job.getServices().entrySet()) {
+      builder.putServices(entry.getKey(), writeService(entry.getValue()));
+    }
+    return builder.build();
+  }
+
+  public static Model.Job readJob(Msg.Job job) {
+    Map<String, Model.Service> services = new HashMap<String, Model.Service>();
+    for (Map.Entry<String, Msg.Service> entry : job.getServicesMap().entrySet()) {
+      services.put(entry.getKey(), readService(entry.getValue()));
+    }
+    return new Model.Job(job.getName(), job.getQueue(), services);
   }
 }
