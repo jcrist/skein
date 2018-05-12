@@ -182,9 +182,11 @@ def do_inspect(app_id, service=None):
     client = get_client()
     resp = client.application(app_id).inspect(service=service)
     if service is not None:
-        resp = {service: resp}
-    data = {k: v.to_dict() for k, v in resp.items()}
-    print(yaml.dump(data, default_flow_style=False))
+        out = yaml.dump({service: resp.to_dict(skip_nulls=True)},
+                        default_flow_style=False)
+    else:
+        out = resp.to_yaml(skip_nulls=True)
+    print(out)
 
 
 @subcommand(entry_subs,

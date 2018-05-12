@@ -11,7 +11,6 @@ import warnings
 from contextlib import closing, contextmanager
 
 import grpc
-import requests
 
 from . import proto
 from .compatibility import PY2, ConnectionError
@@ -228,10 +227,9 @@ class Client(object):
 
 
 class AMClient(object):
-    def __init__(self, address, auth):
+    def __init__(self, address):
         self._address = address
-        self._am = requests.Session()
-        self._am.auth = auth
+        self._stub = proto.MasterStub(grpc.insecure_channel(address))
 
     def get_key(self, key=None):
         if key is None:
@@ -264,24 +262,13 @@ class AMClient(object):
 
     def inspect(self, service=None):
         if service is None:
-            url = '%s/services' % self._address
+            with convert_errors(daemon=False):
+                resp = self._stub.getJob(proto.Empty())
+            return Job.from_protobuf(resp)
         else:
-            url = '%s/services/%s' % (self._address, service)
-        try:
-            resp = self._am.get(url)
-        except requests.ConnectionError:
-            raise ValueError("Application no longer running")
-
-        if resp.ok:
-            data = resp.json()
-        elif resp.status_code == 404 and service is not None:
-            raise ValueError("Unknown service %r" % service)
-        else:
-            self._handle_exceptions(resp)
-
-        if service is None:
-            return {k: Service.from_dict(v) for k, v in data.items()}
-        return Service.from_dict(data)
+            with convert_errors(daemon=False):
+                resp = self._stub.getService(proto.ServiceRequest(name=service))
+            return Service.from_protobuf(resp)
 
     @classmethod
     def from_env(cls):
@@ -298,8 +285,7 @@ class AMClient(object):
         if s.state != 'RUNNING':
             raise ValueError("This operation requires state: RUNNING. "
                              "Current state: %s." % s.state)
-        address = 'http://%s:%d' % (s.host, s.port)
-        return cls(address, client._rm.auth)
+        return cls('%s:%d' % (s.host, s.port))
 
 
 class Application(object):

@@ -1,7 +1,9 @@
 package com.anaconda.skein;
 
 import io.grpc.Server;
+import io.grpc.Status;
 import io.grpc.netty.NettyServerBuilder;
+import io.grpc.stub.StreamObserver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -530,5 +532,26 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   }
 
   class MasterImpl extends MasterGrpc.MasterImplBase {
+    @Override
+    public void getJob(Msg.Empty req, StreamObserver<Msg.Job> resp) {
+      resp.onNext(MsgUtils.writeJob(job));
+      resp.onCompleted();
+    }
+
+    @Override
+    public void getService(Msg.ServiceRequest req,
+        StreamObserver<Msg.Service> resp) {
+      String name = req.getName();
+      Model.Service service = job.getServices().get(name);
+
+      if (service == null) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Unknown Service '" + name + "'")
+            .asRuntimeException());
+        return;
+      }
+      resp.onNext(MsgUtils.writeService(service));
+      resp.onCompleted();
+    }
   }
 }
