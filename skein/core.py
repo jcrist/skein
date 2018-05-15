@@ -16,7 +16,10 @@ from . import proto
 from .compatibility import PY2, ConnectionError
 from .model import Job, Service, ApplicationReport
 from .utils import (cached_property, read_daemon, write_daemon,
-                    ADDRESS_ENV_VAR, DAEMON_PATH, format_list)
+                    ADDRESS_ENV_VAR, DAEMON_PATH, format_list, implements)
+
+
+__all__ = ('Client', 'Application', 'ApplicationClient')
 
 
 def _find_skein_jar():
@@ -59,18 +62,35 @@ def convert_errors(daemon=True):
 
 
 class Client(object):
-    def __init__(self, new_daemon=None, persist=False, log=None):
+    """Connect to and schedule jobs on the YARN cluster.
+
+    Parameters
+    ----------
+    new_daemon : bool or None, optional
+        By default, the client will first try to connect to the global daemon,
+        and will fallback to creating a new daemon on connection failure. Pass
+        in ``True`` to always create a new daemon, or ``False`` to always
+        connect.
+    set_global : bool, optional
+        When explicitly creating a new daemon, set to ``True`` to set as the
+        global daemon. Note that in this case the daemon lifetime will
+        **exceed** that of this process. Default is ``False``
+    log : str, bool, or None, optional
+        When explicitly creating a new daemon, this sets the logging behavior.
+        Set to ``None`` to log to stdout/stderr, or provide a path for logs to
+        be written to. Set to ``False`` to turn off logging completely. Default
+        is ``None``.
+    """
+    def __init__(self, new_daemon=None, set_global=False, log=None):
         if new_daemon is None:
             try:
-                # Try to connect
                 address, proc = self._connect()
             except ConnectionError:
-                kind = 'persistent' if persist else 'temporary'
                 warnings.warn("Failed to connect to global daemon, starting "
-                              "new %s daemon." % kind)
-                address, proc = self._create(persist=persist, log=log)
+                              "new temporary daemon.")
+                address, proc = self._create()
         elif new_daemon:
-            address, proc = self._create(persist=persist, log=log)
+            address, proc = self._create(set_global=set_global, log=log)
         else:
             address, proc = self._connect()
 
@@ -113,10 +133,10 @@ class Client(object):
             pass
 
     @staticmethod
-    def _create(log=None, persist=False):
+    def _create(log=None, set_global=False):
         jar = _find_skein_jar()
 
-        if persist:
+        if set_global:
             command = ["yarn", "jar", jar, jar, '--daemon']
         else:
             command = ["yarn", "jar", jar, jar]
@@ -142,7 +162,7 @@ class Client(object):
                 outfil = subprocess.DEVNULL
             else:
                 outfil = open(log, mode='w')
-            infil = None if persist else subprocess.PIPE
+            infil = None if set_global else subprocess.PIPE
 
             proc = subprocess.Popen(command,
                                     stdin=infil,
@@ -167,17 +187,26 @@ class Client(object):
 
         address = '127.0.0.1:%d' % port
 
-        if persist:
+        if set_global:
             Client._clear_global_daemon()
             write_daemon(address, proc.pid)
             proc = None
 
         return address, proc
 
+    @property
+    def is_global(self):
+        """Whether this client is connected to the global daemon"""
+        return self._proc is None
+
     def __repr__(self):
-        return 'Client<%s>' % self.address
+        kind = 'global' if self.is_global else 'temporary'
+        return 'Client<%s, %s>' % (self.address, kind)
 
     def close(self):
+        """If connected to a temporary daemon, closes the daemon.
+
+        No-op if connected to the global daemon"""
         if self._proc is not None:
             self._proc.stdin.close()
 
@@ -188,9 +217,32 @@ class Client(object):
         self.close()
 
     def application(self, app_id):
+        """Access an Application.
+
+        Parameters
+        ----------
+        app_id : str
+            The id of the application.
+
+        Returns
+        -------
+        app : Application
+        """
         return Application(self, app_id)
 
     def submit(self, job_or_path):
+        """Submit a new skein job.
+
+        Parameters
+        ----------
+        job_or_path : Job or str
+            The job to run. Can either be a ``Job`` object, or a path to a
+            yaml/json file.
+
+        Returns
+        -------
+        app : Application
+        """
         if isinstance(job_or_path, str):
             job = Job.from_file(job_or_path)
         else:
@@ -200,6 +252,35 @@ class Client(object):
         return Application(self, resp.id)
 
     def status(self, app_id=None, state=None):
+        """Get the status of a skein application or applications.
+
+        Parameters
+        ----------
+        app_id : str, optional
+            A single application id to check the status of.
+        state : str or sequence, optional
+            If provided, applications will be filtered to these application
+            states.
+
+        Returns
+        -------
+        Either a single ``ApplicationReport`` (in the case of a provided
+        ``app_id``), or a list of ``ApplicationReport``s.
+
+        Examples
+        --------
+        To get the status of a single application
+
+        >>> client.status(app_id='application_1526134340424_0012')
+        ApplicationReport<name='demo'>
+
+        To get all the finished and failed applications
+
+        >>> client.status(state=['FINISHED', 'FAILED'])
+        [ApplicationReport<name='demo'>,
+         ApplicationReport<name='dask'>,
+         ApplicationReport<name='demo'>]
+        """
         if app_id is not None and state is not None:
             raise ValueError("Cannot provide both app_id and state")
 
@@ -229,16 +310,39 @@ class Client(object):
         return [ApplicationReport.from_protobuf(r) for r in resp.reports]
 
     def kill(self, app_id):
+        """Kill an application.
+
+        Parameters
+        ----------
+        app_id : str
+            The id of the application to kill.
+        """
         with convert_errors(daemon=True):
             self._stub.kill(proto.Application(id=app_id))
 
 
-class AMClient(object):
+class ApplicationClient(object):
+    """A client for the application master.
+
+    Parameters
+    ----------
+    address : str
+        The address of the application master.
+    """
     def __init__(self, address):
         self._address = address
         self._stub = proto.MasterStub(grpc.insecure_channel(address))
 
     def get_key(self, key=None, wait=False):
+        """Get a key from the keystore.
+
+        Parameters
+        ----------
+        key : str, optional
+            The key to get. If not provided, returns the whole keystore.
+        wait : bool, optional
+            If true, will block until the key is set. Default is False.
+        """
         if key is None:
             with convert_errors(daemon=False):
                 resp = self._stub.keystore(proto.Empty())
@@ -250,6 +354,15 @@ class AMClient(object):
         return resp.val
 
     def set_key(self, key, value):
+        """Set a key in the keystore.
+
+        Parameters
+        ----------
+        key : str
+            The key to set.
+        value : str
+            The value to set.
+        """
         if not len(key):
             raise ValueError("len(key) must be > 0")
 
@@ -257,6 +370,19 @@ class AMClient(object):
             self._stub.keystoreSet(proto.SetKeyRequest(key=key, val=value))
 
     def inspect(self, service=None):
+        """Information about the running job.
+
+        Parameters
+        ----------
+        service : str, optional
+            If provided, returns information on that service.
+
+        Returns
+        -------
+        spec : Job or Service
+            Returns a service if ``service`` is specified, otherwise returns
+            the whole ``Job``.
+        """
         if service is None:
             with convert_errors(daemon=False):
                 resp = self._stub.getJob(proto.Empty())
@@ -268,42 +394,51 @@ class AMClient(object):
 
     @classmethod
     def from_env(cls):
+        """Create an application client from a container environment.
+
+        Useful for connecting to the application master from a running
+        container in a job.
+        """
         address = os.environ.get(ADDRESS_ENV_VAR)
         if address is None:
             raise ValueError("Address not found at %r" % ADDRESS_ENV_VAR)
-
         return cls(address)
-
-    @classmethod
-    def from_id(cls, app_id, client=None):
-        client = client or Client()
-        s = client.status(app_id)
-        if s.state != 'RUNNING':
-            raise ValueError("This operation requires state: RUNNING. "
-                             "Current state: %s." % s.state)
-        return cls('%s:%d' % (s.host, s.port))
 
 
 class Application(object):
+    """A Skein application."""
     def __init__(self, client, app_id):
-        self.client = client
+        self._client = client
         self.app_id = app_id
 
     def __repr__(self):
         return 'Application<id=%r>' % self.app_id
 
     def status(self):
-        return self.client.status(self.app_id)
+        """The application status.
 
+        Returns
+        -------
+        status : ApplicationReport
+        """
+        return self._client.status(self.app_id)
+
+    @implements(ApplicationClient.inspect)
     def inspect(self, service=None):
         return self._am_client.inspect(service=service)
 
+    @implements(ApplicationClient.get_key)
     def get_key(self, key=None, wait=False):
         return self._am_client.get_key(key=key, wait=wait)
 
+    @implements(ApplicationClient.set_key)
     def set_key(self, key, value):
         return self._am_client.set_key(key, value)
 
     @cached_property
     def _am_client(self):
-        return AMClient.from_id(self.app_id, client=self.client)
+        s = self._client.status(self.app_id)
+        if s.state != 'RUNNING':
+            raise ValueError("This operation requires state: RUNNING. "
+                             "Current state: %s." % s.state)
+        return ApplicationClient('%s:%d' % (s.host, s.port))

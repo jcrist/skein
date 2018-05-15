@@ -9,7 +9,7 @@ import sys
 import yaml
 
 from . import __version__
-from .core import Client, AMClient
+from .core import Client, ApplicationClient
 from .compatibility import ConnectionError
 from .utils import CONFIG_PATH, SECRET_PATH, format_table
 
@@ -93,7 +93,7 @@ def daemon_start(log=False):
         client = Client(new_daemon=False)
         print("Skein daemon already running")
     except ConnectionError:
-        client = Client(new_daemon=True, persist=True, log=log)
+        client = Client(new_daemon=True, set_global=True, log=log)
     print(client.address)
 
 
@@ -133,11 +133,10 @@ def daemon_restart(log=False):
             arg('key', type=str, help='The key to get'))
 def keystore_get(key, wait=False, app_id=None):
     if app_id is None:
-        am_client = AMClient.from_env()
+        app = ApplicationClient.from_env()
     else:
-        client = get_client()
-        am_client = AMClient.from_id(app_id, client=client)
-    print(am_client.get_key(key, wait=wait))
+        app = get_client().application(app_id)
+    print(app.get_key(key, wait=wait))
 
 
 @subcommand(keystore.subs,
@@ -147,11 +146,10 @@ def keystore_get(key, wait=False, app_id=None):
             arg('val', type=str, help='The value to set'))
 def keystore_set(key, val, app_id=None):
     if app_id is None:
-        am_client = AMClient.from_env()
+        app = ApplicationClient.from_env()
     else:
-        client = get_client()
-        am_client = AMClient.from_id(app_id, client=client)
-    return am_client.set_key(key, val)
+        app = get_client().application(app_id)
+    return app.set_key(key, val)
 
 
 @subcommand(entry_subs,

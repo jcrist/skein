@@ -1,4 +1,4 @@
-from .core import Client, AMClient
+from .core import Client, ApplicationClient
 from .model import Job, Service, File, Resources
 
 from ._version import get_versions
