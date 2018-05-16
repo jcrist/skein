@@ -1,0 +1,19 @@
+language: generic
+sudo: false
+dist: trusty
+os: linux
+
+jobs:
+    fast_finish: true
+
+    include: 
+        - env: DOCS=true
+
+install:
+    - source continuous_integration/travis/install.sh
+
+script:
+    - continuous_integration/travis/script.sh
+
+notifications:
+  email: false

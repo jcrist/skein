@@ -231,11 +231,9 @@ def stop_global_daemon():
     if address is None:
         return
 
-    stub = proto.DaemonStub(secure_channel(address))
-
     try:
-        stub.ping(proto.Empty())
-    except:
+        Client(address=address)
+    except ConnectionError:
         pass
     else:
         os.kill(pid, signal.SIGTERM)
