@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -xe
 
 wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
@@ -19,3 +18,6 @@ fi
 pip install --no-deps -e .
 
 conda list
+
+# Unset options
+set -xe

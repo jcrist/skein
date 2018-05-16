@@ -10,10 +10,10 @@ jobs:
         - env: DOCS=true
 
 install:
-    - ./continuous_integration/travis/install.sh
+    - source continuous_integration/travis/install.sh
 
 script:
-    - ./continuous_integration/travis/script.sh
+    - continuous_integration/travis/script.sh
 
 notifications:
   email: false
