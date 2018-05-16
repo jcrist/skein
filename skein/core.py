@@ -7,7 +7,6 @@ import signal
 import socket
 import struct
 import subprocess
-import warnings
 from contextlib import closing, contextmanager
 
 import grpc
@@ -20,7 +19,8 @@ from .utils import (cached_property, read_daemon, write_daemon,
                     CERT_PATH, KEY_PATH)
 
 
-__all__ = ('Client', 'Application', 'ApplicationClient')
+__all__ = ('Client', 'Application', 'ApplicationClient', 'start_global_daemon',
+           'stop_global_daemon')
 
 
 def _find_skein_jar():
@@ -75,48 +75,134 @@ def secure_channel(address, cert_path=CERT_PATH, key_path=KEY_PATH):
     return grpc.secure_channel(address, creds, options)
 
 
+def _start_daemon(set_global=False, log=None):
+    jar = _find_skein_jar()
+
+    command = ["yarn", "jar", jar, jar, CERT_PATH, KEY_PATH]
+    if set_global:
+        command.append("--daemon")
+
+    callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    callback.bind(('localhost', 0))
+    callback.listen(1)
+
+    with closing(callback):
+        _, callback_port = callback.getsockname()
+
+        env = dict(os.environ)
+        env.update({'SKEIN_CALLBACK_PORT': str(callback_port)})
+
+        if PY2:
+            popen_kwargs = dict(preexec_fn=os.setsid)
+        else:
+            popen_kwargs = dict(start_new_session=True)
+
+        if log is None:
+            outfil = None
+        elif log is False:
+            outfil = subprocess.DEVNULL
+        else:
+            outfil = open(log, mode='w')
+        infil = None if set_global else subprocess.PIPE
+
+        proc = subprocess.Popen(command,
+                                stdin=infil,
+                                stdout=outfil,
+                                stderr=outfil,
+                                env=env,
+                                **popen_kwargs)
+
+        while proc.poll() is None:
+            readable, _, _ = select.select([callback], [], [], 1)
+            if callback in readable:
+                connection = callback.accept()[0]
+                with closing(connection):
+                    stream = connection.makefile(mode="rb")
+                    msg = stream.read(4)
+                    if not msg:
+                        raise ValueError("Failed to read in client port")
+                    port = struct.unpack("!i", msg)[0]
+                    break
+        else:
+            raise ValueError("Failed to start java process")
+
+    address = 'localhost:%d' % port
+
+    if set_global:
+        stop_global_daemon()
+        write_daemon(address, proc.pid)
+        proc = None
+
+    return address, proc
+
+
+def start_global_daemon(log=None):
+    """Start the global daemon.
+
+    No-op if the global daemon is already running.
+
+    Parameters
+    ----------
+    log : str, bool, or None, optional
+        Sets the logging behavior for the daemon. Values may be a path for logs
+        to be written to, ``None`` to log to stdout/stderr, or ``False`` to
+        turn off logging completely. Default is ``None``.
+
+    Returns
+    -------
+    address : str
+        The address of the daemon
+    """
+    try:
+        client = Client()
+    except ConnectionError:
+        pass
+    else:
+        return client.address
+    address, _ = _start_daemon(set_global=True, log=log)
+    return address
+
+
+def stop_global_daemon():
+    """Stops the global daemon if running.
+
+    No-op if no global daemon is running."""
+    address, pid = read_daemon()
+    if address is None:
+        return
+
+    stub = proto.DaemonStub(secure_channel(address))
+
+    try:
+        stub.ping(proto.Empty())
+    except:
+        pass
+    else:
+        os.kill(pid, signal.SIGTERM)
+
+    try:
+        os.remove(DAEMON_PATH)
+    except OSError:
+        pass
+
+
 class Client(object):
     """Connect to and schedule jobs on the YARN cluster.
 
     Parameters
     ----------
-    new_daemon : bool or None, optional
-        By default, the client will first try to connect to the global daemon,
-        and will fallback to creating a new daemon on connection failure. Pass
-        in ``True`` to always create a new daemon, or ``False`` to always
-        connect.
-    set_global : bool, optional
-        When explicitly creating a new daemon, set to ``True`` to set as the
-        global daemon. Note that in this case the daemon lifetime will
-        **exceed** that of this process. Default is ``False``
-    log : str, bool, or None, optional
-        When explicitly creating a new daemon, this sets the logging behavior.
-        Set to ``None`` to log to stdout/stderr, or provide a path for logs to
-        be written to. Set to ``False`` to turn off logging completely. Default
-        is ``None``.
+    address : str, optional
+        The address for the daemon. By default will try to connect to the
+        global daemon. Pass in address explicitly to connect to a different
+        daemon. To create a new daemon, see ``skein.Client.temporary`` or
+        ``skein.start_global_daemon``.
     """
-    def __init__(self, new_daemon=None, set_global=False, log=None):
-        if new_daemon is None:
-            try:
-                address, proc = self._connect()
-            except ConnectionError:
-                warnings.warn("Failed to connect to global daemon, starting "
-                              "new temporary daemon.")
-                address, proc = self._create()
-        elif new_daemon:
-            address, proc = self._create(set_global=set_global, log=log)
-        else:
-            address, proc = self._connect()
-
-        self.address = address
-        self._proc = proc
-        self._stub = proto.DaemonStub(secure_channel(address))
-
-    @staticmethod
-    def _connect():
-        address, _ = read_daemon()
+    def __init__(self, address=None):
         if address is None:
-            raise ConnectionError("No daemon currently running")
+            address, _ = read_daemon()
+
+            if address is None:
+                raise ConnectionError("No daemon currently running")
 
         stub = proto.DaemonStub(secure_channel(address))
 
@@ -124,96 +210,52 @@ class Client(object):
         with convert_errors(daemon=True):
             stub.ping(proto.Empty())
 
-        return address, None
+        self.address = address
+        self._stub = stub
+        self._proc = None
 
-    @staticmethod
-    def _clear_global_daemon():
-        address, pid = read_daemon()
-        if address is None:
-            return
+    @classmethod
+    def temporary(cls, log=None):
+        """Create a client connected to a temporary daemon process.
 
-        stub = proto.DaemonStub(secure_channel(address))
+        It's recommended to use the resulting client as a contextmanager or
+        explicitly call ``.close()``. Otherwise the daemon won't be closed
+        until the creating process exits.
 
+        Parameters
+        ----------
+        log : str, bool, or None, optional
+            Sets the logging behavior for the daemon. Values may be a path for
+            logs to be written to, ``None`` to log to stdout/stderr, or
+            ``False`` to turn off logging completely. Default is ``None``.
+
+        Returns
+        -------
+        client : Client
+
+        Examples
+        --------
+        >>> with Client.temporary() as client:
+        ...     print(client.status(app_id='application_1526134340424_0012'))
+        ApplicationReport<name='demo'>
+        """
+        address, proc = _start_daemon(log=log)
         try:
-            stub.ping(proto.Empty())
-        except:
-            pass
-        else:
-            os.kill(pid, signal.SIGTERM)
-
-        try:
-            os.remove(DAEMON_PATH)
-        except OSError:
-            pass
-
-    @staticmethod
-    def _create(log=None, set_global=False):
-        jar = _find_skein_jar()
-
-        command = ["yarn", "jar", jar, jar, CERT_PATH, KEY_PATH]
-        if set_global:
-            command.append("--daemon")
-
-        callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        callback.bind(('localhost', 0))
-        callback.listen(1)
-
-        with closing(callback):
-            _, callback_port = callback.getsockname()
-
-            env = dict(os.environ)
-            env.update({'SKEIN_CALLBACK_PORT': str(callback_port)})
-
-            if PY2:
-                popen_kwargs = dict(preexec_fn=os.setsid)
-            else:
-                popen_kwargs = dict(start_new_session=True)
-
-            if log is None:
-                outfil = None
-            elif log is False:
-                outfil = subprocess.DEVNULL
-            else:
-                outfil = open(log, mode='w')
-            infil = None if set_global else subprocess.PIPE
-
-            proc = subprocess.Popen(command,
-                                    stdin=infil,
-                                    stdout=outfil,
-                                    stderr=outfil,
-                                    env=env,
-                                    **popen_kwargs)
-
-            while proc.poll() is None:
-                readable, _, _ = select.select([callback], [], [], 1)
-                if callback in readable:
-                    connection = callback.accept()[0]
-                    with closing(connection):
-                        stream = connection.makefile(mode="rb")
-                        msg = stream.read(4)
-                        if not msg:
-                            raise ValueError("Failed to read in client port")
-                        port = struct.unpack("!i", msg)[0]
-                        break
-            else:
-                raise ValueError("Failed to start java process")
-
-        address = 'localhost:%d' % port
-
-        if set_global:
-            Client._clear_global_daemon()
-            write_daemon(address, proc.pid)
-            proc = None
-
-        return address, proc
+            client = cls(address=address)
+        except Exception:
+            proc.stdin.close()  # kill the daemon on error
+            proc.wait()
+            raise
+        client._proc = proc
+        return client
 
     @property
-    def is_global(self):
-        """Whether this client is connected to the global daemon"""
-        return self._proc is None
+    def is_temporary(self):
+        """Whether this client is connected to a temporary daemon"""
+        return self._proc is not None
 
     def __repr__(self):
-        kind = 'global' if self.is_global else 'temporary'
+        kind = 'temporary' if self.is_temporary else 'global'
         return 'Client<%s, %s>' % (self.address, kind)
 
     def close(self):
@@ -222,6 +264,7 @@ class Client(object):
         No-op if connected to the global daemon"""
         if self._proc is not None:
             self._proc.stdin.close()
+            self._proc.wait()
 
     def __enter__(self):
         return self

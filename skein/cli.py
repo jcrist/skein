@@ -8,7 +8,8 @@ import sys
 import yaml
 
 from . import __version__
-from .core import Client, ApplicationClient
+from .core import (Client, ApplicationClient, start_global_daemon,
+                   stop_global_daemon)
 from .compatibility import ConnectionError
 from .utils import CONFIG_DIR, CERT_PATH, KEY_PATH, format_table
 
@@ -88,12 +89,7 @@ log = arg("--log", default=False,
             'start', 'Start the skein daemon',
             log)
 def daemon_start(log=False):
-    try:
-        client = Client(new_daemon=False)
-        print("Skein daemon already running")
-    except ConnectionError:
-        client = Client(new_daemon=True, set_global=True, log=None)
-    print(client.address)
+    print(start_global_daemon(log=log))
 
 
 @subcommand(daemon.subs,
@@ -109,11 +105,7 @@ def daemon_address():
 @subcommand(daemon.subs,
             'stop', 'Stop the skein daemon')
 def daemon_stop():
-    try:
-        Client(new_daemon=False)
-    except ConnectionError:
-        print("No skein daemon is running")
-    Client._clear_global_daemon()
+    stop_global_daemon()
 
 
 @subcommand(daemon.subs,
