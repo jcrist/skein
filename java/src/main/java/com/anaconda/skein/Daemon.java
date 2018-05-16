@@ -77,8 +77,7 @@ public class Daemon {
 
   private boolean daemon = false;
 
-  private int amMemory = 10;
-
+  private int amMemory = 512;
   private int amVCores = 1;
 
   private int callbackPort;
@@ -228,7 +227,7 @@ public class Daemon {
     String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
     List<String> commands = Arrays.asList(
         (Environment.JAVA_HOME.$$() + "/bin/java "
-         + "-Xmx" + amMemory + "m "
+         + "-Xmx10M "
          + "com.anaconda.skein.ApplicationMaster "
          + appDir
          + " >" + logdir + "/appmaster.log 2>&1"));
