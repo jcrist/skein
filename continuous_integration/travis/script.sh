@@ -5,7 +5,7 @@ py.test skein/ -vv
 
 flake8 skein/
 
-if [[ "${DOC}" == "true" ]]; then
+if [[ "$DOCS" == "true" ]]; then
     pushd docs/
     make html
     popd
