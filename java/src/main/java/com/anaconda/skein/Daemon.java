@@ -107,16 +107,16 @@ public class Daemon {
         new Thread() {
           @Override
           public void run() {
-            System.err.println("*** shutting down gRPC server");
             Daemon.this.stopServer();
-            System.err.println("*** gRPC server shut down");
           }
         });
   }
 
   private void stopServer() {
     if (server != null) {
+      LOG.info("Shutting down gRPC server");
       server.shutdown();
+      LOG.info("gRPC server shut down");
     }
   }
 
@@ -188,7 +188,6 @@ public class Daemon {
     } else {
       // Wait until EOF or broken pipe from stdin
       while (System.in.read() != -1) {}
-      stopServer();
     }
   }
 

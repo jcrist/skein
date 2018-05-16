@@ -121,16 +121,16 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         new Thread() {
           @Override
           public void run() {
-            System.err.println("*** shutting down gRPC server");
             ApplicationMaster.this.stopServer();
-            System.err.println("*** gRPC server shut down");
           }
         });
   }
 
   private void stopServer() {
     if (server != null) {
+      LOG.info("Shutting down gRPC server");
       server.shutdown();
+      LOG.info("gRPC server shut down");
     }
   }
 
@@ -478,8 +478,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     rmClient.stop();
-
-    stopServer();
+    System.exit(0);  // Trigger exit hooks
   }
 
   /** Main entrypoint for the ApplicationMaster. **/
