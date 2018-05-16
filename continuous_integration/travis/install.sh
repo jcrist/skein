@@ -15,9 +15,9 @@ if [[ "$DOCS" == "true" ]]; then
     pip install doctr;
 fi
 
-pip install --no-deps -e .
+pip install -v --no-deps -e .
 
 conda list
 
 # Unset options
-set -xe
+set +xe
