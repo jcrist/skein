@@ -4,6 +4,7 @@ build/
 dist/
 skein/java/
 skein/proto/*_pb2*.py
+docs/build/
 .cache/
 .coverage
 .pytest_cache/
