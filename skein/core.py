@@ -1,5 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
+import datetime
 import glob
 import os
 import select
@@ -12,11 +13,11 @@ from contextlib import closing, contextmanager
 import grpc
 
 from . import proto
-from .compatibility import PY2, ConnectionError
+from .compatibility import PY2, ConnectionError, FileExistsError
 from .model import Job, Service, ApplicationReport
 from .utils import (cached_property, read_daemon, write_daemon,
                     ADDRESS_ENV_VAR, DAEMON_PATH, format_list, implements,
-                    CERT_PATH, KEY_PATH)
+                    CERT_PATH, KEY_PATH, CONFIG_DIR)
 
 
 __all__ = ('Client', 'Application', 'ApplicationClient', 'start_global_daemon',
@@ -60,6 +61,65 @@ def convert_errors(daemon=True):
         else:
             cls = DaemonError if daemon else ApplicationMasterError
             raise cls(exc.details())
+
+
+def init_configuration_directory(force=False):
+    """Initialize the configuration directory.
+
+    This is equivalent to the cli command ``skein config``. Should only need to
+    be called once per user upon install. Call again with ``force=True`` to
+    generate new TLS keys and certificates.
+
+    Parameters
+    ----------
+    force : bool, optional
+        If True, will overwrite existing configuration. Otherwise will error if
+        already configured. Default is False.
+    """
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+
+    # Create ~/.skein directory
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+
+    key = rsa.generate_private_key(public_exponent=65537,
+                                   key_size=2048,
+                                   backend=default_backend())
+    key_bytes = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption())
+
+    subject = issuer = x509.Name(
+        [x509.NameAttribute(NameOID.COMMON_NAME, 'skein-internal')])
+    now = datetime.datetime.utcnow()
+    cert = (x509.CertificateBuilder()
+                .subject_name(subject)
+                .issuer_name(issuer)
+                .public_key(key.public_key())
+                .serial_number(x509.random_serial_number())
+                .not_valid_before(now)
+                .not_valid_after(now + datetime.timedelta(days=365))
+                .sign(key, hashes.SHA256(), default_backend()))
+
+    cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
+
+    if not force:
+        if os.path.exists(CERT_PATH):
+            raise FileExistsError("skein.crt file already exists, use "
+                                  "``force`` to override")
+        elif os.path.exists(KEY_PATH):
+            raise FileExistsError("skein.pem file already exists, use "
+                                  "``force`` to override")
+
+    for path, data in [(CERT_PATH, cert_bytes), (KEY_PATH, key_bytes)]:
+        with open(path, mode='wb') as fil:
+            fil.write(data)
+            os.chmod(path, 0o600)  # User only read/write permissions
 
 
 def secure_channel(address, cert_path=CERT_PATH, key_path=KEY_PATH):

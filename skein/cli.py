@@ -1,17 +1,15 @@
 from __future__ import print_function, division, absolute_import
 
 import argparse
-import datetime
-import os
 import sys
 
 import yaml
 
 from . import __version__
 from .core import (Client, ApplicationClient, start_global_daemon,
-                   stop_global_daemon)
+                   stop_global_daemon, init_configuration_directory)
 from .compatibility import ConnectionError
-from .utils import CONFIG_DIR, CERT_PATH, KEY_PATH, format_table
+from .utils import format_table
 
 
 def eprint(x):
@@ -199,51 +197,8 @@ def do_kill(app_id):
             'config', 'Initialize skein configuration',
             arg('--force', '-f', action='store_true',
                 help='Overwrite existing configuration'))
-def do_config(force):
-    from cryptography import x509
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography.x509.oid import NameOID
-
-    # Create ~/.skein directory
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-
-    key = rsa.generate_private_key(public_exponent=65537,
-                                   key_size=2048,
-                                   backend=default_backend())
-    key_bytes = key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption())
-
-    subject = issuer = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, 'skein-internal')])
-    now = datetime.datetime.utcnow()
-    cert = (x509.CertificateBuilder()
-                .subject_name(subject)
-                .issuer_name(issuer)
-                .public_key(key.public_key())
-                .serial_number(x509.random_serial_number())
-                .not_valid_before(now)
-                .not_valid_after(now + datetime.timedelta(days=365))
-                .sign(key, hashes.SHA256(), default_backend()))
-
-    cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
-
-    if not force:
-        if os.path.exists(CERT_PATH):
-            eprint("skein.crt file already exists, use --force to override")
-            sys.exit(1)
-        elif os.path.exists(KEY_PATH):
-            eprint("skein.pem file already exists, use --force to override")
-            sys.exit(1)
-
-    for path, data in [(CERT_PATH, cert_bytes), (KEY_PATH, key_bytes)]:
-        with open(path, mode='wb') as fil:
-            fil.write(data)
-            os.chmod(path, 0o600)  # User only read/write permissions
+def do_config(force=False):
+    init_configuration_directory(force=force)
 
 
 def main(args=None):
