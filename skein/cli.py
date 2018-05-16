@@ -1,8 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import argparse
-import base64
-import errno
+import datetime
 import os
 import sys
 
@@ -11,7 +10,7 @@ import yaml
 from . import __version__
 from .core import Client, ApplicationClient
 from .compatibility import ConnectionError
-from .utils import CONFIG_PATH, SECRET_PATH, format_table
+from .utils import CONFIG_DIR, CERT_PATH, KEY_PATH, format_table
 
 
 def eprint(x):
@@ -93,7 +92,7 @@ def daemon_start(log=False):
         client = Client(new_daemon=False)
         print("Skein daemon already running")
     except ConnectionError:
-        client = Client(new_daemon=True, set_global=True, log=log)
+        client = Client(new_daemon=True, set_global=True, log=None)
     print(client.address)
 
 
@@ -133,7 +132,7 @@ def daemon_restart(log=False):
             arg('key', type=str, help='The key to get'))
 def keystore_get(key, wait=False, app_id=None):
     if app_id is None:
-        app = ApplicationClient.from_env()
+        app = ApplicationClient.current_application()
     else:
         app = get_client().application(app_id)
     print(app.get_key(key, wait=wait))
@@ -146,7 +145,7 @@ def keystore_get(key, wait=False, app_id=None):
             arg('val', type=str, help='The value to set'))
 def keystore_set(key, val, app_id=None):
     if app_id is None:
-        app = ApplicationClient.from_env()
+        app = ApplicationClient.current_application()
     else:
         app = get_client().application(app_id)
     return app.set_key(key, val)
@@ -209,16 +208,50 @@ def do_kill(app_id):
             arg('--force', '-f', action='store_true',
                 help='Overwrite existing configuration'))
 def do_config(force):
-    os.makedirs(CONFIG_PATH, exist_ok=True)
-    secret = base64.b64encode(os.urandom(30))
-    try:
-        mode = 'wb' if force else 'xb'
-        with open(SECRET_PATH, mode=mode) as fil:
-            fil.write(secret)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST:
-            eprint("secret file already exists, use --force to override")
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+
+    # Create ~/.skein directory
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+
+    key = rsa.generate_private_key(public_exponent=65537,
+                                   key_size=2048,
+                                   backend=default_backend())
+    key_bytes = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption())
+
+    subject = issuer = x509.Name(
+        [x509.NameAttribute(NameOID.COMMON_NAME, 'skein-internal')])
+    now = datetime.datetime.utcnow()
+    cert = (x509.CertificateBuilder()
+                .subject_name(subject)
+                .issuer_name(issuer)
+                .public_key(key.public_key())
+                .serial_number(x509.random_serial_number())
+                .not_valid_before(now)
+                .not_valid_after(now + datetime.timedelta(days=365))
+                .sign(key, hashes.SHA256(), default_backend()))
+
+    cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
+
+    if not force:
+        if os.path.exists(CERT_PATH):
+            eprint("skein.crt file already exists, use --force to override")
             sys.exit(1)
+        elif os.path.exists(KEY_PATH):
+            eprint("skein.pem file already exists, use --force to override")
+            sys.exit(1)
+
+    for path, data in [(CERT_PATH, cert_bytes), (KEY_PATH, key_bytes)]:
+        with open(path, mode='wb') as fil:
+            fil.write(data)
+            os.chmod(path, 0o600)  # User only read/write permissions
 
 
 def main(args=None):

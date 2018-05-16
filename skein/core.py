@@ -16,7 +16,8 @@ from . import proto
 from .compatibility import PY2, ConnectionError
 from .model import Job, Service, ApplicationReport
 from .utils import (cached_property, read_daemon, write_daemon,
-                    ADDRESS_ENV_VAR, DAEMON_PATH, format_list, implements)
+                    ADDRESS_ENV_VAR, DAEMON_PATH, format_list, implements,
+                    CERT_PATH, KEY_PATH)
 
 
 __all__ = ('Client', 'Application', 'ApplicationClient')
@@ -61,6 +62,19 @@ def convert_errors(daemon=True):
             raise cls(exc.details())
 
 
+def secure_channel(address, cert_path=CERT_PATH, key_path=KEY_PATH):
+    with open(cert_path, 'rb') as fil:
+        cert = fil.read()
+
+    with open(key_path, 'rb') as fil:
+        key = fil.read()
+
+    creds = grpc.ssl_channel_credentials(cert, key, cert)
+    options = [('grpc.ssl_target_name_override', 'skein-internal'),
+               ('grpc.default_authority', 'skein-internal')]
+    return grpc.secure_channel(address, creds, options)
+
+
 class Client(object):
     """Connect to and schedule jobs on the YARN cluster.
 
@@ -96,7 +110,7 @@ class Client(object):
 
         self.address = address
         self._proc = proc
-        self._stub = proto.DaemonStub(grpc.insecure_channel(address))
+        self._stub = proto.DaemonStub(secure_channel(address))
 
     @staticmethod
     def _connect():
@@ -104,7 +118,7 @@ class Client(object):
         if address is None:
             raise ConnectionError("No daemon currently running")
 
-        stub = proto.DaemonStub(grpc.insecure_channel(address))
+        stub = proto.DaemonStub(secure_channel(address))
 
         # Ping server to check connection
         with convert_errors(daemon=True):
@@ -118,7 +132,7 @@ class Client(object):
         if address is None:
             return
 
-        stub = proto.DaemonStub(grpc.insecure_channel(address))
+        stub = proto.DaemonStub(secure_channel(address))
 
         try:
             stub.ping(proto.Empty())
@@ -136,13 +150,12 @@ class Client(object):
     def _create(log=None, set_global=False):
         jar = _find_skein_jar()
 
+        command = ["yarn", "jar", jar, jar, CERT_PATH, KEY_PATH]
         if set_global:
-            command = ["yarn", "jar", jar, jar, '--daemon']
-        else:
-            command = ["yarn", "jar", jar, jar]
+            command.append("--daemon")
 
         callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        callback.bind(('127.0.0.1', 0))
+        callback.bind(('localhost', 0))
         callback.listen(1)
 
         with closing(callback):
@@ -185,7 +198,7 @@ class Client(object):
             else:
                 raise ValueError("Failed to start java process")
 
-        address = '127.0.0.1:%d' % port
+        address = 'localhost:%d' % port
 
         if set_global:
             Client._clear_global_daemon()
@@ -329,9 +342,9 @@ class ApplicationClient(object):
     address : str
         The address of the application master.
     """
-    def __init__(self, address):
+    def __init__(self, address, channel=None):
         self._address = address
-        self._stub = proto.MasterStub(grpc.insecure_channel(address))
+        self._stub = proto.MasterStub(channel or secure_channel(address))
 
     def get_key(self, key=None, wait=False):
         """Get a key from the keystore.
@@ -393,8 +406,8 @@ class ApplicationClient(object):
             return Service.from_protobuf(resp)
 
     @classmethod
-    def from_env(cls):
-        """Create an application client from a container environment.
+    def current_application(cls):
+        """Create an application client from within a running container.
 
         Useful for connecting to the application master from a running
         container in a job.
@@ -402,7 +415,10 @@ class ApplicationClient(object):
         address = os.environ.get(ADDRESS_ENV_VAR)
         if address is None:
             raise ValueError("Address not found at %r" % ADDRESS_ENV_VAR)
-        return cls(address)
+        channel = secure_channel(address,
+                                 cert_path=".skein.crt",
+                                 key_path=".skein.pem")
+        return cls(address, channel=channel)
 
 
 class Application(object):

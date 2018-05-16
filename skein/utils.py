@@ -1,18 +1,17 @@
 from __future__ import print_function, division, absolute_import
 
-import errno
 import json
 import os
 
 from .compatibility import urlparse
 
 
-SECRET_ENV_VAR = 'SKEIN_SECRET_ACCESS_KEY'
 ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'
 
-CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.skein')
-SECRET_PATH = os.path.join(CONFIG_PATH, 'secret')
-DAEMON_PATH = os.path.join(CONFIG_PATH, 'daemon')
+CONFIG_DIR = os.path.join(os.path.expanduser('~'), '.skein')
+DAEMON_PATH = os.path.join(CONFIG_DIR, 'daemon')
+CERT_PATH = os.path.join(CONFIG_DIR, 'skein.crt')
+KEY_PATH = os.path.join(CONFIG_DIR, 'skein.pem')
 
 
 def ensure_bytes(x):
@@ -79,21 +78,6 @@ def implements(f):
     return decorator
 
 
-def read_secret():
-    try:
-        with open(SECRET_PATH) as fil:
-            secret = fil.read()
-    except OSError as e:
-        if e.errno != errno.ENOENT:
-            raise
-
-        secret = os.environ.get(SECRET_ENV_VAR)
-        if secret is None:
-            raise ValueError("Secret key not found in config file or "
-                             "%r envar" % SECRET_ENV_VAR)
-    return secret
-
-
 def read_daemon():
     try:
         with open(DAEMON_PATH, 'r') as fil:
@@ -107,7 +91,7 @@ def read_daemon():
 
 def write_daemon(address, pid):
     # Ensure the config dir exists
-    os.makedirs(CONFIG_PATH, exist_ok=True)
+    os.makedirs(CONFIG_DIR, exist_ok=True)
     # Write to the daemon file
     with open(DAEMON_PATH, 'w') as fil:
         json.dump({'address': address, 'pid': pid}, fil)

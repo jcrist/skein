@@ -3,8 +3,12 @@ package com.anaconda.skein;
 import io.grpc.Server;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,6 +37,7 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -95,7 +100,15 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   private void startServer() throws IOException {
     // Setup and start the server
+    SslContext sslContext = GrpcSslContexts
+        .forServer(new File(".skein.crt"), new File(".skein.pem"))
+        .trustManager(new File(".skein.crt"))
+        .clientAuth(ClientAuth.REQUIRE)
+        .sslProvider(SslProvider.OPENSSL)
+        .build();
+
     server = NettyServerBuilder.forPort(0)
+        .sslContext(sslContext)
         .addService(new MasterImpl())
         .build()
         .start();

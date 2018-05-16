@@ -2,8 +2,12 @@ package com.anaconda.skein;
 
 import io.grpc.Server;
 import io.grpc.Status;
+import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -24,7 +28,6 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
@@ -35,6 +38,7 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
@@ -55,9 +59,9 @@ public class Daemon {
   // Owner rwx (700)
   private static final FsPermission SKEIN_DIR_PERM =
       FsPermission.createImmutable((short)448);
-  // Owner rw, world r (644)
+  // Owner rw (600)
   private static final FsPermission SKEIN_FILE_PERM =
-      FsPermission.createImmutable((short)420);
+      FsPermission.createImmutable((short)384);
 
   private Configuration conf;
 
@@ -67,7 +71,9 @@ public class Daemon {
 
   private String classpath;
 
-  private URL amJar;
+  private String jarPath;
+  private String certPath;
+  private String keyPath;
 
   private boolean daemon = false;
 
@@ -83,7 +89,15 @@ public class Daemon {
 
   private void startServer() throws IOException {
     // Setup and start the server
+    SslContext sslContext = GrpcSslContexts
+        .forServer(new File(certPath), new File(keyPath))
+        .trustManager(new File(certPath))
+        .clientAuth(ClientAuth.REQUIRE)
+        .sslProvider(SslProvider.OPENSSL)
+        .build();
+
     server = NettyServerBuilder.forPort(0)
+        .sslContext(sslContext)
         .addService(new DaemonImpl())
         .build()
         .start();
@@ -128,21 +142,16 @@ public class Daemon {
     }
     callbackPort = Integer.valueOf(callbackPortEnv);
 
-    if (args.length > 2) {
-      LOG.fatal("Unknown extra arguments");
+    // Parse arguments
+    if (args.length < 3 || args.length > 4
+        || (args.length == 4 && !args[3].equals("--daemon"))) {
+      LOG.fatal("Usage: COMMAND jarPath certPath keyPath [--daemon]");
       System.exit(1);
     }
-    for (String arg : args) {
-      if (arg.equals("--daemon")) {
-        daemon = true;
-      } else {
-        amJar = Utils.urlFromString(arg);
-      }
-    }
-    if (amJar == null) {
-      LOG.fatal("Must pass in path to this jar file");
-      System.exit(1);
-    }
+    jarPath = args[0];
+    certPath = args[1];
+    keyPath = args[2];
+    daemon = args.length == 4;
 
     conf = new YarnConfiguration();
     defaultFs = FileSystem.get(conf);
@@ -264,9 +273,13 @@ public class Daemon {
 
     Map<Path, Path> uploadCache = new HashMap<Path, Path>();
 
+    // Create LocalResources for the crt/pem files
+    LocalResource certFile = newLocalResource(uploadCache, appDir, certPath);
+    LocalResource keyFile = newLocalResource(uploadCache, appDir, keyPath);
+
     // Setup the LocalResources for the services
     for (Model.Service s: job.getServices().values()) {
-      finalizeService(s, uploadCache, appDir);
+      finalizeService(s, uploadCache, appDir, certFile, keyFile);
     }
     job.validate();
 
@@ -288,23 +301,26 @@ public class Daemon {
         status.getModificationTime());
 
     // Setup the LocalResources for the application master
-    LocalResource jar = LocalResource.newInstance(amJar,
-                                                  LocalResourceType.FILE,
-                                                  LocalResourceVisibility.APPLICATION,
-                                                  0, 0);
-    finalizeLocalResource(uploadCache, appDir, jar);
     Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
-    lr.put("skein.jar", jar);
+    lr.put("skein.jar", newLocalResource(uploadCache, appDir, jarPath));
+    lr.put(".skein.crt", certFile);
+    lr.put(".skein.pem", keyFile);
     lr.put(".skein.proto", spec);
     return lr;
   }
 
   private void finalizeService(Model.Service service,
-      Map<Path, Path> uploadCache, Path appDir) throws IOException {
+      Map<Path, Path> uploadCache, Path appDir,
+      LocalResource certFile, LocalResource keyFile) throws IOException {
     // Upload files/archives as necessary
-    for (LocalResource resource : service.getLocalResources().values()) {
-      finalizeLocalResource(uploadCache, appDir, resource);
+    Map<String, LocalResource> lr = service.getLocalResources();
+    for (LocalResource resource : lr.values()) {
+      finalizeLocalResource(uploadCache, appDir, resource, true);
     }
+    // Add crt/pem files
+    lr.put(".skein.crt", certFile);
+    lr.put(".skein.pem", keyFile);
+
     // Add LANG if present
     String lang = System.getenv("LANG");
     if (lang != null) {
@@ -312,18 +328,31 @@ public class Daemon {
     }
   }
 
+  private LocalResource newLocalResource(Map<Path, Path> uploadCache, Path appDir,
+      String localPath) throws IOException {
+    LocalResource out = LocalResource.newInstance(Utils.urlFromString(localPath),
+                                                  LocalResourceType.FILE,
+                                                  LocalResourceVisibility.APPLICATION,
+                                                  0, 0);
+    finalizeLocalResource(uploadCache, appDir, out, false);
+    return out;
+  }
+
   private void finalizeLocalResource(Map<Path, Path> uploadCache,
-      Path appDir, LocalResource file) throws IOException {
+      Path appDir, LocalResource file, boolean hash) throws IOException {
 
     Path srcPath = Utils.pathFromUrl(file.getResource());
-    Path dstPath = srcPath;
+    Path dstPath;
 
     FileSystem dstFs = appDir.getFileSystem(conf);
     FileSystem srcFs = srcPath.getFileSystem(conf);
 
-    if (!Utils.equalFs(srcFs, dstFs)) {
-      dstPath = uploadCache.get(srcPath);
-      if (dstPath == null) {
+    dstPath = uploadCache.get(srcPath);
+    if (dstPath == null) {
+      if (Utils.equalFs(srcFs, dstFs)) {
+        // File exists in filesystem but not in upload cache
+        dstPath = srcPath;
+      } else {
         // File needs to be uploaded to the destination filesystem
         MessageDigest md;
         try {
@@ -331,17 +360,29 @@ public class Daemon {
         } catch (NoSuchAlgorithmException ex) {
           throw new IllegalArgumentException("MD5 not supported on this platform");
         }
-        md.update(srcPath.toString().getBytes());
-        String prefix = Utils.hexEncode(md.digest());
-        dstPath = new Path(new Path(appDir, prefix), srcPath.getName());
+        if (hash) {
+          md.update(srcPath.toString().getBytes());
+          String prefix = Utils.hexEncode(md.digest());
+          dstPath = new Path(new Path(appDir, prefix), srcPath.getName());
+        } else {
+          dstPath = new Path(appDir, srcPath.getName());
+        }
         LOG.info("Uploading " + srcPath + " to " + dstPath);
         FileUtil.copy(srcFs, srcPath, dstFs, dstPath, false, conf);
         dstFs.setPermission(dstPath, SKEIN_FILE_PERM);
-        uploadCache.put(srcPath, dstPath);
+
+        file.setResource(ConverterUtils.getYarnUrlFromPath(dstPath));
       }
-      FileStatus status = dstFs.getFileStatus(dstPath);
-      file.setResource(ConverterUtils.getYarnUrlFromPath(dstPath));
+      uploadCache.put(srcPath, dstPath);
+    }
+    FileStatus status = dstFs.getFileStatus(dstPath);
+
+    // Only set size & timestamp if not set already
+    if (file.getSize() == 0) {
       file.setSize(status.getLen());
+    }
+
+    if (file.getTimestamp() == 0) {
       file.setTimestamp(status.getModificationTime());
     }
   }
