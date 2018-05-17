@@ -1,0 +1,839 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>API &#8212; Skein 0.0.1+79.ga49bc97 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Skein" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="api">
+<h1>API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="global-configuration-and-state">
+<h2>Global configuration and state<a class="headerlink" href="#global-configuration-and-state" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="skein.start_global_daemon">
+<code class="descclassname">skein.</code><code class="descname">start_global_daemon</code><span class="sig-paren">(</span><em>log=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.start_global_daemon" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start the global daemon.</p>
+<p>No-op if the global daemon is already running.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>log</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, bool, or None, optional</span></dt>
+<dd><p class="first last">Sets the logging behavior for the daemon. Values may be a path for logs
+to be written to, <code class="docutils literal notranslate"><span class="pre">None</span></code> to log to stdout/stderr, or <code class="docutils literal notranslate"><span class="pre">False</span></code> to
+turn off logging completely. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>address</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The address of the daemon</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="skein.stop_global_daemon">
+<code class="descclassname">skein.</code><code class="descname">stop_global_daemon</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.stop_global_daemon" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stops the global daemon if running.</p>
+<p>No-op if no global daemon is running.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="skein.init_configuration_directory">
+<code class="descclassname">skein.</code><code class="descname">init_configuration_directory</code><span class="sig-paren">(</span><em>force=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.init_configuration_directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the configuration directory.</p>
+<p>This is equivalent to the cli command <code class="docutils literal notranslate"><span class="pre">skein</span> <span class="pre">config</span></code>. Should only need to
+be called once per user upon install. Call again with <code class="docutils literal notranslate"><span class="pre">force=True</span></code> to
+generate new TLS keys and certificates.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>force</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, will overwrite existing configuration. Otherwise will error if
+already configured. Default is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="clients">
+<h2>Clients<a class="headerlink" href="#clients" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="skein.Client">
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Client</code><span class="sig-paren">(</span><em>address=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connect to and schedule jobs on the YARN cluster.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>address</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The address for the daemon. By default will try to connect to the
+global daemon. Pass in address explicitly to connect to a different
+daemon. To create a new daemon, see <code class="docutils literal notranslate"><span class="pre">skein.Client.temporary</span></code> or
+<code class="docutils literal notranslate"><span class="pre">skein.start_global_daemon</span></code>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="skein.Client.application">
+<code class="descname">application</code><span class="sig-paren">(</span><em>app_id</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.application" title="Permalink to this definition">¶</a></dt>
+<dd><p>Access an Application.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>app_id</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The id of the application.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>app</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Application</span></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Client.close">
+<code class="descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>If connected to a temporary daemon, closes the daemon.</p>
+<p>No-op if connected to the global daemon</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="skein.Client.is_temporary">
+<code class="descname">is_temporary</code><a class="headerlink" href="#skein.Client.is_temporary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether this client is connected to a temporary daemon</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Client.kill">
+<code class="descname">kill</code><span class="sig-paren">(</span><em>app_id</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.kill" title="Permalink to this definition">¶</a></dt>
+<dd><p>Kill an application.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>app_id</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The id of the application to kill.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Client.status">
+<code class="descname">status</code><span class="sig-paren">(</span><em>app_id=None</em>, <em>state=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the status of a skein application or applications.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>app_id</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">A single application id to check the status of.</p>
+</dd>
+<dt><strong>state</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str or sequence, optional</span></dt>
+<dd><p class="first last">If provided, applications will be filtered to these application
+states.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>Either a single ``ApplicationReport`` (in the case of a provided</strong></dt>
+<dd></dd>
+<dt><strong>``app_id``), or a list of ``ApplicationReport``s.</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>To get the status of a single application</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">app_id</span><span class="o">=</span><span class="s1">&#39;application_1526134340424_0012&#39;</span><span class="p">)</span>
+<span class="go">ApplicationReport&lt;name=&#39;demo&#39;&gt;</span>
+</pre></div>
+</div>
+<p>To get all the finished and failed applications</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;FINISHED&#39;</span><span class="p">,</span> <span class="s1">&#39;FAILED&#39;</span><span class="p">])</span>
+<span class="go">[ApplicationReport&lt;name=&#39;demo&#39;&gt;,</span>
+<span class="go"> ApplicationReport&lt;name=&#39;dask&#39;&gt;,</span>
+<span class="go"> ApplicationReport&lt;name=&#39;demo&#39;&gt;]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Client.submit">
+<code class="descname">submit</code><span class="sig-paren">(</span><em>job_or_path</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.submit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Submit a new skein job.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>job_or_path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Job or str</span></dt>
+<dd><p class="first last">The job to run. Can either be a <code class="docutils literal notranslate"><span class="pre">Job</span></code> object, or a path to a
+yaml/json file.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>app</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Application</span></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Client.temporary">
+<em class="property">classmethod </em><code class="descname">temporary</code><span class="sig-paren">(</span><em>log=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.temporary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a client connected to a temporary daemon process.</p>
+<p>It’s recommended to use the resulting client as a contextmanager or
+explicitly call <code class="docutils literal notranslate"><span class="pre">.close()</span></code>. Otherwise the daemon won’t be closed
+until the creating process exits.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>log</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, bool, or None, optional</span></dt>
+<dd><p class="first last">Sets the logging behavior for the daemon. Values may be a path for
+logs to be written to, <code class="docutils literal notranslate"><span class="pre">None</span></code> to log to stdout/stderr, or
+<code class="docutils literal notranslate"><span class="pre">False</span></code> to turn off logging completely. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>client</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Client</span></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">Client</span><span class="o">.</span><span class="n">temporary</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">app_id</span><span class="o">=</span><span class="s1">&#39;application_1526134340424_0012&#39;</span><span class="p">))</span>
+<span class="go">ApplicationReport&lt;name=&#39;demo&#39;&gt;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.ApplicationClient">
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">ApplicationClient</code><span class="sig-paren">(</span><em>address</em>, <em>channel=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient" title="Permalink to this definition">¶</a></dt>
+<dd><p>A client for the application master.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>address</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The address of the application master.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.ApplicationClient.current_application">
+<em class="property">classmethod </em><code class="descname">current_application</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.current_application" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an application client from within a running container.</p>
+<p>Useful for connecting to the application master from a running
+container in a job.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.ApplicationClient.get_key">
+<code class="descname">get_key</code><span class="sig-paren">(</span><em>key=None</em>, <em>wait=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.get_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a key from the keystore.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The key to get. If not provided, returns the whole keystore.</p>
+</dd>
+<dt><strong>wait</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If true, will block until the key is set. Default is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.ApplicationClient.inspect">
+<code class="descname">inspect</code><span class="sig-paren">(</span><em>service=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.inspect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Information about the running job.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>service</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If provided, returns information on that service.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>spec</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Job or Service</span></dt>
+<dd><p class="first last">Returns a service if <code class="docutils literal notranslate"><span class="pre">service</span></code> is specified, otherwise returns
+the whole <code class="docutils literal notranslate"><span class="pre">Job</span></code>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.ApplicationClient.set_key">
+<code class="descname">set_key</code><span class="sig-paren">(</span><em>key</em>, <em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.set_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set a key in the keystore.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to set.</p>
+</dd>
+<dt><strong>value</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The value to set.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="job-specification">
+<h2>Job Specification<a class="headerlink" href="#job-specification" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="skein.Job">
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Job</code><span class="sig-paren">(</span><em>services=required</em>, <em>name='skein'</em>, <em>queue=''</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job" title="Permalink to this definition">¶</a></dt>
+<dd><p>A single Skein job.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>services</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
+<dd><p class="first last">A mapping of service-name to services. At least one service is required.</p>
+</dd>
+<dt><strong>name</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string, optional</span></dt>
+<dd><p class="first last">The name of the application, defaults to ‘skein’.</p>
+</dd>
+<dt><strong>queue</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string, optional</span></dt>
+<dd><p class="first last">The queue to submit to. Defaults to the default queue.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.Job.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a dict.</p>
+<p>Keys in the dict should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Job.from_file">
+<em class="property">classmethod </em><code class="descname">from_file</code><span class="sig-paren">(</span><em>path</em>, <em>format='infer'</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job.from_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a json or yaml file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The path to the file to load.</p>
+</dd>
+<dt><strong>format</strong> <span class="classifier-delimiter">:</span> <span class="classifier">{‘infer’, ‘json’, ‘yaml’}, optional</span></dt>
+<dd><p class="first last">The file format. By default the format is inferred from the file
+extension.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Job.from_json">
+<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a json string.</p>
+<p>Keys in the json object should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Job.from_protobuf">
+<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a protobuf message.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Job.from_yaml">
+<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job.from_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a yaml string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Job.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Job.to_file">
+<code class="descname">to_file</code><span class="sig-paren">(</span><em>path</em>, <em>format='infer'</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job.to_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write object to a file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The path to the file to load.</p>
+</dd>
+<dt><strong>format</strong> <span class="classifier-delimiter">:</span> <span class="classifier">{‘infer’, ‘json’, ‘yaml’}, optional</span></dt>
+<dd><p class="first last">The file format. By default the format is inferred from the file
+extension.</p>
+</dd>
+<dt><strong>skip_nulls</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">By default null values are skipped in the output. Set to True to
+output all fields.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Job.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a json string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Job.to_protobuf">
+<code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a protobuf message</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Job.to_yaml">
+<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job.to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a yaml string</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.Service">
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Service</code><span class="sig-paren">(</span><em>commands=required</em>, <em>resources=required</em>, <em>instances=1</em>, <em>files=None</em>, <em>env=None</em>, <em>depends=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service" title="Permalink to this definition">¶</a></dt>
+<dd><p>Description of a Skein service.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>commands</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">Shell commands to startup the service. Commands are run in the order
+provided, with subsequent commands only run if the prior commands
+succeeded. At least one command must be provided</p>
+</dd>
+<dt><strong>resources</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Resources</span></dt>
+<dd><p class="first last">Describes the resources needed to run the service.</p>
+</dd>
+<dt><strong>instances</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">The number of instances to create on startup. Default is 1.</p>
+</dd>
+<dt><strong>files</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
+<dd><p class="first last">Describes any files needed to run the service. A mapping of destination
+relative paths to <code class="docutils literal notranslate"><span class="pre">File</span></code> objects describing the sources for these
+paths.</p>
+</dd>
+<dt><strong>env</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
+<dd><p class="first last">A mapping of environment variables needed to run the service.</p>
+</dd>
+<dt><strong>depends</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list, optional</span></dt>
+<dd><p class="first last">A list of string keys in the keystore that this service depends on. The
+service will not be started until these keys are present.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.Service.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a dict.</p>
+<p>Keys in the dict should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Service.from_json">
+<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a json string.</p>
+<p>Keys in the json object should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Service.from_protobuf">
+<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a protobuf message.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Service.from_yaml">
+<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a yaml string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Service.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Service.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a json string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Service.to_protobuf">
+<code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a protobuf message</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Service.to_yaml">
+<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a yaml string</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.File">
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">File</code><span class="sig-paren">(</span><em>source=required</em>, <em>type='FILE'</em>, <em>visibility='APPLICATION'</em>, <em>size=0</em>, <em>timestamp=0</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File" title="Permalink to this definition">¶</a></dt>
+<dd><p>A file/archive to distribute with the service.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>source</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The path to the file/archive. If no scheme is specified, path is
+assumed to be on the local filesystem (<code class="docutils literal notranslate"><span class="pre">file://</span></code> scheme).</p>
+</dd>
+<dt><strong>type</strong> <span class="classifier-delimiter">:</span> <span class="classifier">{‘FILE’, ‘ARCHIVE’}, optional</span></dt>
+<dd><p class="first last">The type of file to distribute. Archive’s are automatically extracted
+by yarn into a directory with the same name as <code class="docutils literal notranslate"><span class="pre">dest</span></code>. Default is
+<code class="docutils literal notranslate"><span class="pre">'FILE'</span></code>.</p>
+</dd>
+<dt><strong>visibility</strong> <span class="classifier-delimiter">:</span> <span class="classifier">{‘APPLICATION’, ‘PUBLIC’, ‘PRIVATE’}, optional</span></dt>
+<dd><p class="first last">The resource visibility, default is <code class="docutils literal notranslate"><span class="pre">'APPLICATION'</span></code></p>
+</dd>
+<dt><strong>size</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">The resource size in bytes. If not provided will be determined by the
+file system.</p>
+</dd>
+<dt><strong>timestamp</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">The time the resource was last modified. If not provided will be
+determined by the file system.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.File.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a dict.</p>
+<p>Keys in the dict should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.File.from_json">
+<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a json string.</p>
+<p>Keys in the json object should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.File.from_protobuf">
+<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a protobuf message.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.File.from_yaml">
+<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a yaml string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.File.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.File.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a json string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.File.to_protobuf">
+<code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a protobuf message</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.File.to_yaml">
+<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a yaml string</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.Resources">
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Resources</code><span class="sig-paren">(</span><em>memory=required</em>, <em>vcores=required</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resource requests per container.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>memory</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">The memory to request, in MB</p>
+</dd>
+<dt><strong>vcores</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">The number of virtual cores to request.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.Resources.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a dict.</p>
+<p>Keys in the dict should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Resources.from_json">
+<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a json string.</p>
+<p>Keys in the json object should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Resources.from_protobuf">
+<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>msg</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a protobuf message.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Resources.from_yaml">
+<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a yaml string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Resources.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Resources.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a json string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Resources.to_protobuf">
+<code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a protobuf message</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Resources.to_yaml">
+<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a yaml string</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Skein</a></h1>
+
+
+
+<p class="blurb">Simple tool for deploying jobs on Apache YARN</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=jcrist&repo=skein&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a href="https://travis-ci.org/jcrist/skein">
+    <img
+        alt="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+        src="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#global-configuration-and-state">Global configuration and state</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#clients">Clients</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#job-specification">Job Specification</a></li>
+</ul>
+</li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Jim Crist.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,3 +1,4 @@
+./_sources/api.rst.txt
 ./_sources/index.rst.txt
 ./_static/ajax-loader.gif
 ./_static/alabaster.css
@@ -22,6 +23,7 @@
 ./_static/up-pressed.png
 ./_static/up.png
 ./_static/websupport.js
+./api.html
 ./genindex.html
 ./index.html
 ./objects.inv
