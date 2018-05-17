@@ -1,3 +1,4 @@
+./_images/yarn.jpg
 ./_sources/api.rst.txt
 ./_sources/cli.rst.txt
 ./_sources/index.rst.txt
@@ -24,6 +25,7 @@
 ./_static/up-pressed.png
 ./_static/up.png
 ./_static/websupport.js
+./_static/yarn.jpg
 ./api.html
 ./cli.html
 ./genindex.html
