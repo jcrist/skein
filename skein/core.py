@@ -130,18 +130,18 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
         cert_path = os.path.join(directory, 'skein.crt')
         key_path = os.path.join(directory, 'skein.pem')
 
-        if not force:
-            if os.path.exists(cert_path):
-                raise FileExistsError("skein.crt file already exists, use "
-                                      "``force`` to override")
-            elif os.path.exists(key_path):
-                raise FileExistsError("skein.pem file already exists, use "
-                                      "``force`` to override")
+        for path, name in [(cert_path, 'skein.crt'), (key_path, 'skein.pem')]:
+            if os.path.exists(path):
+                if force:
+                    os.unlink(path)
+                else:
+                    raise FileExistsError("%r file already exists, use "
+                                          "``force`` to override" % name)
 
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
         for path, data in [(cert_path, cert_bytes), (key_path, key_bytes)]:
-            with open(path, mode='wb') as fil:
+            with os.fdopen(os.open(path, flags, 0o600), 'wb') as fil:
                 fil.write(data)
-                os.chmod(path, 0o600)  # User only read/write permissions
 
         return cls(cert_path, key_path)
 
