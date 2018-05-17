@@ -70,19 +70,22 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
 
     @classmethod
     def from_directory(cls, directory):
-        """Create a security object from a directory, relying on standard names
-        for each file."""
+        """Create a security object from a directory.
+
+        Relies on standard names for each file (``skein.crt`` and
+        ``skein.pem``)."""
         cert_path = os.path.join(directory, 'skein.crt')
         key_path = os.path.join(directory, 'skein.pem')
         return Security(cert_path, key_path)
 
     @classmethod
-    def write_security_configuration(cls, directory=None, force=False):
-        """Write security configuration.
+    def from_new_key_pair(cls, directory=None, force=False):
+        """Create a Security object from a new certificate/key pair.
 
-        This is equivalent to the cli command ``skein config``. Should only
-        need to be called *once* per user upon install. Call again with
-        ``force=True`` to generate new TLS keys and certificates.
+        This is equivalent to the cli command ``skein init`` with the option to
+        specify an alternate directory *if needed*. Should only need to be
+        called once per user upon install. Call again with ``force=True`` to
+        generate new TLS keys and certificates.
 
         Parameters
         ----------
@@ -440,63 +443,67 @@ class Client(object):
             resp = self._stub.submit(job.to_protobuf())
         return Application(self, resp.id)
 
-    def status(self, app_id=None, state=None):
-        """Get the status of a skein application or applications.
+    def applications(self, states=None):
+        """Get the status of current skein applications.
 
         Parameters
         ----------
-        app_id : str, optional
-            A single application id to check the status of.
-        state : str or sequence, optional
+        states : sequence, optional
             If provided, applications will be filtered to these application
-            states.
+            states. Default is ``['SUBMITTED', 'ACCEPTED', 'RUNNING']``.
 
         Returns
         -------
-        Either a single ``ApplicationReport`` (in the case of a provided
-        ``app_id``), or a list of ``ApplicationReport``s.
+        reports : list of ``ApplicationReport``s
 
         Examples
         --------
-        To get the status of a single application
+        Get all the finished and failed applications
 
-        >>> client.status(app_id='application_1526134340424_0012')
-        ApplicationReport<name='demo'>
-
-        To get all the finished and failed applications
-
-        >>> client.status(state=['FINISHED', 'FAILED'])
+        >>> client.status(states=['FINISHED', 'FAILED'])
         [ApplicationReport<name='demo'>,
          ApplicationReport<name='dask'>,
          ApplicationReport<name='demo'>]
         """
-        if app_id is not None and state is not None:
-            raise ValueError("Cannot provide both app_id and state")
-
-        if app_id is not None:
-            with convert_errors(daemon=True):
-                resp = self._stub.getStatus(proto.Application(id=app_id))
-            return ApplicationReport.from_protobuf(resp)
-
-        if state is not None:
+        if states is not None:
+            states = {s.upper() for s in states}
             valid = {'ACCEPTED', 'FAILED', 'FINISHED', 'KILLED', 'NEW',
                      'NEW_SAVING', 'RUNNING', 'SUBMITTED'}
-            if isinstance(state, str):
-                state = [state]
-
-            states = {s.upper() for s in state}
             invalid = states.difference(valid)
             if invalid:
                 raise ValueError("Invalid application states:\n"
                                  "%s" % format_list(invalid))
             states = list(states)
         else:
-            states = []
+            states = ('SUBMITTED', 'ACCEPTED', 'RUNNING')
 
         req = proto.ApplicationsRequest(states=states)
         with convert_errors(daemon=True):
             resp = self._stub.getApplications(req)
         return [ApplicationReport.from_protobuf(r) for r in resp.reports]
+
+    def status(self, app_id):
+        """Get the status of a skein application.
+
+        Parameters
+        ----------
+        app_id : str
+            A single application id to check the status of.
+
+        Returns
+        -------
+        report : ApplicationReport
+
+        Examples
+        --------
+        Get the status of a single application
+
+        >>> client.status(app_id='application_1526134340424_0012')
+        ApplicationReport<name='demo'>
+        """
+        with convert_errors(daemon=True):
+            resp = self._stub.getStatus(proto.Application(id=app_id))
+        return ApplicationReport.from_protobuf(resp)
 
     def kill(self, app_id):
         """Kill an application.
@@ -561,7 +568,7 @@ class ApplicationClient(object):
         with convert_errors(daemon=False):
             self._stub.keystoreSet(proto.SetKeyRequest(key=key, val=value))
 
-    def inspect(self, service=None):
+    def describe(self, service=None):
         """Information about the running job.
 
         Parameters
@@ -616,9 +623,9 @@ class Application(object):
         """
         return self._client.status(self.app_id)
 
-    @implements(ApplicationClient.inspect)
-    def inspect(self, service=None):
-        return self._am_client.inspect(service=service)
+    @implements(ApplicationClient.describe)
+    def describe(self, service=None):
+        return self._am_client.describe(service=service)
 
     @implements(ApplicationClient.get_key)
     def get_key(self, key=None, wait=False):

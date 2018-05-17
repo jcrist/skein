@@ -12,8 +12,28 @@ from .compatibility import ConnectionError
 from .utils import format_table
 
 
+class _Formatter(argparse.HelpFormatter):
+    """Format with a fixed argument width, due to bug in argparse measuring
+    argument widths"""
+    @property
+    def _action_max_length(self):
+        return 16
+
+    @_action_max_length.setter
+    def _action_max_length(self, value):
+        pass
+
+
 def eprint(x):
     print(x, file=sys.stderr)
+
+
+def get_client():
+    try:
+        return Client()
+    except ConnectionError:
+        eprint("Skein daemon not found, please run `skein daemon start`")
+        sys.exit(1)
 
 
 def add_help(parser):
@@ -29,6 +49,7 @@ def subcommand(subparsers, name, help, *args):
     def _(func):
         parser = subparsers.add_parser(name,
                                        help=help,
+                                       formatter_class=_Formatter,
                                        description=help,
                                        add_help=False)
         parser.set_defaults(func=func)
@@ -50,6 +71,7 @@ def node(subs, name, help):
 
 entry = argparse.ArgumentParser(prog="skein",
                                 description="Define and run YARN jobs",
+                                formatter_class=_Formatter,
                                 add_help=False)
 add_help(entry)
 entry.add_argument("--version", action='version',
@@ -58,26 +80,15 @@ entry.add_argument("--version", action='version',
 entry.set_defaults(func=lambda: entry.print_usage())
 entry_subs = entry.add_subparsers(metavar='command')
 
-# Sub command nodes
-daemon = node(entry_subs, 'daemon', 'Manage the skein daemon')
-keystore = node(entry_subs, 'keystore', 'Manage the skein keystore')
-
 # Common arguments
-app_id = arg('app_id', type=str, help='The application id')
-spec = arg('spec', type=str, help='The specification file')
-app_id_optional = arg('--id', dest='app_id', type=str,
-                      help='The application id. If used in a container during '
-                           'a skein job, omit this to have it inferred from '
-                           'the environment')
+app_id = arg('app_id', help='The application id', metavar='APP_ID')
 
 
-def get_client():
-    try:
-        return Client()
-    except ConnectionError:
-        eprint("Skein daemon not found, please run `skein daemon start`")
-        sys.exit(1)
+###################
+# DAEMON COMMANDS #
+###################
 
+daemon = node(entry_subs, 'daemon', 'Manage the skein daemon')
 
 log = arg("--log", default=False,
           help="If provided, the daemon will write logs here.")
@@ -94,7 +105,7 @@ def daemon_start(log=False):
             'address', 'The address of the running daemon')
 def daemon_address():
     try:
-        client = Client(new_daemon=False)
+        client = Client()
         print(client.address)
     except ConnectionError:
         print("No skein daemon is running")
@@ -114,51 +125,64 @@ def daemon_restart(log=False):
     daemon_start(log=log)
 
 
+#####################
+# KEYSTORE COMMANDS #
+#####################
+
+keystore = node(entry_subs, 'keystore', 'Manage the skein keystore')
+
+keystore_app_id = arg('app_id', metavar='APP_ID',
+                      help='The application id. To use in a container during '
+                           'a skein job, pass in "current"')
+
+
 @subcommand(keystore.subs,
             'get', 'Get a value from the keystore',
-            app_id_optional,
+            keystore_app_id,
+            arg('--key', help='The key to get. Omit to the whole keystore.'),
             arg('--wait', action='store_true',
-                help='If true, will block until the key is set'),
-            arg('key', type=str, help='The key to get'))
-def keystore_get(key, wait=False, app_id=None):
-    if app_id is None:
+                help='If true, will block until the key is set'))
+def keystore_get(app_id, key=None, wait=False):
+    if app_id == 'current':
         app = ApplicationClient.current_application()
     else:
         app = get_client().application(app_id)
-    print(app.get_key(key, wait=wait))
+    result = app.get_key(key=key, wait=wait)
+    if isinstance(result, dict):
+        print(yaml.dump(result, default_flow_style=False))
+    else:
+        print(result)
 
 
 @subcommand(keystore.subs,
             'set', 'Set a value in the keystore',
-            app_id_optional,
-            arg('key', type=str, help='The key to set'),
-            arg('val', type=str, help='The value to set'))
-def keystore_set(key, val, app_id=None):
-    if app_id is None:
+            keystore_app_id,
+            arg('--key', help='The key to set'),
+            arg('--value', help='The value to set'))
+def keystore_set(app_id, key=None, value=None):
+    if key is None:
+        eprint("--key is required")
+        sys.exit(1)
+    elif value is None:
+        eprint("--value is required")
+        sys.exit(1)
+
+    if app_id == 'current':
         app = ApplicationClient.current_application()
     else:
         app = get_client().application(app_id)
-    return app.set_key(key, val)
+
+    app.set_key(key, value)
 
 
-@subcommand(entry_subs,
-            'start', 'Start a Skein Job',
-            spec)
-def do_start(spec):
-    client = get_client()
-    app = client.submit(spec)
-    print(app.app_id)
+########################
+# APPLICATION COMMANDS #
+########################
+
+application = node(entry_subs, 'application', 'Manage applications')
 
 
-@subcommand(entry_subs,
-            'status', 'Status of Skein Jobs',
-            app_id_optional,
-            arg("--state", "-s", action='append'))
-def do_status(app_id=None, state=None):
-    client = get_client()
-    apps = client.status(app_id=app_id, state=state)
-    if app_id is not None:
-        apps = [apps]
+def _print_application_status(apps):
     header = ['application_id', 'name', 'state', 'status', 'containers',
               'vcores', 'memory']
     data = []
@@ -170,13 +194,50 @@ def do_status(app_id=None, state=None):
     print(format_table(header, sorted(data)))
 
 
-@subcommand(entry_subs,
-            'inspect', 'Information about a Skein Job',
-            app_id,
-            arg('--service', '-s', type=str, help='Service name'))
-def do_inspect(app_id, service=None):
+@subcommand(application.subs,
+            'submit', 'Submit a Skein Job',
+            arg('spec', help='The specification file'))
+def application_submit(spec):
     client = get_client()
-    resp = client.application(app_id).inspect(service=service)
+    app = client.submit(spec)
+    print(app.app_id)
+
+
+@subcommand(application.subs,
+            'ls', 'List applications',
+            arg("--state", "-s", action='append',
+                help=('Filter by application states. May be repeated '
+                      'to select multiple states.')))
+def application_ls(state=None):
+    client = get_client()
+    apps = client.applications(states=state)
+    _print_application_status(apps)
+
+
+@subcommand(application.subs,
+            'status', 'Status of a Skein application',
+            app_id)
+def application_status(app_id):
+    client = get_client()
+    apps = client.status(app_id)
+    _print_application_status([apps])
+
+
+@subcommand(application.subs,
+            'kill', 'Kill a Skein application',
+            app_id)
+def application_kill(app_id):
+    client = get_client()
+    client.kill(app_id)
+
+
+@subcommand(application.subs,
+            'describe', 'Get specifications for a running skein application',
+            app_id,
+            arg('--service', '-s', help='Service name'))
+def application_describe(app_id, service=None):
+    client = get_client()
+    resp = client.application(app_id).describe(service=service)
     if service is not None:
         out = yaml.dump({service: resp.to_dict(skip_nulls=True)},
                         default_flow_style=False)
@@ -186,19 +247,11 @@ def do_inspect(app_id, service=None):
 
 
 @subcommand(entry_subs,
-            'kill', 'Kill a Skein Job',
-            app_id)
-def do_kill(app_id):
-    client = get_client()
-    client.kill(app_id)
-
-
-@subcommand(entry_subs,
-            'config', 'Initialize skein configuration',
+            'init', 'Initialize skein configuration',
             arg('--force', '-f', action='store_true',
                 help='Overwrite existing configuration'))
-def do_config(force=False):
-    Security.write_security_configuration(force=force)
+def entry_init(force=False):
+    Security.from_new_key_pair(force=force)
 
 
 def main(args=None):
