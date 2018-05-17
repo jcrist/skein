@@ -6,8 +6,8 @@ import sys
 import yaml
 
 from . import __version__
-from .core import (Client, ApplicationClient, start_global_daemon,
-                   stop_global_daemon, init_configuration_directory)
+from .core import (Client, ApplicationClient, Security, start_global_daemon,
+                   stop_global_daemon)
 from .compatibility import ConnectionError
 from .utils import format_table
 
@@ -73,7 +73,7 @@ app_id_optional = arg('--id', dest='app_id', type=str,
 
 def get_client():
     try:
-        return Client(new_daemon=False)
+        return Client()
     except ConnectionError:
         eprint("Skein daemon not found, please run `skein daemon start`")
         sys.exit(1)
@@ -198,7 +198,7 @@ def do_kill(app_id):
             arg('--force', '-f', action='store_true',
                 help='Overwrite existing configuration'))
 def do_config(force=False):
-    init_configuration_directory(force=force)
+    Security.write_security_configuration(force=force)
 
 
 def main(args=None):

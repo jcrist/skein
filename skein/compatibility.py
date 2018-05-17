@@ -15,7 +15,11 @@ if PY2:
     class FileExistsError(OSError):
         pass
 
+    class FileNotFoundError(OSError):
+        pass
+
 else:
     from urllib.parse import urlparse, urlsplit
     ConnectionError = ConnectionError
     FileExistsError = FileExistsError
+    FileNotFoundError = FileNotFoundError

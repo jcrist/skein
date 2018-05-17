@@ -1,17 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
-import json
-import os
-
 from .compatibility import urlparse
-
-
-ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'
-
-CONFIG_DIR = os.path.join(os.path.expanduser('~'), '.skein')
-DAEMON_PATH = os.path.join(CONFIG_DIR, 'daemon')
-CERT_PATH = os.path.join(CONFIG_DIR, 'skein.crt')
-KEY_PATH = os.path.join(CONFIG_DIR, 'skein.pem')
 
 
 def ensure_bytes(x):
@@ -76,22 +65,3 @@ def implements(f):
         g.__doc__ = f.__doc__
         return g
     return decorator
-
-
-def read_daemon():
-    try:
-        with open(DAEMON_PATH, 'r') as fil:
-            data = json.load(fil)
-            address = data['address']
-            pid = data['pid']
-    except Exception:
-        address = pid = None
-    return address, pid
-
-
-def write_daemon(address, pid):
-    # Ensure the config dir exists
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-    # Write to the daemon file
-    with open(DAEMON_PATH, 'w') as fil:
-        json.dump({'address': address, 'pid': pid}, fil)

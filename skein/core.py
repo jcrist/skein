@@ -2,12 +2,14 @@ from __future__ import print_function, division, absolute_import
 
 import datetime
 import glob
+import json
 import os
 import select
 import signal
 import socket
 import struct
 import subprocess
+from collections import namedtuple
 from contextlib import closing, contextmanager
 
 import grpc
@@ -15,13 +17,16 @@ import grpc
 from . import proto
 from .compatibility import PY2, ConnectionError, FileExistsError
 from .model import Job, Service, ApplicationReport
-from .utils import (cached_property, read_daemon, write_daemon,
-                    ADDRESS_ENV_VAR, DAEMON_PATH, format_list, implements,
-                    CERT_PATH, KEY_PATH, CONFIG_DIR)
+from .utils import cached_property, format_list, implements
 
 
 __all__ = ('Client', 'Application', 'ApplicationClient', 'start_global_daemon',
-           'stop_global_daemon')
+           'stop_global_daemon', 'Security')
+
+
+ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'
+CONFIG_DIR = os.path.join(os.path.expanduser('~'), '.skein')
+DAEMON_PATH = os.path.join(CONFIG_DIR, 'daemon')
 
 
 def _find_skein_jar():
@@ -39,6 +44,106 @@ class DaemonError(Exception):
 
 class ApplicationMasterError(Exception):
     pass
+
+
+class Security(namedtuple('Security', ['cert_path', 'key_path'])):
+    """Security configuration.
+
+    Parameters
+    ----------
+    cert_path : str
+        Path to the certificate file in pem format.
+    key_path : str
+        Path to the key file in pem format.
+    """
+    def __new__(cls, cert_path=None, key_path=None):
+        paths = [os.path.abspath(p) for p in (cert_path, key_path)]
+        for path in paths:
+            if not os.path.exists(path):
+                raise FileNotFoundError(path)
+        return super(Security, cls).__new__(cls, *paths)
+
+    @classmethod
+    def default(cls):
+        """The default security configuration."""
+        return cls.from_directory(CONFIG_DIR)
+
+    @classmethod
+    def from_directory(cls, directory):
+        """Create a security object from a directory, relying on standard names
+        for each file."""
+        cert_path = os.path.join(directory, 'skein.crt')
+        key_path = os.path.join(directory, 'skein.pem')
+        return Security(cert_path, key_path)
+
+    @classmethod
+    def write_security_configuration(cls, directory=None, force=False):
+        """Write security configuration.
+
+        This is equivalent to the cli command ``skein config``. Should only
+        need to be called *once* per user upon install. Call again with
+        ``force=True`` to generate new TLS keys and certificates.
+
+        Parameters
+        ----------
+        directory : str, optional
+            The directory to write the configuration to. Defaults to the global
+            skein configuration directory at ``~/.skein/``.
+        force : bool, optional
+            If True, will overwrite existing configuration. Otherwise will
+            error if already configured. Default is False.
+        """
+        from cryptography import x509
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.x509.oid import NameOID
+
+        directory = directory or CONFIG_DIR
+
+        # Create directory if it doesn't exist
+        os.makedirs(directory, exist_ok=True)
+
+        key = rsa.generate_private_key(public_exponent=65537,
+                                       key_size=2048,
+                                       backend=default_backend())
+        key_bytes = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption())
+
+        subject = issuer = x509.Name(
+            [x509.NameAttribute(NameOID.COMMON_NAME, 'skein-internal')])
+        now = datetime.datetime.utcnow()
+        cert = (x509.CertificateBuilder()
+                    .subject_name(subject)
+                    .issuer_name(issuer)
+                    .public_key(key.public_key())
+                    .serial_number(x509.random_serial_number())
+                    .not_valid_before(now)
+                    .not_valid_after(now + datetime.timedelta(days=365))
+                    .sign(key, hashes.SHA256(), default_backend()))
+
+        cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
+
+        cert_path = os.path.join(directory, 'skein.crt')
+        key_path = os.path.join(directory, 'skein.pem')
+
+        if not force:
+            if os.path.exists(cert_path):
+                raise FileExistsError("skein.crt file already exists, use "
+                                      "``force`` to override")
+            elif os.path.exists(key_path):
+                raise FileExistsError("skein.pem file already exists, use "
+                                      "``force`` to override")
+
+        for path, data in [(cert_path, cert_bytes), (key_path, key_bytes)]:
+            with open(path, mode='wb') as fil:
+                fil.write(data)
+                os.chmod(path, 0o600)  # User only read/write permissions
+
+        return cls(cert_path, key_path)
 
 
 @contextmanager
@@ -63,70 +168,13 @@ def convert_errors(daemon=True):
             raise cls(exc.details())
 
 
-def init_configuration_directory(force=False):
-    """Initialize the configuration directory.
+def secure_channel(address, security=None):
+    security = security or Security.default()
 
-    This is equivalent to the cli command ``skein config``. Should only need to
-    be called once per user upon install. Call again with ``force=True`` to
-    generate new TLS keys and certificates.
-
-    Parameters
-    ----------
-    force : bool, optional
-        If True, will overwrite existing configuration. Otherwise will error if
-        already configured. Default is False.
-    """
-    from cryptography import x509
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography.x509.oid import NameOID
-
-    # Create ~/.skein directory
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-
-    key = rsa.generate_private_key(public_exponent=65537,
-                                   key_size=2048,
-                                   backend=default_backend())
-    key_bytes = key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption())
-
-    subject = issuer = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, 'skein-internal')])
-    now = datetime.datetime.utcnow()
-    cert = (x509.CertificateBuilder()
-                .subject_name(subject)
-                .issuer_name(issuer)
-                .public_key(key.public_key())
-                .serial_number(x509.random_serial_number())
-                .not_valid_before(now)
-                .not_valid_after(now + datetime.timedelta(days=365))
-                .sign(key, hashes.SHA256(), default_backend()))
-
-    cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
-
-    if not force:
-        if os.path.exists(CERT_PATH):
-            raise FileExistsError("skein.crt file already exists, use "
-                                  "``force`` to override")
-        elif os.path.exists(KEY_PATH):
-            raise FileExistsError("skein.pem file already exists, use "
-                                  "``force`` to override")
-
-    for path, data in [(CERT_PATH, cert_bytes), (KEY_PATH, key_bytes)]:
-        with open(path, mode='wb') as fil:
-            fil.write(data)
-            os.chmod(path, 0o600)  # User only read/write permissions
-
-
-def secure_channel(address, cert_path=CERT_PATH, key_path=KEY_PATH):
-    with open(cert_path, 'rb') as fil:
+    with open(security.cert_path, 'rb') as fil:
         cert = fil.read()
 
-    with open(key_path, 'rb') as fil:
+    with open(security.key_path, 'rb') as fil:
         key = fil.read()
 
     creds = grpc.ssl_channel_credentials(cert, key, cert)
@@ -135,10 +183,31 @@ def secure_channel(address, cert_path=CERT_PATH, key_path=KEY_PATH):
     return grpc.secure_channel(address, creds, options)
 
 
-def _start_daemon(set_global=False, log=None):
+def _read_daemon():
+    try:
+        with open(DAEMON_PATH, 'r') as fil:
+            data = json.load(fil)
+            address = data['address']
+            pid = data['pid']
+    except Exception:
+        address = pid = None
+    return address, pid
+
+
+def _write_daemon(address, pid):
+    # Ensure the config dir exists
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    # Write to the daemon file
+    with open(DAEMON_PATH, 'w') as fil:
+        json.dump({'address': address, 'pid': pid}, fil)
+
+
+def _start_daemon(security=None, set_global=False, log=None):
+    security = security or Security.default()
+
     jar = _find_skein_jar()
 
-    command = ["yarn", "jar", jar, jar, CERT_PATH, KEY_PATH]
+    command = ["yarn", "jar", jar, jar, security.cert_path, security.key_path]
     if set_global:
         command.append("--daemon")
 
@@ -190,7 +259,7 @@ def _start_daemon(set_global=False, log=None):
 
     if set_global:
         stop_global_daemon()
-        write_daemon(address, proc.pid)
+        _write_daemon(address, proc.pid)
         proc = None
 
     return address, proc
@@ -227,7 +296,7 @@ def stop_global_daemon():
     """Stops the global daemon if running.
 
     No-op if no global daemon is running."""
-    address, pid = read_daemon()
+    address, pid = _read_daemon()
     if address is None:
         return
 
@@ -254,15 +323,18 @@ class Client(object):
         global daemon. Pass in address explicitly to connect to a different
         daemon. To create a new daemon, see ``skein.Client.temporary`` or
         ``skein.start_global_daemon``.
+    security : Security, optional
+        The security configuration to use to communicate with the daemon.
+        Defaults to the global configuration.
     """
-    def __init__(self, address=None):
+    def __init__(self, address=None, security=None):
         if address is None:
-            address, _ = read_daemon()
+            address, _ = _read_daemon()
 
             if address is None:
                 raise ConnectionError("No daemon currently running")
 
-        stub = proto.DaemonStub(secure_channel(address))
+        stub = proto.DaemonStub(secure_channel(address, security))
 
         # Ping server to check connection
         with convert_errors(daemon=True):
@@ -273,7 +345,7 @@ class Client(object):
         self._proc = None
 
     @classmethod
-    def temporary(cls, log=None):
+    def temporary(cls, security=None, log=None):
         """Create a client connected to a temporary daemon process.
 
         It's recommended to use the resulting client as a contextmanager or
@@ -282,6 +354,9 @@ class Client(object):
 
         Parameters
         ----------
+        security : Security, optional
+            The security configuration to use to communicate with the daemon.
+            Defaults to the global configuration.
         log : str, bool, or None, optional
             Sets the logging behavior for the daemon. Values may be a path for
             logs to be written to, ``None`` to log to stdout/stderr, or
@@ -297,9 +372,9 @@ class Client(object):
         ...     print(client.status(app_id='application_1526134340424_0012'))
         ApplicationReport<name='demo'>
         """
-        address, proc = _start_daemon(log=log)
+        address, proc = _start_daemon(security=security, log=log)
         try:
-            client = cls(address=address)
+            client = cls(address=address, security=security)
         except Exception:
             proc.stdin.close()  # kill the daemon on error
             proc.wait()
@@ -442,10 +517,13 @@ class ApplicationClient(object):
     ----------
     address : str
         The address of the application master.
+    security : Security, optional
+        The security configuration to use to communicate with the daemon.
+        Defaults to the global configuration.
     """
-    def __init__(self, address, channel=None):
+    def __init__(self, address, security=None):
         self._address = address
-        self._stub = proto.MasterStub(channel or secure_channel(address))
+        self._stub = proto.MasterStub(secure_channel(address, security))
 
     def get_key(self, key=None, wait=False):
         """Get a key from the keystore.
@@ -516,9 +594,7 @@ class ApplicationClient(object):
         address = os.environ.get(ADDRESS_ENV_VAR)
         if address is None:
             raise ValueError("Address not found at %r" % ADDRESS_ENV_VAR)
-        channel = secure_channel(address,
-                                 cert_path=".skein.crt",
-                                 key_path=".skein.pem")
+        channel = secure_channel(address, Security(".skein.crt", ".skein.pem"))
         return cls(address, channel=channel)
 
 

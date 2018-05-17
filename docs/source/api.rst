@@ -3,20 +3,26 @@ API
 
 .. currentmodule:: skein
 
+
 Global configuration and state
 ------------------------------
 
 .. autofunction:: start_global_daemon
 .. autofunction:: stop_global_daemon
-.. autofunction:: init_configuration_directory
+.. autoclass:: Security
+    :members:
 
 
-Clients
+Client
 -------
 
 .. autoclass:: Client
     :members:
     :inherited-members:
+
+
+Application Client
+------------------
 
 .. autoclass:: ApplicationClient
     :members:
