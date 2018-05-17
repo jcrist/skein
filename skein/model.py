@@ -550,8 +550,8 @@ class Job(Base):
     def from_file(cls, path, format='infer'):
         """Create an instance from a json or yaml file.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         path : str
             The path to the file to load.
         format : {'infer', 'json', 'yaml'}, optional
@@ -572,8 +572,8 @@ class Job(Base):
     def to_file(self, path, format='infer', skip_nulls=True):
         """Write object to a file.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         path : str
             The path to the file to load.
         format : {'infer', 'json', 'yaml'}, optional
