@@ -3,6 +3,10 @@ sudo: false
 dist: trusty
 os: linux
 
+branches:
+    only:
+        - master
+
 env:
     global:
         - secure: "o4isEDi/jgj741PYg2GJDAVtLcr+rgnNUFyAKpTjD8C0zfYH7XK9Sf8M2+ymk2BsmVF47KxSI4L2Zzl86rUeSaGSz5UGPbI9MLlv+pge53Z7uPZAv015xxDCjzn44UfXYzG2G0nu0RZ8spX7wpf8fw6jYaBmKogwxxL2t2ys4PMgHZV/0z9AebUj9Byi125VmoE/nvvLeDogXiLkDrod/vRtltA/IrKaZiirXNSakeuY21mGM7KvU8crKC08xae2HBEUBzrYuW2lpULnxrDm/sOFOfumErcRalnCQVYjntvCKFneGgfsXXqp/JoLoxKaM19ACnW0jIfXJ/3BBo/AHtFeuLj+TE2kWtLVd1aNtmyMmElmmxiALLdTvclQ3UcPnkj0HavDnoppo3BXp7eQp4KFpxfIRETOpR6ZP/0gN+pQSEkMH6Ac8DHbDbqiXUN0quEMN0pbbl/78+sROfIaokHDxp6iqiTCpFKJBRnBBiz1C+36j+WKsVIT7YFYMt/keG3YqUmWj+pfXCL6Ghj4sUTHAgpSp2hSn6Ys6f4iwCpi8LC9O4pxsMJE7xGhPZqyP88XcLGt+R8D8HYrDuViCpSViLrIG66vwCmV92+2DwLWJOPQPXoJVtyZQz4qnfyAuig2rTqofIMMM0KtAWL6/0G+jUoZxds15Ymg5YbIRmE="
