@@ -12,7 +12,7 @@ pip install grpcio-tools
 
 if [[ "$DOCS" == "true" ]]; then
     conda install sphinx numpydoc;
-    pip install doctr;
+    pip install doctr sphinxcontrib.autoprogram;
 fi
 
 pip install -v --no-deps -e .

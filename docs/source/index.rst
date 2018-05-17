@@ -17,3 +17,4 @@ needs.
     :hidden:
 
     api.rst
+    cli.rst
