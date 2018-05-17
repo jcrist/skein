@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>CLI &#8212; Skein 0.0.1+84.g994a550 documentation</title>
+    <title>CLI &#8212; Skein 0.0.1+86.gcd53ccf documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="_static/documentation_options.js"></script>
@@ -50,21 +50,116 @@
 <dd><p>Show version then exit</p>
 </dd></dl>
 
-<div class="section" id="skein-config">
-<h3>skein config<a class="headerlink" href="#skein-config" title="Permalink to this headline">¶</a></h3>
-<p>Initialize skein configuration</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein config [--force] [--help]</span>
+<div class="section" id="skein-application">
+<h3>skein application<a class="headerlink" href="#skein-application" title="Permalink to this headline">¶</a></h3>
+<p>Manage applications</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application [--help] command ...</span>
 </pre></div>
 </div>
 <dl class="option">
-<dt id="cmdoption-skein-config-force">
-<code class="descname">--force</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-f</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-config-force" title="Permalink to this definition">¶</a></dt>
-<dd><p>Overwrite existing configuration</p>
+<dt id="cmdoption-skein-application-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show this help message then exit</p>
+</dd></dl>
+
+</div>
+<div class="section" id="skein-application-describe">
+<h3>skein application describe<a class="headerlink" href="#skein-application-describe" title="Permalink to this headline">¶</a></h3>
+<p>Get specifications for a running skein application</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application describe [--service SERVICE] [--help] APP_ID</span>
+</pre></div>
+</div>
+<dl class="option">
+<dt id="cmdoption-skein-application-describe-arg-app-id">
+<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-describe-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The application id</p>
 </dd></dl>
 
 <dl class="option">
-<dt id="cmdoption-skein-config-help">
-<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-config-help" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-application-describe-service">
+<code class="descname">--service</code><code class="descclassname"> &lt;service&gt;</code><code class="descclassname">, </code><code class="descname">-s</code><code class="descclassname"> &lt;service&gt;</code><a class="headerlink" href="#cmdoption-skein-application-describe-service" title="Permalink to this definition">¶</a></dt>
+<dd><p>Service name</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-application-describe-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-describe-help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show this help message then exit</p>
+</dd></dl>
+
+</div>
+<div class="section" id="skein-application-kill">
+<h3>skein application kill<a class="headerlink" href="#skein-application-kill" title="Permalink to this headline">¶</a></h3>
+<p>Kill a Skein application</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application kill [--help] APP_ID</span>
+</pre></div>
+</div>
+<dl class="option">
+<dt id="cmdoption-skein-application-kill-arg-app-id">
+<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-kill-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The application id</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-application-kill-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-kill-help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show this help message then exit</p>
+</dd></dl>
+
+</div>
+<div class="section" id="skein-application-ls">
+<h3>skein application ls<a class="headerlink" href="#skein-application-ls" title="Permalink to this headline">¶</a></h3>
+<p>List applications</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application ls [--state STATE] [--help]</span>
+</pre></div>
+</div>
+<dl class="option">
+<dt id="cmdoption-skein-application-ls-state">
+<code class="descname">--state</code><code class="descclassname"> &lt;state&gt;</code><code class="descclassname">, </code><code class="descname">-s</code><code class="descclassname"> &lt;state&gt;</code><a class="headerlink" href="#cmdoption-skein-application-ls-state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter by application states. May be repeated to select multiple states.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-application-ls-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-ls-help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show this help message then exit</p>
+</dd></dl>
+
+</div>
+<div class="section" id="skein-application-status">
+<h3>skein application status<a class="headerlink" href="#skein-application-status" title="Permalink to this headline">¶</a></h3>
+<p>Status of a Skein application</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application status [--help] APP_ID</span>
+</pre></div>
+</div>
+<dl class="option">
+<dt id="cmdoption-skein-application-status-arg-app-id">
+<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-status-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The application id</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-application-status-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-status-help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show this help message then exit</p>
+</dd></dl>
+
+</div>
+<div class="section" id="skein-application-submit">
+<h3>skein application submit<a class="headerlink" href="#skein-application-submit" title="Permalink to this headline">¶</a></h3>
+<p>Submit a Skein Job</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application submit [--help] spec</span>
+</pre></div>
+</div>
+<dl class="option">
+<dt id="cmdoption-skein-application-submit-arg-spec">
+<code class="descname">spec</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-submit-arg-spec" title="Permalink to this definition">¶</a></dt>
+<dd><p>The specification file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-application-submit-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-submit-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -146,27 +241,21 @@
 </dd></dl>
 
 </div>
-<div class="section" id="skein-inspect">
-<h3>skein inspect<a class="headerlink" href="#skein-inspect" title="Permalink to this headline">¶</a></h3>
-<p>Information about a Skein Job</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein inspect [--service SERVICE] [--help] app_id</span>
+<div class="section" id="skein-init">
+<h3>skein init<a class="headerlink" href="#skein-init" title="Permalink to this headline">¶</a></h3>
+<p>Initialize skein configuration</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein init [--force] [--help]</span>
 </pre></div>
 </div>
 <dl class="option">
-<dt id="cmdoption-skein-inspect-arg-app-id">
-<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-inspect-arg-app-id" title="Permalink to this definition">¶</a></dt>
-<dd><p>The application id</p>
+<dt id="cmdoption-skein-init-force">
+<code class="descname">--force</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-f</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-init-force" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwrite existing configuration</p>
 </dd></dl>
 
 <dl class="option">
-<dt id="cmdoption-skein-inspect-service">
-<code class="descname">--service</code><code class="descclassname"> &lt;service&gt;</code><code class="descclassname">, </code><code class="descname">-s</code><code class="descclassname"> &lt;service&gt;</code><a class="headerlink" href="#cmdoption-skein-inspect-service" title="Permalink to this definition">¶</a></dt>
-<dd><p>Service name</p>
-</dd></dl>
-
-<dl class="option">
-<dt id="cmdoption-skein-inspect-help">
-<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-inspect-help" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-init-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-init-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -187,19 +276,19 @@
 <div class="section" id="skein-keystore-get">
 <h3>skein keystore get<a class="headerlink" href="#skein-keystore-get" title="Permalink to this headline">¶</a></h3>
 <p>Get a value from the keystore</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein keystore get [--id APP_ID] [--wait] [--help] key</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein keystore get [--key KEY] [--wait] [--help] APP_ID</span>
 </pre></div>
 </div>
 <dl class="option">
-<dt id="cmdoption-skein-keystore-get-arg-key">
-<code class="descname">key</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-get-arg-key" title="Permalink to this definition">¶</a></dt>
-<dd><p>The key to get</p>
+<dt id="cmdoption-skein-keystore-get-arg-app-id">
+<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-get-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The application id. To use in a container during a skein job, pass in “current”</p>
 </dd></dl>
 
 <dl class="option">
-<dt id="cmdoption-skein-keystore-get-id">
-<code class="descname">--id</code><code class="descclassname"> &lt;app_id&gt;</code><a class="headerlink" href="#cmdoption-skein-keystore-get-id" title="Permalink to this definition">¶</a></dt>
-<dd><p>The application id. If used in a container during a skein job, omit this to have it inferred from the environment</p>
+<dt id="cmdoption-skein-keystore-get-key">
+<code class="descname">--key</code><code class="descclassname"> &lt;key&gt;</code><a class="headerlink" href="#cmdoption-skein-keystore-get-key" title="Permalink to this definition">¶</a></dt>
+<dd><p>The key to get. Omit to the whole keystore.</p>
 </dd></dl>
 
 <dl class="option">
@@ -218,92 +307,30 @@
 <div class="section" id="skein-keystore-set">
 <h3>skein keystore set<a class="headerlink" href="#skein-keystore-set" title="Permalink to this headline">¶</a></h3>
 <p>Set a value in the keystore</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein keystore set [--id APP_ID] [--help] key val</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein keystore set [--key KEY] [--value VALUE] [--help] APP_ID</span>
 </pre></div>
 </div>
 <dl class="option">
-<dt id="cmdoption-skein-keystore-set-arg-key">
-<code class="descname">key</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-set-arg-key" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-keystore-set-arg-app-id">
+<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-set-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The application id. To use in a container during a skein job, pass in “current”</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-keystore-set-key">
+<code class="descname">--key</code><code class="descclassname"> &lt;key&gt;</code><a class="headerlink" href="#cmdoption-skein-keystore-set-key" title="Permalink to this definition">¶</a></dt>
 <dd><p>The key to set</p>
 </dd></dl>
 
 <dl class="option">
-<dt id="cmdoption-skein-keystore-set-arg-val">
-<code class="descname">val</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-set-arg-val" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-keystore-set-value">
+<code class="descname">--value</code><code class="descclassname"> &lt;value&gt;</code><a class="headerlink" href="#cmdoption-skein-keystore-set-value" title="Permalink to this definition">¶</a></dt>
 <dd><p>The value to set</p>
-</dd></dl>
-
-<dl class="option">
-<dt id="cmdoption-skein-keystore-set-id">
-<code class="descname">--id</code><code class="descclassname"> &lt;app_id&gt;</code><a class="headerlink" href="#cmdoption-skein-keystore-set-id" title="Permalink to this definition">¶</a></dt>
-<dd><p>The application id. If used in a container during a skein job, omit this to have it inferred from the environment</p>
 </dd></dl>
 
 <dl class="option">
 <dt id="cmdoption-skein-keystore-set-help">
 <code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-set-help" title="Permalink to this definition">¶</a></dt>
-<dd><p>Show this help message then exit</p>
-</dd></dl>
-
-</div>
-<div class="section" id="skein-kill">
-<h3>skein kill<a class="headerlink" href="#skein-kill" title="Permalink to this headline">¶</a></h3>
-<p>Kill a Skein Job</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kill [--help] app_id</span>
-</pre></div>
-</div>
-<dl class="option">
-<dt id="cmdoption-skein-kill-arg-app-id">
-<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-kill-arg-app-id" title="Permalink to this definition">¶</a></dt>
-<dd><p>The application id</p>
-</dd></dl>
-
-<dl class="option">
-<dt id="cmdoption-skein-kill-help">
-<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-kill-help" title="Permalink to this definition">¶</a></dt>
-<dd><p>Show this help message then exit</p>
-</dd></dl>
-
-</div>
-<div class="section" id="skein-start">
-<h3>skein start<a class="headerlink" href="#skein-start" title="Permalink to this headline">¶</a></h3>
-<p>Start a Skein Job</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein start [--help] spec</span>
-</pre></div>
-</div>
-<dl class="option">
-<dt id="cmdoption-skein-start-arg-spec">
-<code class="descname">spec</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-start-arg-spec" title="Permalink to this definition">¶</a></dt>
-<dd><p>The specification file</p>
-</dd></dl>
-
-<dl class="option">
-<dt id="cmdoption-skein-start-help">
-<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-start-help" title="Permalink to this definition">¶</a></dt>
-<dd><p>Show this help message then exit</p>
-</dd></dl>
-
-</div>
-<div class="section" id="skein-status">
-<h3>skein status<a class="headerlink" href="#skein-status" title="Permalink to this headline">¶</a></h3>
-<p>Status of Skein Jobs</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein status [--id APP_ID] [--state STATE] [--help]</span>
-</pre></div>
-</div>
-<dl class="option">
-<dt id="cmdoption-skein-status-id">
-<code class="descname">--id</code><code class="descclassname"> &lt;app_id&gt;</code><a class="headerlink" href="#cmdoption-skein-status-id" title="Permalink to this definition">¶</a></dt>
-<dd><p>The application id. If used in a container during a skein job, omit this to have it inferred from the environment</p>
-</dd></dl>
-
-<dl class="option">
-<dt id="cmdoption-skein-status-state">
-<code class="descname">--state</code><code class="descclassname"> &lt;state&gt;</code><code class="descclassname">, </code><code class="descname">-s</code><code class="descclassname"> &lt;state&gt;</code><a class="headerlink" href="#cmdoption-skein-status-state" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="option">
-<dt id="cmdoption-skein-status-help">
-<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-status-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -352,19 +379,21 @@
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">CLI</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#skein">skein</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#skein-config">skein config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#skein-application">skein application</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#skein-application-describe">skein application describe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#skein-application-kill">skein application kill</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#skein-application-ls">skein application ls</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#skein-application-status">skein application status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#skein-application-submit">skein application submit</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#skein-daemon">skein daemon</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#skein-daemon-address">skein daemon address</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#skein-daemon-restart">skein daemon restart</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#skein-daemon-start">skein daemon start</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#skein-daemon-stop">skein daemon stop</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#skein-inspect">skein inspect</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#skein-init">skein init</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#skein-keystore">skein keystore</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#skein-keystore-get">skein keystore get</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#skein-keystore-set">skein keystore set</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#skein-kill">skein kill</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#skein-start">skein start</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#skein-status">skein status</a></li>
 </ul>
 </li>
 </ul>

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API &#8212; Skein 0.0.1+84.g994a550 documentation</title>
+    <title>API &#8212; Skein 0.0.1+86.gcd53ccf documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="_static/documentation_options.js"></script>
@@ -100,17 +100,19 @@ turn off logging completely. Default is <code class="docutils literal notranslat
 <dl class="classmethod">
 <dt id="skein.Security.from_directory">
 <em class="property">classmethod </em><code class="descname">from_directory</code><span class="sig-paren">(</span><em>directory</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_directory" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a security object from a directory, relying on standard names
-for each file.</p>
+<dd><p>Create a security object from a directory.</p>
+<p>Relies on standard names for each file (<code class="docutils literal notranslate"><span class="pre">skein.crt</span></code> and
+<code class="docutils literal notranslate"><span class="pre">skein.pem</span></code>).</p>
 </dd></dl>
 
 <dl class="classmethod">
-<dt id="skein.Security.write_security_configuration">
-<em class="property">classmethod </em><code class="descname">write_security_configuration</code><span class="sig-paren">(</span><em>directory=None</em>, <em>force=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.write_security_configuration" title="Permalink to this definition">¶</a></dt>
-<dd><p>Write security configuration.</p>
-<p>This is equivalent to the cli command <code class="docutils literal notranslate"><span class="pre">skein</span> <span class="pre">config</span></code>. Should only
-need to be called <em>once</em> per user upon install. Call again with
-<code class="docutils literal notranslate"><span class="pre">force=True</span></code> to generate new TLS keys and certificates.</p>
+<dt id="skein.Security.from_new_key_pair">
+<em class="property">classmethod </em><code class="descname">from_new_key_pair</code><span class="sig-paren">(</span><em>directory=None</em>, <em>force=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_new_key_pair" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Security object from a new certificate/key pair.</p>
+<p>This is equivalent to the cli command <code class="docutils literal notranslate"><span class="pre">skein</span> <span class="pre">init</span></code> with the option to
+specify an alternate directory <em>if needed</em>. Should only need to be
+called once per user upon install. Call again with <code class="docutils literal notranslate"><span class="pre">force=True</span></code> to
+generate new TLS keys and certificates.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -186,6 +188,40 @@ Defaults to the global configuration.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="skein.Client.applications">
+<code class="descname">applications</code><span class="sig-paren">(</span><em>states=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.applications" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the status of current skein applications.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>states</strong> <span class="classifier-delimiter">:</span> <span class="classifier">sequence, optional</span></dt>
+<dd><p class="first last">If provided, applications will be filtered to these application
+states. Default is <code class="docutils literal notranslate"><span class="pre">['SUBMITTED',</span> <span class="pre">'ACCEPTED',</span> <span class="pre">'RUNNING']</span></code>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>reports</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <a href="#id1"><span class="problematic" id="id2">``</span></a>ApplicationReport``s</span></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>Get all the finished and failed applications</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;FINISHED&#39;</span><span class="p">,</span> <span class="s1">&#39;FAILED&#39;</span><span class="p">])</span>
+<span class="go">[ApplicationReport&lt;name=&#39;demo&#39;&gt;,</span>
+<span class="go"> ApplicationReport&lt;name=&#39;dask&#39;&gt;,</span>
+<span class="go"> ApplicationReport&lt;name=&#39;demo&#39;&gt;]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
 <dt id="skein.Client.close">
 <code class="descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.close" title="Permalink to this definition">¶</a></dt>
 <dd><p>If connected to a temporary daemon, closes the daemon.</p>
@@ -219,27 +255,21 @@ Defaults to the global configuration.</p>
 
 <dl class="method">
 <dt id="skein.Client.status">
-<code class="descname">status</code><span class="sig-paren">(</span><em>app_id=None</em>, <em>state=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.status" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the status of a skein application or applications.</p>
+<code class="descname">status</code><span class="sig-paren">(</span><em>app_id</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the status of a skein application.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>app_id</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dt><strong>app_id</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
 <dd><p class="first last">A single application id to check the status of.</p>
-</dd>
-<dt><strong>state</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str or sequence, optional</span></dt>
-<dd><p class="first last">If provided, applications will be filtered to these application
-states.</p>
 </dd>
 </dl>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>Either a single ``ApplicationReport`` (in the case of a provided</strong></dt>
-<dd></dd>
-<dt><strong>``app_id``), or a list of ``ApplicationReport``s.</strong></dt>
+<dt><strong>report</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ApplicationReport</span></dt>
 <dd></dd>
 </dl>
 </td>
@@ -247,16 +277,9 @@ states.</p>
 </tbody>
 </table>
 <p class="rubric">Examples</p>
-<p>To get the status of a single application</p>
+<p>Get the status of a single application</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">app_id</span><span class="o">=</span><span class="s1">&#39;application_1526134340424_0012&#39;</span><span class="p">)</span>
 <span class="go">ApplicationReport&lt;name=&#39;demo&#39;&gt;</span>
-</pre></div>
-</div>
-<p>To get all the finished and failed applications</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;FINISHED&#39;</span><span class="p">,</span> <span class="s1">&#39;FAILED&#39;</span><span class="p">])</span>
-<span class="go">[ApplicationReport&lt;name=&#39;demo&#39;&gt;,</span>
-<span class="go"> ApplicationReport&lt;name=&#39;dask&#39;&gt;,</span>
-<span class="go"> ApplicationReport&lt;name=&#39;demo&#39;&gt;]</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -362,30 +385,8 @@ container in a job.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="skein.ApplicationClient.get_key">
-<code class="descname">get_key</code><span class="sig-paren">(</span><em>key=None</em>, <em>wait=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.get_key" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get a key from the keystore.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">The key to get. If not provided, returns the whole keystore.</p>
-</dd>
-<dt><strong>wait</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
-<dd><p class="first last">If true, will block until the key is set. Default is False.</p>
-</dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="skein.ApplicationClient.inspect">
-<code class="descname">inspect</code><span class="sig-paren">(</span><em>service=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.inspect" title="Permalink to this definition">¶</a></dt>
+<dt id="skein.ApplicationClient.describe">
+<code class="descname">describe</code><span class="sig-paren">(</span><em>service=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.describe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Information about the running job.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -402,6 +403,28 @@ container in a job.</p>
 <dt><strong>spec</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Job or Service</span></dt>
 <dd><p class="first last">Returns a service if <code class="docutils literal notranslate"><span class="pre">service</span></code> is specified, otherwise returns
 the whole <code class="docutils literal notranslate"><span class="pre">Job</span></code>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.ApplicationClient.get_key">
+<code class="descname">get_key</code><span class="sig-paren">(</span><em>key=None</em>, <em>wait=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.get_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a key from the keystore.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The key to get. If not provided, returns the whole keystore.</p>
+</dd>
+<dt><strong>wait</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If true, will block until the key is set. Default is False.</p>
 </dd>
 </dl>
 </td>
