@@ -78,7 +78,7 @@ class build_java(Command):
         # This will be picked up as package_data later
         self.mkpath(SKEIN_JAVA_DIR)
         code = subprocess.call(['mvn', '-f', os.path.join(JAVA_DIR, 'pom.xml'),
-                                'package'])
+                                '--batch-mode', 'package'])
         if code:
             sys.exit(code)
 
