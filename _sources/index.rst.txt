@@ -1,7 +1,7 @@
 Skein
 =====
 
-.. image:: _static/yarn.jpg
+.. image:: /_images/yarn.jpg
     :width: 90 %
     :align: center
     :alt: skeins of yarn
