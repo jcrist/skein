@@ -1,4 +1,5 @@
 ./_sources/api.rst.txt
+./_sources/cli.rst.txt
 ./_sources/index.rst.txt
 ./_static/ajax-loader.gif
 ./_static/alabaster.css
@@ -24,6 +25,7 @@
 ./_static/up.png
 ./_static/websupport.js
 ./api.html
+./cli.html
 ./genindex.html
 ./index.html
 ./objects.inv
