@@ -10,12 +10,13 @@ import socket
 import struct
 import subprocess
 from collections import namedtuple
-from contextlib import closing, contextmanager
+from contextlib import closing
 
 import grpc
 
 from . import proto
-from .compatibility import PY2, ConnectionError, FileExistsError
+from .compatibility import PY2, ConnectionError, FileNotFoundError
+from .exceptions import context, convert_errors, NOT_INITIALIZED
 from .model import Job, Service, ApplicationReport
 from .utils import cached_property, format_list, implements
 
@@ -33,17 +34,9 @@ def _find_skein_jar():
     this_dir = os.path.dirname(os.path.relpath(__file__))
     jars = glob.glob(os.path.join(this_dir, 'java', 'skein-*.jar'))
     if not jars:
-        raise ValueError("Failed to find the skein jar file")
+        raise context.FileNotFoundError("Failed to find the skein jar file")
     assert len(jars) == 1
     return jars[0]
-
-
-class DaemonError(Exception):
-    pass
-
-
-class ApplicationMasterError(Exception):
-    pass
 
 
 class Security(namedtuple('Security', ['cert_path', 'key_path'])):
@@ -66,7 +59,11 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
     @classmethod
     def default(cls):
         """The default security configuration."""
-        return cls.from_directory(CONFIG_DIR)
+        try:
+            return cls.from_directory(CONFIG_DIR)
+        except FileNotFoundError:
+            pass
+        raise NOT_INITIALIZED
 
     @classmethod
     def from_directory(cls, directory):
@@ -138,8 +135,9 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
                 if force:
                     os.unlink(path)
                 else:
-                    raise FileExistsError("%r file already exists, use "
-                                          "``force`` to override" % name)
+                    raise context.FileExistsError(
+                        "%r file already exists, use `force` to overwrite" % name,
+                        "%r file already exists, use `--force` to overwrite" % name)
 
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
         for path, data in [(cert_path, cert_bytes), (key_path, key_bytes)]:
@@ -147,28 +145,6 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
                 fil.write(data)
 
         return cls(cert_path, key_path)
-
-
-@contextmanager
-def convert_errors(daemon=True):
-    exc = None
-    try:
-        yield
-    except grpc.RpcError as _exc:
-        exc = _exc
-
-    if exc is not None:
-        code = exc.code()
-        if code == grpc.StatusCode.UNAVAILABLE:
-            server_name = 'daemon' if daemon else 'application master'
-            raise ConnectionError("Unable to connect to %s" % server_name)
-        elif code in (grpc.StatusCode.INVALID_ARGUMENT,
-                      grpc.StatusCode.NOT_FOUND,
-                      grpc.StatusCode.ALREADY_EXISTS):
-            raise ValueError(exc.details())
-        else:
-            cls = DaemonError if daemon else ApplicationMasterError
-            raise cls(exc.details())
 
 
 def secure_channel(address, security=None):
@@ -471,8 +447,8 @@ class Client(object):
                      'NEW_SAVING', 'RUNNING', 'SUBMITTED'}
             invalid = states.difference(valid)
             if invalid:
-                raise ValueError("Invalid application states:\n"
-                                 "%s" % format_list(invalid))
+                raise context.ValueError("Invalid application states:\n"
+                                         "%s" % format_list(invalid))
             states = list(states)
         else:
             states = ('SUBMITTED', 'ACCEPTED', 'RUNNING')
@@ -563,7 +539,7 @@ class ApplicationClient(object):
             The value to set.
         """
         if not len(key):
-            raise ValueError("len(key) must be > 0")
+            raise context.ValueError("key length must be > 0")
 
         with convert_errors(daemon=False):
             self._stub.keystoreSet(proto.SetKeyRequest(key=key, val=value))
@@ -600,7 +576,8 @@ class ApplicationClient(object):
         """
         address = os.environ.get(ADDRESS_ENV_VAR)
         if address is None:
-            raise ValueError("Address not found at %r" % ADDRESS_ENV_VAR)
+            raise context.ValueError("Address not found at "
+                                     "%r" % ADDRESS_ENV_VAR)
         channel = secure_channel(address, Security(".skein.crt", ".skein.pem"))
         return cls(address, channel=channel)
 
@@ -639,6 +616,7 @@ class Application(object):
     def _am_client(self):
         s = self._client.status(self.app_id)
         if s.state != 'RUNNING':
-            raise ValueError("This operation requires state: RUNNING. "
-                             "Current state: %s." % s.state)
+            raise context.ValueError("This operation requires application "
+                                     "state: RUNNING.  Current state: "
+                                     "%s." % s.state)
         return ApplicationClient('%s:%d' % (s.host, s.port))

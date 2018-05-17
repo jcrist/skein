@@ -1,7 +1,9 @@
 from __future__ import print_function, division, absolute_import
 
 import argparse
+import os
 import sys
+import traceback
 
 import yaml
 
@@ -9,6 +11,8 @@ from . import __version__
 from .core import (Client, ApplicationClient, Security, start_global_daemon,
                    stop_global_daemon)
 from .compatibility import ConnectionError
+from .exceptions import context, SkeinError
+from .model import Job
 from .utils import format_table
 
 
@@ -24,16 +28,11 @@ class _Formatter(argparse.HelpFormatter):
         pass
 
 
-def eprint(x):
-    print(x, file=sys.stderr)
-
-
-def get_client():
-    try:
-        return Client()
-    except ConnectionError:
-        eprint("Skein daemon not found, please run `skein daemon start`")
-        sys.exit(1)
+def fail(msg, prefix=True):
+    if prefix:
+        msg = 'Error: %s' % msg
+    print(msg, file=sys.stderr)
+    sys.exit(1)
 
 
 def add_help(parser):
@@ -146,7 +145,7 @@ def keystore_get(app_id, key=None, wait=False):
     if app_id == 'current':
         app = ApplicationClient.current_application()
     else:
-        app = get_client().application(app_id)
+        app = Client().application(app_id)
     result = app.get_key(key=key, wait=wait)
     if isinstance(result, dict):
         print(yaml.dump(result, default_flow_style=False))
@@ -161,16 +160,14 @@ def keystore_get(app_id, key=None, wait=False):
             arg('--value', help='The value to set'))
 def keystore_set(app_id, key=None, value=None):
     if key is None:
-        eprint("--key is required")
-        sys.exit(1)
+        fail("--key is required")
     elif value is None:
-        eprint("--value is required")
-        sys.exit(1)
+        fail("--value is required")
 
     if app_id == 'current':
         app = ApplicationClient.current_application()
     else:
-        app = get_client().application(app_id)
+        app = Client().application(app_id)
 
     app.set_key(key, value)
 
@@ -198,8 +195,15 @@ def _print_application_status(apps):
             'submit', 'Submit a Skein Job',
             arg('spec', help='The specification file'))
 def application_submit(spec):
-    client = get_client()
-    app = client.submit(spec)
+    if not os.path.exists(spec):
+        fail("No job specification file at %r" % spec)
+    try:
+        job = Job.from_file(spec)
+    except SkeinError as exc:
+        # Prettify expected errors, let rest bubble up
+        fail('In file %r, %s' % (spec, exc.cli_message()))
+
+    app = Client().submit(job)
     print(app.app_id)
 
 
@@ -209,8 +213,7 @@ def application_submit(spec):
                 help=('Filter by application states. May be repeated '
                       'to select multiple states.')))
 def application_ls(state=None):
-    client = get_client()
-    apps = client.applications(states=state)
+    apps = Client().applications(states=state)
     _print_application_status(apps)
 
 
@@ -218,8 +221,7 @@ def application_ls(state=None):
             'status', 'Status of a Skein application',
             app_id)
 def application_status(app_id):
-    client = get_client()
-    apps = client.status(app_id)
+    apps = Client().status(app_id)
     _print_application_status([apps])
 
 
@@ -227,8 +229,7 @@ def application_status(app_id):
             'kill', 'Kill a Skein application',
             app_id)
 def application_kill(app_id):
-    client = get_client()
-    client.kill(app_id)
+    Client().kill(app_id)
 
 
 @subcommand(application.subs,
@@ -236,7 +237,7 @@ def application_kill(app_id):
             app_id,
             arg('--service', '-s', help='Service name'))
 def application_describe(app_id, service=None):
-    client = get_client()
+    client = Client()
     resp = client.application(app_id).describe(service=service)
     if service is not None:
         out = yaml.dump({service: resp.to_dict(skip_nulls=True)},
@@ -256,7 +257,16 @@ def entry_init(force=False):
 
 def main(args=None):
     kwargs = vars(entry.parse_args(args=args))
-    kwargs.pop('func')(**kwargs)
+    func = kwargs.pop('func')
+    try:
+        with context.set_cli():
+            func(**kwargs)
+    except SkeinError as exc:
+        fail(exc.cli_message())
+    except ConnectionError as exc:
+        fail("Skein daemon not found, please run `skein daemon start`")
+    except Exception as exc:
+        fail("Unexpected Error:\n%s" % traceback.format_exc(), prefix=False)
 
 
 if __name__ == '__main__':

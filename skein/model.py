@@ -8,6 +8,7 @@ import yaml
 
 from . import proto as _proto
 from .compatibility import urlparse
+from .exceptions import context
 from .utils import implements, format_list
 
 __all__ = ('Job', 'Service', 'Resources', 'File', 'ResourceUsageReport',
@@ -68,8 +69,9 @@ def _infer_format(path, format='infer'):
         elif ext in {'.yaml', '.yml'}:
             format = 'yaml'
         else:
-            raise ValueError("Can't infer format from filepath %r, please "
-                             "specify manually" % path)
+            raise context.ValueError("Can't infer format from filepath %r, "
+                                     "please specify manually" % path,
+                                     "Unsupported file type %r" % ext)
     elif format not in {'json', 'yaml'}:
         raise ValueError("Unknown file format: %r" % format)
     return format
@@ -89,23 +91,23 @@ class Base(object):
 
     def _assign_required(self, name, val):
         if val is required:
-            raise TypeError("parameter %r is required but wasn't "
-                            "provided" % name)
+            raise context.TypeError("parameter %r is required but wasn't "
+                                    "provided" % name)
         setattr(self, name, val)
 
     @classmethod
     def _check_keys(cls, obj, keys=None):
         keys = keys or cls._get_params()
         if not isinstance(obj, dict):
-            raise TypeError("Expected mapping for %r" % cls.__name__)
+            raise context.TypeError("Expected mapping for %r" % cls.__name__)
         extra = set(obj).difference(keys)
         if extra:
-            raise ValueError("Unknown extra keys for %s:\n"
-                             "%s" % (cls.__name__, format_list(extra)))
+            raise context.ValueError("Unknown extra keys for %s:\n"
+                                     "%s" % (cls.__name__, format_list(extra)))
 
     def _check_in_set(self, field, values):
         if getattr(self, field) not in values:
-            raise ValueError("%s must be in %r" % (field, values))
+            raise context.ValueError("%s must be in %r" % (field, values))
 
     def _check_is_type(self, field, type, nullable=False):
         val = getattr(self, field)
@@ -114,7 +116,7 @@ class Base(object):
                 msg = "%s must be an instance of %s, or None"
             else:
                 msg = "%s must be an instance of %s"
-            raise TypeError(msg % (field, type.__name__))
+            raise context.TypeError(msg % (field, type.__name__))
 
     def _check_is_list_of(self, field, type, nullable=False):
         val = getattr(self, field)
@@ -123,7 +125,7 @@ class Base(object):
                 msg = "%s must be a list of %s, or None"
             else:
                 msg = "%s must be a list of %s"
-            raise TypeError(msg % (field, type.__name__))
+            raise context.TypeError(msg % (field, type.__name__))
 
     def _check_is_dict_of(self, field, key, val, nullable=False):
         attr = getattr(self, field)
@@ -132,13 +134,13 @@ class Base(object):
                 msg = "%s must be a dict of %s -> %s, or None"
             else:
                 msg = "%s must be a list of %s -> %s"
-            raise TypeError(msg % (field, key.__name__, val.__name__))
+            raise context.TypeError(msg % (field, key.__name__, val.__name__))
 
     def _check_is_bounded_int(self, field, min=0, nullable=False):
         x = getattr(self, field)
         self._check_is_type(field, int, nullable=nullable)
         if x is not None and x < min:
-            raise ValueError("%s must be >= %d" % (field, min))
+            raise context.ValueError("%s must be >= %d" % (field, min))
 
     @classmethod
     def from_protobuf(cls, msg):
@@ -274,7 +276,7 @@ class File(Base):
     @source.setter
     def source(self, val):
         if not isinstance(val, str):
-            raise TypeError("'source' must be an instance of 'str'")
+            raise context.TypeError("'source' must be an instance of 'str'")
         self._source = self._normpath(val)
 
     @staticmethod
@@ -314,8 +316,8 @@ class File(Base):
         cls._check_keys(obj)
         if _origin:
             if 'source' not in obj:
-                raise TypeError("parameter 'source' is required but wasn't "
-                                "provided")
+                raise context.TypeError("parameter 'source' is required but "
+                                        "wasn't provided")
             obj = dict(obj)
             obj['source'] = cls._normpath(obj['source'], _origin)
         return cls(**obj)
@@ -338,11 +340,11 @@ class File(Base):
     @classmethod
     def _parse_file_spec(cls, obj, _origin=None):
         if not isinstance(obj, dict):
-            raise TypeError("Expected mapping for File")
+            raise context.TypeError("Expected mapping for File")
 
         if 'file' in obj:
             if 'archive' in obj:
-                raise ValueError("Both 'archive' and 'file' specified")
+                raise context.ValueError("Both 'archive' and 'file' specified")
             type = 'file'
         elif 'archive' in obj:
             type = 'archive'
@@ -363,8 +365,8 @@ class File(Base):
             source = urlparse(source).path
             base, name = os.path.split(source)
             if name is None:
-                raise ValueError("Distributed files must be files/archives, "
-                                 "not directories")
+                raise context.ValueError("Distributed files must be "
+                                         "files/archives, not directories")
             dest = name
             if type == 'ARCHIVE':
                 for ext in ['.zip', '.tar.gz', '.tgz']:
@@ -439,7 +441,7 @@ class Service(Base):
 
         self._check_is_list_of('commands', str)
         if not self.commands:
-            raise ValueError("There must be at least one command")
+            raise context.ValueError("There must be at least one command")
 
         self._check_is_list_of('depends', str)
 
@@ -517,7 +519,7 @@ class Job(Base):
         self._check_is_type('queue', str, nullable=True)
         self._check_is_dict_of('services', str, Service)
         if not self.services:
-            raise ValueError("There must be at least one service")
+            raise context.ValueError("There must be at least one service")
         for s in self.services.values():
             s._validate()
 
