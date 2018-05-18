@@ -47,3 +47,15 @@ Job Specification
 .. autoclass:: Resources
     :members:
     :inherited-members:
+
+
+Application Responses
+---------------------
+
+.. autoclass:: skein.model.ApplicationReport
+    :members:
+    :inherited-members:
+
+.. autoclass:: skein.model.ResourceUsageReport
+    :members:
+    :inherited-members:

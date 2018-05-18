@@ -597,6 +597,25 @@ def _to_camel_case(x):
 
 
 class ResourceUsageReport(Base):
+    """Resource usage report.
+
+    Parameters
+    ----------
+    memory_seconds : int
+        The total amount of memory (in MBs) the application has allocated times
+        the number of seconds the application has been running.
+    vcore_seconds : int
+        The total number of vcores that the application has allocated times the
+        number of seconds the application has been running.
+    num_used_containers : int
+        Current number of containers in use.
+    needed_resources : Resources
+        The needed resources.
+    reserved_resources : Resources
+        The reserved resources.
+    used_resources : Resources
+        The used resources.
+    """
     __slots__ = ('memory_seconds', 'vcore_seconds', 'num_used_containers',
                  'needed_resources', 'reserved_resources', 'used_resources')
     _protobuf_cls = _proto.ResourceUsageReport
@@ -651,6 +670,41 @@ class ResourceUsageReport(Base):
 
 
 class ApplicationReport(Base):
+    """Report of application status.
+
+    Parameters
+    ----------
+    id : str
+        The application ID.
+    name : str
+        The application name.
+    user : str
+        The user that started the application.
+    queue : str
+        The application queue.
+    tags : list of strings
+        The application tags.
+    host : str
+        The host the application master is running on.
+    port : int
+        The rpc port for the application master
+    tracking_url : str
+        The application tracking url.
+    state : str
+        The application state.
+    final_status : str
+        The application final status.
+    progress : float
+        The progress of the application, from 0.0 to 1.0.
+    usage : ResourceUsageReport
+        Report on application resource usage.
+    diagnostics : str
+        The diagnostic message in the case of failures.
+    start_time : datetime
+        The application start time.
+    finish_time : datetime
+        The application finish time.
+    """
     __slots__ = ('id', 'name', 'user', 'queue', 'tags', 'host', 'port',
                  'tracking_url', 'state', 'final_status', 'progress', 'usage',
                  'diagnostics', 'start_time', 'finish_time')

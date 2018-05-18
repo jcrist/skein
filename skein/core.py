@@ -430,7 +430,7 @@ class Client(object):
 
         Returns
         -------
-        reports : list of ``ApplicationReport``s
+        reports : list of ApplicationReport
 
         Examples
         --------
