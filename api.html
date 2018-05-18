@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API &#8212; Skein 0.0.1+86.gcd53ccf documentation</title>
+    <title>API &#8212; Skein 0.0.1+89.g7c6f575 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="_static/documentation_options.js"></script>
@@ -196,7 +196,7 @@ Defaults to the global configuration.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>states</strong> <span class="classifier-delimiter">:</span> <span class="classifier">sequence, optional</span></dt>
+<dt><strong>states</strong> <span class="classifier-delimiter">:</span> <span class="classifier">sequence of ApplicationState, optional</span></dt>
 <dd><p class="first last">If provided, applications will be filtered to these application
 states. Default is <code class="docutils literal notranslate"><span class="pre">['SUBMITTED',</span> <span class="pre">'ACCEPTED',</span> <span class="pre">'RUNNING']</span></code>.</p>
 </dd>
@@ -204,7 +204,7 @@ states. Default is <code class="docutils literal notranslate"><span class="pre">
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>reports</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <a href="#id1"><span class="problematic" id="id2">``</span></a>ApplicationReport``s</span></dt>
+<dt><strong>reports</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of ApplicationReport</span></dt>
 <dd></dd>
 </dl>
 </td>
@@ -675,8 +675,69 @@ service will not be started until these keys are present.</p>
 </dd></dl>
 
 <dl class="class">
+<dt id="skein.FileType">
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">FileType</code><a class="headerlink" href="#skein.FileType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enum of possible file types to distribute with the application.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Attributes:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>FILE</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FileType</span></dt>
+<dd><p class="first last">Regular file</p>
+</dd>
+<dt><strong>ARCHIVE</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FileType</span></dt>
+<dd><p class="first last">A <code class="docutils literal notranslate"><span class="pre">zip</span></code> or <code class="docutils literal notranslate"><span class="pre">tar.gz</span></code> file to be automatically unarchived in the
+containers.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.FileType.values">
+<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.FileType.values" title="Permalink to this definition">¶</a></dt>
+<dd><p>The constants of this enum type, in the order they are declared.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.FileVisibility">
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">FileVisibility</code><a class="headerlink" href="#skein.FileVisibility" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enum of possible file visibilities.</p>
+<p>Determines how the file can be shared between containers.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Attributes:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>APPLICATION</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FileVisibility</span></dt>
+<dd><p class="first last">Shared only among containers of the same application on the node.</p>
+</dd>
+<dt><strong>PUBLIC</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FileVisibility</span></dt>
+<dd><p class="first last">Shared by all users on the node.</p>
+</dd>
+<dt><strong>PRIVATE</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FileVisibility</span></dt>
+<dd><p class="first last">Shared among all applications of the same user on the node.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.FileVisibility.values">
+<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.FileVisibility.values" title="Permalink to this definition">¶</a></dt>
+<dd><p>The constants of this enum type, in the order they are declared.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
 <dt id="skein.File">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">File</code><span class="sig-paren">(</span><em>source=required</em>, <em>type='FILE'</em>, <em>visibility='APPLICATION'</em>, <em>size=0</em>, <em>timestamp=0</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">File</code><span class="sig-paren">(</span><em>source=required</em>, <em>type=FileType.FILE</em>, <em>visibility=FileVisibility.APPLICATION</em>, <em>size=0</em>, <em>timestamp=0</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File" title="Permalink to this definition">¶</a></dt>
 <dd><p>A file/archive to distribute with the service.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -687,13 +748,13 @@ service will not be started until these keys are present.</p>
 <dd><p class="first last">The path to the file/archive. If no scheme is specified, path is
 assumed to be on the local filesystem (<code class="docutils literal notranslate"><span class="pre">file://</span></code> scheme).</p>
 </dd>
-<dt><strong>type</strong> <span class="classifier-delimiter">:</span> <span class="classifier">{‘FILE’, ‘ARCHIVE’}, optional</span></dt>
+<dt><strong>type</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FileType or str, optional</span></dt>
 <dd><p class="first last">The type of file to distribute. Archive’s are automatically extracted
 by yarn into a directory with the same name as <code class="docutils literal notranslate"><span class="pre">dest</span></code>. Default is
-<code class="docutils literal notranslate"><span class="pre">'FILE'</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">FileType.FILE</span></code>.</p>
 </dd>
-<dt><strong>visibility</strong> <span class="classifier-delimiter">:</span> <span class="classifier">{‘APPLICATION’, ‘PUBLIC’, ‘PRIVATE’}, optional</span></dt>
-<dd><p class="first last">The resource visibility, default is <code class="docutils literal notranslate"><span class="pre">'APPLICATION'</span></code></p>
+<dt><strong>visibility</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FileVisibility or str, optional</span></dt>
+<dd><p class="first last">The resource visibility, default is <code class="docutils literal notranslate"><span class="pre">FileVisibility.APPLICATION</span></code></p>
 </dd>
 <dt><strong>size</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
 <dd><p class="first last">The resource size in bytes. If not provided will be determined by the
@@ -833,6 +894,286 @@ determined by the file system.</p>
 </dd></dl>
 
 </div>
+<div class="section" id="application-responses">
+<h2>Application Responses<a class="headerlink" href="#application-responses" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="skein.model.ApplicationState">
+<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">ApplicationState</code><a class="headerlink" href="#skein.model.ApplicationState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enum of application states.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Attributes:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>NEW</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ApplicationState</span></dt>
+<dd><p class="first last">Application was just created.</p>
+</dd>
+<dt><strong>NEW_SAVING</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ApplicationState</span></dt>
+<dd><p class="first last">Application is being saved.</p>
+</dd>
+<dt><strong>SUBMITTED</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ApplicationState</span></dt>
+<dd><p class="first last">Application has been submitted.</p>
+</dd>
+<dt><strong>ACCEPTED</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ApplicationState</span></dt>
+<dd><p class="first last">Application has been accepted by the scheduler.</p>
+</dd>
+<dt><strong>RUNNING</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ApplicationState</span></dt>
+<dd><p class="first last">Application is currently running.</p>
+</dd>
+<dt><strong>FINISHED</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ApplicationState</span></dt>
+<dd><p class="first last">Application finished successfully.</p>
+</dd>
+<dt><strong>FAILED</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ApplicationState</span></dt>
+<dd><p class="first last">Application failed.</p>
+</dd>
+<dt><strong>KILLED</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ApplicationState</span></dt>
+<dd><p class="first last">Application was terminated by a user or admin.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.model.ApplicationState.values">
+<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationState.values" title="Permalink to this definition">¶</a></dt>
+<dd><p>The constants of this enum type, in the order they are declared.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.model.FinalStatus">
+<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">FinalStatus</code><a class="headerlink" href="#skein.model.FinalStatus" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enum of application final statuses.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Attributes:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>SUCCEEDED</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FinalStatus</span></dt>
+<dd><p class="first last">Application finished successfully.</p>
+</dd>
+<dt><strong>KILLED</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FinalStatus</span></dt>
+<dd><p class="first last">Application was terminated by a user or admin.</p>
+</dd>
+<dt><strong>FAILED</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FinalStatus</span></dt>
+<dd><p class="first last">Application failed.</p>
+</dd>
+<dt><strong>UNDEFINED</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FinalStatus</span></dt>
+<dd><p class="first last">Application has not yet finished.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.model.FinalStatus.values">
+<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.FinalStatus.values" title="Permalink to this definition">¶</a></dt>
+<dd><p>The constants of this enum type, in the order they are declared.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.model.ApplicationReport">
+<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">ApplicationReport</code><span class="sig-paren">(</span><em>id</em>, <em>name</em>, <em>user</em>, <em>queue</em>, <em>tags</em>, <em>host</em>, <em>port</em>, <em>tracking_url</em>, <em>state</em>, <em>final_status</em>, <em>progress</em>, <em>usage</em>, <em>diagnostics</em>, <em>start_time</em>, <em>finish_time</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport" title="Permalink to this definition">¶</a></dt>
+<dd><p>Report of application status.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>id</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The application ID.</p>
+</dd>
+<dt><strong>name</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The application name.</p>
+</dd>
+<dt><strong>user</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The user that started the application.</p>
+</dd>
+<dt><strong>queue</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The application queue.</p>
+</dd>
+<dt><strong>tags</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of strings</span></dt>
+<dd><p class="first last">The application tags.</p>
+</dd>
+<dt><strong>host</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The host the application master is running on.</p>
+</dd>
+<dt><strong>port</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">The rpc port for the application master</p>
+</dd>
+<dt><strong>tracking_url</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The application tracking url.</p>
+</dd>
+<dt><strong>state</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ApplicationState</span></dt>
+<dd><p class="first last">The application state.</p>
+</dd>
+<dt><strong>final_status</strong> <span class="classifier-delimiter">:</span> <span class="classifier">FinalStatus</span></dt>
+<dd><p class="first last">The application final status.</p>
+</dd>
+<dt><strong>progress</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">The progress of the application, from 0.0 to 1.0.</p>
+</dd>
+<dt><strong>usage</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ResourceUsageReport</span></dt>
+<dd><p class="first last">Report on application resource usage.</p>
+</dd>
+<dt><strong>diagnostics</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The diagnostic message in the case of failures.</p>
+</dd>
+<dt><strong>start_time</strong> <span class="classifier-delimiter">:</span> <span class="classifier">datetime</span></dt>
+<dd><p class="first last">The application start time.</p>
+</dd>
+<dt><strong>finish_time</strong> <span class="classifier-delimiter">:</span> <span class="classifier">datetime</span></dt>
+<dd><p class="first last">The application finish time.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.model.ApplicationReport.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a dict.</p>
+<p>Keys in the dict should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.model.ApplicationReport.from_json">
+<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a json string.</p>
+<p>Keys in the json object should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.model.ApplicationReport.from_protobuf">
+<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a protobuf message.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.model.ApplicationReport.from_yaml">
+<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.from_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a yaml string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.model.ApplicationReport.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.model.ApplicationReport.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a json string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.model.ApplicationReport.to_protobuf">
+<code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a protobuf message</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.model.ApplicationReport.to_yaml">
+<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a yaml string</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.model.ResourceUsageReport">
+<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">ResourceUsageReport</code><span class="sig-paren">(</span><em>memory_seconds</em>, <em>vcore_seconds</em>, <em>num_used_containers</em>, <em>needed_resources</em>, <em>reserved_resources</em>, <em>used_resources</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resource usage report.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>memory_seconds</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">The total amount of memory (in MBs) the application has allocated times
+the number of seconds the application has been running.</p>
+</dd>
+<dt><strong>vcore_seconds</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">The total number of vcores that the application has allocated times the
+number of seconds the application has been running.</p>
+</dd>
+<dt><strong>num_used_containers</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">Current number of containers in use.</p>
+</dd>
+<dt><strong>needed_resources</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Resources</span></dt>
+<dd><p class="first last">The needed resources.</p>
+</dd>
+<dt><strong>reserved_resources</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Resources</span></dt>
+<dd><p class="first last">The reserved resources.</p>
+</dd>
+<dt><strong>used_resources</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Resources</span></dt>
+<dd><p class="first last">The used resources.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.model.ResourceUsageReport.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a dict.</p>
+<p>Keys in the dict should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.model.ResourceUsageReport.from_json">
+<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a json string.</p>
+<p>Keys in the json object should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.model.ResourceUsageReport.from_protobuf">
+<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a protobuf message.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.model.ResourceUsageReport.from_yaml">
+<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.from_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a yaml string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.model.ResourceUsageReport.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.model.ResourceUsageReport.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a json string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.model.ResourceUsageReport.to_protobuf">
+<code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a protobuf message</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.model.ResourceUsageReport.to_yaml">
+<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a yaml string</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
 </div>
 
 
@@ -878,6 +1219,7 @@ determined by the file system.</p>
 <li class="toctree-l2"><a class="reference internal" href="#client">Client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#application-client">Application Client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#job-specification">Job Specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#application-responses">Application Responses</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI</a></li>
