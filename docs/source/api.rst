@@ -40,6 +40,14 @@ Job Specification
     :members:
     :inherited-members:
 
+.. autoclass:: FileType
+    :members:
+    :inherited-members:
+
+.. autoclass:: FileVisibility
+    :members:
+    :inherited-members:
+
 .. autoclass:: File
     :members:
     :inherited-members:

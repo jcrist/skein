@@ -11,8 +11,9 @@ from .compatibility import urlparse, with_metaclass
 from .exceptions import context
 from .utils import implements, format_list
 
-__all__ = ('Job', 'Service', 'Resources', 'File', 'ApplicationState',
-           'FinalStatus', 'ResourceUsageReport', 'ApplicationReport')
+__all__ = ('Job', 'Service', 'Resources', 'File', 'FileType', 'FileVisibility',
+           'ApplicationState', 'FinalStatus', 'ResourceUsageReport',
+           'ApplicationReport')
 
 
 required = type('required', (object,),
@@ -208,10 +209,6 @@ class Base(object):
             raise context.ValueError("Unknown extra keys for %s:\n"
                                      "%s" % (cls.__name__, format_list(extra)))
 
-    def _check_in_set(self, field, values):
-        if getattr(self, field) not in values:
-            raise context.ValueError("%s must be in %r" % (field, values))
-
     def _check_is_type(self, field, type, nullable=False):
         val = getattr(self, field)
         if not (isinstance(val, type) or (nullable and val is None)):
@@ -328,6 +325,37 @@ class Resources(Base):
         self._check_is_bounded_int('memory', min=min)
 
 
+class FileVisibility(Enum):
+    """Enum of possible file visibilities.
+
+    Determines how the file can be shared between containers.
+
+    Attributes
+    ----------
+    APPLICATION : FileVisibility
+        Shared only among containers of the same application on the node.
+    PUBLIC : FileVisibility
+        Shared by all users on the node.
+    PRIVATE : FileVisibility
+        Shared among all applications of the same user on the node.
+    """
+    _values = ('APPLICATION', 'PUBLIC', 'PRIVATE')
+
+
+class FileType(Enum):
+    """Enum of possible file types to distribute with the application.
+
+    Attributes
+    ----------
+    FILE : FileType
+        Regular file
+    ARCHIVE : FileType
+        A ``zip`` or ``tar.gz`` file to be automatically unarchived in the
+        containers.
+    """
+    _values = ('FILE', 'ARCHIVE')
+
+
 class File(Base):
     """A file/archive to distribute with the service.
 
@@ -336,12 +364,12 @@ class File(Base):
     source : str
         The path to the file/archive. If no scheme is specified, path is
         assumed to be on the local filesystem (``file://`` scheme).
-    type : {'FILE', 'ARCHIVE'}, optional
+    type : FileType or str, optional
         The type of file to distribute. Archive's are automatically extracted
         by yarn into a directory with the same name as ``dest``. Default is
-        ``'FILE'``.
-    visibility : {'APPLICATION', 'PUBLIC', 'PRIVATE'}, optional
-        The resource visibility, default is ``'APPLICATION'``
+        ``FileType.FILE``.
+    visibility : FileVisibility or str, optional
+        The resource visibility, default is ``FileVisibility.APPLICATION``
     size : int, optional
         The resource size in bytes. If not provided will be determined by the
         file system.
@@ -349,12 +377,12 @@ class File(Base):
         The time the resource was last modified. If not provided will be
         determined by the file system.
     """
-    __slots__ = ('_source', 'type', 'visibility', 'size', 'timestamp')
+    __slots__ = ('_source', '_type', '_visibility', 'size', 'timestamp')
     _params = ('source', 'type', 'visibility', 'size', 'timestamp')
     _protobuf_cls = _proto.File
 
-    def __init__(self, source=required, type='FILE', visibility='APPLICATION',
-                 size=0, timestamp=0):
+    def __init__(self, source=required, type=FileType.FILE,
+                 visibility=FileVisibility.APPLICATION, size=0, timestamp=0):
         self._assign_required('source', source)
         self.type = type
         self.visibility = visibility
@@ -367,8 +395,8 @@ class File(Base):
 
     def _validate(self):
         self._check_is_type('source', str)
-        self._check_in_set('type', {'FILE', 'ARCHIVE'})
-        self._check_in_set('visibility', {'APPLICATION', 'PUBLIC', 'PRIVATE'})
+        self._check_is_type('type', FileType)
+        self._check_is_type('visibility', FileVisibility)
         self._check_is_bounded_int('size')
         self._check_is_bounded_int('timestamp')
 
@@ -381,6 +409,22 @@ class File(Base):
         if not isinstance(val, str):
             raise context.TypeError("'source' must be an instance of 'str'")
         self._source = self._normpath(val)
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, val):
+        self._type = FileType(val)
+
+    @property
+    def visibility(self):
+        return self._visibility
+
+    @visibility.setter
+    def visibility(self, val):
+        self._visibility = FileVisibility(val)
 
     @staticmethod
     def _normpath(path, origin=None):
@@ -405,8 +449,8 @@ class File(Base):
                             port=url.port,
                             file=url.path)
         return _proto.File(source=urlmsg,
-                           type=self.type,
-                           visibility=self.visibility,
+                           type=str(self.type),
+                           visibility=str(self.visibility),
                            size=self.size,
                            timestamp=self.timestamp)
 
@@ -445,24 +489,18 @@ class File(Base):
         if not isinstance(obj, dict):
             raise context.TypeError("Expected mapping for File")
 
-        if 'file' in obj:
-            if 'archive' in obj:
-                raise context.ValueError("Both 'archive' and 'file' specified")
-            type = 'file'
-        elif 'archive' in obj:
-            type = 'archive'
-        else:
-            type = None
-
-        if type is None:
+        if 'archive' not in obj and 'file' not in obj:
             cls._check_keys(obj, cls._params + ('dest',))
             source = obj['source']
-            type = obj.get('type', 'FILE').upper()
+            type = FileType(obj.get('type', FileType.FILE))
+        elif 'archive' in obj and 'file' in obj:
+            raise context.ValueError("Both 'archive' and 'file' specified")
         else:
+            typefield = 'archive' if 'archive' in obj else 'file'
             cls._check_keys(obj, ('visibility', 'size', 'timestamp',
-                                  type, 'dest'))
-            source = obj[type]
-            type = type.upper()
+                                  typefield, 'dest'))
+            source = obj[typefield]
+            type = FileType(typefield)
 
         if 'dest' not in obj:
             source = urlparse(source).path
@@ -471,7 +509,7 @@ class File(Base):
                 raise context.ValueError("Distributed files must be "
                                          "files/archives, not directories")
             dest = name
-            if type == 'ARCHIVE':
+            if type is FileType.ARCHIVE:
                 for ext in ['.zip', '.tar.gz', '.tgz']:
                     if name.endswith(ext):
                         dest = name[:-len(ext)]
@@ -480,7 +518,7 @@ class File(Base):
             dest = obj['dest']
 
         source = cls._normpath(source, origin=_origin)
-        visibility = obj.get('visibility', 'APPLICATION')
+        visibility = obj.get('visibility', FileVisibility.APPLICATION)
         size = obj.get('size', 0)
         timestamp = obj.get('timestamp', 0)
 

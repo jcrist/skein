@@ -106,6 +106,17 @@ def test_file_invariants():
     with pytest.raises(ValueError):
         File('foo/bar.zip')
 
+    fil = File(source='/test/path')
+
+    with pytest.raises(ValueError):
+        fil.type = 'invalid'
+
+    with pytest.raises(ValueError):
+        fil.visibility = 'invalid'
+
+    assert (File(source='/test/path', type='file') ==
+            File(source='/test/path', type='FILE'))
+
 
 def test_service():
     r = Resources(memory=1024, vcores=1)
