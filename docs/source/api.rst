@@ -52,6 +52,14 @@ Job Specification
 Application Responses
 ---------------------
 
+.. autoclass:: skein.model.ApplicationState
+    :members:
+    :inherited-members:
+
+.. autoclass:: skein.model.FinalStatus
+    :members:
+    :inherited-members:
+
 .. autoclass:: skein.model.ApplicationReport
     :members:
     :inherited-members:

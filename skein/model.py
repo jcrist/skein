@@ -7,12 +7,12 @@ from datetime import datetime, timedelta
 import yaml
 
 from . import proto as _proto
-from .compatibility import urlparse
+from .compatibility import urlparse, with_metaclass
 from .exceptions import context
 from .utils import implements, format_list
 
-__all__ = ('Job', 'Service', 'Resources', 'File', 'ResourceUsageReport',
-           'ApplicationReport')
+__all__ = ('Job', 'Service', 'Resources', 'File', 'ApplicationState',
+           'FinalStatus', 'ResourceUsageReport', 'ApplicationReport')
 
 
 required = type('required', (object,),
@@ -57,6 +57,8 @@ def _convert(x, method, *args):
         return {k: _convert(v, method, *args) for k, v in x.items()}
     elif type(x) is datetime:
         return int(x.timestamp() * 1000)
+    elif isinstance(x, Enum):
+        return str(x)
     else:
         return x
 
@@ -75,6 +77,107 @@ def _infer_format(path, format='infer'):
     elif format not in {'json', 'yaml'}:
         raise ValueError("Unknown file format: %r" % format)
     return format
+
+
+class EnumMeta(type):
+    def __init__(cls, name, parents, dct):
+        for name in cls._values:
+            out = object.__new__(cls)
+            out._value = name
+            setattr(cls, name, out)
+        return super(EnumMeta, cls).__init__(name, parents, dct)
+
+    def __iter__(cls):
+        return (getattr(cls, f) for f in cls._values)
+
+    def __len__(cls):
+        return len(cls._values)
+
+
+class Enum(with_metaclass(EnumMeta)):
+    _values = ()
+    __slots__ = ('_value',)
+
+    def __new__(cls, x):
+        if isinstance(x, cls):
+            return x
+        if type(x) is not str:
+            raise TypeError("Expected 'str' or %r" % cls.__name__)
+        x = x.upper()
+        if x not in cls._values:
+            raise context.ValueError("%r must be in %r"
+                                     % (cls.__name__, cls._values))
+        return getattr(cls, x)
+
+    def __reduce__(self):
+        return (getattr, (type(self), self._value))
+
+    def __repr__(self):
+        return '%s.%s' % (type(self).__name__, self._value)
+
+    def __str__(self):
+        return self._value
+
+    def __eq__(self, other):
+        return (self is other or
+                (type(other) is str and self._value == other.upper()))
+
+    @classmethod
+    def values(cls):
+        """The constants of this enum type, in the order they are declared."""
+        return cls._values
+
+
+class ApplicationState(Enum):
+    """Enum of application states.
+
+    Attributes
+    ----------
+    NEW : ApplicationState
+        Application was just created.
+    NEW_SAVING : ApplicationState
+        Application is being saved.
+    SUBMITTED : ApplicationState
+        Application has been submitted.
+    ACCEPTED : ApplicationState
+        Application has been accepted by the scheduler.
+    RUNNING : ApplicationState
+        Application is currently running.
+    FINISHED : ApplicationState
+        Application finished successfully.
+    FAILED : ApplicationState
+        Application failed.
+    KILLED : ApplicationState
+        Application was terminated by a user or admin.
+    """
+    _values = ('NEW',
+               'NEW_SAVING',
+               'SUBMITTED',
+               'ACCEPTED',
+               'RUNNING',
+               'FINISHED',
+               'FAILED',
+               'KILLED')
+
+
+class FinalStatus(Enum):
+    """Enum of application final statuses.
+
+    Attributes
+    ----------
+    SUCCEEDED : FinalStatus
+        Application finished successfully.
+    KILLED : FinalStatus
+        Application was terminated by a user or admin.
+    FAILED : FinalStatus
+        Application failed.
+    UNDEFINED : FinalStatus
+        Application has not yet finished.
+    """
+    _values = ('SUCCEEDED',
+               'KILLED',
+               'FAILED',
+               'UNDEFINED')
 
 
 class Base(object):
@@ -690,9 +793,9 @@ class ApplicationReport(Base):
         The rpc port for the application master
     tracking_url : str
         The application tracking url.
-    state : str
+    state : ApplicationState
         The application state.
-    final_status : str
+    final_status : FinalStatus
         The application final status.
     progress : float
         The progress of the application, from 0.0 to 1.0.
@@ -745,8 +848,8 @@ class ApplicationReport(Base):
         self._check_is_type('host', str, nullable=True)
         self._check_is_type('port', int, nullable=True)
         self._check_is_type('tracking_url', str, nullable=True)
-        self._check_is_type('state', str)
-        self._check_is_type('final_status', str)
+        self._check_is_type('state', ApplicationState)
+        self._check_is_type('final_status', FinalStatus)
         self._check_is_type('progress', float)
         self._check_is_type('usage', ResourceUsageReport)
         self.usage._validate()
@@ -760,6 +863,8 @@ class ApplicationReport(Base):
         cls._check_keys(obj, cls._keys)
         kwargs = {k: obj.get(k2) for k, k2 in zip(cls.__slots__, cls._keys)}
         kwargs['usage'] = ResourceUsageReport.from_dict(kwargs['usage'])
+        kwargs['state'] = ApplicationState(kwargs['state'])
+        kwargs['final_status'] = FinalStatus(kwargs['final_status'])
         for k in ['start_time', 'finish_time']:
             kwargs[k] = _datetime_from_millis(kwargs[k])
         return cls(**kwargs)
@@ -767,6 +872,9 @@ class ApplicationReport(Base):
     @classmethod
     @implements(Base.from_protobuf)
     def from_protobuf(cls, obj):
+        state = ApplicationState(_proto.ApplicationState.Type.Name(obj.state))
+        final_status = FinalStatus(_proto.FinalStatus.Type.Name(obj.final_status))
+
         return cls(id=obj.id,
                    name=obj.name,
                    user=obj.user,
@@ -775,8 +883,8 @@ class ApplicationReport(Base):
                    host=obj.host,
                    port=obj.port,
                    tracking_url=obj.tracking_url,
-                   state=_proto.ApplicationState.Type.Name(obj.state),
-                   final_status=_proto.FinalStatus.Type.Name(obj.final_status),
+                   state=state,
+                   final_status=final_status,
                    progress=obj.progress,
                    usage=ResourceUsageReport.from_protobuf(obj.usage),
                    diagnostics=obj.diagnostics,

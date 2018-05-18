@@ -17,8 +17,8 @@ import grpc
 from . import proto
 from .compatibility import PY2, ConnectionError, FileNotFoundError
 from .exceptions import context, convert_errors, NOT_INITIALIZED
-from .model import Job, Service, ApplicationReport
-from .utils import cached_property, format_list, implements
+from .model import Job, Service, ApplicationReport, ApplicationState
+from .utils import cached_property, implements
 
 
 __all__ = ('Client', 'Application', 'ApplicationClient', 'start_global_daemon',
@@ -424,7 +424,7 @@ class Client(object):
 
         Parameters
         ----------
-        states : sequence, optional
+        states : sequence of ApplicationState, optional
             If provided, applications will be filtered to these application
             states. Default is ``['SUBMITTED', 'ACCEPTED', 'RUNNING']``.
 
@@ -442,18 +442,13 @@ class Client(object):
          ApplicationReport<name='demo'>]
         """
         if states is not None:
-            states = {s.upper() for s in states}
-            valid = {'ACCEPTED', 'FAILED', 'FINISHED', 'KILLED', 'NEW',
-                     'NEW_SAVING', 'RUNNING', 'SUBMITTED'}
-            invalid = states.difference(valid)
-            if invalid:
-                raise context.ValueError("Invalid application states:\n"
-                                         "%s" % format_list(invalid))
-            states = list(states)
+            states = tuple(ApplicationState(s) for s in states)
         else:
-            states = ('SUBMITTED', 'ACCEPTED', 'RUNNING')
+            states = (ApplicationState.SUBMITTED,
+                      ApplicationState.ACCEPTED,
+                      ApplicationState.RUNNING)
 
-        req = proto.ApplicationsRequest(states=states)
+        req = proto.ApplicationsRequest(states=[str(s) for s in states])
         with convert_errors(daemon=True):
             resp = self._stub.getApplications(req)
         return [ApplicationReport.from_protobuf(r) for r in resp.reports]
@@ -615,7 +610,7 @@ class Application(object):
     @cached_property
     def _am_client(self):
         s = self._client.status(self.app_id)
-        if s.state != 'RUNNING':
+        if s.state is not ApplicationState.RUNNING:
             raise context.ValueError("This operation requires application "
                                      "state: RUNNING.  Current state: "
                                      "%s." % s.state)

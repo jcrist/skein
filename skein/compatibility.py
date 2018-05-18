@@ -23,3 +23,11 @@ else:
     ConnectionError = ConnectionError
     FileExistsError = FileExistsError
     FileNotFoundError = FileNotFoundError
+
+
+def with_metaclass(meta):
+    """Create a base class with a metaclass."""
+    class metaclass(type):
+        def __new__(cls, name, this_bases, d):
+            return meta(name, (object,), d)
+    return type.__new__(metaclass, 'temporary_class', (), {})

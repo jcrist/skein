@@ -2,10 +2,12 @@ from __future__ import print_function, division, absolute_import
 
 import copy
 import os
+import pickle
 
 import pytest
 
-from skein.model import Job, Service, Resources, File
+from skein.model import (Job, Service, Resources, File, ApplicationState,
+                         FinalStatus)
 
 
 def indent(s, n):
@@ -233,3 +235,33 @@ def test_to_file_from_file(tmpdir):
         with pytest.raises(ValueError):
             job.to_file(path, format=format)
         assert not os.path.exists(path)
+
+
+def test_enums():
+    assert type(ApplicationState.RUNNING) is ApplicationState
+    assert ApplicationState.RUNNING is ApplicationState('RUNNING')
+    assert ApplicationState.RUNNING is ApplicationState('running')
+    assert ApplicationState.RUNNING is ApplicationState(ApplicationState.RUNNING)
+    assert ApplicationState.RUNNING == ApplicationState.RUNNING
+    assert ApplicationState.RUNNING == 'RUNNING'
+    assert ApplicationState.RUNNING == 'running'
+    assert ApplicationState.RUNNING != 'foo'
+
+    assert ApplicationState.KILLED != FinalStatus.KILLED
+
+    assert len(ApplicationState) == len(ApplicationState.values())
+    assert tuple(ApplicationState) == ApplicationState.values()
+    assert repr(ApplicationState.RUNNING) == "ApplicationState.RUNNING"
+    assert str(ApplicationState.RUNNING) == 'RUNNING'
+
+    assert (pickle.loads(pickle.dumps(ApplicationState.RUNNING))
+            is ApplicationState.RUNNING)
+
+    with pytest.raises(TypeError):
+        ApplicationState(FinalStatus.KILLED)
+
+    with pytest.raises(TypeError):
+        ApplicationState(1)
+
+    with pytest.raises(ValueError):
+        ApplicationState('foobar')
