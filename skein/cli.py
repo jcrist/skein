@@ -10,8 +10,7 @@ import yaml
 from . import __version__
 from .core import (Client, ApplicationClient, Security, start_global_daemon,
                    stop_global_daemon)
-from .compatibility import ConnectionError
-from .exceptions import context, SkeinError
+from .exceptions import context, SkeinError, DaemonNotRunningError
 from .model import Job
 from .utils import format_table
 
@@ -106,7 +105,7 @@ def daemon_address():
     try:
         client = Client()
         print(client.address)
-    except ConnectionError:
+    except DaemonNotRunningError:
         print("No skein daemon is running")
 
 
@@ -143,9 +142,9 @@ keystore_app_id = arg('app_id', metavar='APP_ID',
                 help='If true, will block until the key is set'))
 def keystore_get(app_id, key=None, wait=False):
     if app_id == 'current':
-        app = ApplicationClient.current_application()
+        app = ApplicationClient.connect_to_current()
     else:
-        app = Client().application(app_id)
+        app = Client().connect(app_id)
     result = app.get_key(key=key, wait=wait)
     if isinstance(result, dict):
         print(yaml.dump(result, default_flow_style=False))
@@ -165,9 +164,9 @@ def keystore_set(app_id, key=None, value=None):
         fail("--value is required")
 
     if app_id == 'current':
-        app = ApplicationClient.current_application()
+        app = ApplicationClient.connect_to_current()
     else:
-        app = Client().application(app_id)
+        app = Client().connect(app_id)
 
     app.set_key(key, value)
 
@@ -201,7 +200,7 @@ def application_submit(spec):
         job = Job.from_file(spec)
     except SkeinError as exc:
         # Prettify expected errors, let rest bubble up
-        fail('In file %r, %s' % (spec, exc.cli_message()))
+        fail('In file %r, %s' % (spec, exc))
 
     app = Client().submit(job)
     print(app.app_id)
@@ -238,7 +237,7 @@ def application_kill(app_id):
             arg('--service', '-s', help='Service name'))
 def application_describe(app_id, service=None):
     client = Client()
-    resp = client.application(app_id).describe(service=service)
+    resp = client.connect(app_id).describe(service=service)
     if service is not None:
         out = yaml.dump({service: resp.to_dict(skip_nulls=True)},
                         default_flow_style=False)
@@ -262,8 +261,8 @@ def main(args=None):
         with context.set_cli():
             func(**kwargs)
     except SkeinError as exc:
-        fail(exc.cli_message())
-    except ConnectionError as exc:
+        fail(str(exc))
+    except DaemonNotRunningError as exc:
         fail("Skein daemon not found, please run `skein daemon start`")
     except Exception as exc:
         fail("Unexpected Error:\n%s" % traceback.format_exc(), prefix=False)

@@ -15,10 +15,11 @@ from contextlib import closing
 import grpc
 
 from . import proto
-from .compatibility import PY2, ConnectionError, FileNotFoundError
-from .exceptions import context, convert_errors, NOT_INITIALIZED
+from .compatibility import PY2
+from .exceptions import (context, FileNotFoundError, SkeinConfigurationError,
+                         ApplicationNotRunningError, ApplicationError,
+                         DaemonNotRunningError, DaemonError)
 from .model import Job, Service, ApplicationReport, ApplicationState
-from .utils import cached_property, implements
 
 
 __all__ = ('Client', 'Application', 'ApplicationClient', 'start_global_daemon',
@@ -63,7 +64,9 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
             return cls.from_directory(CONFIG_DIR)
         except FileNotFoundError:
             pass
-        raise NOT_INITIALIZED
+        raise SkeinConfigurationError(
+            "Skein global configuration directory is not initialized. "
+            "Please run ``skein init``.")
 
     @classmethod
     def from_directory(cls, directory):
@@ -135,9 +138,9 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
                 if force:
                     os.unlink(path)
                 else:
-                    raise context.FileExistsError(
-                        "%r file already exists, use `force` to overwrite" % name,
-                        "%r file already exists, use `--force` to overwrite" % name)
+                    msg = ("%r file already exists, use `%s` to overwrite" %
+                           (name, '--force' if context.is_cli else 'force'))
+                    raise context.FileExistsError(msg)
 
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
         for path, data in [(cert_path, cert_bytes), (key_path, key_bytes)]:
@@ -228,11 +231,11 @@ def _start_daemon(security=None, set_global=False, log=None):
                     stream = connection.makefile(mode="rb")
                     msg = stream.read(4)
                     if not msg:
-                        raise ValueError("Failed to read in client port")
+                        raise DaemonError("Failed to read in client port")
                     port = struct.unpack("!i", msg)[0]
                     break
         else:
-            raise ValueError("Failed to start java process")
+            raise DaemonError("Failed to start java process")
 
     address = 'localhost:%d' % port
 
@@ -263,7 +266,7 @@ def start_global_daemon(log=None):
     """
     try:
         client = Client()
-    except ConnectionError:
+    except DaemonNotRunningError:
         pass
     else:
         return client.address
@@ -281,7 +284,7 @@ def stop_global_daemon():
 
     try:
         Client(address=address)
-    except ConnectionError:
+    except DaemonNotRunningError:
         pass
     else:
         os.kill(pid, signal.SIGTERM)
@@ -292,7 +295,25 @@ def stop_global_daemon():
         pass
 
 
-class Client(object):
+class _ClientBase(object):
+    def _call(self, method, req):
+        try:
+            return getattr(self._stub, method)(req)
+        except grpc.RpcError as _exc:
+            exc = _exc
+
+        code = exc.code()
+        if code == grpc.StatusCode.UNAVAILABLE:
+            raise ConnectionError("Unable to connect to %s" % self._server_name)
+        elif code in (grpc.StatusCode.INVALID_ARGUMENT,
+                      grpc.StatusCode.NOT_FOUND,
+                      grpc.StatusCode.ALREADY_EXISTS):
+            raise context.ValueError(exc.details())
+        else:
+            raise self._server_error(exc.details())
+
+
+class Client(_ClientBase):
     """Connect to and schedule jobs on the YARN cluster.
 
     Parameters
@@ -306,22 +327,26 @@ class Client(object):
         The security configuration to use to communicate with the daemon.
         Defaults to the global configuration.
     """
+    _server_name = 'daemon'
+    _server_error = DaemonError
+
     def __init__(self, address=None, security=None):
         if address is None:
             address, _ = _read_daemon()
 
             if address is None:
-                raise ConnectionError("No daemon currently running")
+                raise DaemonNotRunningError("No daemon currently running")
 
-        stub = proto.DaemonStub(secure_channel(address, security))
+        if security is None:
+            security = Security.default()
+
+        self._stub = proto.DaemonStub(secure_channel(address, security))
+        self.address = address
+        self.security = security
+        self._proc = None
 
         # Ping server to check connection
-        with convert_errors(daemon=True):
-            stub.ping(proto.Empty())
-
-        self.address = address
-        self._stub = stub
-        self._proc = None
+        self._call('ping', proto.Empty())
 
     @classmethod
     def temporary(cls, security=None, log=None):
@@ -384,20 +409,6 @@ class Client(object):
     def __exit__(self, *args):
         self.close()
 
-    def application(self, app_id):
-        """Access an Application.
-
-        Parameters
-        ----------
-        app_id : str
-            The id of the application.
-
-        Returns
-        -------
-        app : Application
-        """
-        return Application(self, app_id)
-
     def submit(self, job_or_path):
         """Submit a new skein job.
 
@@ -415,22 +426,42 @@ class Client(object):
             job = Job.from_file(job_or_path)
         else:
             job = job_or_path
-        with convert_errors(daemon=True):
-            resp = self._stub.submit(job.to_protobuf())
+        resp = self._call('submit', job.to_protobuf())
         return Application(self, resp.id)
 
-    def wait(self, app_id):
-        """Wait for an application to start.
-
-        Blocks until the application starts.
+    def connect(self, app_id, wait=True):
+        """Connect to a running application.
 
         Parameters
         ----------
         app_id : str
             The id of the application.
+        wait : bool, optional
+            If true [default], blocks until the application starts. If False,
+            will raise a ``ApplicationNotRunningError`` immediately if the
+            application isn't running.
+
+        Returns
+        -------
+        app_client : ApplicationClient
+
+        Raises
+        ------
+        ApplicationNotRunningError
+            If the application isn't running.
         """
-        with convert_errors(daemon=True):
-            self._stub.waitForStart(proto.Application(id=app_id))
+        if wait:
+            resp = self._call('waitForStart', proto.Application(id=app_id))
+        else:
+            resp = self._call('getStatus', proto.Application(id=app_id))
+        report = ApplicationReport.from_protobuf(resp)
+        if report.state is not ApplicationState.RUNNING:
+            raise ApplicationNotRunningError(
+                "%s is not running. Application state: "
+                "%s" % (app_id, report.state))
+
+        return ApplicationClient('%s:%d' % (report.host, report.port),
+                                 security=self.security)
 
     def applications(self, states=None):
         """Get the status of current skein applications.
@@ -462,8 +493,7 @@ class Client(object):
                       ApplicationState.RUNNING)
 
         req = proto.ApplicationsRequest(states=[str(s) for s in states])
-        with convert_errors(daemon=True):
-            resp = self._stub.getApplications(req)
+        resp = self._call('getApplications', req)
         return [ApplicationReport.from_protobuf(r) for r in resp.reports]
 
     def status(self, app_id):
@@ -485,8 +515,7 @@ class Client(object):
         >>> client.status(app_id='application_1526134340424_0012')
         ApplicationReport<name='demo'>
         """
-        with convert_errors(daemon=True):
-            resp = self._stub.getStatus(proto.Application(id=app_id))
+        resp = self._call('getStatus', proto.Application(id=app_id))
         return ApplicationReport.from_protobuf(resp)
 
     def kill(self, app_id):
@@ -497,11 +526,10 @@ class Client(object):
         app_id : str
             The id of the application to kill.
         """
-        with convert_errors(daemon=True):
-            self._stub.kill(proto.Application(id=app_id))
+        self._call('kill', proto.Application(id=app_id))
 
 
-class ApplicationClient(object):
+class ApplicationClient(_ClientBase):
     """A client for the application master.
 
     Parameters
@@ -512,9 +540,16 @@ class ApplicationClient(object):
         The security configuration to use to communicate with the daemon.
         Defaults to the global configuration.
     """
+    _server_name = 'application'
+    _server_error = ApplicationError
+
     def __init__(self, address, security=None):
-        self._address = address
+        self.address = address
+        self.security = security
         self._stub = proto.MasterStub(secure_channel(address, security))
+
+    def __repr__(self):
+        return 'ApplicationClient<%s>' % self.address
 
     def get_key(self, key=None, wait=False):
         """Get a key from the keystore.
@@ -527,13 +562,11 @@ class ApplicationClient(object):
             If true, will block until the key is set. Default is False.
         """
         if key is None:
-            with convert_errors(daemon=False):
-                resp = self._stub.keystore(proto.Empty())
+            resp = self._call('keystore', proto.Empty())
             return dict(resp.items)
 
-        with convert_errors(daemon=False):
-            req = proto.GetKeyRequest(key=key, wait=wait)
-            resp = self._stub.keystoreGet(req)
+        req = proto.GetKeyRequest(key=key, wait=wait)
+        resp = self._call('keystoreGet', req)
         return resp.val
 
     def set_key(self, key, value):
@@ -549,8 +582,7 @@ class ApplicationClient(object):
         if not len(key):
             raise context.ValueError("key length must be > 0")
 
-        with convert_errors(daemon=False):
-            self._stub.keystoreSet(proto.SetKeyRequest(key=key, val=value))
+        self._call('keystoreSet', proto.SetKeyRequest(key=key, val=value))
 
     def describe(self, service=None):
         """Information about the running job.
@@ -567,16 +599,14 @@ class ApplicationClient(object):
             the whole ``Job``.
         """
         if service is None:
-            with convert_errors(daemon=False):
-                resp = self._stub.getJob(proto.Empty())
+            resp = self._call('getJob', proto.Empty())
             return Job.from_protobuf(resp)
         else:
-            with convert_errors(daemon=False):
-                resp = self._stub.getService(proto.ServiceRequest(name=service))
+            resp = self._call('getService', proto.ServiceRequest(name=service))
             return Service.from_protobuf(resp)
 
     @classmethod
-    def current_application(cls):
+    def connect_to_current(cls):
         """Create an application client from within a running container.
 
         Useful for connecting to the application master from a running
@@ -608,23 +638,27 @@ class Application(object):
         """
         return self._client.status(self.app_id)
 
-    @implements(ApplicationClient.describe)
-    def describe(self, service=None):
-        return self._am_client.describe(service=service)
+    def kill(self):
+        """Kill the application."""
+        return self._client.kill(self.app_id)
 
-    @implements(ApplicationClient.get_key)
-    def get_key(self, key=None, wait=False):
-        return self._am_client.get_key(key=key, wait=wait)
+    def connect(self, wait=True):
+        """Connect to the application.
 
-    @implements(ApplicationClient.set_key)
-    def set_key(self, key, value):
-        return self._am_client.set_key(key, value)
+        Parameters
+        ----------
+        wait : bool, optional
+            If true [default], blocks until the application starts. If False,
+            will raise a ``ApplicationNotRunningError`` immediately if the
+            application isn't running.
 
-    @cached_property
-    def _am_client(self):
-        s = self._client.status(self.app_id)
-        if s.state is not ApplicationState.RUNNING:
-            raise context.ValueError("This operation requires application "
-                                     "state: RUNNING.  Current state: "
-                                     "%s." % s.state)
-        return ApplicationClient('%s:%d' % (s.host, s.port))
+        Returns
+        -------
+        app_client : ApplicationClient
+
+        Raises
+        ------
+        ApplicationNotRunningError
+            If the application isn't running.
+        """
+        return self._client.connect(self.app_id, wait=wait)
