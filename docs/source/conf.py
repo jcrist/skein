@@ -30,7 +30,7 @@ intersphinx_mapping = {
 html_theme = 'alabaster'
 html_theme_path = [alabaster.get_path()]
 templates_path = ['_templates']
-html_static_path = []
+html_static_path = ['_static']
 html_theme_options = {
     'description': 'Simple tool for deploying jobs on Apache YARN',
     'github_button': True,
@@ -38,7 +38,10 @@ html_theme_options = {
     'github_user': 'jcrist',
     'github_repo': 'skein',
     'travis_button': True,
-    'show_powered_by': False
+    'show_powered_by': False,
+    'page_width': '960px',
+    'sidebar_width': '200px',
+    'code_font_size': '0.8em'
 }
 html_sidebars = {
     '**': ['about.html',
