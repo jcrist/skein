@@ -129,6 +129,8 @@ service Daemon {
 
   rpc submit (Job) returns (Application);
 
+  rpc waitForStart (Application) returns (ApplicationReport);
+
   rpc kill (Application) returns (Empty);
 }
 
