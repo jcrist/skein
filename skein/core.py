@@ -9,6 +9,7 @@ import signal
 import socket
 import struct
 import subprocess
+import warnings
 from collections import namedtuple
 from contextlib import closing
 
@@ -532,6 +533,8 @@ class Client(_ClientBase):
 class ApplicationClient(_ClientBase):
     """A client for the application master.
 
+    Used to interact with a running application.
+
     Parameters
     ----------
     address : str
@@ -621,7 +624,13 @@ class ApplicationClient(_ClientBase):
 
 
 class Application(object):
-    """A Skein application."""
+    """A possibly running Skein application.
+
+    May be used as a contextmanager to ensure that the enclosed application is
+    stopped before exiting.
+
+    The constructor shouldn't be used directly, instead use
+    ``Client.submit``."""
     def __init__(self, client, app_id):
         self._client = client
         self.app_id = app_id
@@ -637,6 +646,10 @@ class Application(object):
         status : ApplicationReport
         """
         return self._client.status(self.app_id)
+
+    def is_running(self):
+        """Return True if the application state is RUNNING"""
+        return self.status().state == ApplicationState.RUNNING
 
     def kill(self):
         """Kill the application."""
@@ -662,3 +675,16 @@ class Application(object):
             If the application isn't running.
         """
         return self._client.connect(self.app_id, wait=wait)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        try:
+            if self.status().state not in {ApplicationState.FINISHED,
+                                           ApplicationState.FAILED,
+                                           ApplicationState.KILLED}:
+                self.kill()
+        except Exception as exc:
+            warnings.warn("Failed to ensure application %s was stopped. "
+                          "Exception: %s" % (self.app_id, exc))

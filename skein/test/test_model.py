@@ -260,6 +260,9 @@ def test_enums():
 
     assert ApplicationState.KILLED != FinalStatus.KILLED
 
+    assert ApplicationState.KILLED in {ApplicationState.KILLED,
+                                       ApplicationState.FINISHED}
+
     assert len(ApplicationState) == len(ApplicationState.values())
     assert tuple(ApplicationState) == ApplicationState.values()
     assert repr(ApplicationState.RUNNING) == "ApplicationState.RUNNING"

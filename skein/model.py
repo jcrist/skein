@@ -126,6 +126,9 @@ class Enum(with_metaclass(EnumMeta)):
         return (self is other or
                 (type(other) is str and self._value == other.upper()))
 
+    def __hash__(self):
+        return hash(self._value)
+
     @classmethod
     def values(cls):
         """The constants of this enum type, in the order they are declared."""
