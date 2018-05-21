@@ -2,6 +2,7 @@ package com.anaconda.skein;
 
 import io.grpc.Server;
 import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
@@ -45,6 +46,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -85,6 +87,9 @@ public class Daemon {
   private String secret;
 
   private Server server;
+
+  private final Map<ApplicationId, List<StreamObserver<Msg.ApplicationReport>>> startedCallbacks =
+      new HashMap<ApplicationId, List<StreamObserver<Msg.ApplicationReport>>>();
 
   private void startServer() throws IOException {
     // Setup and start the server
@@ -385,6 +390,95 @@ public class Daemon {
     }
   }
 
+  private boolean hasStarted(ApplicationReport report) {
+    switch (report.getYarnApplicationState()) {
+      case RUNNING:
+      case FINISHED:
+      case FAILED:
+      case KILLED:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  private synchronized void addWatcher(final ApplicationId appId,
+      StreamObserver<Msg.ApplicationReport> resp) {
+
+    if (startedCallbacks.get(appId) != null) {
+      startedCallbacks.get(appId).add(resp);
+      return;
+    }
+
+    final List<StreamObserver<Msg.ApplicationReport>> callbacks =
+        new ArrayList<StreamObserver<Msg.ApplicationReport>>();
+    startedCallbacks.put(appId, callbacks);
+    callbacks.add(resp);
+
+    Thread watcher = new Thread() {
+        @Override
+        public void run() {
+          Thread thisThread = Thread.currentThread();
+          ApplicationReport report = null;
+          while (!thisThread.isInterrupted()) {
+            try {
+              // Get report
+              report = yarnClient.getApplicationReport(appId);
+            } catch (Exception exc) {
+              LOG.warn("Failed to get report for " + appId.toString()
+                       + ". Notifying " + callbacks.size() + " callbacks.");
+              for (StreamObserver<Msg.ApplicationReport> resp : callbacks) {
+                // Send error
+                try {
+                  resp.onError(Status.INTERNAL
+                      .withDescription("Failed to get applications, exception:\n"
+                                      + exc.getMessage())
+                      .asRuntimeException());
+                } catch (StatusRuntimeException cbExc) {
+                  if (cbExc.getStatus().getCode() != Status.Code.CANCELLED) {
+                    LOG.warn("Callback failed for app_id: " + appId.toString()
+                             + ", status: " + cbExc.getStatus());
+                  }
+                }
+              }
+              break;
+            }
+
+            if (hasStarted(report)) {
+              LOG.info("Notifying that " + appId.toString() + " has started. "
+                       + callbacks.size() + " callbacks registered.");
+              for (StreamObserver<Msg.ApplicationReport> resp : callbacks) {
+                // Send report
+                try {
+                  resp.onNext(MsgUtils.writeApplicationReport(report));
+                  resp.onCompleted();
+                } catch (StatusRuntimeException cbExc) {
+                  if (cbExc.getStatus().getCode() != Status.Code.CANCELLED) {
+                    LOG.warn("Callback failed for app_id: " + appId.toString()
+                             + ", status: " + cbExc.getStatus());
+                  }
+                }
+              }
+              break;
+            }
+
+            // Sleep for 1 second
+            try {
+              thisThread.sleep(1000);
+            } catch (InterruptedException exc) { }
+          }
+
+          // Remove callbacks for this appId
+          LOG.info("Removing callbacks for " + appId.toString());
+          synchronized (Daemon.this) {
+            startedCallbacks.remove(appId);
+          }
+        }
+      };
+    watcher.setDaemon(true);
+    watcher.start();
+  }
+
   class DaemonImpl extends DaemonGrpc.DaemonImplBase {
     @Override
     public void ping(Msg.Empty req, StreamObserver<Msg.Empty> resp) {
@@ -427,7 +521,7 @@ public class Daemon {
     private ApplicationReport getReport(Msg.Application req,
         StreamObserver<?> resp) {
 
-      ApplicationId appId = Utils.appIdFromString(req.getId());
+      final ApplicationId appId = Utils.appIdFromString(req.getId());
 
       if (appId == null) {
         resp.onError(Status.INVALID_ARGUMENT
@@ -465,6 +559,23 @@ public class Daemon {
       if (report != null) {
         resp.onNext(MsgUtils.writeApplicationReport(report));
         resp.onCompleted();
+      }
+    }
+
+    @Override
+    public void waitForStart(Msg.Application req,
+        StreamObserver<Msg.ApplicationReport> resp) {
+
+      ApplicationReport report = getReport(req, resp);
+      if (report == null) {
+        return;  // error message set in getReport
+      }
+
+      if (hasStarted(report)) {
+        resp.onNext(MsgUtils.writeApplicationReport(report));
+        resp.onCompleted();
+      } else {
+        addWatcher(report.getApplicationId(), resp);
       }
     }
 

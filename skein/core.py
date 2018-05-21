@@ -419,6 +419,19 @@ class Client(object):
             resp = self._stub.submit(job.to_protobuf())
         return Application(self, resp.id)
 
+    def wait(self, app_id):
+        """Wait for an application to start.
+
+        Blocks until the application starts.
+
+        Parameters
+        ----------
+        app_id : str
+            The id of the application.
+        """
+        with convert_errors(daemon=True):
+            self._stub.waitForStart(proto.Application(id=app_id))
+
     def applications(self, states=None):
         """Get the status of current skein applications.
 
