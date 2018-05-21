@@ -21,6 +21,14 @@ Client
     :inherited-members:
 
 
+Application
+-----------
+
+.. autoclass:: Application
+    :members:
+    :inherited-members:
+
+
 Application Client
 ------------------
 
@@ -75,3 +83,28 @@ Application Responses
 .. autoclass:: skein.model.ResourceUsageReport
     :members:
     :inherited-members:
+
+
+Exceptions
+----------
+
+.. autoexception:: SkeinError
+    :show-inheritance:
+
+.. autoexception:: SkeinConfigurationError
+    :show-inheritance:
+
+.. autoexception:: ConnectionError
+    :show-inheritance:
+
+.. autoexception:: DaemonNotRunningError
+    :show-inheritance:
+
+.. autoexception:: ApplicationNotRunningError
+    :show-inheritance:
+
+.. autoexception:: DaemonError
+    :show-inheritance:
+
+.. autoexception:: ApplicationError
+    :show-inheritance:

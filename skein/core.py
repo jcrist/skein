@@ -22,8 +22,8 @@ from .exceptions import (context, FileNotFoundError, SkeinConfigurationError,
 from .model import Job, Service, ApplicationReport, ApplicationState
 
 
-__all__ = ('Client', 'Application', 'ApplicationClient', 'start_global_daemon',
-           'stop_global_daemon', 'Security')
+__all__ = ('Client', 'Application', 'ApplicationClient', 'Security',
+           'start_global_daemon', 'stop_global_daemon')
 
 
 ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'

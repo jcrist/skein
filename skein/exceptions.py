@@ -38,11 +38,11 @@ class SkeinError(Exception):
 
 
 class SkeinConfigurationError(SkeinError, FileNotFoundError):
-    """Skein configuration not found"""
+    """Skein configuration was not found"""
 
 
 class ConnectionError(SkeinError, _ConnectionError):
-    """Failed to connect to Daemon or ApplicationMaster"""
+    """Failed to connect to the daemon or application master"""
 
 
 class DaemonNotRunningError(ConnectionError):
@@ -54,11 +54,11 @@ class ApplicationNotRunningError(ConnectionError):
 
 
 class DaemonError(SkeinError):
-    """Internal exceptions from the Daemon"""
+    """Internal exceptions from the daemon"""
 
 
 class ApplicationError(SkeinError):
-    """Internal exceptions from the Application"""
+    """Internal exceptions from the application master"""
 
 
 class _Context(object):
