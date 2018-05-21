@@ -189,6 +189,9 @@ setup(name='skein',
         [console_scripts]
         skein=skein.cli:main
       ''',
-      install_requires=['grpcio', 'pyyaml', 'cryptography'],
+      install_requires=['grpcio>=1.11.0',
+                        'protobuf>=3.5.0',
+                        'pyyaml',
+                        'cryptography'],
       setup_requires=setup_requires,
       zip_safe=False)
