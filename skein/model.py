@@ -72,9 +72,12 @@ def _infer_format(path, format='infer'):
         elif ext in {'.yaml', '.yml'}:
             format = 'yaml'
         else:
-            raise context.ValueError("Can't infer format from filepath %r, "
-                                     "please specify manually" % path,
-                                     "Unsupported file type %r" % ext)
+            if context.is_cli:
+                msg = "Unsupported file type %r" % ext
+            else:
+                msg = ("Can't infer format from filepath %r, please "
+                       "specify manually" % path)
+            raise context.ValueError(msg)
     elif format not in {'json', 'yaml'}:
         raise ValueError("Unknown file format: %r" % format)
     return format

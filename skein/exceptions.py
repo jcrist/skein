@@ -4,43 +4,61 @@ import warnings
 import sys
 from contextlib import contextmanager
 
-import grpc
+from .compatibility import PY2
 
-from .compatibility import (PY2, ConnectionError, FileExistsError,
-                            FileNotFoundError)
+__all__ = ('FileExistsError',    # py2 compat
+           'FileNotFoundError',  # py2 compat
+           'SkeinError',
+           'SkeinConfigurationError',
+           'ConnectionError',
+           'DaemonNotRunningError',
+           'ApplicationNotRunningError',
+           'DaemonError',
+           'ApplicationError')
+
+
+if PY2:
+    class _ConnectionError(OSError):
+        pass
+
+    class FileExistsError(OSError):
+        pass
+
+    class FileNotFoundError(OSError):
+        pass
+
+else:
+    _ConnectionError = ConnectionError
+    FileExistsError = FileExistsError
+    FileNotFoundError = FileNotFoundError
 
 
 class SkeinError(Exception):
-    """Base class for exceptions that are handled nicely by the CLI"""
-    def with_cli_message(self, cli_message=None):
-        if cli_message is not None:
-            self._cli_message = cli_message
-        return self
+    """Base class for Skein specific exceptions"""
 
-    def cli_message(self):
-        return getattr(self, '_cli_message', None) or str(self)
+
+class SkeinConfigurationError(SkeinError, FileNotFoundError):
+    """Skein configuration not found"""
+
+
+class ConnectionError(SkeinError, _ConnectionError):
+    """Failed to connect to Daemon or ApplicationMaster"""
+
+
+class DaemonNotRunningError(ConnectionError):
+    """The daemon process is not currently running"""
+
+
+class ApplicationNotRunningError(ConnectionError):
+    """The application master is not currently running"""
 
 
 class DaemonError(SkeinError):
-    """Exceptions raised when communicating with the daemon"""
-    pass
+    """Internal exceptions from the Daemon"""
 
 
-class ApplicationMasterError(SkeinError):
-    """Exceptions raised when communicating with the application master"""
-    pass
-
-
-class NotInitializedError(FileNotFoundError, SkeinError):
-    pass
-
-
-NOT_INITIALIZED = (NotInitializedError(
-    "Skein global configuration directory is not initialized. Please run "
-    "either ``Security.from_new_key_pair()`` or ``skein init``.")
-    .with_cli_message(
-    "Skein global configuration directory is not initialized. Please run "
-    "``skein init``."))
+class ApplicationError(SkeinError):
+    """Internal exceptions from the Application"""
 
 
 class _Context(object):
@@ -68,10 +86,8 @@ class _Context(object):
         name = typ.__name__
         typ2 = type(name, (typ, SkeinError), {})
 
-        def wrap(self, msg, cli=None):
-            if not self.is_cli:
-                return typ(msg)
-            return typ2(msg).with_cli_message(cli)
+        def wrap(self, msg):
+            return typ2(msg) if self.is_cli else typ(msg)
 
         if PY2:
             import types
@@ -80,31 +96,8 @@ class _Context(object):
             setattr(cls, name, wrap)
 
 
-for exc in [ValueError, TypeError, ConnectionError, FileExistsError,
-            FileNotFoundError]:
+for exc in [ValueError, TypeError, FileExistsError, FileNotFoundError]:
     _Context.register_wrapper(exc)
 
 
 context = _Context()
-
-
-@contextmanager
-def convert_errors(daemon=True):
-    exc = None
-    try:
-        yield
-    except grpc.RpcError as _exc:
-        exc = _exc
-
-    if exc is not None:
-        code = exc.code()
-        if code == grpc.StatusCode.UNAVAILABLE:
-            server_name = 'daemon' if daemon else 'application master'
-            raise ConnectionError("Unable to connect to %s" % server_name)
-        elif code in (grpc.StatusCode.INVALID_ARGUMENT,
-                      grpc.StatusCode.NOT_FOUND,
-                      grpc.StatusCode.ALREADY_EXISTS):
-            raise context.ValueError(exc.details())
-        else:
-            cls = DaemonError if daemon else ApplicationMasterError
-            raise cls(exc.details())
