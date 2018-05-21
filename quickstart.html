@@ -1,0 +1,254 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Quickstart &#8212; Skein 0.0.1+95.g49abb50 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Docs" href="api.html" />
+    <link rel="prev" title="Skein" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="quickstart">
+<h1>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h1>
+<p>First make sure that <a class="reference external" href="index.html#installation">Skein is installed</a>.</p>
+<p>Skein is intended to be used either as a commandline application or
+programmatically using the Python API. This document provides a brief example
+using the commandline – for more information please see the <a class="reference external" href="api.html">API</a>
+or <a class="reference external" href="cli.html">CLI</a> documentation.</p>
+<div class="section" id="initialize-configuration">
+<h2>Initialize Configuration<a class="headerlink" href="#initialize-configuration" title="Permalink to this headline">¶</a></h2>
+<p>Skein relies on a <code class="docutils literal notranslate"><span class="pre">.skein</span></code> directory in your home directory to store security
+credentials and runtime state. To initialize this directory, run <a class="reference external" href="cli.html#skein-init">skein init</a>. Note that this only needs to be done once upon
+install.</p>
+<div class="code highlight-default notranslate"><div class="highlight"><pre><span></span>$ skein init
+</pre></div>
+</div>
+</div>
+<div class="section" id="start-the-skein-daemon">
+<h2>Start the Skein Daemon<a class="headerlink" href="#start-the-skein-daemon" title="Permalink to this headline">¶</a></h2>
+<p>To communicate with the YARN Resource manager, Skein uses a background daemon
+process written in Java. How this process is managed is configurable, but for
+most users the pattern will be:</p>
+<ol class="arabic simple">
+<li>Start the Skein daemon</li>
+<li>Execute yarn job/jobs</li>
+<li>Shut down the Skein daemon</li>
+</ol>
+<p>To do this from the command line, use <a class="reference external" href="cli.html#skein-daemon-start">skein daemon start</a>:</p>
+<div class="code highlight-default notranslate"><div class="highlight"><pre><span></span>$ skein daemon start
+localhost:12345
+</pre></div>
+</div>
+</div>
+<div class="section" id="write-an-application-specification">
+<h2>Write an Application Specification<a class="headerlink" href="#write-an-application-specification" title="Permalink to this headline">¶</a></h2>
+<p>Skein applications are written declaratively as specifications. These can be
+provided as YAML or JSON files, or created programmatically using the
+<a class="reference external" href="api.html#job-specification">specification api</a>.</p>
+<p>Here we create a simple “Hello World” application as a YAML file:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hello_world</span>
+<span class="l l-Scalar l-Scalar-Plain">queue</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">default</span>
+
+<span class="l l-Scalar l-Scalar-Plain">services</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">my_service</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">resources</span><span class="p p-Indicator">:</span>
+      <span class="l l-Scalar l-Scalar-Plain">vcores</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+      <span class="l l-Scalar l-Scalar-Plain">memory</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">128</span>
+    <span class="l l-Scalar l-Scalar-Plain">files</span><span class="p p-Indicator">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">file</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">payload.txt</span>
+    <span class="l l-Scalar l-Scalar-Plain">commands</span><span class="p p-Indicator">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">echo &quot;Sleeping for 60 seconds&quot;</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sleep 60</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">cat payload.txt</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">echo &quot;Stopping service&quot;</span>
+</pre></div>
+</div>
+<p>Where the contents of <code class="docutils literal notranslate"><span class="pre">payload.txt</span></code> is:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Hello World!
+</pre></div>
+</div>
+<p>Walking through this specification:</p>
+<ul class="simple">
+<li>The application name is specified as <code class="docutils literal notranslate"><span class="pre">hello_world</span></code>, and the will be
+deployed in the YARN queue <code class="docutils literal notranslate"><span class="pre">default</span></code>.</li>
+<li>The application starts a single service <code class="docutils literal notranslate"><span class="pre">my_service</span></code> on a container using 1
+virtual core and 128 MB of memory.</li>
+<li>The file <code class="docutils literal notranslate"><span class="pre">payload.txt</span></code> is distributed with the application.</li>
+<li>The service runs a few Shell commands. These will be run in order, stopping
+on the first failure, and all outputs logged in the container logs.</li>
+</ul>
+</div>
+<div class="section" id="submit-the-application">
+<h2>Submit the Application<a class="headerlink" href="#submit-the-application" title="Permalink to this headline">¶</a></h2>
+<p>Applications are submitted to be run on the cluster using the <a class="reference external" href="cli.html#skein-application-submit">skein
+application submit</a> command:</p>
+<div class="code highlight-default notranslate"><div class="highlight"><pre><span></span>$ skein application submit hello_world.yaml
+application_1526497750451_0009
+</pre></div>
+</div>
+<p>This uploads any necessary files to HDFS, and submits the application to the
+YARN scheduler. Depending on current cluster usage this could start immediately
+or at a later time. The command outputs the Application ID, which is needed for
+subsequent commands.</p>
+</div>
+<div class="section" id="query-existing-applications">
+<h2>Query existing applications<a class="headerlink" href="#query-existing-applications" title="Permalink to this headline">¶</a></h2>
+<p>As YARN processes applications, they work through several states, enumerated by
+<a class="reference internal" href="api.html#skein.model.ApplicationState" title="skein.model.ApplicationState"><code class="xref py py-class docutils literal notranslate"><span class="pre">ApplicationState</span></code></a>. The status of all Skein applications
+can be queried using the <a class="reference external" href="cli.html#skein-application-ls">skein application ls</a> command. By default this shows all
+applications that are either <code class="docutils literal notranslate"><span class="pre">SUBMITTED</span></code>, <code class="docutils literal notranslate"><span class="pre">ACCEPTED</span></code>, or <code class="docutils literal notranslate"><span class="pre">RUNNING</span></code>.</p>
+<div class="code highlight-default notranslate"><div class="highlight"><pre><span></span>$ skein application ls
+APPLICATION_ID                    NAME           STATE      STATUS       CONTAINERS    VCORES    MEMORY
+application_1526497750451_0009    hello_world    RUNNING    UNDEFINED    2             2         640
+</pre></div>
+</div>
+<p>You can also filter by application state. Here we show all <code class="docutils literal notranslate"><span class="pre">KILLED</span></code> and <code class="docutils literal notranslate"><span class="pre">FAILED</span></code> applications:</p>
+<div class="code highlight-default notranslate"><div class="highlight"><pre><span></span>$ skein application ls -s KILLED -s FAILED
+APPLICATION_ID                    NAME           STATE     STATUS    CONTAINERS    VCORES    MEMORY
+application_1526497750451_0002    hello_world    KILLED    KILLED    0             0         0
+application_1526497750451_0004    hello_world    KILLED    KILLED    0             0         0
+application_1526497750451_0005    hello_world    FAILED    FAILED    0             0         0
+</pre></div>
+</div>
+<p>To get the status of a specific application, use the <a class="reference external" href="cli.html#skein-application-status">skein application status</a> command:</p>
+<div class="code highlight-default notranslate"><div class="highlight"><pre><span></span>$ skein application status application_1526497750451_0009
+APPLICATION_ID                    NAME           STATE      STATUS       CONTAINERS    VCORES    MEMORY
+application_1526497750451_0009    hello_world    RUNNING    UNDEFINED    2             2         640
+</pre></div>
+</div>
+</div>
+<div class="section" id="kill-a-running-application">
+<h2>Kill a running application<a class="headerlink" href="#kill-a-running-application" title="Permalink to this headline">¶</a></h2>
+<p>By default, applications shutdown once all of their services have exited <em>or</em>
+any service exits with a non-zero exit code. To explicitly kill an application,
+use the <a class="reference external" href="cli.html#skein-application-kill">skein application kill</a> command:</p>
+<div class="code highlight-default notranslate"><div class="highlight"><pre><span></span>$ skein application kill application_1526497750451_0009
+
+# See that the application was killed
+$ skein application status application_1526497750451_0009
+APPLICATION_ID                    NAME           STATE     STATUS    CONTAINERS    VCORES    MEMORY
+application_1526497750451_0009    hello_world    KILLED    KILLED    0             0         0
+</pre></div>
+</div>
+</div>
+<div class="section" id="stop-the-skein-daemon">
+<h2>Stop the Skein Daemon<a class="headerlink" href="#stop-the-skein-daemon" title="Permalink to this headline">¶</a></h2>
+<p>Once you’ve completed your work, you can shutdown the Skein daemon. This isn’t
+strictly necessary (the daemon can run for long periods), but helps keep
+resource usage on the edge node low.</p>
+<p>To do this from the command line, use <a class="reference external" href="cli.html#skein-daemon-stop">skein daemon stop</a>.</p>
+<div class="code highlight-default notranslate"><div class="highlight"><pre><span></span>$ skein daemon stop
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Skein</a></h1>
+
+
+
+<p class="blurb">Simple tool for deploying jobs on Apache YARN</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=jcrist&repo=skein&type=watch&count=False&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a href="https://travis-ci.org/jcrist/skein">
+    <img
+        alt="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+        src="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#initialize-configuration">Initialize Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#start-the-skein-daemon">Start the Skein Daemon</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#write-an-application-specification">Write an Application Specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#submit-the-application">Submit the Application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#query-existing-applications">Query existing applications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kill-a-running-application">Kill a running application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stop-the-skein-daemon">Stop the Skein Daemon</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
+</ul>
+
+<h3>Need help?</h3>
+
+<p>
+  Open an issue in the <a href="https://github.com/jcrist/skein/issues">issue tracker</a>.
+</p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Jim Crist.
+      
+      |
+      <a href="_sources/quickstart.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
