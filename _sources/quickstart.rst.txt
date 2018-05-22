@@ -22,6 +22,17 @@ install.
     $ skein init
 
 
+Kinit (optional)
+----------------
+
+If your system is configured to use Kerberos for authentication, you need to
+make sure you have an active ticket-granting-ticket before continuing:
+
+.. code::
+
+    $ kinit
+
+
 Start the Skein Daemon
 ----------------------
 
