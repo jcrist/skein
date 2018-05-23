@@ -27,10 +27,6 @@ def _datetime_from_millis(x):
     return _EPOCH + timedelta(milliseconds=x)
 
 
-def _if_none(x, y):
-    return x if x is not None else y
-
-
 def _pop_origin(kwargs):
     _origin = kwargs.pop('_origin', None)
     if kwargs:
@@ -39,8 +35,51 @@ def _pop_origin(kwargs):
     return _origin
 
 
+def check_no_cycles(dependencies):
+    completed = set()
+    seen = set()
+
+    for key in dependencies:
+        if key in completed:
+            continue
+        nodes = [key]
+        while nodes:
+            # Keep current node on the stack until all descendants are visited
+            cur = nodes[-1]
+            if cur in completed:
+                # Already fully traversed descendants of cur
+                nodes.pop()
+                continue
+            seen.add(cur)
+
+            # Add direct descendants of cur to nodes stack
+            next_nodes = []
+            for nxt in dependencies[cur]:
+                if nxt not in completed:
+                    if nxt in seen:
+                        cycle = [nxt]
+                        while nodes[-1] != nxt:
+                            cycle.append(nodes.pop())
+                        cycle.append(nodes.pop())
+                        raise context.ValueError(
+                            'Dependency cycle detected in job: %s' %
+                            '->'.join(str(x) for x in reversed(cycle)))
+                    next_nodes.append(nxt)
+
+            if next_nodes:
+                nodes.extend(next_nodes)
+            else:
+                completed.add(cur)
+                seen.remove(cur)
+                nodes.pop()
+
+
 def is_list_of(x, typ):
     return isinstance(x, list) and all(isinstance(i, typ) for i in x)
+
+
+def is_set_of(x, typ):
+    return isinstance(x, set) and all(isinstance(i, typ) for i in x)
 
 
 def is_dict_of(x, ktyp, vtyp):
@@ -52,11 +91,12 @@ def is_dict_of(x, ktyp, vtyp):
 def _convert(x, method, *args):
     if hasattr(x, method):
         return getattr(x, method)(*args)
-    elif type(x) is list:
+    typ = type(x)
+    if typ in (list, set, tuple):
         return [_convert(i, method, *args) for i in x]
-    elif type(x) is dict:
+    elif typ is dict:
         return {k: _convert(v, method, *args) for k, v in x.items()}
-    elif type(x) is datetime:
+    elif typ is datetime:
         return int(x.timestamp() * 1000)
     elif isinstance(x, Enum):
         return str(x)
@@ -224,22 +264,19 @@ class Base(object):
                 msg = "%s must be an instance of %s"
             raise context.TypeError(msg % (field, type.__name__))
 
-    def _check_is_list_of(self, field, type, nullable=False):
-        val = getattr(self, field)
-        if not (is_list_of(val, type) or (nullable and val is None)):
-            if nullable:
-                msg = "%s must be a list of %s, or None"
-            else:
-                msg = "%s must be a list of %s"
+    def _check_is_set_of(self, field, type):
+        if not is_set_of(getattr(self, field), type):
+            msg = "%s must be a set of %s"
             raise context.TypeError(msg % (field, type.__name__))
 
-    def _check_is_dict_of(self, field, key, val, nullable=False):
-        attr = getattr(self, field)
-        if not (is_dict_of(attr, key, val) or (nullable and attr is None)):
-            if nullable:
-                msg = "%s must be a dict of %s -> %s, or None"
-            else:
-                msg = "%s must be a list of %s -> %s"
+    def _check_is_list_of(self, field, type):
+        if not is_list_of(getattr(self, field), type):
+            msg = "%s must be a list of %s"
+            raise context.TypeError(msg % (field, type.__name__))
+
+    def _check_is_dict_of(self, field, key, val):
+        if not is_dict_of(getattr(self, field), key, val):
+            msg = "%s must be a list of %s -> %s"
             raise context.TypeError(msg % (field, key.__name__, val.__name__))
 
     def _check_is_bounded_int(self, field, min=0, nullable=False):
@@ -553,9 +590,9 @@ class Service(Base):
         paths.
     env : dict, optional
         A mapping of environment variables needed to run the service.
-    depends : list, optional
-        A list of string keys in the keystore that this service depends on. The
-        service will not be started until these keys are present.
+    depends : set, optional
+        A set of service names that this service depends on. The service will
+        only be started after all its dependencies have been started.
     """
     __slots__ = ('commands', 'resources', 'instances', 'files', 'env',
                  'depends')
@@ -566,9 +603,9 @@ class Service(Base):
         self._assign_required('commands', commands)
         self._assign_required('resources', resources)
         self.instances = instances
-        self.files = _if_none(files, {})
-        self.env = _if_none(env, {})
-        self.depends = _if_none(depends, [])
+        self.files = {} if files is None else files
+        self.env = {} if env is None else env
+        self.depends = set() if depends is None else set(depends)
         self._validate()
 
     def __repr__(self):
@@ -590,7 +627,7 @@ class Service(Base):
         if not self.commands:
             raise context.ValueError("There must be at least one command")
 
-        self._check_is_list_of('depends', str)
+        self._check_is_set_of('depends', str)
 
     @classmethod
     @implements(Base.from_dict)
@@ -633,7 +670,7 @@ class Service(Base):
                   'files': files,
                   'env': dict(obj.env),
                   'commands': list(obj.commands),
-                  'depends': list(obj.depends)}
+                  'depends': set(obj.depends)}
         return cls(**kwargs)
 
 
@@ -667,8 +704,18 @@ class Job(Base):
         self._check_is_dict_of('services', str, Service)
         if not self.services:
             raise context.ValueError("There must be at least one service")
-        for s in self.services.values():
-            s._validate()
+
+        for name, service in self.services.items():
+            service._validate()
+            missing = set(service.depends).difference(self.services)
+            if missing:
+                raise context.ValueError(
+                    "Unknown service dependencies for service %r:\n"
+                    "%s" % (name, format_list(missing)))
+
+        dependencies = {name: service.depends
+                        for name, service in self.services.items()}
+        check_no_cycles(dependencies)
 
     @classmethod
     @implements(Base.from_dict)

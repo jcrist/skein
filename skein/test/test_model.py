@@ -139,6 +139,9 @@ def test_service_invariants():
     with pytest.raises(ValueError):
         Service(commands=[], resources=r)
 
+    with pytest.raises(TypeError):
+        Service(commands='foo', resources=r)
+
     with pytest.raises(ValueError):
         Service(commands=c, resources=r, instances=-1)
 
@@ -152,7 +155,7 @@ def test_service_invariants():
     s = Service(commands=c, resources=r)
     assert isinstance(s.env, dict)
     assert isinstance(s.files, dict)
-    assert isinstance(s.depends, list)
+    assert isinstance(s.depends, set)
 
 
 def test_job():
@@ -181,6 +184,20 @@ def test_job_invariants():
     with pytest.raises(TypeError):
         Job(queue=1, services={'service': s})
 
+    r = Resources(memory=1024, vcores=1)
+    c = ['commands']
+
+    # Unknown dependency name
+    with pytest.raises(ValueError):
+        Job(services={'a': s,
+                      'b': Service(resources=r, commands=c, depends=['c', 'd'])})
+
+    # Cyclical dependencies
+    with pytest.raises(ValueError):
+        Job(services={'a': Service(resources=r, commands=c, depends=['c']),
+                      'b': Service(resources=r, commands=c, depends=['a']),
+                      'c': Service(resources=r, commands=c, depends=['b'])})
+
 
 def test_service_from_yaml():
     # Check that syntactic sugar for files, etc... is properly parsed
@@ -203,7 +220,7 @@ def test_service_from_yaml():
 
     assert s.env == {'key1': 'val1', 'key2': 'val2'}
     assert s.commands == ['command 1', 'command 2']
-    assert s.depends == []
+    assert s.depends == set()
 
 
 def test_service_roundtrip():
