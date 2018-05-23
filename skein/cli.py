@@ -119,7 +119,7 @@ def daemon_stop():
             'restart', 'Restart the skein daemon',
             log)
 def daemon_restart(log=False):
-    Client._clear_global_daemon()
+    daemon_stop()
     daemon_start(log=log)
 
 
