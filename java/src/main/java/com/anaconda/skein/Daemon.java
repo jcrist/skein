@@ -232,7 +232,7 @@ public class Daemon {
     String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
     List<String> commands = Arrays.asList(
         (Environment.JAVA_HOME.$$() + "/bin/java "
-         + "-Xmx10M "
+         + "-Xmx128M "
          + "com.anaconda.skein.ApplicationMaster "
          + appDir
          + " >" + logdir + "/appmaster.log 2>&1"));
