@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -281,8 +282,9 @@ public class Daemon {
     LocalResource keyFile = newLocalResource(uploadCache, appDir, keyPath);
 
     // Setup the LocalResources for the services
-    for (Model.Service s: job.getServices().values()) {
-      finalizeService(s, uploadCache, appDir, certFile, keyFile);
+    for (Map.Entry<String, Model.Service> entry: job.getServices().entrySet()) {
+      finalizeService(entry.getKey(), entry.getValue(),
+                      uploadCache, appDir, certFile, keyFile);
     }
     job.validate();
 
@@ -295,32 +297,57 @@ public class Daemon {
     } finally {
       out.close();
     }
-    FileStatus status = defaultFs.getFileStatus(specPath);
-    LocalResource spec = LocalResource.newInstance(
-        ConverterUtils.getYarnUrlFromPath(specPath),
-        LocalResourceType.FILE,
-        LocalResourceVisibility.APPLICATION,
-        status.getLen(),
-        status.getModificationTime());
+    LocalResource specFile = Utils.localResource(defaultFs, specPath,
+                                                 LocalResourceType.FILE);
 
     // Setup the LocalResources for the application master
     Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
     lr.put("skein.jar", newLocalResource(uploadCache, appDir, jarPath));
     lr.put(".skein.crt", certFile);
     lr.put(".skein.pem", keyFile);
-    lr.put(".skein.proto", spec);
+    lr.put(".skein.proto", specFile);
     return lr;
   }
 
-  private void finalizeService(Model.Service service,
+  private void finalizeService(String serviceName, Model.Service service,
       Map<Path, Path> uploadCache, Path appDir,
       LocalResource certFile, LocalResource keyFile) throws IOException {
+
+    // Build the execution script
+    final StringBuilder script = new StringBuilder();
+    script.append("set -e -x");
+    for (String c : service.getCommands()) {
+      script.append("\n");
+      script.append(c);
+    }
+
+    // Write the job script to file
+    final Path scriptPath = new Path(appDir, serviceName + ".sh");
+    LOG.info("SERVICE: " + serviceName + " - writing script to " + scriptPath);
+
+    OutputStream out = defaultFs.create(scriptPath);
+    try {
+      out.write(script.toString().getBytes(StandardCharsets.UTF_8));
+    } finally {
+      out.close();
+    }
+    LocalResource scriptFile = Utils.localResource(defaultFs, scriptPath,
+                                                   LocalResourceType.FILE);
+
+    // Build command to execute script and set as new commands
+    ArrayList<String> commands = new ArrayList<String>();
+    String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
+    commands.add("bash .script.sh >" + logdir + "/" + serviceName + ".log 2>&1");
+    service.setCommands(commands);
+
     // Upload files/archives as necessary
     Map<String, LocalResource> lr = service.getLocalResources();
     for (LocalResource resource : lr.values()) {
       finalizeLocalResource(uploadCache, appDir, resource, true);
     }
-    // Add crt/pem files
+
+    // Add script/crt/pem files
+    lr.put(".script.sh", scriptFile);
     lr.put(".skein.crt", certFile);
     lr.put(".skein.pem", keyFile);
 

@@ -17,15 +17,12 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -40,13 +37,10 @@ import org.apache.log4j.Logger;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -179,59 +173,12 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   public void initialize(ServiceTracker tracker) throws IOException {
     Model.Service service = tracker.service;
 
-    // Finalize environment variables
-    Map<String, String> env = new HashMap<String, String>();
-    for (Map.Entry<String, String> entry : service.getEnv().entrySet()) {
-      env.put(entry.getKey(), entry.getValue());
-    }
-    env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
-
-    // Finalize execution script
-    final StringBuilder script = new StringBuilder();
-    script.append("set -e -x");
-    for (String c : service.getCommands()) {
-      script.append("\n");
-      script.append(c);
-    }
-
-    // Write the job script to file
-    final Path scriptPath = new Path(appDir, tracker.name + ".sh");
-    LOG.info("SERVICE: " + tracker.name + " - writing script to " + scriptPath);
-
-    LocalResource scriptResource = null;
-    try {
-      scriptResource = ugi.doAs(
-        new PrivilegedExceptionAction<LocalResource>() {
-          public LocalResource run() throws IOException {
-            FileSystem fs = FileSystem.get(conf);
-            OutputStream out = fs.create(scriptPath);
-            try {
-              out.write(script.toString().getBytes(StandardCharsets.UTF_8));
-            } finally {
-              out.close();
-            }
-            return Utils.localResource(fs, scriptPath, LocalResourceType.FILE);
-          }
-        });
-    } catch (InterruptedException exc) { }
-
-    // Add script to localized files
-    Map<String, LocalResource> localResources;
-    Map<String, LocalResource> specLR = service.getLocalResources();
-    if (specLR != null) {
-      localResources = new HashMap<String, LocalResource>(specLR);
-    } else {
-      localResources = new HashMap<String, LocalResource>();
-    }
-    localResources.put(".script.sh", scriptResource);
-
-    // Build command to execute script
-    ArrayList<String> commands = new ArrayList<String>();
-    String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
-    commands.add("bash .script.sh >" + logdir + "/" + tracker.name + ".log 2>&1");
+    // Add appmaster address to environment
+    service.getEnv().put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
 
     tracker.ctx = ContainerLaunchContext.newInstance(
-        localResources, env, commands, null, tokens, null);
+        service.getLocalResources(), service.getEnv(), service.getCommands(),
+        null, tokens, null);
 
     // Request initial containers
     for (int i = 0; i < service.getInstances(); i++) {
