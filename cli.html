@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>CLI Docs &#8212; Skein 0.0.2+5.gd657ea3 documentation</title>
+    <title>CLI Docs &#8212; Skein 0.0.2+7.g7b41506 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="_static/documentation_options.js"></script>
@@ -260,77 +260,102 @@
 </dd></dl>
 
 </div>
-<div class="section" id="skein-keystore">
-<h3>skein keystore<a class="headerlink" href="#skein-keystore" title="Permalink to this headline">¶</a></h3>
-<p>Manage the skein keystore</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein keystore [--help] command ...</span>
+<div class="section" id="skein-kv">
+<h3>skein kv<a class="headerlink" href="#skein-kv" title="Permalink to this headline">¶</a></h3>
+<p>Manage the skein key-value store</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kv [--help] command ...</span>
 </pre></div>
 </div>
 <dl class="option">
-<dt id="cmdoption-skein-keystore-help">
-<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-help" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-kv-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
 </div>
-<div class="section" id="skein-keystore-get">
-<h3>skein keystore get<a class="headerlink" href="#skein-keystore-get" title="Permalink to this headline">¶</a></h3>
-<p>Get a value from the keystore</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein keystore get [--key KEY] [--wait] [--help] APP_ID</span>
+<div class="section" id="skein-kv-del">
+<h3>skein kv del<a class="headerlink" href="#skein-kv-del" title="Permalink to this headline">¶</a></h3>
+<p>Delete a value from the key-value store</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kv del [--key KEY] [--help] APP_ID</span>
 </pre></div>
 </div>
 <dl class="option">
-<dt id="cmdoption-skein-keystore-get-arg-app-id">
-<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-get-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-kv-del-arg-app-id">
+<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-del-arg-app-id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id. To use in a container during a skein job, pass in “current”</p>
 </dd></dl>
 
 <dl class="option">
-<dt id="cmdoption-skein-keystore-get-key">
-<code class="descname">--key</code><code class="descclassname"> &lt;key&gt;</code><a class="headerlink" href="#cmdoption-skein-keystore-get-key" title="Permalink to this definition">¶</a></dt>
-<dd><p>The key to get. Omit to the whole keystore.</p>
+<dt id="cmdoption-skein-kv-del-key">
+<code class="descname">--key</code><code class="descclassname"> &lt;key&gt;</code><a class="headerlink" href="#cmdoption-skein-kv-del-key" title="Permalink to this definition">¶</a></dt>
+<dd><p>The key to delete.</p>
 </dd></dl>
 
 <dl class="option">
-<dt id="cmdoption-skein-keystore-get-wait">
-<code class="descname">--wait</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-get-wait" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-kv-del-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-del-help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show this help message then exit</p>
+</dd></dl>
+
+</div>
+<div class="section" id="skein-kv-get">
+<h3>skein kv get<a class="headerlink" href="#skein-kv-get" title="Permalink to this headline">¶</a></h3>
+<p>Get a value from the key-value store</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kv get [--key KEY] [--wait] [--help] APP_ID</span>
+</pre></div>
+</div>
+<dl class="option">
+<dt id="cmdoption-skein-kv-get-arg-app-id">
+<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-get-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The application id. To use in a container during a skein job, pass in “current”</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-kv-get-key">
+<code class="descname">--key</code><code class="descclassname"> &lt;key&gt;</code><a class="headerlink" href="#cmdoption-skein-kv-get-key" title="Permalink to this definition">¶</a></dt>
+<dd><p>The key to get. Omit to get the whole key-value store.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-kv-get-wait">
+<code class="descname">--wait</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-get-wait" title="Permalink to this definition">¶</a></dt>
 <dd><p>If true, will block until the key is set</p>
 </dd></dl>
 
 <dl class="option">
-<dt id="cmdoption-skein-keystore-get-help">
-<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-get-help" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-kv-get-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-get-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
 </div>
-<div class="section" id="skein-keystore-set">
-<h3>skein keystore set<a class="headerlink" href="#skein-keystore-set" title="Permalink to this headline">¶</a></h3>
-<p>Set a value in the keystore</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein keystore set [--key KEY] [--value VALUE] [--help] APP_ID</span>
+<div class="section" id="skein-kv-set">
+<h3>skein kv set<a class="headerlink" href="#skein-kv-set" title="Permalink to this headline">¶</a></h3>
+<p>Set a value in the key-value store</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kv set [--key KEY] [--value VALUE] [--help] APP_ID</span>
 </pre></div>
 </div>
 <dl class="option">
-<dt id="cmdoption-skein-keystore-set-arg-app-id">
-<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-set-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-kv-set-arg-app-id">
+<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-set-arg-app-id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id. To use in a container during a skein job, pass in “current”</p>
 </dd></dl>
 
 <dl class="option">
-<dt id="cmdoption-skein-keystore-set-key">
-<code class="descname">--key</code><code class="descclassname"> &lt;key&gt;</code><a class="headerlink" href="#cmdoption-skein-keystore-set-key" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-kv-set-key">
+<code class="descname">--key</code><code class="descclassname"> &lt;key&gt;</code><a class="headerlink" href="#cmdoption-skein-kv-set-key" title="Permalink to this definition">¶</a></dt>
 <dd><p>The key to set</p>
 </dd></dl>
 
 <dl class="option">
-<dt id="cmdoption-skein-keystore-set-value">
-<code class="descname">--value</code><code class="descclassname"> &lt;value&gt;</code><a class="headerlink" href="#cmdoption-skein-keystore-set-value" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-kv-set-value">
+<code class="descname">--value</code><code class="descclassname"> &lt;value&gt;</code><a class="headerlink" href="#cmdoption-skein-kv-set-value" title="Permalink to this definition">¶</a></dt>
 <dd><p>The value to set</p>
 </dd></dl>
 
 <dl class="option">
-<dt id="cmdoption-skein-keystore-set-help">
-<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-keystore-set-help" title="Permalink to this definition">¶</a></dt>
+<dt id="cmdoption-skein-kv-set-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-set-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 

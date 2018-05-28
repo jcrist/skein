@@ -37,6 +37,13 @@ Application Client
     :inherited-members:
 
 
+Key Value Store
+---------------
+
+.. autoclass:: skein.core.KeyValueStore
+    :members:
+
+
 Job Specification
 -----------------
 
