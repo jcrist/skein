@@ -154,13 +154,13 @@ message ApplicationsResponse {
 
 
 service Master {
-  rpc keystoreGet (GetKeyRequest) returns (GetKeyResponse);
+  rpc keyvalueGetKey (GetKeyRequest) returns (GetKeyResponse);
 
-  rpc keystoreSet (SetKeyRequest) returns (Empty);
+  rpc keyvalueSetKey (SetKeyRequest) returns (Empty);
 
-  rpc keystoreDel (DelKeyRequest) returns (Empty);
+  rpc keyvalueDelKey (DelKeyRequest) returns (Empty);
 
-  rpc keystore (Empty) returns (KeystoreResponse);
+  rpc keyvalueGetAll (Empty) returns (KeyValueResponse);
 
   rpc getService (ServiceRequest) returns (Service);
 
@@ -188,7 +188,7 @@ message DelKeyRequest {
   string key = 1;
 }
 
-message KeystoreResponse {
+message KeyValueResponse {
   map<string, string> items = 1;
 }
 

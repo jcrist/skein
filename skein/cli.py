@@ -127,40 +127,41 @@ def daemon_restart(log=False):
 # KEYSTORE COMMANDS #
 #####################
 
-keystore = node(entry_subs, 'keystore', 'Manage the skein keystore')
+kv = node(entry_subs, 'kv', 'Manage the skein key-value store')
 
-keystore_app_id = arg('app_id', metavar='APP_ID',
-                      help='The application id. To use in a container during '
-                           'a skein job, pass in "current"')
+kv_app_id = arg('app_id', metavar='APP_ID',
+                help='The application id. To use in a container during '
+                     'a skein job, pass in "current"')
 
 
-@subcommand(keystore.subs,
-            'get', 'Get a value from the keystore',
-            keystore_app_id,
-            arg('--key', help='The key to get. Omit to get the whole keystore.'),
+@subcommand(kv.subs,
+            'get', 'Get a value from the key-value store',
+            kv_app_id,
+            arg('--key', help='The key to get. Omit to get the whole '
+                              'key-value store.'),
             arg('--wait', action='store_true',
                 help='If true, will block until the key is set'))
-def keystore_get(app_id, key=None, wait=False):
+def kv_get(app_id, key=None, wait=False):
     if app_id == 'current':
         app = ApplicationClient.connect_to_current()
     else:
         app = Client().connect(app_id)
 
     if key is None:
-        result = app.keystore.to_dict()
+        result = app.kv.to_dict()
         if result:
             print('\n'.join('%s: %s' % i for i in result.items()))
     else:
-        result = app.keystore.wait(key) if wait else app.keystore[key]
+        result = app.kv.wait(key) if wait else app.kv[key]
         print(result)
 
 
-@subcommand(keystore.subs,
-            'set', 'Set a value in the keystore',
-            keystore_app_id,
+@subcommand(kv.subs,
+            'set', 'Set a value in the key-value store',
+            kv_app_id,
             arg('--key', help='The key to set'),
             arg('--value', help='The value to set'))
-def keystore_set(app_id, key=None, value=None):
+def kv_set(app_id, key=None, value=None):
     if key is None:
         fail("--key is required")
     elif value is None:
@@ -171,20 +172,20 @@ def keystore_set(app_id, key=None, value=None):
     else:
         app = Client().connect(app_id)
 
-    app.keystore[key] = value
+    app.kv[key] = value
 
 
-@subcommand(keystore.subs,
-            'del', 'Delete a value from the keystore',
-            keystore_app_id,
+@subcommand(kv.subs,
+            'del', 'Delete a value from the key-value store',
+            kv_app_id,
             arg('--key', help='The key to delete.'))
-def keystore_del(app_id, key=None, wait=False):
+def kv_del(app_id, key=None, wait=False):
     if app_id == 'current':
         app = ApplicationClient.connect_to_current()
     else:
         app = Client().connect(app_id)
 
-    del app.keystore[key]
+    del app.kv[key]
 
 
 ########################
@@ -276,6 +277,8 @@ def main(args=None):
     try:
         with context.set_cli():
             func(**kwargs)
+    except KeyError as exc:
+        fail("Key %s is not set" % str(exc))
     except SkeinError as exc:
         fail(str(exc))
     except DaemonNotRunningError as exc:

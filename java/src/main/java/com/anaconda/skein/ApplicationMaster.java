@@ -63,7 +63,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   private Path appDir;
 
-  private final ConcurrentHashMap<String, String> configuration =
+  private final ConcurrentHashMap<String, String> keyValueStore =
       new ConcurrentHashMap<String, String>();
 
   private final ConcurrentHashMap<String, List<StreamObserver<Msg.GetKeyResponse>>> alerts =
@@ -529,10 +529,10 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     @Override
-    public void keystoreGet(Msg.GetKeyRequest req,
+    public void keyvalueGetKey(Msg.GetKeyRequest req,
         StreamObserver<Msg.GetKeyResponse> resp) {
       String key = req.getKey();
-      String val = configuration.get(key);
+      String val = keyValueStore.get(key);
       if (val == null) {
         if (req.getWait()) {
           if (alerts.get(key) == null) {
@@ -551,12 +551,12 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     @Override
-    public void keystoreSet(Msg.SetKeyRequest req,
+    public void keyvalueSetKey(Msg.SetKeyRequest req,
         StreamObserver<Msg.Empty> resp) {
       String key = req.getKey();
       String val = req.getVal();
 
-      configuration.put(key, val);
+      keyValueStore.put(key, val);
 
       resp.onNext(MsgUtils.EMPTY);
       resp.onCompleted();
@@ -582,9 +582,9 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     @Override
-    public void keystoreDel(Msg.DelKeyRequest req, StreamObserver<Msg.Empty> resp) {
+    public void keyvalueDelKey(Msg.DelKeyRequest req, StreamObserver<Msg.Empty> resp) {
       String key = req.getKey();
-      if (configuration.remove(key) == null) {
+      if (keyValueStore.remove(key) == null) {
         resp.onError(Status.NOT_FOUND.withDescription(key).asRuntimeException());
       } else {
         resp.onNext(MsgUtils.EMPTY);
@@ -593,11 +593,11 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     @Override
-    public void keystore(Msg.Empty req,
-        StreamObserver<Msg.KeystoreResponse> resp) {
-      resp.onNext(Msg.KeystoreResponse
+    public void keyvalueGetAll(Msg.Empty req,
+        StreamObserver<Msg.KeyValueResponse> resp) {
+      resp.onNext(Msg.KeyValueResponse
           .newBuilder()
-          .putAllItems(configuration)
+          .putAllItems(keyValueStore)
           .build());
       resp.onCompleted();
     }

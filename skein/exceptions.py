@@ -28,7 +28,7 @@ if PY2:
         pass
 
 else:
-    _ConnectionError = ConnectionError
+    _ConnectionError = ConnectionError  # noqa
     FileExistsError = FileExistsError
     FileNotFoundError = FileNotFoundError
 

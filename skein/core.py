@@ -532,7 +532,7 @@ class Client(_ClientBase):
         self._call('kill', proto.Application(id=app_id))
 
 
-class KeyStore(MutableMapping):
+class KeyValueStore(MutableMapping):
     """The Skein Key-Value store.
 
     Used by applications to coordinate configuration and global state.
@@ -544,16 +544,16 @@ class KeyStore(MutableMapping):
         self._client = client
 
     def to_dict(self):
-        """Return the whole keystore as a dictionary"""
-        return dict(self._client._call('keystore', proto.Empty()).items)
+        """Return the whole key-value store as a dictionary"""
+        return dict(self._client._call('keyvalueGetAll', proto.Empty()).items)
 
     def _get(self, key=None, wait=False):
         req = proto.GetKeyRequest(key=key, wait=wait)
-        resp = self._client._call('keystoreGet', req)
+        resp = self._client._call('keyvalueGetKey', req)
         return resp.val
 
     def wait(self, key):
-        """Get a key from the keystore, blocking until the key is set."""
+        """Get a key from the key-value store, blocking until the key is set."""
         return self._get(key=key, wait=True)
 
     def __getitem__(self, key):
@@ -562,11 +562,11 @@ class KeyStore(MutableMapping):
     def __setitem__(self, key, value):
         if not len(key):
             raise context.ValueError("key length must be > 0")
-        self._client._call('keystoreSet',
+        self._client._call('keyvalueSetKey',
                            proto.SetKeyRequest(key=key, val=value))
 
     def __delitem__(self, key):
-        self._client._call('keystoreDel', proto.DelKeyRequest(key=key))
+        self._client._call('keyvalueDelKey', proto.DelKeyRequest(key=key))
 
     def __iter__(self):
         return iter(self.to_dict())
@@ -600,7 +600,7 @@ class ApplicationClient(_ClientBase):
         return 'ApplicationClient<%s>' % self.address
 
     @cached_property
-    def keystore(self):
+    def kv(self):
         """The Skein Key-Value store.
 
         Used by applications to coordinate configuration and global state.
@@ -610,19 +610,19 @@ class ApplicationClient(_ClientBase):
 
         Examples
         --------
-        >>> app_client.keystore['foo'] = 'bar'
-        >>> app_client.keystore['foo']
+        >>> app_client.kv['foo'] = 'bar'
+        >>> app_client.kv['foo']
         'bar'
-        >>> del app_client.keystore['foo']
-        >>> 'foo' in app_client.keystore
+        >>> del app_client.kv['foo']
+        >>> 'foo' in app_client.kv
         False
 
         Wait until the key is set, either by another service or by a user
         client. This is useful for inter-service synchronization.
 
-        >>> app_client.keystore.wait('mykey')
+        >>> app_client.kv.wait('mykey')
         """
-        return KeyStore(self)
+        return KeyValueStore(self)
 
     def describe(self, service=None):
         """Information about the running job.
