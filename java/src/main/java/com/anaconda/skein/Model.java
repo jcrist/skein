@@ -2,6 +2,7 @@ package com.anaconda.skein;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 
 import java.util.List;
@@ -144,10 +145,20 @@ public class Model {
     private String id;
     private State state;
     private ContainerId containerId;
+    private NodeId nodeId;
     private long startTime;
     private long finishTime;
 
     public Container() {}
+
+    public Container(String serviceName, String id, State state) {
+      this.serviceName = serviceName;
+      this.id = id;
+      this.state = state;
+      this.containerId = null;
+      this.startTime = 0;
+      this.finishTime = 0;
+    }
 
     public String toString() {
       return ("Container<"
@@ -166,6 +177,9 @@ public class Model {
 
     public void setContainerId(ContainerId containerId) { this.containerId = containerId; }
     public ContainerId getContainerId() { return containerId; }
+
+    public void setNodeId(NodeId nodeId) { this.nodeId = nodeId; }
+    public NodeId getNodeId() { return nodeId; }
 
     public void setStartTime(long startTime) { this.startTime = startTime; }
     public long getStartTime() { return startTime; }
