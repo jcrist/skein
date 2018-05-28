@@ -2,6 +2,7 @@ package com.anaconda.skein;
 
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -137,6 +138,42 @@ public class MsgUtils {
     return null; // appease the compiler, but can't get here
   }
 
+  public static Msg.Container.State writeContainerState(Model.Container.State state) {
+    switch (state) {
+      case WAITING:
+        return Msg.Container.State.WAITING;
+      case REQUESTED:
+        return Msg.Container.State.REQUESTED;
+      case RUNNING:
+        return Msg.Container.State.RUNNING;
+      case SUCCEEDED:
+        return Msg.Container.State.SUCCEEDED;
+      case FAILED:
+        return Msg.Container.State.FAILED;
+      case STOPPED:
+        return Msg.Container.State.STOPPED;
+    }
+    return null; // appease the compiler, but can't get here
+  }
+
+  public static Model.Container.State readContainerState(Msg.Container.State state) {
+    switch (state) {
+      case WAITING:
+        return Model.Container.State.WAITING;
+      case REQUESTED:
+        return Model.Container.State.REQUESTED;
+      case RUNNING:
+        return Model.Container.State.RUNNING;
+      case SUCCEEDED:
+        return Model.Container.State.SUCCEEDED;
+      case FAILED:
+        return Model.Container.State.FAILED;
+      case STOPPED:
+        return Model.Container.State.STOPPED;
+    }
+    return null; // appease the compiler, but can't get here
+  }
+
   public static Msg.ApplicationReport writeApplicationReport(
       ApplicationReport r) {
     return Msg.ApplicationReport.newBuilder()
@@ -268,5 +305,27 @@ public class MsgUtils {
       services.put(entry.getKey(), readService(entry.getValue()));
     }
     return new Model.Job(job.getName(), job.getQueue(), services);
+  }
+
+  public static Msg.Container writeContainer(Model.Container container) {
+    return Msg.Container.newBuilder()
+      .setServiceName(container.getServiceName())
+      .setId(container.getId())
+      .setState(writeContainerState(container.getState()))
+      .setContainerId(container.getContainerId().toString())
+      .setStartTime(container.getStartTime())
+      .setFinishTime(container.getFinishTime())
+      .build();
+  }
+
+  public static Model.Container readContainer(Msg.Container container) {
+    Model.Container out = new Model.Container();
+    out.setServiceName(container.getServiceName());
+    out.setId(container.getId());
+    out.setState(readContainerState(container.getState()));
+    out.setContainerId(ContainerId.fromString(container.getContainerId()));
+    out.setStartTime(container.getStartTime());
+    out.setFinishTime(container.getFinishTime());
+    return out;
   }
 }

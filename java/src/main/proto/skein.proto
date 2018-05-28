@@ -88,6 +88,24 @@ message Job {
 }
 
 
+message Container {
+  enum State {
+    WAITING = 0;
+    REQUESTED = 1;
+    RUNNING = 2;
+    SUCCEEDED = 3;
+    FAILED = 4;
+    STOPPED = 5;
+  }
+  string service_name = 1;
+  string id = 2;
+  State state = 3;
+  string container_id = 4;
+  int64 start_time = 5;
+  int64 finish_time = 6;
+}
+
+
 message ResourceUsageReport {
   int64 memory_seconds = 1;
   int64 vcore_seconds = 2;
@@ -165,6 +183,8 @@ service Master {
   rpc getService (ServiceRequest) returns (Service);
 
   rpc getJob (Empty) returns (Job);
+
+  rpc getContainers(ContainersRequest) returns (ContainersResponse);
 }
 
 
@@ -195,4 +215,15 @@ message KeyValueResponse {
 
 message ServiceRequest {
   string name = 1;
+}
+
+
+message ContainersRequest {
+  repeated Container.State states = 1;
+  repeated string services = 2;
+}
+
+
+message ContainersResponse {
+  repeated Container containers = 1;
 }

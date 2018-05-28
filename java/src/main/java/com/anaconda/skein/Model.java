@@ -1,5 +1,6 @@
 package com.anaconda.skein;
 
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.Resource;
 
@@ -127,5 +128,49 @@ public class Model {
         s.validate();
       }
     }
+  }
+
+  public static class Container {
+    public enum State {
+      WAITING,
+      REQUESTED,
+      RUNNING,
+      SUCCEEDED,
+      FAILED,
+      STOPPED
+    }
+
+    private String serviceName;
+    private String id;
+    private State state;
+    private ContainerId containerId;
+    private long startTime;
+    private long finishTime;
+
+    public Container() {}
+
+    public String toString() {
+      return ("Container<"
+              + "serviceName: " + serviceName + ", "
+              + "id: " + id + ">");
+    }
+
+    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
+    public String getServiceName() { return serviceName; }
+
+    public void setId(String id) { this.id = id; }
+    public String getId() { return id; }
+
+    public void setState(State state) { this.state = state; }
+    public State getState() { return state; }
+
+    public void setContainerId(ContainerId containerId) { this.containerId = containerId; }
+    public ContainerId getContainerId() { return containerId; }
+
+    public void setStartTime(long startTime) { this.startTime = startTime; }
+    public long getStartTime() { return startTime; }
+
+    public void setFinishTime(long finishTime) { this.finishTime = finishTime; }
+    public long getFinishTime() { return finishTime; }
   }
 }
