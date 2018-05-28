@@ -96,7 +96,8 @@ class _Context(object):
             setattr(cls, name, wrap)
 
 
-for exc in [ValueError, TypeError, FileExistsError, FileNotFoundError]:
+for exc in [ValueError, KeyError, TypeError, FileExistsError,
+            FileNotFoundError]:
     _Context.register_wrapper(exc)
 
 

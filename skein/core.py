@@ -10,7 +10,7 @@ import socket
 import struct
 import subprocess
 import warnings
-from collections import namedtuple
+from collections import namedtuple, MutableMapping
 from contextlib import closing
 
 import grpc
@@ -18,9 +18,10 @@ import grpc
 from . import proto
 from .compatibility import PY2
 from .exceptions import (context, FileNotFoundError, SkeinConfigurationError,
-                         ApplicationNotRunningError, ApplicationError,
-                         DaemonNotRunningError, DaemonError)
+                         ConnectionError, ApplicationNotRunningError,
+                         ApplicationError, DaemonNotRunningError, DaemonError)
 from .model import Job, Service, ApplicationReport, ApplicationState
+from .utils import cached_property
 
 
 __all__ = ('Client', 'Application', 'ApplicationClient', 'Security',
@@ -306,8 +307,9 @@ class _ClientBase(object):
         code = exc.code()
         if code == grpc.StatusCode.UNAVAILABLE:
             raise ConnectionError("Unable to connect to %s" % self._server_name)
+        elif code == grpc.StatusCode.NOT_FOUND:
+            raise context.KeyError(exc.details())
         elif code in (grpc.StatusCode.INVALID_ARGUMENT,
-                      grpc.StatusCode.NOT_FOUND,
                       grpc.StatusCode.ALREADY_EXISTS):
             raise context.ValueError(exc.details())
         else:
@@ -530,6 +532,49 @@ class Client(_ClientBase):
         self._call('kill', proto.Application(id=app_id))
 
 
+class KeyStore(MutableMapping):
+    """The Skein Key-Value store.
+
+    Used by applications to coordinate configuration and global state.
+
+    This implements the standard MutableMapping interface, along with the
+    ability to "wait" for keys to be set.
+    """
+    def __init__(self, client):
+        self._client = client
+
+    def to_dict(self):
+        """Return the whole keystore as a dictionary"""
+        return dict(self._client._call('keystore', proto.Empty()).items)
+
+    def _get(self, key=None, wait=False):
+        req = proto.GetKeyRequest(key=key, wait=wait)
+        resp = self._client._call('keystoreGet', req)
+        return resp.val
+
+    def wait(self, key):
+        """Get a key from the keystore, blocking until the key is set."""
+        return self._get(key=key, wait=True)
+
+    def __getitem__(self, key):
+        return self._get(key)
+
+    def __setitem__(self, key, value):
+        if not len(key):
+            raise context.ValueError("key length must be > 0")
+        self._client._call('keystoreSet',
+                           proto.SetKeyRequest(key=key, val=value))
+
+    def __delitem__(self, key):
+        self._client._call('keystoreDel', proto.DelKeyRequest(key=key))
+
+    def __iter__(self):
+        return iter(self.to_dict())
+
+    def __len__(self):
+        return len(self.to_dict())
+
+
 class ApplicationClient(_ClientBase):
     """A client for the application master.
 
@@ -554,38 +599,30 @@ class ApplicationClient(_ClientBase):
     def __repr__(self):
         return 'ApplicationClient<%s>' % self.address
 
-    def get_key(self, key=None, wait=False):
-        """Get a key from the keystore.
+    @cached_property
+    def keystore(self):
+        """The Skein Key-Value store.
 
-        Parameters
-        ----------
-        key : str, optional
-            The key to get. If not provided, returns the whole keystore.
-        wait : bool, optional
-            If true, will block until the key is set. Default is False.
+        Used by applications to coordinate configuration and global state.
+
+        This implements the standard MutableMapping interface, along with the
+        ability to "wait" for keys to be set.
+
+        Examples
+        --------
+        >>> app_client.keystore['foo'] = 'bar'
+        >>> app_client.keystore['foo']
+        'bar'
+        >>> del app_client.keystore['foo']
+        >>> 'foo' in app_client.keystore
+        False
+
+        Wait until the key is set, either by another service or by a user
+        client. This is useful for inter-service synchronization.
+
+        >>> app_client.keystore.wait('mykey')
         """
-        if key is None:
-            resp = self._call('keystore', proto.Empty())
-            return dict(resp.items)
-
-        req = proto.GetKeyRequest(key=key, wait=wait)
-        resp = self._call('keystoreGet', req)
-        return resp.val
-
-    def set_key(self, key, value):
-        """Set a key in the keystore.
-
-        Parameters
-        ----------
-        key : str
-            The key to set.
-        value : str
-            The value to set.
-        """
-        if not len(key):
-            raise context.ValueError("key length must be > 0")
-
-        self._call('keystoreSet', proto.SetKeyRequest(key=key, val=value))
+        return KeyStore(self)
 
     def describe(self, service=None):
         """Information about the running job.

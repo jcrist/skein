@@ -4,5 +4,5 @@ from .skein_pb2 import (Empty, FinalStatus, ApplicationState, Resources, File,
                         Service, Job, ResourceUsageReport, ApplicationReport,
                         Application, ApplicationsRequest, Url, ServiceRequest,
                         GetKeyRequest, GetKeyResponse, SetKeyRequest,
-                        KeystoreResponse)
+                        DelKeyRequest, KeystoreResponse)
 from .skein_pb2_grpc import DaemonStub, MasterStub

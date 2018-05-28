@@ -158,6 +158,8 @@ service Master {
 
   rpc keystoreSet (SetKeyRequest) returns (Empty);
 
+  rpc keystoreDel (DelKeyRequest) returns (Empty);
+
   rpc keystore (Empty) returns (KeystoreResponse);
 
   rpc getService (ServiceRequest) returns (Service);
@@ -182,6 +184,9 @@ message SetKeyRequest {
   string val = 2;
 }
 
+message DelKeyRequest {
+  string key = 1;
+}
 
 message KeystoreResponse {
   map<string, string> items = 1;

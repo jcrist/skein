@@ -582,6 +582,17 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     @Override
+    public void keystoreDel(Msg.DelKeyRequest req, StreamObserver<Msg.Empty> resp) {
+      String key = req.getKey();
+      if (configuration.remove(key) == null) {
+        resp.onError(Status.NOT_FOUND.withDescription(key).asRuntimeException());
+      } else {
+        resp.onNext(MsgUtils.EMPTY);
+        resp.onCompleted();
+      }
+    }
+
+    @Override
     public void keystore(Msg.Empty req,
         StreamObserver<Msg.KeystoreResponse> resp) {
       resp.onNext(Msg.KeystoreResponse

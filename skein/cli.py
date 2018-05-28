@@ -137,7 +137,7 @@ keystore_app_id = arg('app_id', metavar='APP_ID',
 @subcommand(keystore.subs,
             'get', 'Get a value from the keystore',
             keystore_app_id,
-            arg('--key', help='The key to get. Omit to the whole keystore.'),
+            arg('--key', help='The key to get. Omit to get the whole keystore.'),
             arg('--wait', action='store_true',
                 help='If true, will block until the key is set'))
 def keystore_get(app_id, key=None, wait=False):
@@ -145,10 +145,13 @@ def keystore_get(app_id, key=None, wait=False):
         app = ApplicationClient.connect_to_current()
     else:
         app = Client().connect(app_id)
-    result = app.get_key(key=key, wait=wait)
-    if isinstance(result, dict):
-        print(yaml.dump(result, default_flow_style=False))
+
+    if key is None:
+        result = app.keystore.to_dict()
+        if result:
+            print('\n'.join('%s: %s' % i for i in result.items()))
     else:
+        result = app.keystore.wait(key) if wait else app.keystore[key]
         print(result)
 
 
@@ -168,7 +171,20 @@ def keystore_set(app_id, key=None, value=None):
     else:
         app = Client().connect(app_id)
 
-    app.set_key(key, value)
+    app.keystore[key] = value
+
+
+@subcommand(keystore.subs,
+            'del', 'Delete a value from the keystore',
+            keystore_app_id,
+            arg('--key', help='The key to delete.'))
+def keystore_del(app_id, key=None, wait=False):
+    if app_id == 'current':
+        app = ApplicationClient.connect_to_current()
+    else:
+        app = Client().connect(app_id)
+
+    del app.keystore[key]
 
 
 ########################
