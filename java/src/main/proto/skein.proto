@@ -98,7 +98,7 @@ message Container {
     KILLED = 5;
   }
   string service_name = 1;
-  string id = 2;
+  int32 attempt = 2;
   State state = 3;
   string container_id = 4;
   int64 start_time = 5;

@@ -270,10 +270,10 @@ container = node(entry_subs, 'container', 'Manage containers')
 
 
 def _print_container_status(containers):
-    header = ['service', 'id', 'state', 'container_id']
+    header = ['service', 'attempt', 'state', 'container_id']
     data = []
     for c in containers:
-        data.append((c.service, c.id, c.state, c.container_id))
+        data.append((c.service, c.attempt, c.state, c.container_id))
     print(format_table(header, sorted(data)))
 
 

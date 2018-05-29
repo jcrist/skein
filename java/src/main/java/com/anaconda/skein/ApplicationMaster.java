@@ -74,8 +74,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       new HashMap<String, ServiceTracker>();
   private final List<ServiceTracker> trackers =
       new ArrayList<ServiceTracker>();
-  private final Map<ContainerId, TrackerID> containers =
-      new HashMap<ContainerId, TrackerID>();
+  private final Map<ContainerId, Model.Container> containers =
+      new HashMap<ContainerId, Model.Container>();
 
   private Server server;
   private String hostname;
@@ -190,24 +190,20 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   }
 
   @SuppressWarnings("unchecked")
-  public String addContainer(ServiceTracker tracker) {
-    String id = tracker.nextId();
-    Model.Container.State state;
+  public void addContainer(ServiceTracker tracker) {
+    Model.Container container;
     if (!tracker.isReady()) {
-      tracker.waiting.add(id);
-      state = Model.Container.State.WAITING;
-      LOG.info("WAITING: " + tracker.name + " - " + id);
+      container = tracker.newContainer(Model.Container.State.WAITING);
+      tracker.waiting.add(container.getAttempt());
+      LOG.info("WAITING: " + tracker.name + " - " + container.getAttempt());
     } else {
-      ContainerRequest req =
+      rmClient.addContainerRequest(
           new ContainerRequest(tracker.service.getResources(),
-                               null, null, Priority.newInstance(0));
-      tracker.requested.add(id);
-      state = Model.Container.State.REQUESTED;
-      rmClient.addContainerRequest(req);
-      LOG.info("REQUESTED: " + tracker.name + " - " + id);
+                               null, null, Priority.newInstance(0)));
+      container = tracker.newContainer(Model.Container.State.REQUESTED);
+      tracker.requested.add(container.getAttempt());
+      LOG.info("REQUESTED: " + tracker.name + " - " + container.getAttempt());
     }
-    tracker.containers.put(id, new Model.Container(tracker.name, id, state));
-    return id;
   }
 
   /* ResourceManager Callbacks */
@@ -221,27 +217,28 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       ContainerId cid = status.getContainerId();
       int exitStatus = status.getExitStatus();
 
-      TrackerID pair = containers.get(cid);
-      if (pair == null) {
+      Model.Container container = containers.get(cid);
+      if (container == null) {
         continue;  // release container that was never started
       }
 
-      Model.Container c = pair.tracker.containers.get(pair.id);
-
       if (exitStatus == ContainerExitStatus.SUCCESS) {
-        LOG.info("SUCCEEDED: " + pair.tracker.name + " - " + pair.id);
-        c.setState(Model.Container.State.SUCCEEDED);
+        LOG.info("SUCCEEDED: " + container.getServiceName()
+                 + " - " + container.getAttempt());
+        container.setState(Model.Container.State.SUCCEEDED);
         numSucceeded += 1;
       } else if (exitStatus == ContainerExitStatus.KILLED_BY_APPMASTER) {
-        LOG.info("KILLED: " + pair.tracker.name + " - " + pair.id);
-        c.setState(Model.Container.State.KILLED);
+        LOG.info("KILLED: " + container.getServiceName()
+                 + " - " + container.getAttempt());
+        container.setState(Model.Container.State.KILLED);
         numStopped += 1;
       } else {
-        LOG.info("FAILED: " + pair.tracker.name + " - " + pair.id);
-        c.setState(Model.Container.State.FAILED);
+        LOG.info("FAILED: " + container.getServiceName()
+                 + " - " + container.getAttempt());
+        container.setState(Model.Container.State.FAILED);
         numFailed += 1;
       }
-      c.setFinishTime(finishTime);
+      container.setFinishTime(finishTime);
     }
 
     if ((numSucceeded + numStopped) == numTotal || numFailed > 0) {
@@ -259,21 +256,22 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       for (ServiceTracker t : trackers) {
         if (t.matches(c.getResource())) {
           found = true;
-          String id = Utils.popfirst(t.requested);
+          int attempt = Utils.popfirst(t.requested);
 
           // Add fields for running container
-          Model.Container container = t.containers.get(id);
+          Model.Container container = t.containers.get(attempt);
           container.setState(Model.Container.State.RUNNING);
           container.setStartTime(startTime);
           container.setContainerId(c.getId());
           container.setNodeId(c.getNodeId());
 
-          // Note container_id -> tracker/id pair
-          containers.put(c.getId(), new TrackerID(t, id));
+          // Note container_id -> container
+          containers.put(c.getId(), container);
 
           nmClient.startContainerAsync(c, t.ctx);
 
-          LOG.info("RUNNING: " + t.name + " - " + id + " on " + c.getId());
+          LOG.info("RUNNING: " + container.getServiceName()
+                   + " - " + container.getAttempt() + " on " + c.getId());
 
           if (!t.initialRunning && t.requested.size() == 0) {
             t.initialRunning = true;
@@ -281,14 +279,14 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
               // If all dependencies satisfied, launch initial containers
               if (dep.notifyRunning()) {
-                for (String id2 : dep.waiting) {
+                for (int attempt2 : dep.waiting) {
                   ContainerRequest req =
                       new ContainerRequest(dep.service.getResources(), null,
                                            null, Priority.newInstance(0));
                   rmClient.addContainerRequest(req);
-                  dep.requested.add(id2);
-                  dep.containers.get(id2).setState(Model.Container.State.REQUESTED);
-                  LOG.info("REQUESTED: " + dep.name + " - " + id2);
+                  dep.requested.add(attempt2);
+                  dep.containers.get(attempt2).setState(Model.Container.State.REQUESTED);
+                  LOG.info("REQUESTED: " + dep.name + " - " + attempt2);
                 }
                 dep.waiting.clear();
               }
@@ -335,8 +333,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   @Override
   public synchronized void onStartContainerError(ContainerId containerId, Throwable exc) {
-    TrackerID pair = containers.remove(containerId);
-    pair.tracker.containers.get(pair.id).setState(Model.Container.State.FAILED);
+    containers.remove(containerId).setState(Model.Container.State.FAILED);
     numFailed += 1;
   }
 
@@ -474,11 +471,10 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     public Model.Service service;
     public ContainerLaunchContext ctx;
 
-    public final Set<String> waiting = new LinkedHashSet<String>();
-    public final Set<String> requested = new LinkedHashSet<String>();
+    public final Set<Integer> waiting = new LinkedHashSet<Integer>();
+    public final Set<Integer> requested = new LinkedHashSet<Integer>();
 
-    public final Map<String, Model.Container> containers =
-        new HashMap<String, Model.Container>();
+    public final List<Model.Container> containers = new ArrayList<Model.Container>();
 
     public final List<ServiceTracker> dependents = new ArrayList<ServiceTracker>();
 
@@ -502,9 +498,10 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       return isReady();
     }
 
-    public String nextId() {
-      count += 1;
-      return name + "_" + count;
+    public Model.Container newContainer(Model.Container.State state) {
+      Model.Container out = new Model.Container(name, containers.size(), state);
+      containers.add(out);
+      return out;
     }
 
     public boolean matches(Resource r) {
@@ -514,16 +511,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     public int compareTo(ServiceTracker other) {
       return service.getResources().compareTo(other.service.getResources());
-    }
-  }
-
-  public static class TrackerID {
-    public ServiceTracker tracker;
-    public String id;
-
-    public TrackerID(ServiceTracker tracker, String id) {
-      this.tracker = tracker;
-      this.id = id;
     }
   }
 
@@ -580,7 +567,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       // Filter containers and build response
       Msg.ContainersResponse.Builder msg = Msg.ContainersResponse.newBuilder();
       for (String name : serviceSet) {
-        for (Model.Container c : services.get(name).containers.values()) {
+        for (Model.Container c : services.get(name).containers) {
           if (stateSet == null || stateSet.contains(c.getState())) {
             msg.addContainers(MsgUtils.writeContainer(c));
           }

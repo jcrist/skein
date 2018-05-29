@@ -310,7 +310,7 @@ public class MsgUtils {
   public static Msg.Container writeContainer(Model.Container container) {
     return Msg.Container.newBuilder()
       .setServiceName(container.getServiceName())
-      .setId(container.getId())
+      .setAttempt(container.getAttempt())
       .setState(writeContainerState(container.getState()))
       .setContainerId(container.getContainerId().toString())
       .setStartTime(container.getStartTime())
@@ -321,7 +321,7 @@ public class MsgUtils {
   public static Model.Container readContainer(Msg.Container container) {
     Model.Container out = new Model.Container();
     out.setServiceName(container.getServiceName());
-    out.setId(container.getId());
+    out.setAttempt(container.getAttempt());
     out.setState(readContainerState(container.getState()));
     out.setContainerId(ContainerId.fromString(container.getContainerId()));
     out.setStartTime(container.getStartTime());
