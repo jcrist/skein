@@ -70,10 +70,10 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private final ConcurrentHashMap<String, List<StreamObserver<Msg.GetKeyResponse>>> alerts =
       new ConcurrentHashMap<String, List<StreamObserver<Msg.GetKeyResponse>>>();
 
-  private final Map<String, ServiceTracker> services =
-      new HashMap<String, ServiceTracker>();
   private final List<ServiceTracker> trackers =
       new ArrayList<ServiceTracker>();
+  private final Map<String, ServiceTracker> services =
+      new HashMap<String, ServiceTracker>();
   private final Map<ContainerId, Model.Container> containers =
       new HashMap<ContainerId, Model.Container>();
 
@@ -159,7 +159,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     // Setup dependents
     for (ServiceTracker tracker : trackers) {
       for (String dep : tracker.service.getDepends()) {
-        services.get(dep).dependents.add(tracker);
+        services.get(dep).addDependent(tracker);
       }
     }
 
@@ -168,41 +168,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     // Startup services
     for (ServiceTracker tracker: trackers) {
-      LOG.info("INTIALIZING: " + tracker.name);
-      initialize(tracker);
-    }
-  }
-
-  public void initialize(ServiceTracker tracker) throws IOException {
-    Model.Service service = tracker.service;
-
-    // Add appmaster address to environment
-    service.getEnv().put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
-
-    tracker.ctx = ContainerLaunchContext.newInstance(
-        service.getLocalResources(), service.getEnv(), service.getCommands(),
-        null, tokens, null);
-
-    // Request initial containers
-    for (int i = 0; i < service.getInstances(); i++) {
-      addContainer(tracker);
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  public void addContainer(ServiceTracker tracker) {
-    Model.Container container;
-    if (!tracker.isReady()) {
-      container = tracker.newContainer(Model.Container.State.WAITING);
-      tracker.waiting.add(container.getAttempt());
-      LOG.info("WAITING: " + tracker.name + " - " + container.getAttempt());
-    } else {
-      rmClient.addContainerRequest(
-          new ContainerRequest(tracker.service.getResources(),
-                               null, null, Priority.newInstance(0)));
-      container = tracker.newContainer(Model.Container.State.REQUESTED);
-      tracker.requested.add(container.getAttempt());
-      LOG.info("REQUESTED: " + tracker.name + " - " + container.getAttempt());
+      tracker.initialize();
     }
   }
 
@@ -213,7 +179,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     long finishTime = System.currentTimeMillis();
 
     for (ContainerStatus status : containerStatuses) {
-
       ContainerId cid = status.getContainerId();
       int exitStatus = status.getExitStatus();
 
@@ -224,17 +189,17 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
       if (exitStatus == ContainerExitStatus.SUCCESS) {
         LOG.info("SUCCEEDED: " + container.getServiceName()
-                 + " - " + container.getAttempt());
+                 + " - " + container.getInstance());
         container.setState(Model.Container.State.SUCCEEDED);
         numSucceeded += 1;
       } else if (exitStatus == ContainerExitStatus.KILLED_BY_APPMASTER) {
         LOG.info("KILLED: " + container.getServiceName()
-                 + " - " + container.getAttempt());
+                 + " - " + container.getInstance());
         container.setState(Model.Container.State.KILLED);
         numStopped += 1;
       } else {
         LOG.info("FAILED: " + container.getServiceName()
-                 + " - " + container.getAttempt());
+                 + " - " + container.getInstance());
         container.setState(Model.Container.State.FAILED);
         numFailed += 1;
       }
@@ -256,42 +221,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       for (ServiceTracker t : trackers) {
         if (t.matches(c.getResource())) {
           found = true;
-          int attempt = Utils.popfirst(t.requested);
-
-          // Add fields for running container
-          Model.Container container = t.containers.get(attempt);
-          container.setState(Model.Container.State.RUNNING);
-          container.setStartTime(startTime);
-          container.setContainerId(c.getId());
-          container.setNodeId(c.getNodeId());
-
-          // Note container_id -> container
-          containers.put(c.getId(), container);
-
-          nmClient.startContainerAsync(c, t.ctx);
-
-          LOG.info("RUNNING: " + container.getServiceName()
-                   + " - " + container.getAttempt() + " on " + c.getId());
-
-          if (!t.initialRunning && t.requested.size() == 0) {
-            t.initialRunning = true;
-            for (ServiceTracker dep : t.dependents) {
-
-              // If all dependencies satisfied, launch initial containers
-              if (dep.notifyRunning()) {
-                for (int attempt2 : dep.waiting) {
-                  ContainerRequest req =
-                      new ContainerRequest(dep.service.getResources(), null,
-                                           null, Priority.newInstance(0));
-                  rmClient.addContainerRequest(req);
-                  dep.requested.add(attempt2);
-                  dep.containers.get(attempt2).setState(Model.Container.State.REQUESTED);
-                  LOG.info("REQUESTED: " + dep.name + " - " + attempt2);
-                }
-                dep.waiting.clear();
-              }
-            }
-          }
+          t.startContainer(c);
           break;
         }
       }
@@ -466,42 +396,21 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
   }
 
-  private static class ServiceTracker implements Comparable<ServiceTracker> {
-    public String name;
-    public Model.Service service;
-    public ContainerLaunchContext ctx;
-
-    public final Set<Integer> waiting = new LinkedHashSet<Integer>();
-    public final Set<Integer> requested = new LinkedHashSet<Integer>();
-
-    public final List<Model.Container> containers = new ArrayList<Model.Container>();
-
-    public final List<ServiceTracker> dependents = new ArrayList<ServiceTracker>();
-
-    public boolean initialRunning = false;
-
-    private int numWaitingOn;
-    private int count = 0;
+  private final class ServiceTracker implements Comparable<ServiceTracker> {
+    private String name;
+    private Model.Service service;
+    private ContainerLaunchContext ctx;
+    private boolean initialRunning = false;
+    private final Set<String> depends = new HashSet<String>();
+    private final Set<Integer> waiting = new LinkedHashSet<Integer>();
+    private final Set<Integer> requested = new LinkedHashSet<Integer>();
+    private final List<Model.Container> containers = new ArrayList<Model.Container>();
+    private final List<ServiceTracker> dependents = new ArrayList<ServiceTracker>();
 
     public ServiceTracker(String name, Model.Service service) {
       this.name = name;
       this.service = service;
-      this.numWaitingOn = service.getDepends().size();
-    }
-
-    public boolean isReady() {
-      return numWaitingOn == 0;
-    }
-
-    public boolean notifyRunning() {
-      numWaitingOn -= 1;
-      return isReady();
-    }
-
-    public Model.Container newContainer(Model.Container.State state) {
-      Model.Container out = new Model.Container(name, containers.size(), state);
-      containers.add(out);
-      return out;
+      this.depends.addAll(service.getDepends());
     }
 
     public boolean matches(Resource r) {
@@ -511,6 +420,93 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     public int compareTo(ServiceTracker other) {
       return service.getResources().compareTo(other.service.getResources());
+    }
+
+    public void addDependent(ServiceTracker tracker) {
+      dependents.add(tracker);
+    }
+
+    private boolean isReady() {
+      return depends.size() == 0;
+    }
+
+    @SuppressWarnings("unchecked")
+    public void notifyRunning(String dependency) {
+      depends.remove(dependency);
+      if (isReady()) {
+        for (int instance : waiting) {
+          rmClient.addContainerRequest(
+              new ContainerRequest(service.getResources(),
+                                   null, null, Priority.newInstance(0)));
+          requested.add(instance);
+          containers.get(instance).setState(Model.Container.State.REQUESTED);
+          LOG.info("REQUESTED: " + name + " - " + instance);
+        }
+        waiting.clear();
+      }
+    }
+
+    private Model.Container newContainer(Model.Container.State state) {
+      Model.Container out = new Model.Container(name, containers.size(), state);
+      containers.add(out);
+      LOG.info(state + ": " + name + " - " + out.getInstance());
+      return out;
+    }
+
+    public void initialize() throws IOException {
+      LOG.info("INTIALIZING: " + name);
+      // Add appmaster address to environment
+      service.getEnv().put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
+
+      ctx = ContainerLaunchContext.newInstance(
+          service.getLocalResources(), service.getEnv(), service.getCommands(),
+          null, tokens, null);
+
+      // Request initial containers
+      for (int i = 0; i < service.getInstances(); i++) {
+        addContainer();
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    public Model.Container addContainer() {
+      Model.Container container;
+      if (!isReady()) {
+        container = newContainer(Model.Container.State.WAITING);
+        waiting.add(container.getInstance());
+      } else {
+        rmClient.addContainerRequest(
+            new ContainerRequest(service.getResources(),
+                                 null, null, Priority.newInstance(0)));
+        container = newContainer(Model.Container.State.REQUESTED);
+        requested.add(container.getInstance());
+      }
+      return container;
+    }
+
+    public Model.Container startContainer(Container container) {
+      int instance = Utils.popfirst(requested);
+      Model.Container out = containers.get(instance);
+
+      // Add fields for running container
+      out.setState(Model.Container.State.RUNNING);
+      out.setStartTime(System.currentTimeMillis());
+      out.setContainerId(container.getId());
+      out.setNodeId(container.getNodeId());
+
+      ApplicationMaster.this.containers.put(container.getId(), out);
+
+      nmClient.startContainerAsync(container, ctx);
+
+      LOG.info("RUNNING: " + name + " - " + instance + " on " + container.getId());
+
+      if (!initialRunning && requested.size() == 0) {
+        initialRunning = true;
+        for (ServiceTracker dep : dependents) {
+          dep.notifyRunning(name);
+        }
+      }
+      return out;
     }
   }
 
@@ -545,7 +541,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       if (req.getServicesCount() == 0) {
         serviceSet = services.keySet();
       } else {
-        serviceSet = new HashSet(req.getServicesList());
+        serviceSet = new HashSet<String>(req.getServicesList());
         for (String name : serviceSet) {
           if (services.get(name) == null) {
             resp.onError(Status.INVALID_ARGUMENT

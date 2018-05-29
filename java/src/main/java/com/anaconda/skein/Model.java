@@ -142,7 +142,7 @@ public class Model {
     }
 
     private String serviceName;
-    private int attempt;
+    private int instance;
     private State state;
     private ContainerId containerId;
     private NodeId nodeId;
@@ -151,9 +151,9 @@ public class Model {
 
     public Container() {}
 
-    public Container(String serviceName, int attempt, State state) {
+    public Container(String serviceName, int instance, State state) {
       this.serviceName = serviceName;
-      this.attempt = attempt;
+      this.instance = instance;
       this.state = state;
       this.containerId = null;
       this.startTime = 0;
@@ -163,14 +163,14 @@ public class Model {
     public String toString() {
       return ("Container<"
               + "serviceName: " + serviceName + ", "
-              + "attempt: " + attempt + ">");
+              + "instance: " + instance + ">");
     }
 
     public void setServiceName(String serviceName) { this.serviceName = serviceName; }
     public String getServiceName() { return serviceName; }
 
-    public void setAttempt(int attempt) { this.attempt = attempt; }
-    public int getAttempt() { return attempt; }
+    public void setInstance(int instance) { this.instance = instance; }
+    public int getInstance() { return instance; }
 
     public void setState(State state) { this.state = state; }
     public State getState() { return state; }

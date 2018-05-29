@@ -1017,8 +1017,8 @@ class Container(Base):
     ----------
     service : str
         The service this container is running.
-    attempt : int
-        The container attempt number.
+    instance : int
+        The container instance number.
     state : ContainerState
         The current container state.
     container_id : str
@@ -1028,16 +1028,16 @@ class Container(Base):
     finish_time : datetime
         The finish time, None if container has not finished.
     """
-    __slots__ = ('service', 'attempt', 'state', 'container_id', 'start_time',
+    __slots__ = ('service', 'instance', 'state', 'container_id', 'start_time',
                  'finish_time')
-    _keys = ('serviceName', 'attempt', 'state', 'containerId', 'startTime',
+    _keys = ('serviceName', 'instance', 'state', 'containerId', 'startTime',
              'finishTime')
     _protobuf_cls = _proto.Container
 
-    def __init__(self, service, attempt, state, container_id, start_time,
+    def __init__(self, service, instance, state, container_id, start_time,
                  finish_time):
         self.service = service
-        self.attempt = attempt
+        self.instance = instance
         self.state = state
         self.container_id = container_id
         self.start_time = start_time
@@ -1046,12 +1046,12 @@ class Container(Base):
         self._validate()
 
     def __repr__(self):
-        return ('Container<service=%r, attempt=%d, state=%s>'
-                % (self.service, self.attempt, self.state))
+        return ('Container<service=%r, instance=%d, state=%s>'
+                % (self.service, self.instance, self.state))
 
     def _validate(self):
         self._check_is_type('service', str)
-        self._check_is_type('attempt', int)
+        self._check_is_type('instance', int)
         self._check_is_type('state', ContainerState)
         self._check_is_type('container_id', str)
         self._check_is_type('start_time', datetime, nullable=True)
@@ -1062,7 +1062,7 @@ class Container(Base):
     def from_dict(cls, obj):
         cls._check_keys(obj, cls._keys)
         return cls(service=obj['serviceName'],
-                   attempt=obj['attempt'],
+                   instance=obj['instance'],
                    state=ContainerState(obj['state']),
                    container_id=obj['containerId'],
                    start_time=_datetime_from_millis(obj['startTime']),
@@ -1072,7 +1072,7 @@ class Container(Base):
     @implements(Base.from_protobuf)
     def from_protobuf(cls, obj):
         return cls(service=obj.service_name,
-                   attempt=obj.attempt,
+                   instance=obj.instance,
                    state=ContainerState(_proto.Container.State.Name(obj.state)),
                    container_id=obj.container_id,
                    start_time=_datetime_from_millis(obj.start_time),
