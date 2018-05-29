@@ -44,6 +44,7 @@ import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -232,8 +233,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         c.setState(Model.Container.State.SUCCEEDED);
         numSucceeded += 1;
       } else if (exitStatus == ContainerExitStatus.KILLED_BY_APPMASTER) {
-        LOG.info("STOPPED: " + pair.tracker.name + " - " + pair.id);
-        c.setState(Model.Container.State.STOPPED);
+        LOG.info("KILLED: " + pair.tracker.name + " - " + pair.id);
+        c.setState(Model.Container.State.KILLED);
         numStopped += 1;
       } else {
         LOG.info("FAILED: " + pair.tracker.name + " - " + pair.id);
@@ -546,6 +547,46 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         return;
       }
       resp.onNext(MsgUtils.writeService(service));
+      resp.onCompleted();
+    }
+
+    @Override
+    public void getContainers(Msg.ContainersRequest req,
+        StreamObserver<Msg.ContainersResponse> resp) {
+
+      Set<String> serviceSet;
+      if (req.getServicesCount() == 0) {
+        serviceSet = services.keySet();
+      } else {
+        serviceSet = new HashSet(req.getServicesList());
+        for (String name : serviceSet) {
+          if (services.get(name) == null) {
+            resp.onError(Status.INVALID_ARGUMENT
+                .withDescription("Unknown Service '" + name + "'")
+                .asRuntimeException());
+            return;
+          }
+        }
+      }
+
+      Set<Model.Container.State> stateSet = null;
+      if (req.getStatesCount() > 0) {
+        stateSet = new HashSet<Model.Container.State>();
+        for (Msg.Container.State s : req.getStatesList()) {
+          stateSet.add(MsgUtils.readContainerState(s));
+        }
+      }
+
+      // Filter containers and build response
+      Msg.ContainersResponse.Builder msg = Msg.ContainersResponse.newBuilder();
+      for (String name : serviceSet) {
+        for (Model.Container c : services.get(name).containers.values()) {
+          if (stateSet == null || stateSet.contains(c.getState())) {
+            msg.addContainers(MsgUtils.writeContainer(c));
+          }
+        }
+      }
+      resp.onNext(msg.build());
       resp.onCompleted();
     }
 

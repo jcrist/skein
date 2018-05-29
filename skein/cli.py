@@ -80,6 +80,9 @@ entry_subs = entry.add_subparsers(metavar='command')
 
 # Common arguments
 app_id = arg('app_id', help='The application id', metavar='APP_ID')
+optional_app_id = arg('app_id', metavar='APP_ID',
+                      help='The application id. To use in a container during '
+                           'a skein job, pass in "current"')
 
 
 ###################
@@ -129,14 +132,10 @@ def daemon_restart(log=False):
 
 kv = node(entry_subs, 'kv', 'Manage the skein key-value store')
 
-kv_app_id = arg('app_id', metavar='APP_ID',
-                help='The application id. To use in a container during '
-                     'a skein job, pass in "current"')
-
 
 @subcommand(kv.subs,
             'get', 'Get a value from the key-value store',
-            kv_app_id,
+            optional_app_id,
             arg('--key', help='The key to get. Omit to get the whole '
                               'key-value store.'),
             arg('--wait', action='store_true',
@@ -158,7 +157,7 @@ def kv_get(app_id, key=None, wait=False):
 
 @subcommand(kv.subs,
             'set', 'Set a value in the key-value store',
-            kv_app_id,
+            optional_app_id,
             arg('--key', help='The key to set'),
             arg('--value', help='The value to set'))
 def kv_set(app_id, key=None, value=None):
@@ -177,7 +176,7 @@ def kv_set(app_id, key=None, value=None):
 
 @subcommand(kv.subs,
             'del', 'Delete a value from the key-value store',
-            kv_app_id,
+            optional_app_id,
             arg('--key', help='The key to delete.'))
 def kv_del(app_id, key=None, wait=False):
     if app_id == 'current':
@@ -261,6 +260,45 @@ def application_describe(app_id, service=None):
     else:
         out = resp.to_yaml(skip_nulls=True)
     print(out)
+
+
+######################
+# CONTAINER COMMANDS #
+######################
+
+container = node(entry_subs, 'container', 'Manage containers')
+
+
+def _print_container_status(containers):
+    header = ['service', 'id', 'state', 'container_id']
+    data = []
+    for c in containers:
+        data.append((c.service, c.id, c.state, c.container_id))
+    print(format_table(header, sorted(data)))
+
+
+@subcommand(container.subs,
+            'ls', 'List containers',
+            optional_app_id,
+            arg("--service", action='append',
+                help=('Filter by container services. May be repeated '
+                      'to select multiple services.')),
+            arg("--state", action='append',
+                help=('Filter by container states. May be repeated '
+                      'to select multiple states.')))
+def container_ls(app_id=None, service=None, state=None):
+    if app_id == 'current':
+        app = ApplicationClient.connect_to_current()
+    else:
+        app = Client().connect(app_id)
+
+    containers = app.containers(states=state, services=service)
+    _print_container_status(containers)
+
+
+################
+# INIT COMMAND #
+################
 
 
 @subcommand(entry_subs,

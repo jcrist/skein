@@ -150,8 +150,8 @@ public class MsgUtils {
         return Msg.Container.State.SUCCEEDED;
       case FAILED:
         return Msg.Container.State.FAILED;
-      case STOPPED:
-        return Msg.Container.State.STOPPED;
+      case KILLED:
+        return Msg.Container.State.KILLED;
     }
     return null; // appease the compiler, but can't get here
   }
@@ -168,8 +168,8 @@ public class MsgUtils {
         return Model.Container.State.SUCCEEDED;
       case FAILED:
         return Model.Container.State.FAILED;
-      case STOPPED:
-        return Model.Container.State.STOPPED;
+      case KILLED:
+        return Model.Container.State.KILLED;
     }
     return null; // appease the compiler, but can't get here
   }

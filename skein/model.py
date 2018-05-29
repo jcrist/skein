@@ -13,7 +13,7 @@ from .utils import implements, format_list
 
 __all__ = ('Job', 'Service', 'Resources', 'File', 'FileType', 'FileVisibility',
            'ApplicationState', 'FinalStatus', 'ResourceUsageReport',
-           'ApplicationReport')
+           'ApplicationReport', 'ContainerState', 'Container')
 
 
 required = type('required', (object,),
@@ -24,7 +24,7 @@ _EPOCH = datetime(1970, 1, 1)
 
 
 def _datetime_from_millis(x):
-    return _EPOCH + timedelta(milliseconds=x)
+    return None if x == 0 else _EPOCH + timedelta(milliseconds=x)
 
 
 def _pop_origin(kwargs):
@@ -945,8 +945,8 @@ class ApplicationReport(Base):
         self._check_is_type('usage', ResourceUsageReport)
         self.usage._validate()
         self._check_is_type('diagnostics', str, nullable=True)
-        self._check_is_type('start_time', datetime)
-        self._check_is_type('finish_time', datetime)
+        self._check_is_type('start_time', datetime, nullable=True)
+        self._check_is_type('finish_time', datetime, nullable=True)
 
     @classmethod
     @implements(Base.from_dict)
@@ -979,5 +979,100 @@ class ApplicationReport(Base):
                    progress=obj.progress,
                    usage=ResourceUsageReport.from_protobuf(obj.usage),
                    diagnostics=obj.diagnostics,
+                   start_time=_datetime_from_millis(obj.start_time),
+                   finish_time=_datetime_from_millis(obj.finish_time))
+
+
+class ContainerState(Enum):
+    """Enum of container states.
+
+    Attributes
+    ----------
+    WAITING : ContainerState
+        Container is waiting on another service to startup before being
+        requested.
+    REQUESTED : ContainerState
+        Container has been requested but is not currently running.
+    RUNNING : ContainerState
+        Container is currently running.
+    SUCCEEDED : ContainerState
+        Container finished successfully.
+    FAILED : ContainerState
+        Container failed.
+    KILLED : ContainerState
+        Container was terminated by a user or admin.
+    """
+    _values = ('WAITING',
+               'REQUESTED',
+               'RUNNING',
+               'SUCCEEDED',
+               'FAILED',
+               'KILLED')
+
+
+class Container(Base):
+    """Current container state.
+
+    Parameters
+    ----------
+    service : str
+        The service this container is running.
+    id : str
+        The container attempt id.
+    state : ContainerState
+        The current container state.
+    container_id : str
+        The YARN container id.
+    start_time : datetime
+        The start time, None if container has not started.
+    finish_time : datetime
+        The finish time, None if container has not finished.
+    """
+    __slots__ = ('service', 'id', 'state', 'container_id', 'start_time',
+                 'finish_time')
+    _keys = ('serviceName', 'id', 'state', 'containerId', 'startTime',
+             'finishTime')
+    _protobuf_cls = _proto.Container
+
+    def __init__(self, service, id, state, container_id, start_time,
+                 finish_time):
+        self.service = service
+        self.id = id
+        self.state = state
+        self.container_id = container_id
+        self.start_time = start_time
+        self.finish_time = finish_time
+
+        self._validate()
+
+    def __repr__(self):
+        return 'Container<id=%r, state=%s>' % (self.id, self.state)
+
+    def _validate(self):
+        self._check_is_type('service', str)
+        self._check_is_type('id', str)
+        self._check_is_type('state', ContainerState)
+        self._check_is_type('container_id', str)
+        self._check_is_type('start_time', datetime, nullable=True)
+        self._check_is_type('finish_time', datetime, nullable=True)
+
+    @classmethod
+    @implements(Base.from_dict)
+    def from_dict(cls, obj):
+        cls._check_keys(obj, cls._keys)
+        return cls(service=obj['serviceName'],
+                   id=obj['id'],
+                   state=ContainerState(obj['state']),
+                   container_id=obj['containerId'],
+                   start_time=_datetime_from_millis(obj['startTime']),
+                   finish_time=_datetime_from_millis(obj['finishTime']))
+
+    @classmethod
+    @implements(Base.from_protobuf)
+    def from_protobuf(cls, obj):
+        return cls(service=obj.service_name,
+                   id=obj.id,
+                   state=ContainerState(_proto.Container.State.Name(obj.state)),
+                   container_id=obj.container_id,
                    start_time=_datetime_from_millis(obj.start_time),
                    finish_time=_datetime_from_millis(obj.finish_time))

@@ -138,7 +138,7 @@ public class Model {
       RUNNING,
       SUCCEEDED,
       FAILED,
-      STOPPED
+      KILLED
     }
 
     private String serviceName;

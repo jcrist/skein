@@ -20,7 +20,8 @@ from .compatibility import PY2
 from .exceptions import (context, FileNotFoundError, SkeinConfigurationError,
                          ConnectionError, ApplicationNotRunningError,
                          ApplicationError, DaemonNotRunningError, DaemonError)
-from .model import Job, Service, ApplicationReport, ApplicationState
+from .model import (Job, Service, ApplicationReport, ApplicationState,
+                    ContainerState, Container)
 from .utils import cached_property
 
 
@@ -658,6 +659,31 @@ class ApplicationClient(_ClientBase):
                                      "%r" % ADDRESS_ENV_VAR)
         channel = secure_channel(address, Security(".skein.crt", ".skein.pem"))
         return cls(address, channel=channel)
+
+    def containers(self, services=None, states=None):
+        """Get information on containers in this application.
+
+        Parameters
+        ----------
+        services : sequence of str, optional
+            If provided, containers will be filtered to these services.
+            Default is all services.
+        states : sequence of ContainerState, optional
+            If provided, containers will be filtered by these container states.
+            Default is all containers.
+
+        Returns
+        -------
+        containers : list of Container
+        """
+        if services is not None:
+            services = set(services)
+        if states is not None:
+            states = [str(ContainerState(s)) for s in states]
+
+        req = proto.ContainersRequest(services=services, states=states)
+        resp = self._call('getContainers', req)
+        return [Container.from_protobuf(c) for c in resp.containers]
 
 
 class Application(object):
