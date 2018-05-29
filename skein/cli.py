@@ -12,7 +12,7 @@ from .core import (Client, ApplicationClient, Security, start_global_daemon,
                    stop_global_daemon)
 from .exceptions import context, SkeinError, DaemonNotRunningError
 from .model import Job
-from .utils import format_table
+from .utils import format_table, humanize_timedelta
 
 
 class _Formatter(argparse.HelpFormatter):
@@ -83,6 +83,8 @@ app_id = arg('app_id', help='The application id', metavar='APP_ID')
 optional_app_id = arg('app_id', metavar='APP_ID',
                       help='The application id. To use in a container during '
                            'a skein job, pass in "current"')
+container_id = arg('--id', required=True,
+                   help='The container id', metavar='CONTAINER_ID')
 
 
 ###################
@@ -158,8 +160,8 @@ def kv_get(app_id, key=None, wait=False):
 @subcommand(kv.subs,
             'set', 'Set a value in the key-value store',
             optional_app_id,
-            arg('--key', help='The key to set'),
-            arg('--value', help='The value to set'))
+            arg('--key', required=True, help='The key to set'),
+            arg('--value', required=True, help='The value to set'))
 def kv_set(app_id, key=None, value=None):
     if key is None:
         fail("--key is required")
@@ -270,10 +272,11 @@ container = node(entry_subs, 'container', 'Manage containers')
 
 
 def _print_container_status(containers):
-    header = ['service', 'attempt', 'state', 'container_id']
+    header = ['service', 'id', 'state', 'age']
     data = []
     for c in containers:
-        data.append((c.service, c.attempt, c.state, c.container_id))
+        age = humanize_timedelta(c.age) if c.age is not None else ''
+        data.append((c.service, c.id, c.state, age))
     print(format_table(header, sorted(data)))
 
 
@@ -294,6 +297,21 @@ def container_ls(app_id=None, service=None, state=None):
 
     containers = app.containers(states=state, services=service)
     _print_container_status(containers)
+
+
+@subcommand(container.subs,
+            'kill', 'Kill a container',
+            optional_app_id,
+            container_id)
+def container_kill(app_id=None, id=None):
+    if id is None:
+        fail("--id is required")
+
+    if app_id == 'current':
+        app = ApplicationClient.connect_to_current()
+    else:
+        app = Client().connect(app_id)
+    app.kill(id)
 
 
 ################

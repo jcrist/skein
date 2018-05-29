@@ -308,14 +308,19 @@ public class MsgUtils {
   }
 
   public static Msg.Container writeContainer(Model.Container container) {
-    return Msg.Container.newBuilder()
-      .setServiceName(container.getServiceName())
-      .setInstance(container.getInstance())
-      .setState(writeContainerState(container.getState()))
-      .setContainerId(container.getContainerId().toString())
-      .setStartTime(container.getStartTime())
-      .setFinishTime(container.getFinishTime())
-      .build();
+
+    Msg.Container.Builder builder = Msg.Container.newBuilder()
+        .setServiceName(container.getServiceName())
+        .setInstance(container.getInstance())
+        .setState(writeContainerState(container.getState()))
+        .setStartTime(container.getStartTime())
+        .setFinishTime(container.getFinishTime());
+
+    ContainerId containerId = container.getYarnContainerId();
+    if (containerId != null) {
+      builder.setYarnContainerId(containerId.toString());
+    }
+    return builder.build();
   }
 
   public static Model.Container readContainer(Msg.Container container) {
@@ -323,7 +328,7 @@ public class MsgUtils {
     out.setServiceName(container.getServiceName());
     out.setInstance(container.getInstance());
     out.setState(readContainerState(container.getState()));
-    out.setContainerId(ContainerId.fromString(container.getContainerId()));
+    out.setYarnContainerId(ContainerId.fromString(container.getYarnContainerId()));
     out.setStartTime(container.getStartTime());
     out.setFinishTime(container.getFinishTime());
     return out;

@@ -13,6 +13,17 @@ def format_list(x):
     return "\n".join("- %s" % s for s in sorted(x))
 
 
+def humanize_timedelta(td):
+    secs = int(td.total_seconds())
+    hours, secs = divmod(secs, 60 * 60)
+    if hours:
+        return '%dh' % hours
+    mins, secs = divmod(secs, 60)
+    if mins:
+        return '%dm' % mins
+    return '%ds' % secs
+
+
 def format_table(columns, rows):
     """Formats an ascii table for given columns and rows.
 

@@ -685,6 +685,22 @@ class ApplicationClient(_ClientBase):
         resp = self._call('getContainers', req)
         return [Container.from_protobuf(c) for c in resp.containers]
 
+    def kill(self, id):
+        """Kill a container.
+
+        Parameters
+        ----------
+        id : str
+            The id of the container to kill.
+        """
+        try:
+            service, instance = id.rsplit('_', 1)
+            instance = int(instance)
+        except (TypeError, ValueError):
+            raise context.ValueError("Invalid container id %r" % id)
+        req = proto.ContainerInstance(service_name=service, instance=instance)
+        self._call('killContainer', req)
+
 
 class Application(object):
     """A possibly running Skein application.

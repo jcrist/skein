@@ -446,13 +446,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       }
     }
 
-    private Model.Container newContainer(Model.Container.State state) {
-      Model.Container out = new Model.Container(name, containers.size(), state);
-      containers.add(out);
-      LOG.info(state + ": " + name + " - " + out.getInstance());
-      return out;
-    }
-
     public void initialize() throws IOException {
       LOG.info("INTIALIZING: " + name);
       // Add appmaster address to environment
@@ -466,6 +459,20 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       for (int i = 0; i < service.getInstances(); i++) {
         addContainer();
       }
+    }
+
+    private Model.Container newContainer(Model.Container.State state) {
+      Model.Container out = new Model.Container(name, containers.size(), state);
+      containers.add(out);
+      LOG.info(state + ": " + name + " - " + out.getInstance());
+      return out;
+    }
+
+    private Model.Container getContainer(int instance) {
+      if (instance >= 0 && instance < containers.size()) {
+        return containers.get(instance);
+      }
+      return null;
     }
 
     @SuppressWarnings("unchecked")
@@ -484,6 +491,25 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       return container;
     }
 
+    public void killContainer(int instance) {
+      Model.Container container = containers.get(instance);
+      switch (container.getState()) {
+        case WAITING:
+          waiting.remove(container.getInstance());
+          break;
+        case REQUESTED:
+          requested.remove(container.getInstance());
+          break;
+        case RUNNING:
+          nmClient.stopContainerAsync(container.getYarnContainerId(),
+                                      container.getYarnNodeId());
+          break;
+        default:
+          return;  // Already stopped, don't change final state
+      }
+      container.setState(Model.Container.State.KILLED);
+    }
+
     public Model.Container startContainer(Container container) {
       int instance = Utils.popfirst(requested);
       Model.Container out = containers.get(instance);
@@ -491,8 +517,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       // Add fields for running container
       out.setState(Model.Container.State.RUNNING);
       out.setStartTime(System.currentTimeMillis());
-      out.setContainerId(container.getId());
-      out.setNodeId(container.getNodeId());
+      out.setYarnContainerId(container.getId());
+      out.setYarnNodeId(container.getNodeId());
 
       ApplicationMaster.this.containers.put(container.getId(), out);
 
@@ -511,6 +537,17 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   }
 
   class MasterImpl extends MasterGrpc.MasterImplBase {
+
+    private boolean checkService(String name, StreamObserver<?> resp) {
+      if (services.get(name) == null) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Unknown Service '" + name + "'")
+            .asRuntimeException());
+        return false;
+      }
+      return true;
+    }
+
     @Override
     public void getJob(Msg.Empty req, StreamObserver<Msg.Job> resp) {
       resp.onNext(MsgUtils.writeJob(job));
@@ -521,14 +558,11 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     public void getService(Msg.ServiceRequest req,
         StreamObserver<Msg.Service> resp) {
       String name = req.getName();
-      Model.Service service = job.getServices().get(name);
 
-      if (service == null) {
-        resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("Unknown Service '" + name + "'")
-            .asRuntimeException());
+      if (!checkService(name, resp)) {
         return;
       }
+      Model.Service service = job.getServices().get(name);
       resp.onNext(MsgUtils.writeService(service));
       resp.onCompleted();
     }
@@ -543,10 +577,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       } else {
         serviceSet = new HashSet<String>(req.getServicesList());
         for (String name : serviceSet) {
-          if (services.get(name) == null) {
-            resp.onError(Status.INVALID_ARGUMENT
-                .withDescription("Unknown Service '" + name + "'")
-                .asRuntimeException());
+          if (!checkService(name, resp)) {
             return;
           }
         }
@@ -570,6 +601,29 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         }
       }
       resp.onNext(msg.build());
+      resp.onCompleted();
+    }
+
+    @Override
+    public void killContainer(Msg.ContainerInstance req,
+        StreamObserver<Msg.Empty> resp) {
+
+      String service = req.getServiceName();
+      int instance = req.getInstance();
+      if (!checkService(service, resp)) {
+        return;
+      }
+
+      ServiceTracker tracker = services.get(service);
+      if (tracker.getContainer(instance) == null) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Service '" + service + "' has no container "
+                             + "instance " + instance)
+            .asRuntimeException());
+        return;
+      }
+      tracker.killContainer(instance);
+      resp.onNext(MsgUtils.EMPTY);
       resp.onCompleted();
     }
 

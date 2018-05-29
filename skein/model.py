@@ -1021,25 +1021,25 @@ class Container(Base):
         The container instance number.
     state : ContainerState
         The current container state.
-    container_id : str
+    yarn_container_id : str
         The YARN container id.
     start_time : datetime
         The start time, None if container has not started.
     finish_time : datetime
         The finish time, None if container has not finished.
     """
-    __slots__ = ('service', 'instance', 'state', 'container_id', 'start_time',
+    __slots__ = ('service', 'instance', 'state', 'yarn_container_id', 'start_time',
                  'finish_time')
-    _keys = ('serviceName', 'instance', 'state', 'containerId', 'startTime',
+    _keys = ('serviceName', 'instance', 'state', 'yarnContainerId', 'startTime',
              'finishTime')
     _protobuf_cls = _proto.Container
 
-    def __init__(self, service, instance, state, container_id, start_time,
-                 finish_time):
+    def __init__(self, service, instance, state, yarn_container_id,
+                 start_time, finish_time):
         self.service = service
         self.instance = instance
         self.state = state
-        self.container_id = container_id
+        self.yarn_container_id = yarn_container_id
         self.start_time = start_time
         self.finish_time = finish_time
 
@@ -1053,9 +1053,22 @@ class Container(Base):
         self._check_is_type('service', str)
         self._check_is_type('instance', int)
         self._check_is_type('state', ContainerState)
-        self._check_is_type('container_id', str)
+        self._check_is_type('yarn_container_id', str)
         self._check_is_type('start_time', datetime, nullable=True)
         self._check_is_type('finish_time', datetime, nullable=True)
+
+    @property
+    def id(self):
+        """The complete service & instance identity of this container."""
+        return '%s_%d' % (self.service, self.instance)
+
+    @property
+    def age(self):
+        """The age of the container."""
+        if self.start_time is None:
+            return None
+        end = datetime.now() if self.finish_time is None else self.finish_time
+        return end - self.start_time
 
     @classmethod
     @implements(Base.from_dict)
@@ -1064,7 +1077,7 @@ class Container(Base):
         return cls(service=obj['serviceName'],
                    instance=obj['instance'],
                    state=ContainerState(obj['state']),
-                   container_id=obj['containerId'],
+                   yarn_container_id=obj['yarnContainerId'],
                    start_time=_datetime_from_millis(obj['startTime']),
                    finish_time=_datetime_from_millis(obj['finishTime']))
 
@@ -1074,6 +1087,6 @@ class Container(Base):
         return cls(service=obj.service_name,
                    instance=obj.instance,
                    state=ContainerState(_proto.Container.State.Name(obj.state)),
-                   container_id=obj.container_id,
+                   yarn_container_id=obj.yarn_container_id,
                    start_time=_datetime_from_millis(obj.start_time),
                    finish_time=_datetime_from_millis(obj.finish_time))
