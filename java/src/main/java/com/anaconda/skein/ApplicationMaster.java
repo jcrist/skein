@@ -43,6 +43,7 @@ import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -661,19 +662,23 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         }
       }
 
-      Set<Model.Container.State> stateSet = null;
+      Set<Model.Container.State> stateSet;
       if (req.getStatesCount() > 0) {
-        stateSet = new HashSet<Model.Container.State>();
+        stateSet = EnumSet.noneOf(Model.Container.State.class);
         for (Msg.Container.State s : req.getStatesList()) {
           stateSet.add(MsgUtils.readContainerState(s));
         }
+      } else {
+        stateSet = EnumSet.of(Model.Container.State.WAITING,
+                              Model.Container.State.REQUESTED,
+                              Model.Container.State.RUNNING);
       }
 
       // Filter containers and build response
       Msg.ContainersResponse.Builder msg = Msg.ContainersResponse.newBuilder();
       for (String name : serviceSet) {
         for (Model.Container c : services.get(name).containers) {
-          if (stateSet == null || stateSet.contains(c.getState())) {
+          if (stateSet.contains(c.getState())) {
             msg.addContainers(MsgUtils.writeContainer(c));
           }
         }

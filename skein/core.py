@@ -696,7 +696,7 @@ class ApplicationClient(_ClientBase):
             Default is all services.
         states : sequence of ContainerState, optional
             If provided, containers will be filtered by these container states.
-            Default is all containers.
+            Default is ``['WAITING', 'REQUESTED', 'RUNNING']``.
 
         Returns
         -------
