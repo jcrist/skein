@@ -233,7 +233,6 @@ public class Daemon {
     List<String> commands = Arrays.asList(
         (Environment.JAVA_HOME.$$() + "/bin/java "
          + "-Xmx128M "
-         + "-Dio.netty.native.workdir=./ "
          + "com.anaconda.skein.ApplicationMaster "
          + appDir
          + " >" + logdir + "/appmaster.log 2>&1"));
