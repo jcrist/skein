@@ -314,6 +314,25 @@ def container_kill(app_id=None, id=None):
     app.kill(id)
 
 
+@subcommand(container.subs,
+            'scale', 'Scale a service to a requested number of containers',
+            optional_app_id,
+            arg('--service', '-s', required=True, help='Service name'),
+            arg('--number', '-n', type=int, required=True,
+                help='The requested number of instances'))
+def container_scale(app_id, service=None, number=None):
+    if service is None:
+        fail("--service is required")
+    if number is None:
+        fail("--number is required")
+
+    if app_id == 'current':
+        app = ApplicationClient.connect_to_current()
+    else:
+        app = Client().connect(app_id)
+    app.scale(service, number)
+
+
 ################
 # INIT COMMAND #
 ################

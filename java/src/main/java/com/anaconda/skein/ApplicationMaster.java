@@ -81,11 +81,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private String hostname;
   private int port = -1;
 
-  private int numTotal;
-  private int numSucceeded;
-  private int numFailed;
-  private int numStopped;
-
   private AMRMClientAsync rmClient;
   private NMClientAsync nmClient;
   private UserGroupInformation ugi;
@@ -128,7 +123,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
   }
 
-  private int loadJob() throws Exception {
+  private void loadJob() throws Exception {
     try {
       job = MsgUtils.readJob(Msg.Job.parseFrom(new FileInputStream(".skein.proto")));
     } catch (IOException exc) {
@@ -136,13 +131,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
     job.validate();
     LOG.info("Job successfully loaded");
-
-    int total = 0;
-    for (Model.Service service : job.getServices().values()) {
-      total += service.getInstances();
-    }
-    LOG.info("total instances: " + total);
-    return total;
   }
 
   private synchronized void intializeServices() throws Exception {
@@ -176,46 +164,31 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   @Override
   public synchronized void onContainersCompleted(List<ContainerStatus> containerStatuses) {
-    long finishTime = System.currentTimeMillis();
-
     for (ContainerStatus status : containerStatuses) {
-      ContainerId cid = status.getContainerId();
-      int exitStatus = status.getExitStatus();
-
-      Model.Container container = containers.get(cid);
+      Model.Container container = containers.get(status.getContainerId());
       if (container == null) {
         continue;  // release container that was never started
       }
 
-      if (exitStatus == ContainerExitStatus.SUCCESS) {
-        LOG.info("SUCCEEDED: " + container.getServiceName()
-                 + " - " + container.getInstance());
-        container.setState(Model.Container.State.SUCCEEDED);
-        numSucceeded += 1;
-      } else if (exitStatus == ContainerExitStatus.KILLED_BY_APPMASTER) {
-        LOG.info("KILLED: " + container.getServiceName()
-                 + " - " + container.getInstance());
-        container.setState(Model.Container.State.KILLED);
-        numStopped += 1;
-      } else {
-        LOG.info("FAILED: " + container.getServiceName()
-                 + " - " + container.getInstance());
-        container.setState(Model.Container.State.FAILED);
-        numFailed += 1;
-      }
-      container.setFinishTime(finishTime);
-    }
+      Model.Container.State state;
+      int exitStatus = status.getExitStatus();
 
-    if ((numSucceeded + numStopped) == numTotal || numFailed > 0) {
-      shutdown();
+      if (exitStatus == ContainerExitStatus.SUCCESS) {
+        state = Model.Container.State.SUCCEEDED;
+      } else if (exitStatus == ContainerExitStatus.KILLED_BY_APPMASTER) {
+        return;  // state change already handled by killContainer
+      } else {
+        state = Model.Container.State.FAILED;
+      }
+
+      services.get(container.getServiceName())
+              .finishContainer(container.getInstance(), state);
     }
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public synchronized void onContainersAllocated(List<Container> newContainers) {
-    long startTime = System.currentTimeMillis();
-
     for (Container c : newContainers) {
       boolean found = false;
       for (ServiceTracker t : trackers) {
@@ -229,7 +202,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         // TODO: For some reason YARN allocates extra containers *sometimes*.
         // It's not clear yet if this is a bug in skein or in YARN, for now
         // release extra containers and log the discrepancy.
-        LOG.warn("No matching service round for resource: " + c.getResource()
+        LOG.warn("No matching service found for resource: " + c.getResource()
                  + " releasing " + c.getId());
         rmClient.releaseAssignedContainer(c.getId());
       }
@@ -237,17 +210,27 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   }
 
   @Override
-  public void onShutdownRequest() { shutdown(); }
+  public void onShutdownRequest() {
+    shutdown(FinalApplicationStatus.SUCCEEDED, "Shutdown Requested");
+  }
 
   @Override
-  public void onError(Throwable exc) { shutdown(); }
+  public void onError(Throwable exc) {
+    shutdown(FinalApplicationStatus.FAILED, exc.toString());
+  }
 
   @Override
   public void onNodesUpdated(List<NodeReport> nodeReports) {}
 
   @Override
   public float getProgress() {
-    return (float)(numSucceeded + numStopped) / numTotal;
+    float completed = 0;
+    float total = 0;
+    for (ServiceTracker tracker : trackers) {
+      completed += tracker.getNumCompleted();
+      total += tracker.getNumTotal();
+    }
+    return completed / total;
   }
 
   /* NodeManager Callbacks */
@@ -263,8 +246,10 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   @Override
   public synchronized void onStartContainerError(ContainerId containerId, Throwable exc) {
-    containers.remove(containerId).setState(Model.Container.State.FAILED);
-    numFailed += 1;
+    Model.Container container = containers.get(containerId);
+    services.get(container.getServiceName())
+            .finishContainer(container.getInstance(),
+                             Model.Container.State.FAILED);
   }
 
   @Override
@@ -296,7 +281,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   public void run() throws Exception {
     conf = new YarnConfiguration();
 
-    numTotal = loadJob();
+    loadJob();
 
     try {
       hostname = InetAddress.getLocalHost().getHostAddress();
@@ -341,7 +326,25 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     server.awaitTermination();
   }
 
-  private void shutdown() {
+  private void maybeShutdown() {
+    FinalApplicationStatus status = FinalApplicationStatus.SUCCEEDED;
+    boolean finished = true;
+    String msg = "Completed Successfully";
+    for (ServiceTracker tracker : trackers) {
+      finished &= tracker.isFinished();
+      if (tracker.hasFailed()) {
+        status = FinalApplicationStatus.FAILED;
+        msg = ("Failure in service " + tracker.getName() + ", shutting down. "
+               + "See logs for details");
+        break;
+      }
+    }
+    if (finished) {
+      shutdown(status, msg);
+    }
+  }
+
+  private void shutdown(FinalApplicationStatus status, String msg) {
     // wait for completion.
     nmClient.stop();
 
@@ -359,19 +362,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
             return null;
           }
         });
-
-    FinalApplicationStatus status;
-    if (numFailed == 0 && (numSucceeded + numStopped) == numTotal) {
-      status = FinalApplicationStatus.SUCCEEDED;
-    } else {
-      status = FinalApplicationStatus.FAILED;
-    }
-
-    String msg = ("Diagnostics."
-                  + ", total = " + numTotal
-                  + ", succeeded = " + numSucceeded
-                  + ", stopped = " + numStopped
-                  + ", failed = " + numFailed);
 
     try {
       rmClient.unregisterApplicationMaster(status, msg, null);
@@ -404,13 +394,19 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     private final Set<String> depends = new HashSet<String>();
     private final Set<Integer> waiting = new LinkedHashSet<Integer>();
     private final Set<Integer> requested = new LinkedHashSet<Integer>();
+    private final Set<Integer> running = new LinkedHashSet<Integer>();
     private final List<Model.Container> containers = new ArrayList<Model.Container>();
     private final List<ServiceTracker> dependents = new ArrayList<ServiceTracker>();
+    private int numTarget = 0;
+    private int numSucceeded = 0;
+    private int numFailed = 0;
+    private int numKilled = 0;
 
     public ServiceTracker(String name, Model.Service service) {
       this.name = name;
       this.service = service;
       this.depends.addAll(service.getDepends());
+      this.numTarget = service.getInstances();
     }
 
     public boolean matches(Resource r) {
@@ -426,8 +422,32 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       dependents.add(tracker);
     }
 
+    public String getName() {
+      return name;
+    }
+
+    public int getNumTotal() {
+      return containers.size();
+    }
+
+    public int getNumCompleted() {
+      return numSucceeded + numFailed + numKilled;
+    }
+
+    public int getNumActive() {
+      return getNumTotal() - getNumCompleted();
+    }
+
     private boolean isReady() {
       return depends.size() == 0;
+    }
+
+    public boolean isFinished() {
+      return numFailed > 0 || numSucceeded + numKilled == numTarget;
+    }
+
+    public boolean hasFailed() {
+      return numFailed > 0;
     }
 
     @SuppressWarnings("unchecked")
@@ -440,7 +460,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
                                    null, null, Priority.newInstance(0)));
           requested.add(instance);
           containers.get(instance).setState(Model.Container.State.REQUESTED);
-          LOG.info("REQUESTED: " + name + " - " + instance);
+          LOG.info("REQUESTED: " + name + "_" + instance);
         }
         waiting.clear();
       }
@@ -464,7 +484,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     private Model.Container newContainer(Model.Container.State state) {
       Model.Container out = new Model.Container(name, containers.size(), state);
       containers.add(out);
-      LOG.info(state + ": " + name + " - " + out.getInstance());
+      LOG.info(state + ": " + name + "_" + out.getInstance());
       return out;
     }
 
@@ -473,6 +493,28 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         return containers.get(instance);
       }
       return null;
+    }
+
+    public synchronized List<Model.Container> scale(int instances) {
+      List<Model.Container> out =  new ArrayList<Model.Container>();
+
+      int active = getNumActive();
+      int delta = instances - active;
+      LOG.info("Scaling service '" + name + "' to " + instances
+               + " instances, a delta of " + delta);
+      if (delta > 0) {
+        // Scale up
+        for (int i = 0; i < delta; i++) {
+          out.add(addContainer());
+          numTarget += 1;
+        }
+      } else if (delta < 0) {
+        // Scale down
+        for (int i = delta; i < 0; i++) {
+          out.add(removeContainer());
+        }
+      }
+      return out;
     }
 
     @SuppressWarnings("unchecked")
@@ -491,23 +533,26 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       return container;
     }
 
-    public void killContainer(int instance) {
-      Model.Container container = containers.get(instance);
-      switch (container.getState()) {
-        case WAITING:
-          waiting.remove(container.getInstance());
-          break;
-        case REQUESTED:
-          requested.remove(container.getInstance());
-          break;
-        case RUNNING:
-          nmClient.stopContainerAsync(container.getYarnContainerId(),
-                                      container.getYarnNodeId());
-          break;
-        default:
-          return;  // Already stopped, don't change final state
+    private Model.Container removeContainer() {
+      int instance;
+      if (waiting.size() > 0) {
+        instance = Utils.popfirst(waiting);
+      } else if (requested.size() > 0) {
+        instance = Utils.popfirst(requested);
+      } else {
+        instance = Utils.popfirst(running);
       }
-      container.setState(Model.Container.State.KILLED);
+      killContainer(instance);
+      return containers.get(instance);
+    }
+
+    public synchronized void killContainer(int instance) {
+      Model.Container container = containers.get(instance);
+      if (container.getState() == Model.Container.State.RUNNING) {
+        nmClient.stopContainerAsync(container.getYarnContainerId(),
+                                    container.getYarnNodeId());
+      }
+      finishContainer(instance, Model.Container.State.KILLED);
     }
 
     public Model.Container startContainer(Container container) {
@@ -519,12 +564,13 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       out.setStartTime(System.currentTimeMillis());
       out.setYarnContainerId(container.getId());
       out.setYarnNodeId(container.getNodeId());
+      running.add(instance);
 
       ApplicationMaster.this.containers.put(container.getId(), out);
 
       nmClient.startContainerAsync(container, ctx);
 
-      LOG.info("RUNNING: " + name + " - " + instance + " on " + container.getId());
+      LOG.info("RUNNING: " + name + "_" + instance + " on " + container.getId());
 
       if (!initialRunning && requested.size() == 0) {
         initialRunning = true;
@@ -533,6 +579,38 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         }
       }
       return out;
+    }
+
+    public void finishContainer(int instance, Model.Container.State state) {
+      Model.Container container = containers.get(instance);
+
+      switch (container.getState()) {
+        case WAITING:
+          waiting.remove(instance);
+          break;
+        case REQUESTED:
+          requested.remove(instance);
+          break;
+        case RUNNING:
+          running.remove(instance);
+          container.setFinishTime(System.currentTimeMillis());
+          break;
+        default:
+          return;  // Already finished, should never get here
+      }
+
+      if (state == Model.Container.State.SUCCEEDED) {
+        numSucceeded += 1;
+      } else if (state == Model.Container.State.KILLED) {
+        numKilled += 1;
+      } else {
+        numFailed += 1;
+      }
+
+      LOG.info(state + ": " + name + "_" + instance);
+      container.setState(state);
+
+      maybeShutdown();
     }
   }
 
@@ -624,6 +702,34 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       }
       tracker.killContainer(instance);
       resp.onNext(MsgUtils.EMPTY);
+      resp.onCompleted();
+    }
+
+    @Override
+    public void scale(Msg.ScaleRequest req,
+        StreamObserver<Msg.ContainersResponse> resp) {
+
+      String service = req.getServiceName();
+      if (!checkService(service, resp)) {
+        return;
+      }
+
+      int instances = req.getInstances();
+      if (instances < 0) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("instances must be >= 0")
+            .asRuntimeException());
+        return;
+      }
+
+      ServiceTracker tracker = services.get(service);
+      List<Model.Container> changes = tracker.scale(instances);
+
+      Msg.ContainersResponse.Builder msg = Msg.ContainersResponse.newBuilder();
+      for (Model.Container c : changes) {
+        msg.addContainers(MsgUtils.writeContainer(c));
+      }
+      resp.onNext(msg.build());
       resp.onCompleted();
     }
 

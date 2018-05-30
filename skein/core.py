@@ -646,6 +646,32 @@ class ApplicationClient(_ClientBase):
             resp = self._call('getService', proto.ServiceRequest(name=service))
             return Service.from_protobuf(resp)
 
+    def scale(self, service, instances):
+        """Scale a service to a requested number of instances.
+
+        Adds or removes containers to match the requested number of instances.
+        When choosing which containers to remove, containers are removed in
+        order of state (`WAITING`, `REQUESTED`, `RUNNING`) followed by age
+        (oldest to newest).
+
+        Parameters
+        ----------
+        service : str, optional
+            The service to scale.
+        instances : int
+            The number of instances to scale to.
+
+        Returns
+        -------
+        containers : list of Container
+            A list of containers that were started or stopped.
+        """
+        if instances < 0:
+            raise context.ValueError("instances must be >= 0")
+        req = proto.ScaleRequest(service_name=service, instances=instances)
+        resp = self._call('scale', req)
+        return [Container.from_protobuf(c) for c in resp.containers]
+
     @classmethod
     def connect_to_current(cls):
         """Create an application client from within a running container.
