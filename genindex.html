@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Index &#8212; Skein 0.0.2+10.gf0e6c67 documentation</title>
+    <title>Index &#8212; Skein 0.0.2+14.ga8117d4 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="_static/documentation_options.js"></script>
@@ -79,7 +79,11 @@
 </li>
         <li><a href="cli.html#cmdoption-skein-container-help">skein-container command line option</a>
 </li>
+        <li><a href="cli.html#cmdoption-skein-container-kill-help">skein-container-kill command line option</a>
+</li>
         <li><a href="cli.html#cmdoption-skein-container-ls-help">skein-container-ls command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-container-scale-help">skein-container-scale command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-skein-daemon-help">skein-daemon command line option</a>
 </li>
@@ -100,6 +104,13 @@
         <li><a href="cli.html#cmdoption-skein-kv-get-help">skein-kv-get command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-skein-kv-set-help">skein-kv-set command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --id &lt;container_id&gt;
+
+      <ul>
+        <li><a href="cli.html#cmdoption-skein-container-kill-id">skein-container-kill command line option</a>
 </li>
       </ul></li>
   </ul></td>
@@ -125,6 +136,13 @@
 </li>
       </ul></li>
       <li>
+    --number &lt;number&gt;, -n &lt;number&gt;
+
+      <ul>
+        <li><a href="cli.html#cmdoption-skein-container-scale-number">skein-container-scale command line option</a>
+</li>
+      </ul></li>
+      <li>
     --service &lt;service&gt;
 
       <ul>
@@ -136,6 +154,8 @@
 
       <ul>
         <li><a href="cli.html#cmdoption-skein-application-describe-service">skein-application-describe command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-container-scale-service">skein-container-scale command line option</a>
 </li>
       </ul></li>
       <li>
@@ -189,7 +209,11 @@
 </li>
         <li><a href="cli.html#cmdoption-skein-application-status-arg-app-id">skein-application-status command line option</a>
 </li>
+        <li><a href="cli.html#cmdoption-skein-container-kill-arg-app-id">skein-container-kill command line option</a>
+</li>
         <li><a href="cli.html#cmdoption-skein-container-ls-arg-app-id">skein-container-ls command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-container-scale-arg-app-id">skein-container-scale command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-skein-kv-del-arg-app-id">skein-kv-del command line option</a>
 </li>
@@ -363,6 +387,8 @@
       <li><a href="api.html#skein.Application.kill">kill() (skein.Application method)</a>
 
       <ul>
+        <li><a href="api.html#skein.ApplicationClient.kill">(skein.ApplicationClient method)</a>
+</li>
         <li><a href="api.html#skein.Client.kill">(skein.Client method)</a>
 </li>
       </ul></li>
@@ -388,6 +414,8 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.ApplicationClient.scale">scale() (skein.ApplicationClient method)</a>
+</li>
       <li><a href="api.html#skein.Security">Security (class in skein)</a>
 </li>
       <li><a href="api.html#skein.Service">Service (class in skein)</a>
@@ -463,6 +491,17 @@
 </li>
       </ul></li>
       <li>
+    skein-container-kill command line option
+
+      <ul>
+        <li><a href="cli.html#cmdoption-skein-container-kill-help">--help, -h</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-container-kill-id">--id &lt;container_id&gt;</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-container-kill-arg-app-id">app_id</a>
+</li>
+      </ul></li>
+      <li>
     skein-container-ls command line option
 
       <ul>
@@ -475,6 +514,21 @@
         <li><a href="cli.html#cmdoption-skein-container-ls-arg-app-id">app_id</a>
 </li>
       </ul></li>
+      <li>
+    skein-container-scale command line option
+
+      <ul>
+        <li><a href="cli.html#cmdoption-skein-container-scale-help">--help, -h</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-container-scale-number">--number &lt;number&gt;, -n &lt;number&gt;</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-container-scale-service">--service &lt;service&gt;, -s &lt;service&gt;</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-container-scale-arg-app-id">app_id</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     skein-daemon command line option
 
@@ -498,8 +552,6 @@
         <li><a href="cli.html#cmdoption-skein-daemon-restart-log">--log &lt;log&gt;</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     skein-daemon-start command line option
 

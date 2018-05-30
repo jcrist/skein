@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>CLI Docs &#8212; Skein 0.0.2+10.gf0e6c67 documentation</title>
+    <title>CLI Docs &#8212; Skein 0.0.2+14.ga8117d4 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="_static/documentation_options.js"></script>
@@ -177,6 +177,31 @@
 </dd></dl>
 
 </div>
+<div class="section" id="skein-container-kill">
+<h3>skein container kill<a class="headerlink" href="#skein-container-kill" title="Permalink to this headline">¶</a></h3>
+<p>Kill a container</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein container kill --id CONTAINER_ID [--help] APP_ID</span>
+</pre></div>
+</div>
+<dl class="option">
+<dt id="cmdoption-skein-container-kill-arg-app-id">
+<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-kill-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The application id. To use in a container during a skein job, pass in “current”</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-container-kill-id">
+<code class="descname">--id</code><code class="descclassname"> &lt;container_id&gt;</code><a class="headerlink" href="#cmdoption-skein-container-kill-id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The container id</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-container-kill-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-kill-help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show this help message then exit</p>
+</dd></dl>
+
+</div>
 <div class="section" id="skein-container-ls">
 <h3>skein container ls<a class="headerlink" href="#skein-container-ls" title="Permalink to this headline">¶</a></h3>
 <p>List containers</p>
@@ -204,6 +229,37 @@
 <dl class="option">
 <dt id="cmdoption-skein-container-ls-help">
 <code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-ls-help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show this help message then exit</p>
+</dd></dl>
+
+</div>
+<div class="section" id="skein-container-scale">
+<h3>skein container scale<a class="headerlink" href="#skein-container-scale" title="Permalink to this headline">¶</a></h3>
+<p>Scale a service to a requested number of containers</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein container scale --service SERVICE --number NUMBER [--help] APP_ID</span>
+</pre></div>
+</div>
+<dl class="option">
+<dt id="cmdoption-skein-container-scale-arg-app-id">
+<code class="descname">app_id</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-scale-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The application id. To use in a container during a skein job, pass in “current”</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-container-scale-service">
+<code class="descname">--service</code><code class="descclassname"> &lt;service&gt;</code><code class="descclassname">, </code><code class="descname">-s</code><code class="descclassname"> &lt;service&gt;</code><a class="headerlink" href="#cmdoption-skein-container-scale-service" title="Permalink to this definition">¶</a></dt>
+<dd><p>Service name</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-container-scale-number">
+<code class="descname">--number</code><code class="descclassname"> &lt;number&gt;</code><code class="descclassname">, </code><code class="descname">-n</code><code class="descclassname"> &lt;number&gt;</code><a class="headerlink" href="#cmdoption-skein-container-scale-number" title="Permalink to this definition">¶</a></dt>
+<dd><p>The requested number of instances</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-container-scale-help">
+<code class="descname">--help</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">-h</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-scale-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -376,7 +432,7 @@
 <div class="section" id="skein-kv-set">
 <h3>skein kv set<a class="headerlink" href="#skein-kv-set" title="Permalink to this headline">¶</a></h3>
 <p>Set a value in the key-value store</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kv set [--key KEY] [--value VALUE] [--help] APP_ID</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kv set --key KEY --value VALUE [--help] APP_ID</span>
 </pre></div>
 </div>
 <dl class="option">
