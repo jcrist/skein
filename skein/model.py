@@ -689,7 +689,7 @@ class Job(Base):
     __slots__ = ('name', 'queue', 'services')
     _protobuf_cls = _proto.Job
 
-    def __init__(self, services=required, name='skein', queue=''):
+    def __init__(self, services=required, name='skein', queue='default'):
         self._assign_required('services', services)
         self.name = name
         self.queue = queue

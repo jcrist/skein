@@ -407,23 +407,26 @@ class Client(_ClientBase):
     def __exit__(self, *args):
         self.close()
 
-    def submit(self, job_or_path):
+    def submit(self, job):
         """Submit a new skein job.
 
         Parameters
         ----------
-        job_or_path : Job or str
-            The job to run. Can either be a ``Job`` object, or a path to a
-            yaml/json file.
+        job : Job, str, or dict
+            The job to run. Can be a ``Job`` object, a path to a
+            yaml/json file, or a dictionary description of a job.
 
         Returns
         -------
         app : Application
         """
-        if isinstance(job_or_path, str):
-            job = Job.from_file(job_or_path)
-        else:
-            job = job_or_path
+        if isinstance(job, str):
+            job = Job.from_file(job)
+        elif isinstance(job, dict):
+            job = Job.from_dict(dict)
+        elif not isinstance(job, Job):
+            raise context.TypeError("job must be either a Job, path, or dict, "
+                                    "got %s" % type(job).__name__)
         resp = self._call('submit', job.to_protobuf())
         return Application(self, resp.id)
 
