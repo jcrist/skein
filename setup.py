@@ -14,16 +14,13 @@ from setuptools.command.install import install as _install
 
 import versioneer
 
-ROOT_DIR = os.path.dirname(os.path.relpath(__file__))
+ROOT_DIR = os.path.abspath(os.path.dirname(os.path.relpath(__file__)))
 JAVA_DIR = os.path.join(ROOT_DIR, 'java')
 JAVA_TARGET_DIR = os.path.join(JAVA_DIR, 'target')
 JAVA_PROTO_DIR = os.path.join(ROOT_DIR, "java", "src", "main", "proto")
 SKEIN_JAVA_DIR = os.path.join(ROOT_DIR, 'skein', 'java')
+SKEIN_JAR = os.path.join(SKEIN_JAVA_DIR, 'skein.jar')
 SKEIN_PROTO_DIR = os.path.join(ROOT_DIR, 'skein', 'proto')
-
-
-def _get_jars(dir):
-    return glob(os.path.join(dir, 'skein-*.jar'))
 
 
 class build_proto(Command):
@@ -82,18 +79,21 @@ class build_java(Command):
         if code:
             sys.exit(code)
 
-        jar_files = _get_jars(JAVA_TARGET_DIR)
-
+        jar_files = glob(os.path.join(JAVA_TARGET_DIR, 'skein-*.jar'))
         if not jar_files:
             self.warn('Maven compilation produced no jar files')
             sys.exit(1)
+        elif len(jar_files) > 1:
+            self.warn('Maven produced multiple jar files')
+            sys.exit(1)
 
-        for jar_file in jar_files:
-            self.copy_file(jar_file, SKEIN_JAVA_DIR)
+        jar = jar_files[0]
+
+        self.copy_file(jar, SKEIN_JAR)
 
 
 def _ensure_java(command):
-    if not _get_jars(SKEIN_JAVA_DIR):
+    if not os.path.exists(SKEIN_JAR):
         command.run_command('build_java')
 
 

@@ -229,7 +229,10 @@ public class MsgUtils {
 
   public static URL readUrl(Msg.Url url) {
     return URL.newInstance(
-        url.getScheme(), url.getHost(), url.getPort(), url.getFile());
+        url.getScheme(),
+        url.getHost(),
+        url.getPort() == 0 ? -1 : url.getPort(),
+        url.getFile());
   }
 
   public static Msg.Url writeUrl(URL url) {

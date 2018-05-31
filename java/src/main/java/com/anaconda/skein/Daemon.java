@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
@@ -360,10 +361,11 @@ public class Daemon {
 
   private LocalResource newLocalResource(Map<Path, Path> uploadCache, Path appDir,
       String localPath) throws IOException {
-    LocalResource out = LocalResource.newInstance(Utils.urlFromString(localPath),
-                                                  LocalResourceType.FILE,
-                                                  LocalResourceVisibility.APPLICATION,
-                                                  0, 0);
+    LocalResource out = LocalResource.newInstance(
+        URL.newInstance("file", null, -1, localPath),
+        LocalResourceType.FILE,
+        LocalResourceVisibility.APPLICATION,
+        0, 0);
     finalizeLocalResource(uploadCache, appDir, out, false);
     return out;
   }

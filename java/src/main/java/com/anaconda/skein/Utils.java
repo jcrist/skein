@@ -10,7 +10,6 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
@@ -60,28 +59,12 @@ public class Utils {
                                      status.getModificationTime());
   }
 
-  public static URL urlFromString(String path) {
-    URI uri = null;
-    try {
-      uri = new URI(path);
-      if (uri.getScheme() == null) {
-        uri = null;
-      }
-    } catch (URISyntaxException exc) { }
-    if (uri == null) {
-      uri = new File(path).getAbsoluteFile().toURI();
-    }
-    return ConverterUtils.getYarnUrlFromURI(uri);
-  }
-
   public static Path pathFromUrl(URL url) {
-    Path path = null;
     try {
-      path = ConverterUtils.getPathFromYarnURL(url);
+      return ConverterUtils.getPathFromYarnURL(url);
     } catch (URISyntaxException exc) {
       throw new IllegalArgumentException(exc.getMessage());
-    };
-    return path;
+    }
   }
 
   /** Compare two filesystems for equality.

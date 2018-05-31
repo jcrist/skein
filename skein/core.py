@@ -1,7 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
 import datetime
-import glob
 import json
 import os
 import select
@@ -32,15 +31,8 @@ __all__ = ('Client', 'Application', 'ApplicationClient', 'Security',
 ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'
 CONFIG_DIR = os.path.join(os.path.expanduser('~'), '.skein')
 DAEMON_PATH = os.path.join(CONFIG_DIR, 'daemon')
-
-
-def _find_skein_jar():
-    this_dir = os.path.dirname(os.path.relpath(__file__))
-    jars = glob.glob(os.path.join(this_dir, 'java', 'skein-*.jar'))
-    if not jars:
-        raise context.FileNotFoundError("Failed to find the skein jar file")
-    assert len(jars) == 1
-    return jars[0]
+SKEIN_DIR = os.path.abspath(os.path.dirname(os.path.relpath(__file__)))
+SKEIN_JAR = os.path.join(SKEIN_DIR, 'java', 'skein.jar')
 
 
 class Security(namedtuple('Security', ['cert_path', 'key_path'])):
@@ -190,9 +182,11 @@ def _write_daemon(address, pid):
 def _start_daemon(security=None, set_global=False, log=None):
     security = security or Security.default()
 
-    jar = _find_skein_jar()
+    if not os.path.exists(SKEIN_JAR):
+        raise context.FileNotFoundError("Failed to find the skein jar file")
 
-    command = ["yarn", "jar", jar, jar, security.cert_path, security.key_path]
+    command = ["yarn", "jar", SKEIN_JAR, SKEIN_JAR,
+               security.cert_path, security.key_path]
     if set_global:
         command.append("--daemon")
 
