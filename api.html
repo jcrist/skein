@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.0.2+18.gf2bc1df documentation</title>
+    <title>API Docs &#8212; Skein 0.0.2+19.gea97683 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="_static/documentation_options.js"></script>
@@ -298,16 +298,16 @@ application isn’t running.</p>
 
 <dl class="method">
 <dt id="skein.Client.submit">
-<code class="descname">submit</code><span class="sig-paren">(</span><em>job_or_path</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.submit" title="Permalink to this definition">¶</a></dt>
+<code class="descname">submit</code><span class="sig-paren">(</span><em>job</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.submit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Submit a new skein job.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>job_or_path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Job or str</span></dt>
-<dd><p class="first last">The job to run. Can either be a <code class="docutils literal notranslate"><span class="pre">Job</span></code> object, or a path to a
-yaml/json file.</p>
+<dt><strong>job</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Job, str, or dict</span></dt>
+<dd><p class="first last">The job to run. Can be a <code class="docutils literal notranslate"><span class="pre">Job</span></code> object, a path to a
+yaml/json file, or a dictionary description of a job.</p>
 </dd>
 </dl>
 </td>
@@ -637,7 +637,7 @@ ability to “wait” for keys to be set.</p>
 <h2>Job Specification<a class="headerlink" href="#job-specification" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="skein.Job">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Job</code><span class="sig-paren">(</span><em>services=required</em>, <em>name='skein'</em>, <em>queue=''</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Job</code><span class="sig-paren">(</span><em>services=required</em>, <em>name='skein'</em>, <em>queue='default'</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Job" title="Permalink to this definition">¶</a></dt>
 <dd><p>A single Skein job.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
