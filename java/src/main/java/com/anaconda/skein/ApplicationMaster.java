@@ -376,6 +376,10 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   /** Main entrypoint for the ApplicationMaster. **/
   public static void main(String[] args) {
+    // Specify the netty native workdir. This is necessary for systems where
+    // `/tmp` is not executable.
+    System.setProperty("io.netty.native.workdir", "./");
+
     ApplicationMaster appMaster = new ApplicationMaster();
 
     appMaster.init(args);

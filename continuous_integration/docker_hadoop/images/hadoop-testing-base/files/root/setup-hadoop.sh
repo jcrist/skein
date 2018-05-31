@@ -8,8 +8,8 @@ cp /etc/hadoop/conf.empty/log4j.properties /etc/hadoop/conf.test/log4j.propertie
     && alternatives --set hadoop-conf /etc/hadoop/conf.test
 
 # Create yarn directories with proper permissions
-mkdir -p /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs \
-    && chown -R yarn:yarn /tmp/hadoop-yarn/local /tmp/hadoop-yarn/logs
+mkdir -p /var/tmp/hadoop-yarn/local /var/tmp/hadoop-yarn/logs \
+    && chown -R yarn:yarn /var/tmp/hadoop-yarn/local /var/tmp/hadoop-yarn/logs
 
 # Create secret key to authenticate web access
 dd if=/dev/urandom bs=64 count=1 > /etc/hadoop/conf/http-secret-file

@@ -19,6 +19,8 @@ services:
       - 8088:8088    # RM webui
       - 88:88/udp    # Kerberos
       - 749:749      # Kerberos
+    tmpfs:
+      - /tmp:noexec
 
   worker:
     image: '${HADOOP_TESTING_IMAGE}'
@@ -30,6 +32,8 @@ services:
     ports:
       - 50075:50075  # DN webui
       - 8042:8042    # NM webui
+    tmpfs:
+      - /tmp:noexec
 
   edge:
     image: '${HADOOP_TESTING_IMAGE}'

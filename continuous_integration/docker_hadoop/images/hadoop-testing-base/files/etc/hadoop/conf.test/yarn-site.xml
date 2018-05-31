@@ -27,12 +27,12 @@
 
     <property>
         <name>yarn.nodemanager.local-dirs</name>
-        <value>file:///tmp/hadoop-yarn/local</value>
+        <value>file:///var/tmp/hadoop-yarn/local</value>
     </property>
 
     <property>
         <name>yarn.nodemanager.log-dirs</name>
-        <value>file:///tmp/hadoop-yarn/logs</value>
+        <value>file:///var/tmp/hadoop-yarn/logs</value>
     </property>
 
     <property>
