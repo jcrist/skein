@@ -56,6 +56,10 @@ COPY ./files /
 # Configure and setup hadoop
 RUN /root/setup-hadoop.sh
 
+# Make the working directory
+RUN mkdir /home/testuser/workdir \
+    && chown testuser:testuser /home/testuser/workdir
+
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.171-8.b10.el7_5.x86_64/jre/
 ENV LIBHDFS3_CONF /etc/hadoop/conf/hdfs-site.xml
 ENV HADOOP_CONF_DIR /etc/hadoop/conf
