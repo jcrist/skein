@@ -5,6 +5,6 @@ conda install maven grpcio pyyaml cryptography pytest flake8
 
 pip install grpcio-tools
 
-python setup.py develop
+pip install -e .
 
 conda list
