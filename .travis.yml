@@ -1,8 +1,10 @@
-language: generic
+language: python
 sudo: required
 dist: trusty
 os: linux
 
+python:
+    - "3.6"
 services:
     - docker
 
@@ -24,32 +26,22 @@ jobs:
         - env: DOCS=true
 
 before_install:
-    # Upgrade docker-compose
     - sudo rm /usr/local/bin/docker-compose
     - curl -L https://github.com/docker/compose/releases/download/1.19.0/docker-compose-`uname -s`-`uname -m` > docker-compose
     - chmod +x docker-compose
     - sudo mv docker-compose /usr/local/bin
-    # Start the docker cluster
     - ./continuous_integration/docker_hadoop/hcluster startup base -w .
 
 install:
-    # Install conda
-    - source continuous_integration/travis/install_conda.sh
-    # Build skein outside docker
-    - ./continuous_integration/travis/install.sh
-    # Use the built skein inside docker
-    - ./continuous_integration/docker_hadoop/hcluster exec -- ./workdir/continuous_integration/travis/docker_install.sh
+    - ./continuous_integration/docker_hadoop/hcluster exec -- ./workdir/continuous_integration/travis/install.sh
 
 script:
     - set -e
-    # Run py.test inside docker
     - ./continuous_integration/docker_hadoop/hcluster exec -- py.test workdir/skein/ -vv
-    # linting
-    - flake8 skein/
-    # If everything passes, build (and deploy) the docs
+    - ./continuous_integration/docker_hadoop/hcluster exec -- flake8 workdir/skein/
     - |
       if [[ "$DOCS" == "true" ]]; then
-        ./continuous_integration/travis/build_docs.sh
+        ./continuous_integration/docker_hadoop/hcluster exec -- ./workdir/continuous_integration/travis/build_docs.sh
         if [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_EVENT_TYPE" == "push" ]]; then
             pip install doctr
             doctr deploy . --built-docs docs/build/html/
