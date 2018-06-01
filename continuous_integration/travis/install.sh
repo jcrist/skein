@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -xe
 
-conda install grpcio pyyaml cryptography pytest flake8
+conda install maven grpcio pyyaml cryptography pytest flake8
 
 pip install grpcio-tools
 
-cd ~/workdir
-python setup.py install
+python setup.py develop
 
 conda list
