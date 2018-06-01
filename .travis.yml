@@ -33,19 +33,19 @@ before_install:
     - ./continuous_integration/docker_hadoop/hcluster startup base -w .
 
 install:
-    # Install conda
-    - source continuous_integration/travis/install_conda.sh
-    # Build skein outside docker
-    - ./continuous_integration/travis/install.sh
-    # Use the built skein inside docker
+    - |
+      if [[ "$DOCS" == "true" ]]; then
+        source continuous_integration/travis/install_conda.sh
+        ./continuous_integration/travis/install.sh
+      fi
     - ./continuous_integration/docker_hadoop/hcluster exec -- ./workdir/continuous_integration/travis/docker_install.sh
 
 script:
     - set -e
     # Run py.test inside docker
-    - ./continuous_integration/docker_hadoop/hcluster exec -- py.test workdir/skein/ -vv
+    - ./continuous_integration/docker_hadoop/hcluster exec -- py.test skein/ -vv
     # linting
-    - flake8 skein/
+    - ./continuous_integration/docker_hadoop/hcluster exec -- flake8 skein/
     # If everything passes, build (and deploy) the docs
     - |
       if [[ "$DOCS" == "true" ]]; then
