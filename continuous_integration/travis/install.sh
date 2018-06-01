@@ -1,23 +1,11 @@
+#!/usr/bin/env bash
 set -xe
 
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh -nv
-bash miniconda.sh -b -p $HOME/miniconda
-export PATH="$HOME/miniconda/bin:$PATH"
-
-conda config --set always_yes yes --set changeps1 no
-
-conda install maven grpcio pyyaml cryptography pytest flake8
+conda install grpcio pyyaml cryptography pytest flake8
 
 pip install grpcio-tools
 
-if [[ "$DOCS" == "true" ]]; then
-    conda install sphinx numpydoc;
-    pip install doctr sphinxcontrib.autoprogram;
-fi
-
-pip install -v --no-deps -e .
+cd ~/workdir
+python setup.py install
 
 conda list
-
-# Unset options
-set +xe

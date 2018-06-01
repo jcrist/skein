@@ -1,7 +1,12 @@
-language: generic
-sudo: false
+language: python
+sudo: required
 dist: trusty
 os: linux
+
+python:
+    - "3.6"
+services:
+    - docker
 
 git:
     depth: false  # Ensure latest tag is pulled
@@ -20,11 +25,24 @@ jobs:
     include:
         - env: DOCS=true
 
+before_install:
+    - ./continuous_integration/docker_hadoop/hcluster startup base -w .
+
 install:
-    - source continuous_integration/travis/install.sh
+    - ./continuous_integration/docker_hadoop/hcluster exec -- ./workdir/continuous_integration/travis/install.sh
 
 script:
-    - continuous_integration/travis/script.sh
+    - set -e
+    - ./continuous_integration/docker_hadoop/hcluster exec -- py.test workdir/skein/ -vv
+    - ./continuous_integration/docker_hadoop/hcluster exec -- flake8 workdir/skein/
+    - |
+      if [[ "$DOCS" == "true" ]]; then
+        ./continuous_integration/docker_hadoop/hcluster exec -- ./workdir/continuous_integration/travis/build_docs.sh
+        if [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_EVENT_TYPE" == "push" ]]; then
+            pip install doctr
+            doctr deploy . --built-docs docs/build/html/
+        fi
+      fi
 
 notifications:
   email: false

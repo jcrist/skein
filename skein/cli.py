@@ -343,7 +343,7 @@ def container_scale(app_id, service=None, number=None):
             arg('--force', '-f', action='store_true',
                 help='Overwrite existing configuration'))
 def entry_init(force=False):
-    Security.from_new_key_pair(force=force)
+    Security.new_key_pair(force=force)
 
 
 def main(args=None):
