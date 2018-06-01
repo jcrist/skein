@@ -35,6 +35,13 @@ SKEIN_DIR = os.path.abspath(os.path.dirname(os.path.relpath(__file__)))
 SKEIN_JAR = os.path.join(SKEIN_DIR, 'java', 'skein.jar')
 
 
+def _get_env_var(name):
+    res = os.environ.get(name)
+    if res is None:
+        raise context.ValueError("Environment variable %r not found", name)
+    return res
+
+
 class Security(namedtuple('Security', ['cert_path', 'key_path'])):
     """Security configuration.
 
@@ -676,12 +683,15 @@ class ApplicationClient(_ClientBase):
         Useful for connecting to the application master from a running
         container in a job.
         """
-        address = os.environ.get(ADDRESS_ENV_VAR)
-        if address is None:
-            raise context.ValueError("Address not found at "
-                                     "%r" % ADDRESS_ENV_VAR)
-        channel = secure_channel(address, Security(".skein.crt", ".skein.pem"))
-        return cls(address, channel=channel)
+        address = _get_env_var(ADDRESS_ENV_VAR)
+
+        local_dirs = _get_env_var('LOCAL_DIRS')
+        container_id = _get_env_var('CONTAINER_ID')
+        container_dir = os.path.join(local_dirs, container_id)
+        security = Security(os.path.join(container_dir, ".skein.crt"),
+                            os.path.join(container_dir, ".skein.pem"))
+
+        return cls(address, security=security)
 
     def containers(self, services=None, states=None):
         """Get information on containers in this application.
