@@ -1,7 +1,10 @@
 language: generic
-sudo: false
+sudo: required
 dist: trusty
 os: linux
+
+services:
+    - docker
 
 git:
     depth: false  # Ensure latest tag is pulled
@@ -18,13 +21,49 @@ jobs:
     fast_finish: true
 
     include:
-        - env: DOCS=true
+        - env:
+            - DOCS=true
+            - CLUSTER_TYPE=base
+        - env:
+            - CLUSTER_TYPE=kerberos
+
+before_install:
+    # Upgrade docker-compose
+    - sudo rm /usr/local/bin/docker-compose
+    - curl -L https://github.com/docker/compose/releases/download/1.19.0/docker-compose-`uname -s`-`uname -m` > docker-compose
+    - chmod +x docker-compose
+    - sudo mv docker-compose /usr/local/bin
+    # Start the docker cluster
+    - ./continuous_integration/docker_hadoop/hcluster startup $CLUSTER_TYPE -w .
 
 install:
-    - source continuous_integration/travis/install.sh
+    - |
+      if [[ "$DOCS" == "true" ]]; then
+        source continuous_integration/travis/install_conda.sh
+        ./continuous_integration/travis/install.sh
+      fi
+    - ./continuous_integration/docker_hadoop/hcluster exec -- ./workdir/continuous_integration/travis/docker_install.sh
 
 script:
-    - continuous_integration/travis/script.sh
+    - set -e
+    # kinit if needed
+    - |
+      if [[ "$CLUSTER_TYPE" == "kerberos" ]]; then
+        ./continuous_integration/docker_hadoop/hcluster exec -- kinit testuser -kt testuser.keytab
+      fi
+    # Run py.test inside docker
+    - ./continuous_integration/docker_hadoop/hcluster exec -- py.test skein/ -vv
+    # linting
+    - ./continuous_integration/docker_hadoop/hcluster exec -- flake8 skein/
+    # If everything passes, build (and deploy) the docs
+    - |
+      if [[ "$DOCS" == "true" ]]; then
+        ./continuous_integration/travis/build_docs.sh
+        if [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_EVENT_TYPE" == "push" ]]; then
+            pip install doctr
+            doctr deploy . --built-docs docs/build/html/
+        fi
+      fi
 
 notifications:
   email: false

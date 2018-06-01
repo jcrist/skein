@@ -167,6 +167,58 @@ exit 0;
     docker_compose_base exec -u "$user" "$host" bash --init-file /root/init-shell.sh
 }
 
+function hcluster_exec {
+    usage='usage: hcluster exec [-h] [user@][hostname] -- ARGS...'
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                echo "$usage
+
+Execute a command on the edge node as the user testuser
+
+Options:
+    user                    The user to login as. Defaults to testuser.
+    hostname                The host to login to. Defaults to edge.
+    ARGS...                 Bash command to execute
+
+Examples:
+
+    hcluster exec -- py.test ~/workdir/skein/   # Run the test suite"
+exit 0;
+;;
+            --)
+                shift
+                break
+                ;;
+            *)
+                if [ -z "${userhost+x}" ]; then
+                    userhost="$1"
+                else
+                    unrecognized_argument "$usage" "$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    case "$userhost" in
+        "")
+            user="testuser"
+            host="edge"
+            ;;
+        *@*)
+            user="${userhost%@*}"
+            host="${userhost#*@}"
+            ;;
+        *)
+            user="testuser"
+            host="$userhost"
+            ;;
+    esac
+    docker_compose_base exec -u "$user" "$host" /root/run_command.sh "$@"
+}
+
 function hcluster_shutdown {
     usage='usage: hcluster shutdown [-h]'
 
@@ -226,6 +278,10 @@ function hcluster_main {
             shift;
             hcluster_login "$@";
             ;;
+        exec)
+            shift;
+            hcluster_exec "$@";
+            ;;
         shutdown)
             shift;
             hcluster_shutdown "$@";
@@ -249,6 +305,7 @@ Helper script for working with dockerized hadoop clusters.
 Commands:
     startup         Start up the cluster
     login           Login to one of the nodes
+    exec            Run a command on one of the nodes
     shutdown        Shutdown the cluster
     compose         Forward commands to underlying docker-compose call
     kerbenv         Output environment variables to setup kerberos locally

@@ -81,7 +81,7 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
         return Security(cert_path, key_path)
 
     @classmethod
-    def from_new_key_pair(cls, directory=None, force=False):
+    def new_key_pair(cls, directory=None, force=False):
         """Create a Security object from a new certificate/key pair.
 
         This is equivalent to the cli command ``skein init`` with the option to
