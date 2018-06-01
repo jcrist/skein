@@ -10,6 +10,6 @@ cp -r ~/workdir ~/skein
 chown -R testuser:testuser /home/testuser/skein
 
 cd ~/skein
-pip install -e .
+pip install -v --no-deps -e .
 
 conda list

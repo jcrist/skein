@@ -21,7 +21,11 @@ jobs:
     fast_finish: true
 
     include:
-        - env: DOCS=true
+        - env:
+            - DOCS=true
+            - CLUSTER_TYPE=base
+        - env:
+            - CLUSTER_TYPE=kerberos
 
 before_install:
     # Upgrade docker-compose
@@ -30,7 +34,7 @@ before_install:
     - chmod +x docker-compose
     - sudo mv docker-compose /usr/local/bin
     # Start the docker cluster
-    - ./continuous_integration/docker_hadoop/hcluster startup base -w .
+    - ./continuous_integration/docker_hadoop/hcluster startup $CLUSTER_TYPE -w .
 
 install:
     - |
