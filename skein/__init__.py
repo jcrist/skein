@@ -1,5 +1,4 @@
-from .core import (Client, Application, ApplicationClient, Security,
-                   start_global_daemon, stop_global_daemon)
+from .core import Client, Application, ApplicationClient, Security
 from .exceptions import (SkeinError, SkeinConfigurationError, ConnectionError,
                          DaemonNotRunningError, ApplicationNotRunningError,
                          DaemonError, ApplicationError)

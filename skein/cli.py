@@ -8,8 +8,7 @@ import traceback
 import yaml
 
 from . import __version__
-from .core import (Client, ApplicationClient, Security, start_global_daemon,
-                   stop_global_daemon)
+from .core import Client, ApplicationClient, Security
 from .exceptions import context, SkeinError, DaemonNotRunningError
 from .model import Job
 from .utils import format_table, humanize_timedelta
@@ -101,14 +100,14 @@ log = arg("--log", default=False,
             'start', 'Start the skein daemon',
             log)
 def daemon_start(log=False):
-    print(start_global_daemon(log=log))
+    print(Client.start_global_daemon(log=log))
 
 
 @subcommand(daemon.subs,
             'address', 'The address of the running daemon')
 def daemon_address():
     try:
-        client = Client()
+        client = Client.from_global_daemon()
         print(client.address)
     except DaemonNotRunningError:
         print("No skein daemon is running")
@@ -117,7 +116,7 @@ def daemon_address():
 @subcommand(daemon.subs,
             'stop', 'Stop the skein daemon')
 def daemon_stop():
-    stop_global_daemon()
+    Client.stop_global_daemon()
 
 
 @subcommand(daemon.subs,
@@ -144,9 +143,9 @@ kv = node(entry_subs, 'kv', 'Manage the skein key-value store')
                 help='If true, will block until the key is set'))
 def kv_get(app_id, key=None, wait=False):
     if app_id == 'current':
-        app = ApplicationClient.connect_to_current()
+        app = ApplicationClient.from_current()
     else:
-        app = Client().connect(app_id)
+        app = Client.from_global_daemon().connect(app_id)
 
     if key is None:
         result = app.kv.to_dict()
@@ -169,9 +168,9 @@ def kv_set(app_id, key=None, value=None):
         fail("--value is required")
 
     if app_id == 'current':
-        app = ApplicationClient.connect_to_current()
+        app = ApplicationClient.from_current()
     else:
-        app = Client().connect(app_id)
+        app = Client.from_global_daemon().connect(app_id)
 
     app.kv[key] = value
 
@@ -182,9 +181,9 @@ def kv_set(app_id, key=None, value=None):
             arg('--key', help='The key to delete.'))
 def kv_del(app_id, key=None, wait=False):
     if app_id == 'current':
-        app = ApplicationClient.connect_to_current()
+        app = ApplicationClient.from_current()
     else:
-        app = Client().connect(app_id)
+        app = Client.from_global_daemon().connect(app_id)
 
     del app.kv[key]
 
@@ -220,7 +219,7 @@ def application_submit(spec):
         # Prettify expected errors, let rest bubble up
         fail('In file %r, %s' % (spec, exc))
 
-    app = Client().submit(job)
+    app = Client.from_global_daemon().submit(job)
     print(app.app_id)
 
 
@@ -230,7 +229,7 @@ def application_submit(spec):
                 help=('Filter by application states. May be repeated '
                       'to select multiple states.')))
 def application_ls(state=None):
-    apps = Client().applications(states=state)
+    apps = Client.from_global_daemon().applications(states=state)
     _print_application_status(apps)
 
 
@@ -238,7 +237,7 @@ def application_ls(state=None):
             'status', 'Status of a Skein application',
             app_id)
 def application_status(app_id):
-    apps = Client().status(app_id)
+    apps = Client.from_global_daemon().status(app_id)
     _print_application_status([apps])
 
 
@@ -246,7 +245,7 @@ def application_status(app_id):
             'kill', 'Kill a Skein application',
             app_id)
 def application_kill(app_id):
-    Client().kill(app_id)
+    Client.from_global_daemon().kill(app_id)
 
 
 @subcommand(application.subs,
@@ -254,7 +253,7 @@ def application_kill(app_id):
             app_id,
             arg('--service', '-s', help='Service name'))
 def application_describe(app_id, service=None):
-    client = Client()
+    client = Client.from_global_daemon()
     resp = client.connect(app_id).describe(service=service)
     if service is not None:
         out = yaml.dump({service: resp.to_dict(skip_nulls=True)},
@@ -291,9 +290,9 @@ def _print_container_status(containers):
                       'to select multiple states.')))
 def container_ls(app_id=None, service=None, state=None):
     if app_id == 'current':
-        app = ApplicationClient.connect_to_current()
+        app = ApplicationClient.from_current()
     else:
-        app = Client().connect(app_id)
+        app = Client.from_global_daemon().connect(app_id)
 
     containers = app.containers(states=state, services=service)
     _print_container_status(containers)
@@ -308,9 +307,9 @@ def container_kill(app_id=None, id=None):
         fail("--id is required")
 
     if app_id == 'current':
-        app = ApplicationClient.connect_to_current()
+        app = ApplicationClient.from_current()
     else:
-        app = Client().connect(app_id)
+        app = Client.from_global_daemon().connect(app_id)
     app.kill(id)
 
 
@@ -327,9 +326,9 @@ def container_scale(app_id, service=None, number=None):
         fail("--number is required")
 
     if app_id == 'current':
-        app = ApplicationClient.connect_to_current()
+        app = ApplicationClient.from_current()
     else:
-        app = Client().connect(app_id)
+        app = Client.from_global_daemon().connect(app_id)
     app.scale(service, number)
 
 
@@ -343,7 +342,7 @@ def container_scale(app_id, service=None, number=None):
             arg('--force', '-f', action='store_true',
                 help='Overwrite existing configuration'))
 def entry_init(force=False):
-    Security.new_key_pair(force=force)
+    Security.from_new_directory(force=force)
 
 
 def main(args=None):

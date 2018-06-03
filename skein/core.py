@@ -24,8 +24,7 @@ from .model import (Job, Service, ApplicationReport, ApplicationState,
 from .utils import cached_property
 
 
-__all__ = ('Client', 'Application', 'ApplicationClient', 'Security',
-           'start_global_daemon', 'stop_global_daemon')
+__all__ = ('Client', 'Application', 'ApplicationClient', 'Security')
 
 
 ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'
@@ -60,7 +59,7 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
         return super(Security, cls).__new__(cls, *paths)
 
     @classmethod
-    def default(cls):
+    def from_default(cls):
         """The default security configuration."""
         try:
             return cls.from_directory(CONFIG_DIR)
@@ -81,7 +80,7 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
         return Security(cert_path, key_path)
 
     @classmethod
-    def new_key_pair(cls, directory=None, force=False):
+    def from_new_directory(cls, directory=None, force=False):
         """Create a Security object from a new certificate/key pair.
 
         This is equivalent to the cli command ``skein init`` with the option to
@@ -153,7 +152,7 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
 
 
 def secure_channel(address, security=None):
-    security = security or Security.default()
+    security = security or Security.from_default()
 
     with open(security.cert_path, 'rb') as fil:
         cert = fil.read()
@@ -187,7 +186,7 @@ def _write_daemon(address, pid):
 
 
 def _start_daemon(security=None, set_global=False, log=None):
-    security = security or Security.default()
+    security = security or Security.from_default()
 
     if not os.path.exists(SKEIN_JAR):
         raise context.FileNotFoundError("Failed to find the skein jar file")
@@ -244,59 +243,11 @@ def _start_daemon(security=None, set_global=False, log=None):
     address = 'localhost:%d' % port
 
     if set_global:
-        stop_global_daemon()
+        Client.stop_global_daemon()
         _write_daemon(address, proc.pid)
         proc = None
 
     return address, proc
-
-
-def start_global_daemon(log=None):
-    """Start the global daemon.
-
-    No-op if the global daemon is already running.
-
-    Parameters
-    ----------
-    log : str, bool, or None, optional
-        Sets the logging behavior for the daemon. Values may be a path for logs
-        to be written to, ``None`` to log to stdout/stderr, or ``False`` to
-        turn off logging completely. Default is ``None``.
-
-    Returns
-    -------
-    address : str
-        The address of the daemon
-    """
-    try:
-        client = Client()
-    except DaemonNotRunningError:
-        pass
-    else:
-        return client.address
-    address, _ = _start_daemon(set_global=True, log=log)
-    return address
-
-
-def stop_global_daemon():
-    """Stops the global daemon if running.
-
-    No-op if no global daemon is running."""
-    address, pid = _read_daemon()
-    if address is None:
-        return
-
-    try:
-        Client(address=address)
-    except DaemonNotRunningError:
-        pass
-    else:
-        os.kill(pid, signal.SIGTERM)
-
-    try:
-        os.remove(DAEMON_PATH)
-    except OSError:
-        pass
 
 
 class _ClientBase(object):
@@ -324,86 +275,114 @@ class Client(_ClientBase):
     Parameters
     ----------
     address : str, optional
-        The address for the daemon. By default will try to connect to the
-        global daemon. Pass in address explicitly to connect to a different
-        daemon. To create a new daemon, see ``skein.Client.temporary`` or
-        ``skein.start_global_daemon``.
+        The address for the daemon. By default will create a new daemon
+        process.  Pass in address explicitly to connect to a different daemon.
+        To connect to the global daemon see ``Client.from_global_daemon``.
     security : Security, optional
         The security configuration to use to communicate with the daemon.
         Defaults to the global configuration.
+    log : str, bool, or None, optional
+        When starting a new daemon, sets the logging behavior for the daemon.
+        Values may be a path for logs to be written to, ``None`` to log to
+        stdout/stderr, or ``False`` to turn off logging completely. Default is
+        ``None``.
+
+    Examples
+    --------
+    >>> with skein.Client() as client:
+    ...     print(client.status(app_id='application_1526134340424_0012'))
+    ApplicationReport<name='demo'>
     """
     _server_name = 'daemon'
     _server_error = DaemonError
 
-    def __init__(self, address=None, security=None):
-        if address is None:
-            address, _ = _read_daemon()
-
-            if address is None:
-                raise DaemonNotRunningError("No daemon currently running")
-
+    def __init__(self, address=None, security=None, log=None):
         if security is None:
-            security = Security.default()
+            security = Security.from_default()
+
+        if address is None:
+            address, proc = _start_daemon(security=security, log=log)
+        else:
+            proc = None
 
         self._stub = proto.DaemonStub(secure_channel(address, security))
         self.address = address
         self.security = security
-        self._proc = None
+        self._proc = proc
 
-        # Ping server to check connection
-        self._call('ping', proto.Empty())
+        try:
+            # Ping server to check connection
+            self._call('ping', proto.Empty())
+        except Exception:
+            if proc is not None:
+                proc.stdin.close()  # kill the daemon on error
+                proc.wait()
+            raise
 
     @classmethod
-    def temporary(cls, security=None, log=None):
-        """Create a client connected to a temporary daemon process.
+    def from_global_daemon(self):
+        """Connect to the global daemon."""
+        address, _ = _read_daemon()
 
-        It's recommended to use the resulting client as a contextmanager or
-        explicitly call ``.close()``. Otherwise the daemon won't be closed
-        until the creating process exits.
+        if address is None:
+            raise DaemonNotRunningError("No daemon currently running")
+
+        security = Security.from_default()
+        return Client(address=address, security=security)
+
+    @staticmethod
+    def start_global_daemon(log=None):
+        """Start the global daemon.
+
+        No-op if the global daemon is already running.
 
         Parameters
         ----------
-        security : Security, optional
-            The security configuration to use to communicate with the daemon.
-            Defaults to the global configuration.
         log : str, bool, or None, optional
-            Sets the logging behavior for the daemon. Values may be a path for
-            logs to be written to, ``None`` to log to stdout/stderr, or
-            ``False`` to turn off logging completely. Default is ``None``.
+            Sets the logging behavior for the daemon. Values may be a path for logs
+            to be written to, ``None`` to log to stdout/stderr, or ``False`` to
+            turn off logging completely. Default is ``None``.
 
         Returns
         -------
-        client : Client
-
-        Examples
-        --------
-        >>> with Client.temporary() as client:
-        ...     print(client.status(app_id='application_1526134340424_0012'))
-        ApplicationReport<name='demo'>
+        address : str
+            The address of the daemon
         """
-        address, proc = _start_daemon(security=security, log=log)
         try:
-            client = cls(address=address, security=security)
-        except Exception:
-            proc.stdin.close()  # kill the daemon on error
-            proc.wait()
-            raise
-        client._proc = proc
-        return client
+            client = Client.from_global_daemon()
+        except DaemonNotRunningError:
+            pass
+        else:
+            return client.address
+        address, _ = _start_daemon(set_global=True, log=log)
+        return address
 
-    @property
-    def is_temporary(self):
-        """Whether this client is connected to a temporary daemon"""
-        return self._proc is not None
+    @staticmethod
+    def stop_global_daemon():
+        """Stops the global daemon if running.
+
+        No-op if no global daemon is running."""
+        address, pid = _read_daemon()
+        if address is None:
+            return
+
+        try:
+            Client(address=address)
+        except DaemonNotRunningError:
+            pass
+        else:
+            os.kill(pid, signal.SIGTERM)
+
+        try:
+            os.remove(DAEMON_PATH)
+        except OSError:
+            pass
 
     def __repr__(self):
-        kind = 'temporary' if self.is_temporary else 'global'
-        return 'Client<%s, %s>' % (self.address, kind)
+        return 'Client<%s>' % self.address
 
     def close(self):
-        """If connected to a temporary daemon, closes the daemon.
-
-        No-op if connected to the global daemon"""
+        """Closes the java daemon if started by this client. No-op otherwise."""
         if self._proc is not None:
             self._proc.stdin.close()
             self._proc.wait()
@@ -677,7 +656,7 @@ class ApplicationClient(_ClientBase):
         return [Container.from_protobuf(c) for c in resp.containers]
 
     @classmethod
-    def connect_to_current(cls):
+    def from_current(cls):
         """Create an application client from within a running container.
 
         Useful for connecting to the application master from a running

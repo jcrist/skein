@@ -4,11 +4,9 @@ API Docs
 .. currentmodule:: skein
 
 
-Global configuration and state
-------------------------------
+Security
+--------
 
-.. autofunction:: start_global_daemon
-.. autofunction:: stop_global_daemon
 .. autoclass:: Security
     :members:
 

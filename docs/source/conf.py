@@ -14,17 +14,9 @@ pygments_style = 'sphinx'
 exclude_patterns = []
 
 # Sphinx Extensions
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'numpydoc',
-              'sphinxcontrib.autoprogram']
+extensions = ['sphinx.ext.autodoc', 'numpydoc', 'sphinxcontrib.autoprogram']
 
 numpydoc_show_class_members = False
-
-intersphinx_mapping = {
-    'dask': ('http://dask.pydata.org/en/latest/',
-             'http://dask.pydata.org/en/latest/objects.inv'),
-    'distributed': ('http://distributed.readthedocs.io/en/latest/',
-                    'http://distributed.readthedocs.io/en/latest/objects.inv')}
-
 
 # Sphinx Theme
 html_theme = 'alabaster'
