@@ -291,23 +291,23 @@ public class MsgUtils {
         new HashSet<String>(service.getDependsList()));
   }
 
-  public static Msg.Job writeJob(Model.Job job) {
-    Msg.Job.Builder builder = Msg.Job.newBuilder()
-        .setName(job.getName())
-        .setQueue(job.getQueue());
+  public static Msg.ApplicationSpec writeApplicationSpec(Model.ApplicationSpec spec) {
+    Msg.ApplicationSpec.Builder builder = Msg.ApplicationSpec.newBuilder()
+        .setName(spec.getName())
+        .setQueue(spec.getQueue());
 
-    for (Map.Entry<String, Model.Service> entry : job.getServices().entrySet()) {
+    for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
       builder.putServices(entry.getKey(), writeService(entry.getValue()));
     }
     return builder.build();
   }
 
-  public static Model.Job readJob(Msg.Job job) {
+  public static Model.ApplicationSpec readApplicationSpec(Msg.ApplicationSpec spec) {
     Map<String, Model.Service> services = new HashMap<String, Model.Service>();
-    for (Map.Entry<String, Msg.Service> entry : job.getServicesMap().entrySet()) {
+    for (Map.Entry<String, Msg.Service> entry : spec.getServicesMap().entrySet()) {
       services.put(entry.getKey(), readService(entry.getValue()));
     }
-    return new Model.Job(job.getName(), job.getQueue(), services);
+    return new Model.ApplicationSpec(spec.getName(), spec.getQueue(), services);
   }
 
   public static Msg.Container writeContainer(Model.Container container) {

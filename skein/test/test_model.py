@@ -6,7 +6,7 @@ import pickle
 
 import pytest
 
-from skein.model import (Job, Service, Resources, File, ApplicationState,
+from skein.model import (ApplicationSpec, Service, Resources, File, ApplicationState,
                          FinalStatus)
 
 
@@ -33,7 +33,7 @@ commands:
     - command 2
 """
 
-job_spec = """\
+app_spec = """\
 name: test
 queue: default
 
@@ -42,10 +42,10 @@ services:
 %s""" % indent(service_spec, 8)
 
 
-def check_basic_methods(obj, obj2):
+def check_basic_methods(obj, obspec2):
     # equality
     assert obj == copy.deepcopy(obj)
-    assert obj != obj2
+    assert obj != obspec2
     assert obj != 'incorrect_type'
 
     # smoketest repr
@@ -56,12 +56,12 @@ def check_basic_methods(obj, obj2):
     for skip in [True, False]:
         for method in ['json', 'yaml', 'dict']:
             msg = getattr(obj, 'to_' + method)(skip_nulls=skip)
-            obj2 = getattr(cls, 'from_' + method)(msg)
-            assert obj == obj2
+            obspec2 = getattr(cls, 'from_' + method)(msg)
+            assert obj == obspec2
 
     proto = obj.to_protobuf()
-    obj2 = cls.from_protobuf(proto)
-    assert obj == obj2
+    obspec2 = cls.from_protobuf(proto)
+    assert obj == obspec2
 
 
 def test_resources():
@@ -158,45 +158,49 @@ def test_service_invariants():
     assert isinstance(s.depends, set)
 
 
-def test_job():
+def test_application_spec():
     r = Resources(memory=1024, vcores=1)
     c = ['commands']
     s1 = Service(resources=r, commands=c,
                  files={'file': File(source='/test/path')})
     s2 = Service(resources=r, commands=c,
                  files={'file': File(source='/test/path', size=1024)})
-    j1 = Job(services={'service': s1})
-    j2 = Job(services={'service': s2})
-    check_basic_methods(j1, j2)
+    spec1 = ApplicationSpec(services={'service': s1})
+    spec2 = ApplicationSpec(services={'service': s2})
+    check_basic_methods(spec1, spec2)
 
 
-def test_job_invariants():
+def test_application_spec_invariants():
     s = Service(commands=['command'],
                 resources=Resources(memory=1024, vcores=1))
 
     # No services
     with pytest.raises(ValueError):
-        Job(name='dask', queue='default', services={})
+        ApplicationSpec(name='dask', queue='default', services={})
 
     with pytest.raises(TypeError):
-        Job(name=1, services={'service': s})
+        ApplicationSpec(name=1, services={'service': s})
 
     with pytest.raises(TypeError):
-        Job(queue=1, services={'service': s})
+        ApplicationSpec(queue=1, services={'service': s})
 
     r = Resources(memory=1024, vcores=1)
     c = ['commands']
 
     # Unknown dependency name
     with pytest.raises(ValueError):
-        Job(services={'a': s,
-                      'b': Service(resources=r, commands=c, depends=['c', 'd'])})
+        ApplicationSpec(services={'a': s,
+                                  'b': Service(resources=r, commands=c,
+                                               depends=['c', 'd'])})
 
     # Cyclical dependencies
     with pytest.raises(ValueError):
-        Job(services={'a': Service(resources=r, commands=c, depends=['c']),
-                      'b': Service(resources=r, commands=c, depends=['a']),
-                      'c': Service(resources=r, commands=c, depends=['b'])})
+        ApplicationSpec(services={'a': Service(resources=r, commands=c,
+                                               depends=['c']),
+                                  'b': Service(resources=r, commands=c,
+                                               depends=['a']),
+                                  'c': Service(resources=r, commands=c,
+                                               depends=['b'])})
 
 
 def test_service_from_yaml():
@@ -229,39 +233,39 @@ def test_service_roundtrip():
     assert s == s2
 
 
-def test_job_from_yaml():
-    j = Job.from_yaml(job_spec)
-    assert isinstance(j, Job)
+def test_application_spec_from_yaml():
+    spec = ApplicationSpec.from_yaml(app_spec)
+    assert isinstance(spec, ApplicationSpec)
 
-    assert j.name == 'test'
-    assert j.queue == 'default'
-    assert isinstance(j.services, dict)
-    assert isinstance(j.services['service_1'], Service)
+    assert spec.name == 'test'
+    assert spec.queue == 'default'
+    assert isinstance(spec.services, dict)
+    assert isinstance(spec.services['service_1'], Service)
 
 
-def test_job_roundtrip():
-    j = Job.from_yaml(job_spec)
-    j2 = Job.from_yaml(j.to_yaml())
-    assert j == j2
+def test_application_spec_roundtrip():
+    spec = ApplicationSpec.from_yaml(app_spec)
+    spec2 = ApplicationSpec.from_yaml(spec.to_yaml())
+    assert spec == spec2
 
 
 def test_to_file_from_file(tmpdir):
-    job = Job.from_yaml(job_spec)
+    spec = ApplicationSpec.from_yaml(app_spec)
 
     for name, format in [('test.yaml', 'infer'),
                          ('test.json', 'infer'),
                          ('test2.yaml', 'json')]:
         path = os.path.join(str(tmpdir), name)
         assert not os.path.exists(path)
-        job.to_file(path, format=format)
+        spec.to_file(path, format=format)
         assert os.path.exists(path)
-        job2 = Job.from_file(path, format=format)
-        assert job == job2
+        spec2 = ApplicationSpec.from_file(path, format=format)
+        assert spec == spec2
 
     for name, format in [('bad.yaml', 'invalid'), ('bad.invalid', 'infer')]:
         path = os.path.join(str(tmpdir), name)
         with pytest.raises(ValueError):
-            job.to_file(path, format=format)
+            spec.to_file(path, format=format)
         assert not os.path.exists(path)
 
 

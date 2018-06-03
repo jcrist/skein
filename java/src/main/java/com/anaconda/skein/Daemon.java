@@ -209,10 +209,10 @@ public class Daemon {
   }
 
   /** Start a new application. **/
-  public ApplicationId submitApplication(Model.Job job)
+  public ApplicationId submitApplication(Model.ApplicationSpec spec)
       throws IOException, YarnException {
-    // First validate the job request
-    job.validate();
+    // First validate the spec request
+    spec.validate();
 
     // Get an application id. This is needed before doing anything else so we
     // can upload additional files to the application directory
@@ -223,7 +223,7 @@ public class Daemon {
     // Setup the LocalResources for the appmaster and containers
     Path appDir = new Path(defaultFs.getHomeDirectory(),
                            ".skein/" + appId.toString());
-    Map<String, LocalResource> localResources = setupAppDir(job, appDir);
+    Map<String, LocalResource> localResources = setupAppDir(spec, appDir);
 
     // Setup the appmaster environment variables
     Map<String, String> env = new HashMap<String, String>();
@@ -259,10 +259,10 @@ public class Daemon {
 
     appContext.setApplicationType("skein");
     appContext.setAMContainerSpec(amContext);
-    appContext.setApplicationName(job.getName());
+    appContext.setApplicationName(spec.getName());
     appContext.setResource(Resource.newInstance(amMemory, amVCores));
     appContext.setPriority(Priority.newInstance(0));
-    appContext.setQueue(job.getQueue());
+    appContext.setQueue(spec.getQueue());
 
     LOG.info("Submitting application...");
     yarnClient.submitApplication(appContext);
@@ -270,7 +270,7 @@ public class Daemon {
     return appId;
   }
 
-  private Map<String, LocalResource> setupAppDir(Model.Job job,
+  private Map<String, LocalResource> setupAppDir(Model.ApplicationSpec spec,
         Path appDir) throws IOException {
 
     // Make the ~/.skein/app_id dir
@@ -283,18 +283,18 @@ public class Daemon {
     LocalResource keyFile = newLocalResource(uploadCache, appDir, keyPath);
 
     // Setup the LocalResources for the services
-    for (Map.Entry<String, Model.Service> entry: job.getServices().entrySet()) {
+    for (Map.Entry<String, Model.Service> entry: spec.getServices().entrySet()) {
       finalizeService(entry.getKey(), entry.getValue(),
                       uploadCache, appDir, certFile, keyFile);
     }
-    job.validate();
+    spec.validate();
 
-    // Write the job specification to file
+    // Write the application specification to file
     Path specPath = new Path(appDir, ".skein.proto");
-    LOG.info("Writing job specification to " + specPath);
+    LOG.info("Writing application specification to " + specPath);
     OutputStream out = defaultFs.create(specPath);
     try {
-      MsgUtils.writeJob(job).writeTo(out);
+      MsgUtils.writeApplicationSpec(spec).writeTo(out);
     } finally {
       out.close();
     }
@@ -322,7 +322,7 @@ public class Daemon {
       script.append(c);
     }
 
-    // Write the job script to file
+    // Write the service script to file
     final Path scriptPath = new Path(appDir, serviceName + ".sh");
     LOG.info("SERVICE: " + serviceName + " - writing script to " + scriptPath);
 
@@ -609,14 +609,14 @@ public class Daemon {
     }
 
     @Override
-    public void submit(Msg.Job req,
+    public void submit(Msg.ApplicationSpec req,
         StreamObserver<Msg.Application> resp) {
 
-      Model.Job job = MsgUtils.readJob(req);
+      Model.ApplicationSpec spec = MsgUtils.readApplicationSpec(req);
 
       ApplicationId appId = null;
       try {
-        appId = submitApplication(job);
+        appId = submitApplication(spec);
       } catch (Exception exc) {
         resp.onError(Status.INTERNAL
             .withDescription("Failed to submit application, "

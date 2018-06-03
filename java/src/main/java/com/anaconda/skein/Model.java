@@ -89,21 +89,21 @@ public class Model {
     }
   }
 
-  public static class Job {
+  public static class ApplicationSpec {
     private String name;
     private String queue;
     private Map<String, Service> services;
 
-    public Job() {}
+    public ApplicationSpec() {}
 
-    public Job(String name, String queue, Map<String, Service> services) {
+    public ApplicationSpec(String name, String queue, Map<String, Service> services) {
       this.name = name;
       this.queue = queue;
       this.services = services;
     }
 
     public String toString() {
-      return ("Job<"
+      return ("ApplicationSpec<"
               + "name: " + name + ", "
               + "queue: " + queue + ", "
               + "services: " + services + ">");

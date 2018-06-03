@@ -61,7 +61,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   private Configuration conf;
 
-  private Model.Job job;
+  private Model.ApplicationSpec spec;
 
   private Path appDir;
 
@@ -124,18 +124,19 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
   }
 
-  private void loadJob() throws Exception {
+  private void loadApplicationSpec() throws Exception {
     try {
-      job = MsgUtils.readJob(Msg.Job.parseFrom(new FileInputStream(".skein.proto")));
+      spec = MsgUtils.readApplicationSpec(
+          Msg.ApplicationSpec.parseFrom(new FileInputStream(".skein.proto")));
     } catch (IOException exc) {
-      fatal("Issue loading job specification", exc);
+      fatal("Issue loading application specification", exc);
     }
-    job.validate();
-    LOG.info("Job successfully loaded");
+    spec.validate();
+    LOG.info("Application specification successfully loaded");
   }
 
   private synchronized void intializeServices() throws Exception {
-    for (Map.Entry<String, Model.Service> entry : job.getServices().entrySet()) {
+    for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
       String serviceName = entry.getKey();
       Model.Service service = entry.getValue();
 
@@ -282,7 +283,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   public void run() throws Exception {
     conf = new YarnConfiguration();
 
-    loadJob();
+    loadApplicationSpec();
 
     try {
       hostname = InetAddress.getLocalHost().getHostAddress();
@@ -632,8 +633,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     @Override
-    public void getJob(Msg.Empty req, StreamObserver<Msg.Job> resp) {
-      resp.onNext(MsgUtils.writeJob(job));
+    public void getApplicationSpec(Msg.Empty req, StreamObserver<Msg.ApplicationSpec> resp) {
+      resp.onNext(MsgUtils.writeApplicationSpec(spec));
       resp.onCompleted();
     }
 
@@ -645,7 +646,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       if (!checkService(name, resp)) {
         return;
       }
-      Model.Service service = job.getServices().get(name);
+      Model.Service service = spec.getServices().get(name);
       resp.onNext(MsgUtils.writeService(service));
       resp.onCompleted();
     }

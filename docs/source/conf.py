@@ -24,7 +24,7 @@ html_theme_path = [alabaster.get_path()]
 templates_path = ['_templates']
 html_static_path = ['_static']
 html_theme_options = {
-    'description': 'Simple tool for deploying jobs on Apache YARN',
+    'description': 'Simple tool for deploying applications on Apache YARN',
     'github_button': True,
     'github_count': False,
     'github_user': 'jcrist',

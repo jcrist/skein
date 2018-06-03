@@ -81,7 +81,7 @@ message Service {
 }
 
 
-message Job {
+message ApplicationSpec {
   string name = 1;
   string queue = 2;
   map<string, Service> services = 3;
@@ -145,7 +145,7 @@ service Daemon {
 
   rpc getApplications (ApplicationsRequest) returns (ApplicationsResponse);
 
-  rpc submit (Job) returns (Application);
+  rpc submit (ApplicationSpec) returns (Application);
 
   rpc waitForStart (Application) returns (ApplicationReport);
 
@@ -182,7 +182,7 @@ service Master {
 
   rpc getService (ServiceRequest) returns (Service);
 
-  rpc getJob (Empty) returns (Job);
+  rpc getApplicationSpec (Empty) returns (ApplicationSpec);
 
   rpc getContainers (ContainersRequest) returns (ContainersResponse);
 

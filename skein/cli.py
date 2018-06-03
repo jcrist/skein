@@ -10,7 +10,7 @@ import yaml
 from . import __version__
 from .core import Client, ApplicationClient, Security
 from .exceptions import context, SkeinError, DaemonNotRunningError
-from .model import Job
+from .model import ApplicationSpec
 from .utils import format_table, humanize_timedelta
 
 
@@ -67,7 +67,7 @@ def node(subs, name, help):
 
 
 entry = argparse.ArgumentParser(prog="skein",
-                                description="Define and run YARN jobs",
+                                description="Define and run YARN applications",
                                 formatter_class=_Formatter,
                                 add_help=False)
 add_help(entry)
@@ -81,7 +81,7 @@ entry_subs = entry.add_subparsers(metavar='command')
 app_id = arg('app_id', help='The application id', metavar='APP_ID')
 optional_app_id = arg('app_id', metavar='APP_ID',
                       help='The application id. To use in a container during '
-                           'a skein job, pass in "current"')
+                           'a skein applications, pass in "current"')
 container_id = arg('--id', required=True,
                    help='The container id', metavar='CONTAINER_ID')
 
@@ -208,18 +208,18 @@ def _print_application_status(apps):
 
 
 @subcommand(application.subs,
-            'submit', 'Submit a Skein Job',
+            'submit', 'Submit a Skein Application',
             arg('spec', help='The specification file'))
 def application_submit(spec):
     if not os.path.exists(spec):
-        fail("No job specification file at %r" % spec)
+        fail("No applications specification file at %r" % spec)
     try:
-        job = Job.from_file(spec)
+        spec = ApplicationSpec.from_file(spec)
     except SkeinError as exc:
         # Prettify expected errors, let rest bubble up
         fail('In file %r, %s' % (spec, exc))
 
-    app = Client.from_global_daemon().submit(job)
+    app = Client.from_global_daemon().submit(spec)
     print(app.app_id)
 
 

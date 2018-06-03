@@ -41,7 +41,7 @@ process written in Java. How this process is managed is configurable, but for
 most users the pattern will be:
 
 1. Start the Skein daemon
-2. Execute yarn job/jobs
+2. Run yarn application/applications
 3. Shut down the Skein daemon
 
 To do this from the command line, use `skein daemon start
@@ -58,7 +58,7 @@ Write an Application Specification
 
 Skein applications are written declaratively as specifications. These can be
 provided as YAML or JSON files, or created programmatically using the
-`specification api <api.html#job-specification>`__.
+`specification api <api.html#application-specification>`__.
 
 Here we create a simple "Hello World" application as a YAML file:
 

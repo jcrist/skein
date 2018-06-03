@@ -19,8 +19,8 @@ from .compatibility import PY2
 from .exceptions import (context, FileNotFoundError, SkeinConfigurationError,
                          ConnectionError, ApplicationNotRunningError,
                          ApplicationError, DaemonNotRunningError, DaemonError)
-from .model import (Job, Service, ApplicationReport, ApplicationState,
-                    ContainerState, Container)
+from .model import (ApplicationSpec, Service, ApplicationReport,
+                    ApplicationState, ContainerState, Container)
 from .utils import cached_property
 
 
@@ -270,7 +270,7 @@ class _ClientBase(object):
 
 
 class Client(_ClientBase):
-    """Connect to and schedule jobs on the YARN cluster.
+    """Connect to and schedule applications on the YARN cluster.
 
     Parameters
     ----------
@@ -393,27 +393,29 @@ class Client(_ClientBase):
     def __exit__(self, *args):
         self.close()
 
-    def submit(self, job):
-        """Submit a new skein job.
+    def submit(self, spec):
+        """Submit a new skein application.
 
         Parameters
         ----------
-        job : Job, str, or dict
-            The job to run. Can be a ``Job`` object, a path to a
-            yaml/json file, or a dictionary description of a job.
+        spec : ApplicationSpec, str, or dict
+            A description of the application to run. Can be an
+            ``ApplicationSpec`` object, a path to a yaml/json file, or a
+            dictionary description of an application specification.
 
         Returns
         -------
         app : Application
         """
-        if isinstance(job, str):
-            job = Job.from_file(job)
-        elif isinstance(job, dict):
-            job = Job.from_dict(dict)
-        elif not isinstance(job, Job):
-            raise context.TypeError("job must be either a Job, path, or dict, "
-                                    "got %s" % type(job).__name__)
-        resp = self._call('submit', job.to_protobuf())
+        if isinstance(spec, str):
+            spec = ApplicationSpec.from_file(spec)
+        elif isinstance(spec, dict):
+            spec = ApplicationSpec.from_dict(spec)
+        elif not isinstance(spec, ApplicationSpec):
+            raise context.TypeError("spec must be either an ApplicationSpec, "
+                                    "path, or dict, got "
+                                    "%s" % type(spec).__name__)
+        resp = self._call('submit', spec.to_protobuf())
         return Application(self, resp.id)
 
     def connect(self, app_id, wait=True):
@@ -609,7 +611,7 @@ class ApplicationClient(_ClientBase):
         return KeyValueStore(self)
 
     def describe(self, service=None):
-        """Information about the running job.
+        """Information about the running application.
 
         Parameters
         ----------
@@ -618,13 +620,13 @@ class ApplicationClient(_ClientBase):
 
         Returns
         -------
-        spec : Job or Service
+        spec : ApplicationSpec or Service
             Returns a service if ``service`` is specified, otherwise returns
-            the whole ``Job``.
+            the whole ``ApplicationSpec``.
         """
         if service is None:
-            resp = self._call('getJob', proto.Empty())
-            return Job.from_protobuf(resp)
+            resp = self._call('getApplicationSpec', proto.Empty())
+            return ApplicationSpec.from_protobuf(resp)
         else:
             resp = self._call('getService', proto.ServiceRequest(name=service))
             return Service.from_protobuf(resp)
@@ -660,7 +662,7 @@ class ApplicationClient(_ClientBase):
         """Create an application client from within a running container.
 
         Useful for connecting to the application master from a running
-        container in a job.
+        container in a application.
         """
         address = _get_env_var(ADDRESS_ENV_VAR)
 

@@ -3,7 +3,7 @@ Skein
 
 |travis| |pypi|
 
-Skein is a simple tool for deploying jobs on `Apache YARN
+Skein is a simple tool for deploying applications on `Apache YARN
 <https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YARN.html>`_.
 See `the documentation <https://jcrist.github.io/skein/>`_ for more
 information.

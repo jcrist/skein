@@ -42,10 +42,10 @@ Key Value Store
     :members:
 
 
-Job Specification
------------------
+Application Specification
+-------------------------
 
-.. autoclass:: Job
+.. autoclass:: ApplicationSpec
     :members:
     :inherited-members:
 

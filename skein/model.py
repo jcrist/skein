@@ -11,9 +11,10 @@ from .compatibility import urlparse, with_metaclass
 from .exceptions import context
 from .utils import implements, format_list
 
-__all__ = ('Job', 'Service', 'Resources', 'File', 'FileType', 'FileVisibility',
-           'ApplicationState', 'FinalStatus', 'ResourceUsageReport',
-           'ApplicationReport', 'ContainerState', 'Container')
+__all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
+           'FileVisibility', 'ApplicationState', 'FinalStatus',
+           'ResourceUsageReport', 'ApplicationReport', 'ContainerState',
+           'Container')
 
 
 required = type('required', (object,),
@@ -62,7 +63,7 @@ def check_no_cycles(dependencies):
                             cycle.append(nodes.pop())
                         cycle.append(nodes.pop())
                         raise context.ValueError(
-                            'Dependency cycle detected in job: %s' %
+                            'Dependency cycle detected between services: %s' %
                             '->'.join(str(x) for x in reversed(cycle)))
                     next_nodes.append(nxt)
 
@@ -674,8 +675,8 @@ class Service(Base):
         return cls(**kwargs)
 
 
-class Job(Base):
-    """A single Skein job.
+class ApplicationSpec(Base):
+    """A complete description of an application.
 
     Parameters
     ----------
@@ -687,7 +688,7 @@ class Job(Base):
         The queue to submit to. Defaults to the default queue.
     """
     __slots__ = ('name', 'queue', 'services')
-    _protobuf_cls = _proto.Job
+    _protobuf_cls = _proto.ApplicationSpec
 
     def __init__(self, services=required, name='skein', queue='default'):
         self._assign_required('services', services)
@@ -696,7 +697,8 @@ class Job(Base):
         self._validate()
 
     def __repr__(self):
-        return 'Job<name=%r, queue=%r, services=...>' % (self.name, self.queue)
+        return ('ApplicationSpec<name=%r, queue=%r, services=...>' %
+                (self.name, self.queue))
 
     def _validate(self):
         self._check_is_type('name', str)
