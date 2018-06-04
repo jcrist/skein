@@ -402,11 +402,12 @@ public class Daemon {
         LOG.info("Uploading " + srcPath + " to " + dstPath);
         FileUtil.copy(srcFs, srcPath, dstFs, dstPath, false, conf);
         dstFs.setPermission(dstPath, SKEIN_FILE_PERM);
-
-        file.setResource(ConverterUtils.getYarnUrlFromPath(dstPath));
       }
       uploadCache.put(srcPath, dstPath);
     }
+
+    file.setResource(ConverterUtils.getYarnUrlFromPath(dstPath));
+
     FileStatus status = dstFs.getFileStatus(dstPath);
 
     // Only set size & timestamp if not set already
