@@ -37,7 +37,7 @@ SKEIN_JAR = os.path.join(SKEIN_DIR, 'java', 'skein.jar')
 def _get_env_var(name):
     res = os.environ.get(name)
     if res is None:
-        raise context.ValueError("Environment variable %r not found", name)
+        raise context.ValueError("Environment variable %r not found" % name)
     return res
 
 
