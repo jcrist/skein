@@ -41,7 +41,7 @@ process written in Java. How this process is managed is configurable, but for
 most users the pattern will be:
 
 1. Start the Skein daemon
-2. Execute yarn job/jobs
+2. Run yarn application/applications
 3. Shut down the Skein daemon
 
 To do this from the command line, use `skein daemon start
@@ -58,7 +58,8 @@ Write an Application Specification
 
 Skein applications are written declaratively as specifications. These can be
 provided as YAML or JSON files, or created programmatically using the
-`specification api <api.html#job-specification>`__.
+`specification api <api.html#application-specification>`__. For more
+information, see the `specification docs <specification.html>`__.
 
 Here we create a simple "Hello World" application as a YAML file:
 
@@ -73,7 +74,7 @@ Here we create a simple "Hello World" application as a YAML file:
           vcores: 1
           memory: 128
         files:
-          - file: payload.txt
+          payload.txt: payload.txt
         commands:
           - echo "Sleeping for 60 seconds"
           - sleep 60
@@ -94,7 +95,8 @@ Walking through this specification:
 - The application starts a single service ``my_service`` on a container using 1
   virtual core and 128 MB of memory.
 
-- The file ``payload.txt`` is distributed with the application.
+- The file ``payload.txt`` is distributed with the application, and is named
+  ``payload.txt`` both locally and on the running container.
 
 - The service runs a few Shell commands. These will be run in order, stopping
   on the first failure, and all outputs logged in the container logs.

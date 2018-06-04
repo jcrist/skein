@@ -13,7 +13,7 @@ Skein
     1. *A quantity of yarn, thread, or the like, put up together, after it is taken from the reel.*
 
 
-Skein is a simple library and cli for deploying jobs on `Apache YARN
+Skein is a simple library and cli for deploying applications on `Apache YARN
 <https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YARN.html>`_.
 While YARN has many features that make it powerful for developing resilient
 applications, these features also can make it difficult for developers to use.
@@ -51,5 +51,6 @@ User Documentation
     :maxdepth: 2
 
     quickstart.rst
+    specification.rst
     api.rst
     cli.rst

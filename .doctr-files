@@ -3,6 +3,7 @@
 ./_sources/cli.rst.txt
 ./_sources/index.rst.txt
 ./_sources/quickstart.rst.txt
+./_sources/specification.rst.txt
 ./_static/ajax-loader.gif
 ./_static/alabaster.css
 ./_static/basic.css
@@ -34,3 +35,4 @@
 ./quickstart.html
 ./search.html
 ./searchindex.js
+./specification.html

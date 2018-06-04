@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Quickstart &#8212; Skein 0.0.2+21.g4673b57 documentation</title>
+    <title>Quickstart &#8212; Skein 0.0.2+24.g855b43c documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -15,7 +15,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="API Docs" href="api.html" />
+    <link rel="next" title="Specification" href="specification.html" />
     <link rel="prev" title="Skein" href="index.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
@@ -62,7 +62,7 @@ process written in Java. How this process is managed is configurable, but for
 most users the pattern will be:</p>
 <ol class="arabic simple">
 <li>Start the Skein daemon</li>
-<li>Execute yarn job/jobs</li>
+<li>Run yarn application/applications</li>
 <li>Shut down the Skein daemon</li>
 </ol>
 <p>To do this from the command line, use <a class="reference external" href="cli.html#skein-daemon-start">skein daemon start</a>:</p>
@@ -75,7 +75,8 @@ localhost:12345
 <h2>Write an Application Specification<a class="headerlink" href="#write-an-application-specification" title="Permalink to this headline">¶</a></h2>
 <p>Skein applications are written declaratively as specifications. These can be
 provided as YAML or JSON files, or created programmatically using the
-<a class="reference external" href="api.html#job-specification">specification api</a>.</p>
+<a class="reference external" href="api.html#application-specification">specification api</a>. For more
+information, see the <a class="reference external" href="specification.html">specification docs</a>.</p>
 <p>Here we create a simple “Hello World” application as a YAML file:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hello_world</span>
 <span class="l l-Scalar l-Scalar-Plain">queue</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">default</span>
@@ -86,7 +87,7 @@ provided as YAML or JSON files, or created programmatically using the
       <span class="l l-Scalar l-Scalar-Plain">vcores</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
       <span class="l l-Scalar l-Scalar-Plain">memory</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">128</span>
     <span class="l l-Scalar l-Scalar-Plain">files</span><span class="p p-Indicator">:</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">file</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">payload.txt</span>
+      <span class="l l-Scalar l-Scalar-Plain">payload.txt</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">payload.txt</span>
     <span class="l l-Scalar l-Scalar-Plain">commands</span><span class="p p-Indicator">:</span>
       <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">echo &quot;Sleeping for 60 seconds&quot;</span>
       <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sleep 60</span>
@@ -104,7 +105,8 @@ provided as YAML or JSON files, or created programmatically using the
 deployed in the YARN queue <code class="docutils literal notranslate"><span class="pre">default</span></code>.</li>
 <li>The application starts a single service <code class="docutils literal notranslate"><span class="pre">my_service</span></code> on a container using 1
 virtual core and 128 MB of memory.</li>
-<li>The file <code class="docutils literal notranslate"><span class="pre">payload.txt</span></code> is distributed with the application.</li>
+<li>The file <code class="docutils literal notranslate"><span class="pre">payload.txt</span></code> is distributed with the application, and is named
+<code class="docutils literal notranslate"><span class="pre">payload.txt</span></code> both locally and on the running container.</li>
 <li>The service runs a few Shell commands. These will be run in order, stopping
 on the first failure, and all outputs logged in the container logs.</li>
 </ul>
@@ -184,7 +186,7 @@ resource usage on the edge node low.</p>
 
 
 
-<p class="blurb">Simple tool for deploying jobs on Apache YARN</p>
+<p class="blurb">Simple tool for deploying applications on Apache YARN</p>
 
 
 
@@ -223,6 +225,7 @@ resource usage on the edge node low.</p>
 <li class="toctree-l2"><a class="reference internal" href="#stop-the-skein-daemon">Stop the Skein Daemon</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="specification.html">Specification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Docs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
 </ul>

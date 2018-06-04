@@ -1,0 +1,378 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Specification &#8212; Skein 0.0.2+24.g855b43c documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Docs" href="api.html" />
+    <link rel="prev" title="Quickstart" href="quickstart.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="specification">
+<h1>Specification<a class="headerlink" href="#specification" title="Permalink to this headline">¶</a></h1>
+<p>Skein uses a declarative api for creating applications. The application may be
+specificed as a YAML or JSON document, or via the <a class="reference external" href="api.html#application-specification">Python API</a>.  Here we describe the pieces of an
+application specification in detail.</p>
+<div class="section" id="specification-components">
+<h2>Specification Components<a class="headerlink" href="#specification-components" title="Permalink to this headline">¶</a></h2>
+<p>At the top-level, a specification starts with an <a class="reference internal" href="api.html#skein.ApplicationSpec" title="skein.ApplicationSpec"><code class="xref py py-class docutils literal notranslate"><span class="pre">ApplicationSpec</span></code></a>.
+This takes the following fields:</p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">name</span></code></p>
+<p>The name of the application. Defaults to <code class="docutils literal notranslate"><span class="pre">skein</span></code>.</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">queue</span></code></p>
+<p>The queue to submit the application to. Defaults to <code class="docutils literal notranslate"><span class="pre">default</span></code>.</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">services</span></code></p>
+<p>A dict of service-name to <a class="reference internal" href="api.html#skein.Service" title="skein.Service"><code class="xref py py-class docutils literal notranslate"><span class="pre">Service</span></code></a>. At least one service is required.</p>
+</li>
+</ul>
+<p><strong>Example</strong></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>name: my-application
+queue: my-queue
+services:
+  my_service:
+    ...
+</pre></div>
+</div>
+<div class="section" id="service">
+<h3>Service<a class="headerlink" href="#service" title="Permalink to this headline">¶</a></h3>
+<p>The basic of unit of an application is a <a class="reference internal" href="api.html#skein.Service" title="skein.Service"><code class="xref py py-class docutils literal notranslate"><span class="pre">Service</span></code></a>. Services describe
+how to launch an executable, as well as how that executable should be managed
+over the course of the application. A service may also have multiple instances,
+each running in their own YARN container. A service description takes the
+following fields:</p>
+<div class="section" id="instances">
+<h4><code class="docutils literal notranslate"><span class="pre">instances</span></code><a class="headerlink" href="#instances" title="Permalink to this headline">¶</a></h4>
+<p>The number of instances to create on startup. Must be &gt;= 0. After startup
+additional instances may be created by the <a class="reference internal" href="api.html#skein.ApplicationClient" title="skein.ApplicationClient"><code class="xref py py-class docutils literal notranslate"><span class="pre">ApplicationClient</span></code></a>.
+Optional, default is 1.</p>
+<p><strong>Example</strong></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
+  my_service:
+    instances: 4  # Start 4 instances
+</pre></div>
+</div>
+</div>
+<div class="section" id="resources">
+<h4><code class="docutils literal notranslate"><span class="pre">resources</span></code><a class="headerlink" href="#resources" title="Permalink to this headline">¶</a></h4>
+<p>The memory and cpu requirements to a single instance of the service. Takes the
+following fields:</p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">memory</span></code></p>
+<p>The amount of memory to request, in MB. Requests smaller than the minimum
+allocation will receive the minimum allocation (usually 1024). Requests
+larger than the maximum allocation will error on application submission.</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">vcores</span></code></p>
+<p>The number of virtual cores to request. Depending on your system
+configuration one virtual core may map to a single actual core, or a fraction
+of a core. Requests larger than the maximum allocation will error on
+application submission.</p>
+</li>
+</ul>
+<p><strong>Example</strong></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
+  my_service:
+    memory: 2048  # 2 GB
+    vcores: 2
+</pre></div>
+</div>
+</div>
+<div class="section" id="files">
+<h4><code class="docutils literal notranslate"><span class="pre">files</span></code><a class="headerlink" href="#files" title="Permalink to this headline">¶</a></h4>
+<p>Any files or archives needed to run the service. A mapping of destination
+relative paths to <a class="reference internal" href="api.html#skein.File" title="skein.File"><code class="xref py py-class docutils literal notranslate"><span class="pre">File</span></code></a> or <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> objects describing the sources
+for these paths. <a class="reference internal" href="api.html#skein.File" title="skein.File"><code class="xref py py-class docutils literal notranslate"><span class="pre">File</span></code></a> objects are described in more detail below.
+Each <a class="reference internal" href="api.html#skein.File" title="skein.File"><code class="xref py py-class docutils literal notranslate"><span class="pre">File</span></code></a> object takes the following fields:</p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">source</span></code></p>
+<p>The path to the file/archive. If no scheme is specified, the path is assumed
+to be on the local filesystem (<code class="docutils literal notranslate"><span class="pre">file://</span></code> scheme). Relative paths are
+supported, and are taken relative to the location of the specification file.</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">type</span></code></p>
+<p>The type of file to distribute – either <code class="docutils literal notranslate"><span class="pre">archive</span></code> or <code class="docutils literal notranslate"><span class="pre">file</span></code>.  Archive’s
+are automatically extracted by yarn into a directory with the same name as
+their destination (only <code class="docutils literal notranslate"><span class="pre">.zip</span></code>, <code class="docutils literal notranslate"><span class="pre">.tar.gz</span></code>, and <code class="docutils literal notranslate"><span class="pre">.tgz</span></code> supported).
+Optional; by default the type is inferred from the file extension.</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">visibility</span></code></p>
+<p>The resource visibility. Describes how resources are shared between
+applications. Valid values are:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">application</span></code> – Shared among containers of the same application on the node.</li>
+<li><code class="docutils literal notranslate"><span class="pre">private</span></code> – Shared among all applications of the same user on the node.</li>
+<li><code class="docutils literal notranslate"><span class="pre">public</span></code> – Shared by all users on the node.</li>
+</ul>
+<p>Optional, default is <code class="docutils literal notranslate"><span class="pre">application</span></code>. In most cases the default is what you
+want.</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">size</span></code></p>
+<p>The resource size in bytes. Optional; if not provided will be determined by
+the file system. In most cases the default is what you want.</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">timestamp</span></code></p>
+<p>The time the resource was last modified. Optional; if not provided will be
+determined by the file system. In most cases the default is what you want.</p>
+</li>
+</ul>
+<p>As a shorthand, values may be the source path instead of a <a class="reference internal" href="api.html#skein.File" title="skein.File"><code class="xref py py-class docutils literal notranslate"><span class="pre">File</span></code></a>
+object.</p>
+<p><strong>Example</strong></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
+  my_service:
+    files:
+      # /local/path/to/file.zip will be uploaded to hdfs, and extracted
+      # into the directory path_on_container
+      path_on_container:
+        source: /local/path/to/file.zip
+        type: archive
+
+      # Can also specify only the source path - missing fields are inferred
+      script_path.py: /path/to/script.py
+
+      # Files on remote filesystems can be used by specifying the scheme.
+      script2_path.py: hdfs:///remote/path/to/script2.py
+</pre></div>
+</div>
+</div>
+<div class="section" id="env">
+<h4><code class="docutils literal notranslate"><span class="pre">env</span></code><a class="headerlink" href="#env" title="Permalink to this headline">¶</a></h4>
+<p>A mapping of environment variables needed to run the service. Optional.</p>
+<p><strong>Example</strong></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
+  my_service:
+    env:
+      ENV1: VAL1
+      ENV2: VAL2
+</pre></div>
+</div>
+</div>
+<div class="section" id="depends">
+<h4><code class="docutils literal notranslate"><span class="pre">depends</span></code><a class="headerlink" href="#depends" title="Permalink to this headline">¶</a></h4>
+<p>A list of service names that this service depends on. The service will only be
+started after all its dependencies have been started. Optional.</p>
+<p><strong>Example</strong></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
+  starts_first:
+    ...
+  starts_second:
+    depends:
+      - starts_first
+</pre></div>
+</div>
+</div>
+<div class="section" id="commands">
+<h4><code class="docutils literal notranslate"><span class="pre">commands</span></code><a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h4>
+<p>Shell commands to startup the service. Commands are run in the order provided,
+with subsequent commands only run if the prior commands succeeded. At least one
+command must be provided.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
+  my_service:
+    commands:
+      - echo &quot;This is a single command&quot;
+      - |
+        if [[ &quot;$SOME_CONDITION&quot; == &quot;true&quot; ]]; then
+            echo &quot;You can use multi-line strings &quot;
+            echo &quot;to handle more complicated behavior&quot;
+        fi
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>An example specification file. This starts a <a class="reference external" href="http://jupyter.org/">jupyter</a>
+notebook and a 4 node <a class="reference external" href="http://dask.pydata.org/">dask.distributed</a> cluster.
+The example uses <a class="reference external" href="https://github.com/jcrist/conda-pack/">conda-pack</a> to
+package and distribute <a class="reference external" href="http://conda.pydata.org/">conda environments</a>, but
+applications are free to package files any way they see fit.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>name: dask-with-jupyter
+queue: default
+
+services:
+  jupyter:
+    resources:
+      memory: 1024
+      vcores: 1
+    files:
+      conda_env: env.zip
+      data.csv: hdfs:///path/to/some/data.csv
+    commands:
+      - source conda_env/bin/activate
+      - start-jupyter-notebook-and-register-address  # pseudocode
+
+  dask.scheduler:
+    resources:
+      memory: 2048
+      vcores: 1
+    files:
+      conda_env: env.zip
+    commands:
+      - source conda_env/bin/activate
+      - start-dask-scheduler-and-register-address  # pseudocode
+
+  dask.worker:
+    resources:
+      memory: 2048
+      vcores: 4
+    files:
+      conda_env: env.zip
+    depends:
+      - dask.scheduler  # Ensure scheduler is started before workers
+    commands:
+      - source conda_env/bin/activate
+      - get-dask-scheduler-address-and-start-worker  # pseudocode
+</pre></div>
+</div>
+</div>
+<div class="section" id="python-api-example">
+<h2>Python API Example<a class="headerlink" href="#python-api-example" title="Permalink to this headline">¶</a></h2>
+<p>The above YAML file format is also composable using the <a class="reference external" href="api.html#application-specification">Python API</a>. The python classes
+(<a class="reference internal" href="api.html#skein.ApplicationSpec" title="skein.ApplicationSpec"><code class="xref py py-class docutils literal notranslate"><span class="pre">ApplicationSpec</span></code></a>, <a class="reference internal" href="api.html#skein.Service" title="skein.Service"><code class="xref py py-class docutils literal notranslate"><span class="pre">Service</span></code></a>, etc…) map 1:1 to the YAML format
+described above. They can be read from a file, or created directly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">skein</span>
+
+<span class="c1"># Create from a yaml file</span>
+<span class="n">spec</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ApplicationSpec</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;spec.yaml&#39;</span><span class="p">)</span>
+
+<span class="c1"># Create directly</span>
+<span class="n">jupyter</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">instances</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                        <span class="n">resources</span><span class="o">=</span><span class="n">skein</span><span class="o">.</span><span class="n">Resources</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n">vcores</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+                        <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;conda_env&#39;</span><span class="p">:</span> <span class="s1">&#39;env.zip&#39;</span><span class="p">,</span>
+                               <span class="s1">&#39;data.csv&#39;</span><span class="p">:</span> <span class="s1">&#39;hdfs:///path/to/some/data.csv&#39;</span><span class="p">},</span>
+                        <span class="n">commands</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;source conda_env/bin/activate&#39;</span><span class="p">,</span>
+                                  <span class="s1">&#39;start-jupyter-notebook-and-register-address&#39;</span><span class="p">])</span>
+
+<span class="n">scheduler</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">instances</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                          <span class="n">resources</span><span class="o">=</span><span class="n">skein</span><span class="o">.</span><span class="n">Resources</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">vcores</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+                          <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;conda_env&#39;</span><span class="p">:</span> <span class="s1">&#39;env.zip&#39;</span><span class="p">},</span>
+                          <span class="n">commands</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;source conda_env/bin/activate&#39;</span><span class="p">,</span>
+                                    <span class="s1">&#39;start-dask-scheduler-and-register-address&#39;</span><span class="p">])</span>
+
+<span class="n">worker</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">instances</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                       <span class="n">resources</span><span class="o">=</span><span class="n">skein</span><span class="o">.</span><span class="n">Resources</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">vcores</span><span class="o">=</span><span class="mi">4</span><span class="p">),</span>
+                       <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;conda_env&#39;</span><span class="p">:</span> <span class="s1">&#39;env.zip&#39;</span><span class="p">},</span>
+                       <span class="n">depends</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;dask.scheduler&#39;</span><span class="p">],</span>
+                       <span class="n">commands</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;source conda_env/bin/activate&#39;</span><span class="p">,</span>
+                                 <span class="s1">&#39;get-dask-scheduler-address-and-start-worker&#39;</span><span class="p">])</span>
+
+<span class="n">spec</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ApplicationSpec</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;dask-with-jupyter&quot;</span><span class="p">,</span>
+                             <span class="n">queue</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span>
+                             <span class="n">services</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;jupyter&#39;</span><span class="p">:</span> <span class="n">jupyter</span><span class="p">,</span>
+                                       <span class="s1">&#39;dask.scheduler&#39;</span><span class="p">:</span> <span class="n">scheduler</span><span class="p">,</span>
+                                       <span class="s1">&#39;dask.worker&#39;</span><span class="p">:</span> <span class="n">worker</span><span class="p">})</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Skein</a></h1>
+
+
+
+<p class="blurb">Simple tool for deploying applications on Apache YARN</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=jcrist&repo=skein&type=watch&count=False&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a href="https://travis-ci.org/jcrist/skein">
+    <img
+        alt="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+        src="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Specification</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#specification-components">Specification Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#python-api-example">Python API Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
+</ul>
+
+<h3>Need help?</h3>
+
+<p>
+  Open an issue in the <a href="https://github.com/jcrist/skein/issues">issue tracker</a>.
+</p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Jim Crist.
+      
+      |
+      <a href="_sources/specification.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
