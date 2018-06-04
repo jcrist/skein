@@ -51,5 +51,6 @@ User Documentation
     :maxdepth: 2
 
     quickstart.rst
+    specification.rst
     api.rst
     cli.rst

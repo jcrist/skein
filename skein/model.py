@@ -234,7 +234,7 @@ class Base(object):
     def __eq__(self, other):
         return (type(self) == type(other) and
                 all(getattr(self, k) == getattr(other, k)
-                    for k in self.__slots__))
+                    for k in self._get_params()))
 
     @classmethod
     def _get_params(cls):
@@ -348,9 +348,15 @@ class Resources(Base):
     Parameters
     ----------
     memory : int
-        The memory to request, in MB
+        The amount of memory to request, in MB. Requests smaller than the
+        minimum allocation will receive the minimum allocation (usually 1024).
+        Requests larger than the maximum allocation will error on application
+        submission.
     vcores : int
-        The number of virtual cores to request.
+        The number of virtual cores to request. Depending on your system
+        configuration one virtual core may map to a single actual core, or a
+        fraction of a core. Requests larger than the maximum allocation will
+        error on application submission.
     """
     __slots__ = ('memory', 'vcores')
     _protobuf_cls = _proto.Resources
@@ -394,8 +400,8 @@ class FileType(Enum):
     FILE : FileType
         Regular file
     ARCHIVE : FileType
-        A ``zip`` or ``tar.gz`` file to be automatically unarchived in the
-        containers.
+        A ``.zip``, ``.tar.gz``, or ``.tgz`` file to be automatically
+        unarchived in the containers.
     """
     _values = ('FILE', 'ARCHIVE')
 
@@ -410,8 +416,8 @@ class File(Base):
         assumed to be on the local filesystem (``file://`` scheme).
     type : FileType or str, optional
         The type of file to distribute. Archive's are automatically extracted
-        by yarn into a directory with the same name as ``dest``. Default is
-        ``FileType.FILE``.
+        by yarn into a directory with the same name as their destination.
+        By default the type is inferred from the file extension.
     visibility : FileVisibility or str, optional
         The resource visibility, default is ``FileVisibility.APPLICATION``
     size : int, optional
@@ -425,7 +431,7 @@ class File(Base):
     _params = ('source', 'type', 'visibility', 'size', 'timestamp')
     _protobuf_cls = _proto.File
 
-    def __init__(self, source=required, type=FileType.FILE,
+    def __init__(self, source=required, type='infer',
                  visibility=FileVisibility.APPLICATION, size=0, timestamp=0):
         self._assign_required('source', source)
         self.type = type
@@ -456,11 +462,15 @@ class File(Base):
 
     @property
     def type(self):
+        if self._type == 'infer':
+            return (FileType.ARCHIVE
+                    if any(map(self._source.endswith, ('.zip', '.tar.gz', '.tgz')))
+                    else FileType.FILE)
         return self._type
 
     @type.setter
     def type(self, val):
-        self._type = FileType(val)
+        self._type = val if val == 'infer' else FileType(val)
 
     @property
     def visibility(self):
@@ -504,6 +514,10 @@ class File(Base):
 
         Keys in the dict should match parameter names"""
         _origin = _pop_origin(kwargs)
+
+        if isinstance(obj, str):
+            obj = {'source': obj}
+
         cls._check_keys(obj)
         if _origin:
             if 'source' not in obj:
@@ -528,49 +542,6 @@ class File(Base):
                    size=obj.size,
                    timestamp=obj.timestamp)
 
-    @classmethod
-    def _parse_file_spec(cls, obj, _origin=None):
-        if not isinstance(obj, dict):
-            raise context.TypeError("Expected mapping for File")
-
-        if 'archive' not in obj and 'file' not in obj:
-            cls._check_keys(obj, cls._params + ('dest',))
-            source = obj['source']
-            type = FileType(obj.get('type', FileType.FILE))
-        elif 'archive' in obj and 'file' in obj:
-            raise context.ValueError("Both 'archive' and 'file' specified")
-        else:
-            typefield = 'archive' if 'archive' in obj else 'file'
-            cls._check_keys(obj, ('visibility', 'size', 'timestamp',
-                                  typefield, 'dest'))
-            source = obj[typefield]
-            type = FileType(typefield)
-
-        if 'dest' not in obj:
-            source = urlparse(source).path
-            base, name = os.path.split(source)
-            if name is None:
-                raise context.ValueError("Distributed files must be "
-                                         "files/archives, not directories")
-            dest = name
-            if type is FileType.ARCHIVE:
-                for ext in ['.zip', '.tar.gz', '.tgz']:
-                    if name.endswith(ext):
-                        dest = name[:-len(ext)]
-                        break
-        else:
-            dest = obj['dest']
-
-        source = cls._normpath(source, origin=_origin)
-        visibility = obj.get('visibility', FileVisibility.APPLICATION)
-        size = obj.get('size', 0)
-        timestamp = obj.get('timestamp', 0)
-
-        resource = cls(source=source, type=type, visibility=visibility,
-                       size=size, timestamp=timestamp)
-
-        return dest, resource
-
 
 class Service(Base):
     """Description of a Skein service.
@@ -587,8 +558,9 @@ class Service(Base):
         The number of instances to create on startup. Default is 1.
     files : dict, optional
         Describes any files needed to run the service. A mapping of destination
-        relative paths to ``File`` objects describing the sources for these
-        paths.
+        relative paths to ``File`` or ``str`` objects describing the sources
+        for these paths. If a ``str``, the file type is inferred from the
+        extension.
     env : dict, optional
         A mapping of environment variables needed to run the service.
     depends : set, optional
@@ -604,7 +576,12 @@ class Service(Base):
         self._assign_required('commands', commands)
         self._assign_required('resources', resources)
         self.instances = instances
-        self.files = {} if files is None else files
+        if files is not None:
+            files = {k: v if isinstance(v, File) else File(v)
+                     for (k, v) in files.items()}
+        else:
+            files = {}
+        self.files = files
         self.env = {} if env is None else env
         self.depends = set() if depends is None else set(depends)
         self._validate()
@@ -643,12 +620,8 @@ class Service(Base):
         files = obj.get('files')
 
         if files is not None:
-            if isinstance(files, list):
-                files = dict(File._parse_file_spec(v, _origin=_origin)
-                             for v in files)
-            elif isinstance(files, dict):
-                files = {k: File.from_dict(v, _origin=_origin)
-                         for k, v in files.items()}
+            files = {k: File.from_dict(v, _origin=_origin)
+                     for k, v in files.items()}
 
         kwargs = {'resources': resources,
                   'files': files,

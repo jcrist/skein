@@ -7,7 +7,7 @@ import pickle
 import pytest
 
 from skein.model import (ApplicationSpec, Service, Resources, File, ApplicationState,
-                         FinalStatus)
+                         FinalStatus, FileType)
 
 
 def indent(s, n):
@@ -20,11 +20,11 @@ resources:
     vcores: 1
     memory: 1024
 files:
-    - file: /path/to/testfile
-    - archive: /path/to/testarchive.zip
-    - source: /path/to/other
-      dest: otherpath
-      type: FILE
+    testfile: /path/to/testfile
+    testarchive: /path/to/testarchive.zip
+    otherpath:
+        source: /path/to/other
+        type: file
 env:
     key1: val1
     key2: val2
@@ -117,6 +117,13 @@ def test_file_invariants():
     assert (File(source='/test/path', type='file') ==
             File(source='/test/path', type='FILE'))
 
+    assert File(source='/test/path').type == FileType.FILE
+    assert File(source='/test/path.zip').type == FileType.ARCHIVE
+    f = File(source='/test/path.zip', type='file')
+    assert f.type == FileType.FILE
+    f.type = 'archive'
+    assert f.type == FileType.ARCHIVE
+
 
 def test_service():
     r = Resources(memory=1024, vcores=1)
@@ -156,6 +163,13 @@ def test_service_invariants():
     assert isinstance(s.env, dict)
     assert isinstance(s.files, dict)
     assert isinstance(s.depends, set)
+
+    # Strings are converted to File objects
+    s = Service(commands=c, resources=r,
+                files={'target': '/source.zip',
+                       'target2': '/source2.txt'})
+    assert s.files['target'].type == 'archive'
+    assert s.files['target2'].type == 'file'
 
 
 def test_application_spec():
