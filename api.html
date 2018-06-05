@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.0.2+26.gdb68e65 documentation</title>
+    <title>API Docs &#8212; Skein 0.0.2+27.g94666d7 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -733,7 +733,7 @@ output all fields.</p>
 
 <dl class="class">
 <dt id="skein.Service">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Service</code><span class="sig-paren">(</span><em>commands=required</em>, <em>resources=required</em>, <em>instances=1</em>, <em>files=None</em>, <em>env=None</em>, <em>depends=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Service</code><span class="sig-paren">(</span><em>commands=required</em>, <em>resources=required</em>, <em>instances=1</em>, <em>max_restarts=0</em>, <em>files=None</em>, <em>env=None</em>, <em>depends=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service" title="Permalink to this definition">¶</a></dt>
 <dd><p>Description of a Skein service.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -750,6 +750,12 @@ succeeded. At least one command must be provided</p>
 </dd>
 <dt><strong>instances</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
 <dd><p class="first last">The number of instances to create on startup. Default is 1.</p>
+</dd>
+<dt><strong>max_restarts</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">The maximum number of restarts to allow for this service. Containers
+are only restarted on failure, and the cap is set for all containers in
+the service, not per container. Set to -1 to allow infinite restarts.
+Default is 0.</p>
 </dd>
 <dt><strong>files</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
 <dd><p class="first last">Describes any files needed to run the service. A mapping of destination

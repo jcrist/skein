@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Specification &#8212; Skein 0.0.2+26.gdb68e65 documentation</title>
+    <title>Specification &#8212; Skein 0.0.2+27.g94666d7 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -75,6 +75,29 @@ Optional, default is 1.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
   my_service:
     instances: 4  # Start 4 instances
+</pre></div>
+</div>
+</div>
+<div class="section" id="max-restarts">
+<h4><code class="docutils literal notranslate"><span class="pre">max_restarts</span></code><a class="headerlink" href="#max-restarts" title="Permalink to this headline">¶</a></h4>
+<p>The maximum number of restarts allowed for this service. Must be &gt;= -1. On
+failure, a container will be restarted if the total number of restarts for its
+service is &lt; <code class="docutils literal notranslate"><span class="pre">max_restarts</span></code>. Once this limit is exceeded, the service is
+marked as failed and the application will be terminated. Set to -1 to always
+restart, or 0 to never restart. Optinoal, default is 0.</p>
+<p><strong>Example</strong></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
+  my_service:
+    max_restarts: -1  # always restart
+    ...
+
+  my_service2:
+    max_restarts: 0   # never restart
+    ...
+
+  my_service3:
+    max_restarts: 3   # restart a maximum of 3 times
+    ...
 </pre></div>
 </div>
 </div>
@@ -239,9 +262,11 @@ services:
       - start-dask-scheduler-and-register-address  # pseudocode
 
   dask.worker:
+    instances: 4
     resources:
       memory: 2048
       vcores: 4
+    max_restarts: 8  # Restart workers a maximum of 8 times
     files:
       conda_env: env.zip
     depends:
@@ -263,20 +288,19 @@ described above. They can be read from a file, or created directly:</p>
 <span class="n">spec</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ApplicationSpec</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;spec.yaml&#39;</span><span class="p">)</span>
 
 <span class="c1"># Create directly</span>
-<span class="n">jupyter</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">instances</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                        <span class="n">resources</span><span class="o">=</span><span class="n">skein</span><span class="o">.</span><span class="n">Resources</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n">vcores</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+<span class="n">jupyter</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">resources</span><span class="o">=</span><span class="n">skein</span><span class="o">.</span><span class="n">Resources</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n">vcores</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
                         <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;conda_env&#39;</span><span class="p">:</span> <span class="s1">&#39;env.zip&#39;</span><span class="p">,</span>
                                <span class="s1">&#39;data.csv&#39;</span><span class="p">:</span> <span class="s1">&#39;hdfs:///path/to/some/data.csv&#39;</span><span class="p">},</span>
                         <span class="n">commands</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;source conda_env/bin/activate&#39;</span><span class="p">,</span>
                                   <span class="s1">&#39;start-jupyter-notebook-and-register-address&#39;</span><span class="p">])</span>
 
-<span class="n">scheduler</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">instances</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                          <span class="n">resources</span><span class="o">=</span><span class="n">skein</span><span class="o">.</span><span class="n">Resources</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">vcores</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+<span class="n">scheduler</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">resources</span><span class="o">=</span><span class="n">skein</span><span class="o">.</span><span class="n">Resources</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">vcores</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
                           <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;conda_env&#39;</span><span class="p">:</span> <span class="s1">&#39;env.zip&#39;</span><span class="p">},</span>
                           <span class="n">commands</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;source conda_env/bin/activate&#39;</span><span class="p">,</span>
                                     <span class="s1">&#39;start-dask-scheduler-and-register-address&#39;</span><span class="p">])</span>
 
-<span class="n">worker</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">instances</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="n">worker</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">instances</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                       <span class="n">max_restarts</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
                        <span class="n">resources</span><span class="o">=</span><span class="n">skein</span><span class="o">.</span><span class="n">Resources</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">vcores</span><span class="o">=</span><span class="mi">4</span><span class="p">),</span>
                        <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;conda_env&#39;</span><span class="p">:</span> <span class="s1">&#39;env.zip&#39;</span><span class="p">},</span>
                        <span class="n">depends</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;dask.scheduler&#39;</span><span class="p">],</span>
