@@ -62,6 +62,33 @@ Optional, default is 1.
       my_service:
         instances: 4  # Start 4 instances
 
+
+``max_restarts``
+~~~~~~~~~~~~~~~~
+
+The maximum number of restarts allowed for this service. Must be >= -1. On
+failure, a container will be restarted if the total number of restarts for its
+service is < ``max_restarts``. Once this limit is exceeded, the service is
+marked as failed and the application will be terminated. Set to -1 to always
+restart, or 0 to never restart. Optinoal, default is 0.
+
+**Example**
+
+.. code-block:: none
+
+    services:
+      my_service:
+        max_restarts: -1  # always restart
+        ...
+
+      my_service2:
+        max_restarts: 0   # never restart
+        ...
+
+      my_service3:
+        max_restarts: 3   # restart a maximum of 3 times
+        ...
+
 ``resources``
 ~~~~~~~~~~~~~
 
@@ -245,9 +272,11 @@ applications are free to package files any way they see fit.
           - start-dask-scheduler-and-register-address  # pseudocode
 
       dask.worker:
+        instances: 4
         resources:
           memory: 2048
           vcores: 4
+        max_restarts: 8  # Restart workers a maximum of 8 times
         files:
           conda_env: env.zip
         depends:
@@ -273,20 +302,19 @@ described above. They can be read from a file, or created directly:
     spec = skein.ApplicationSpec.from_file('spec.yaml')
 
     # Create directly
-    jupyter = skein.Service(instances=1,
-                            resources=skein.Resources(memory=1024, vcores=1),
+    jupyter = skein.Service(resources=skein.Resources(memory=1024, vcores=1),
                             files={'conda_env': 'env.zip',
                                    'data.csv': 'hdfs:///path/to/some/data.csv'},
                             commands=['source conda_env/bin/activate',
                                       'start-jupyter-notebook-and-register-address'])
 
-    scheduler = skein.Service(instances=1,
-                              resources=skein.Resources(memory=2048, vcores=1),
+    scheduler = skein.Service(resources=skein.Resources(memory=2048, vcores=1),
                               files={'conda_env': 'env.zip'},
                               commands=['source conda_env/bin/activate',
                                         'start-dask-scheduler-and-register-address'])
 
-    worker = skein.Service(instances=0,
+    worker = skein.Service(instances=4,
+                           max_restarts=8,
                            resources=skein.Resources(memory=2048, vcores=4),
                            files={'conda_env': 'env.zip'},
                            depends=['dask.scheduler'],

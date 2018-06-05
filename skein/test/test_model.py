@@ -152,6 +152,9 @@ def test_service_invariants():
     with pytest.raises(ValueError):
         Service(commands=c, resources=r, instances=-1)
 
+    with pytest.raises(ValueError):
+        Service(commands=c, resources=r, max_restarts=-2)
+
     with pytest.raises(TypeError):
         Service(commands=c, resources=r, env={'a': 1})
 

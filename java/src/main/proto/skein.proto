@@ -73,11 +73,12 @@ message File {
 
 message Service {
   int32 instances = 1;
-  Resources resources = 2;
-  map<string, File> files = 3;
-  map<string, string> env = 4;
-  repeated string commands = 5;
-  repeated string depends = 6;
+  int32 max_restarts = 2;
+  Resources resources = 3;
+  map<string, File> files = 4;
+  map<string, string> env = 5;
+  repeated string commands = 6;
+  repeated string depends = 7;
 }
 
 

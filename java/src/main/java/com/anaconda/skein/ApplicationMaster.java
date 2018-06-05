@@ -329,20 +329,20 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   }
 
   private void maybeShutdown() {
-    FinalApplicationStatus status = FinalApplicationStatus.SUCCEEDED;
+    // Fail if any service is failed
+    // Succeed if all services are finished and none failed
     boolean finished = true;
-    String msg = "Completed Successfully";
     for (ServiceTracker tracker : trackers) {
       finished &= tracker.isFinished();
-      if (tracker.hasFailed()) {
-        status = FinalApplicationStatus.FAILED;
-        msg = ("Failure in service " + tracker.getName() + ", shutting down. "
-               + "See logs for details");
-        break;
+      if (tracker.isFailed()) {
+        shutdown(FinalApplicationStatus.FAILED,
+                 "Failure in service " + tracker.getName()
+                 + ", see logs for details");
+        return;
       }
     }
     if (finished) {
-      shutdown(status, msg);
+      shutdown(FinalApplicationStatus.SUCCEEDED, "Completed Successfully");
     }
   }
 
@@ -407,6 +407,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     private int numSucceeded = 0;
     private int numFailed = 0;
     private int numKilled = 0;
+    private int numRestarted = 0;
 
     public ServiceTracker(String name, Model.Service service) {
       this.name = name;
@@ -449,11 +450,11 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     public boolean isFinished() {
-      return numFailed > 0 || numSucceeded + numKilled == numTarget;
+      return numSucceeded + numKilled == numTarget;
     }
 
-    public boolean hasFailed() {
-      return numFailed > 0;
+    public boolean isFailed() {
+      return numFailed > numRestarted;
     }
 
     @SuppressWarnings("unchecked")
@@ -615,6 +616,14 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
       LOG.info(state + ": " + name + "_" + instance);
       container.setState(state);
+
+      if (service.getMaxRestarts() == -1
+          || numRestarted < service.getMaxRestarts()) {
+        numRestarted += 1;
+        LOG.info("RESTARTING: adding new container to replace "
+                 + name + "_" + instance);
+        addContainer();
+      }
 
       maybeShutdown();
     }

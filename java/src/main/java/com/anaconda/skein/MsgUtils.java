@@ -266,6 +266,7 @@ public class MsgUtils {
   public static Msg.Service writeService(Model.Service service) {
     Msg.Service.Builder builder = Msg.Service.newBuilder()
         .setInstances(service.getInstances())
+        .setMaxRestarts(service.getMaxRestarts())
         .setResources(writeResources(service.getResources()))
         .putAllEnv(service.getEnv())
         .addAllCommands(service.getCommands())
@@ -284,6 +285,7 @@ public class MsgUtils {
     }
     return new Model.Service(
         service.getInstances(),
+        service.getMaxRestarts(),
         readResources(service.getResources()),
         localResources,
         new HashMap<String, String>(service.getEnvMap()),

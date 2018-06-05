@@ -26,6 +26,7 @@ public class Model {
 
   public static class Service {
     private int instances;
+    private int maxRestarts;
     private Resource resources;
     private Map<String, LocalResource> localResources;
     private Map<String, String> env;
@@ -34,11 +35,15 @@ public class Model {
 
     public Service() {}
 
-    public Service(int instances, Resource resources,
+    public Service(int instances,
+                   int maxRestarts,
+                   Resource resources,
                    Map<String, LocalResource> localResources,
-                   Map<String, String> env, List<String> commands,
+                   Map<String, String> env,
+                   List<String> commands,
                    Set<String> depends) {
       this.instances = instances;
+      this.maxRestarts = maxRestarts;
       this.resources = resources;
       this.localResources = localResources;
       this.env = env;
@@ -49,6 +54,7 @@ public class Model {
     public String toString() {
       return ("Service:\n"
               + "instances: " + instances + "\n"
+              + "maxRestarts: " + maxRestarts + "\n"
               + "resources: " + resources + "\n"
               + "localResources: " + localResources + "\n"
               + "env: " + env + "\n"
@@ -58,6 +64,9 @@ public class Model {
 
     public void setInstances(int instances) { this.instances = instances; }
     public int getInstances() { return instances; }
+
+    public void setMaxRestarts(int maxRestarts) { this.maxRestarts = maxRestarts; }
+    public int getMaxRestarts() { return maxRestarts; }
 
     public void setResources(Resource resources) { this.resources = resources; }
     public Resource getResources() { return resources; }

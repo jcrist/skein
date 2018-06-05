@@ -556,6 +556,11 @@ class Service(Base):
         Describes the resources needed to run the service.
     instances : int, optional
         The number of instances to create on startup. Default is 1.
+    max_restarts : int, optional
+        The maximum number of restarts to allow for this service. Containers
+        are only restarted on failure, and the cap is set for all containers in
+        the service, not per container. Set to -1 to allow infinite restarts.
+        Default is 0.
     files : dict, optional
         Describes any files needed to run the service. A mapping of destination
         relative paths to ``File`` or ``str`` objects describing the sources
@@ -567,15 +572,16 @@ class Service(Base):
         A set of service names that this service depends on. The service will
         only be started after all its dependencies have been started.
     """
-    __slots__ = ('commands', 'resources', 'instances', 'files', 'env',
-                 'depends')
+    __slots__ = ('commands', 'resources', 'instances', 'max_restarts', 'files',
+                 'env', 'depends')
     _protobuf_cls = _proto.Service
 
     def __init__(self, commands=required, resources=required, instances=1,
-                 files=None, env=None, depends=None):
+                 max_restarts=0, files=None, env=None, depends=None):
         self._assign_required('commands', commands)
         self._assign_required('resources', resources)
         self.instances = instances
+        self.max_restarts = max_restarts
         if files is not None:
             files = {k: v if isinstance(v, File) else File(v)
                      for (k, v) in files.items()}
@@ -591,6 +597,7 @@ class Service(Base):
 
     def _validate(self):
         self._check_is_bounded_int('instances', min=0)
+        self._check_is_bounded_int('max_restarts', min=-1)
 
         self._check_is_type('resources', Resources)
         self.resources._validate(is_request=True)
@@ -618,19 +625,13 @@ class Service(Base):
             resources = Resources.from_dict(resources)
 
         files = obj.get('files')
-
         if files is not None:
             files = {k: File.from_dict(v, _origin=_origin)
                      for k, v in files.items()}
 
-        kwargs = {'resources': resources,
-                  'files': files,
-                  'env': obj.get('env'),
-                  'commands': obj.get('commands'),
-                  'depends': obj.get('depends')}
-
-        if 'instances' in obj:
-            kwargs['instances'] = obj['instances']
+        kwargs = obj.copy()
+        kwargs['resources'] = resources
+        kwargs['files'] = files
 
         return cls(**kwargs)
 
@@ -640,6 +641,7 @@ class Service(Base):
         resources = Resources.from_protobuf(obj.resources)
         files = {k: File.from_protobuf(v) for k, v in obj.files.items()}
         kwargs = {'instances': obj.instances,
+                  'max_restarts': obj.max_restarts,
                   'resources': resources,
                   'files': files,
                   'env': dict(obj.env),
