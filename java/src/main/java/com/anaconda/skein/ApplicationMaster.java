@@ -248,19 +248,21 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
   @Override
   public synchronized void onStartContainerError(ContainerId containerId, Throwable exc) {
+    rmClient.releaseAssignedContainer(containerId);
     Model.Container container = containers.get(containerId);
-    services.get(container.getServiceName())
-            .finishContainer(container.getInstance(),
-                             Model.Container.State.FAILED);
+
+    String serviceName = container.getServiceName();
+    int instance = container.getInstance();
+
+    LOG.warn("Failed to start " + serviceName + "_" + instance, exc);
+    services.get(serviceName).finishContainer(instance, Model.Container.State.FAILED);
   }
 
   @Override
-  public void onGetContainerStatusError(ContainerId containerId, Throwable exc) {}
+  public void onGetContainerStatusError(ContainerId containerId, Throwable exc) { }
 
   @Override
-  public void onStopContainerError(ContainerId containerId, Throwable exc) {
-    onStartContainerError(containerId, exc);
-  }
+  public void onStopContainerError(ContainerId containerId, Throwable exc) { }
 
   private static void fatal(String msg, Throwable exc) {
     LOG.fatal(msg, exc);
@@ -559,6 +561,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         nmClient.stopContainerAsync(container.getYarnContainerId(),
                                     container.getYarnNodeId());
       }
+      rmClient.releaseAssignedContainer(container.getYarnContainerId());
       finishContainer(instance, Model.Container.State.KILLED);
     }
 
