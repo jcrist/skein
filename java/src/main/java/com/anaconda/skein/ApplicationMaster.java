@@ -191,6 +191,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   @Override
   @SuppressWarnings("unchecked")
   public synchronized void onContainersAllocated(List<Container> newContainers) {
+    LOG.info("ALLOCATED: " + newContainers.size() + " new containers");
     for (Container c : newContainers) {
       boolean found = false;
       for (ServiceTracker t : trackers) {
@@ -262,7 +263,15 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   public void onGetContainerStatusError(ContainerId containerId, Throwable exc) { }
 
   @Override
-  public void onStopContainerError(ContainerId containerId, Throwable exc) { }
+  public void onStopContainerError(ContainerId containerId, Throwable exc) {
+    Model.Container container = containers.get(containerId);
+
+    String serviceName = container.getServiceName();
+    int instance = container.getInstance();
+
+    LOG.warn("Failed to stop " + serviceName + "_" + instance, exc);
+    rmClient.releaseAssignedContainer(containerId);
+  }
 
   private static void fatal(String msg, Throwable exc) {
     LOG.fatal(msg, exc);
@@ -466,7 +475,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
         for (int instance : waiting) {
           rmClient.addContainerRequest(
               new ContainerRequest(service.getResources(),
-                                   null, null, Priority.newInstance(0)));
+                                   null, null, Priority.newInstance(1)));
           requested.add(instance);
           containers.get(instance).setState(Model.Container.State.REQUESTED);
           LOG.info("REQUESTED: " + name + "_" + instance);
@@ -535,7 +544,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       } else {
         rmClient.addContainerRequest(
             new ContainerRequest(service.getResources(),
-                                 null, null, Priority.newInstance(0)));
+                                 null, null, Priority.newInstance(1)));
         container = newContainer(Model.Container.State.REQUESTED);
         requested.add(container.getInstance());
       }
@@ -551,22 +560,17 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       } else {
         instance = Utils.popfirst(running);
       }
-      killContainer(instance);
-      return containers.get(instance);
-    }
-
-    public synchronized void killContainer(int instance) {
-      Model.Container container = containers.get(instance);
-      if (container.getState() == Model.Container.State.RUNNING) {
-        nmClient.stopContainerAsync(container.getYarnContainerId(),
-                                    container.getYarnNodeId());
-      }
-      rmClient.releaseAssignedContainer(container.getYarnContainerId());
       finishContainer(instance, Model.Container.State.KILLED);
+      return containers.get(instance);
     }
 
     public Model.Container startContainer(Container container) {
       int instance = Utils.popfirst(requested);
+      // Remove request so it dosn't get resubmitted
+      rmClient.removeContainerRequest(
+          new ContainerRequest(service.getResources(),
+                               null, null,
+                               Priority.newInstance(1)));
       Model.Container out = containers.get(instance);
 
       // Add fields for running container
@@ -599,9 +603,15 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
           waiting.remove(instance);
           break;
         case REQUESTED:
+          rmClient.removeContainerRequest(
+            new ContainerRequest(service.getResources(),
+                                 null, null,
+                                 Priority.newInstance(1)));
           requested.remove(instance);
           break;
         case RUNNING:
+          nmClient.stopContainerAsync(container.getYarnContainerId(),
+                                      container.getYarnNodeId());
           running.remove(instance);
           container.setFinishTime(System.currentTimeMillis());
           break;
@@ -722,7 +732,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
             .asRuntimeException());
         return;
       }
-      tracker.killContainer(instance);
+      tracker.finishContainer(instance, Model.Container.State.KILLED);
       resp.onNext(MsgUtils.EMPTY);
       resp.onCompleted();
     }
