@@ -4,6 +4,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -157,6 +158,7 @@ public class Model {
     private NodeId yarnNodeId;
     private long startTime;
     private long finishTime;
+    private ContainerRequest req;
 
     public Container() {}
 
@@ -197,5 +199,9 @@ public class Model {
 
     public void setFinishTime(long finishTime) { this.finishTime = finishTime; }
     public long getFinishTime() { return finishTime; }
+
+    public void setContainerRequest(ContainerRequest req) { this.req = req; }
+    public ContainerRequest getContainerRequest() { return this.req; }
+    public void clearContainerRequest() { this.req = null; }
   }
 }

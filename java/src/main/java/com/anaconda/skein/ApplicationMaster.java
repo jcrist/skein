@@ -17,19 +17,20 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
-import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -42,7 +43,6 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -51,11 +51,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 
-public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
-       NMClientAsync.CallbackHandler {
+public class ApplicationMaster implements NMClientAsync.CallbackHandler {
 
   private static final Logger LOG = LogManager.getLogger(ApplicationMaster.class);
 
@@ -71,19 +71,40 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
   private final ConcurrentHashMap<String, List<StreamObserver<Msg.GetKeyResponse>>> alerts =
       new ConcurrentHashMap<String, List<StreamObserver<Msg.GetKeyResponse>>>();
 
-  private final List<ServiceTracker> trackers =
-      new ArrayList<ServiceTracker>();
   private final Map<String, ServiceTracker> services =
       new HashMap<String, ServiceTracker>();
   private final Map<ContainerId, Model.Container> containers =
       new HashMap<ContainerId, Model.Container>();
 
+  // Due to how YARN container allocation works, sometimes duplicate requests
+  // can be sent. This can be avoided if all outstanding requests are of a
+  // different priority. To handle this, we keep a *sorted* map of all
+  // outstanding priorities -> the service tracker that they are requesting. We
+  // also keep an integer of the next priority to use to speed up allocating a
+  // new ContainerRequest. This layout provides the following benefits:
+  //
+  // - Older requests get lower priorities. Since we always want FIFO for
+  // requests, this makes sense.
+  //
+  // - The max priority is bounded by the maximum outstanding requests, meaning
+  // for realistic workloads this should never grow unbounded.
+  //
+  // - We get O(1) lookup of returned requests. Until recently, returned
+  // containers had no easy way to match them to their request - you had to
+  // compare the resources and understand the rounding strategy. By always
+  // matching priority -> request, this makes the pairing easy. As a safety
+  // check, we also check that the resources match.
+  private final TreeMap<Priority, ServiceTracker> priorities =
+      new TreeMap<Priority, ServiceTracker>();
+  private int nextPriority = 1;
+
   private Server server;
   private String hostname;
   private int port = -1;
 
-  private AMRMClientAsync rmClient;
+  private AMRMClient<ContainerRequest> rmClient;
   private NMClientAsync nmClient;
+  private Thread allocatorThread;
   private UserGroupInformation ugi;
   private ByteBuffer tokens;
 
@@ -124,6 +145,36 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
   }
 
+  private void startAllocator() {
+    allocatorThread =
+      new Thread() {
+        public void run() {
+          while (true) {
+            try {
+              long start = System.currentTimeMillis();
+              allocate();
+              long left = 1000 - (System.currentTimeMillis() - start);
+              if (left > 0) {
+                Thread.sleep(left);
+              }
+            } catch (InterruptedException exc) {
+              break;
+            } catch (Throwable exc) {
+              shutdown(FinalApplicationStatus.FAILED,
+                       exc.getMessage());
+              break;
+            }
+          }
+        }
+      };
+    allocatorThread.setDaemon(true);
+    allocatorThread.start();
+  }
+
+  private void stopAllocator() {
+    allocatorThread.interrupt();
+  }
+
   private void loadApplicationSpec() throws Exception {
     try {
       spec = MsgUtils.readApplicationSpec(
@@ -143,29 +194,79 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       ServiceTracker tracker = new ServiceTracker(serviceName, service);
 
       services.put(serviceName, tracker);
-      trackers.add(tracker);
     }
 
     // Setup dependents
-    for (ServiceTracker tracker : trackers) {
+    for (ServiceTracker tracker : services.values()) {
       for (String dep : tracker.service.getDepends()) {
         services.get(dep).addDependent(tracker);
       }
     }
 
-    // Sort trackers by resources
-    Collections.sort(trackers);
-
     // Startup services
-    for (ServiceTracker tracker: trackers) {
+    for (ServiceTracker tracker: services.values()) {
       tracker.initialize();
     }
   }
 
-  /* ResourceManager Callbacks */
+  private float getProgress() {
+    float completed = 0;
+    float total = 0;
+    for (ServiceTracker tracker : services.values()) {
+      completed += tracker.getNumCompleted();
+      total += tracker.getNumTotal();
+    }
+    return completed / total;
+  }
 
-  @Override
-  public synchronized void onContainersCompleted(List<ContainerStatus> containerStatuses) {
+  private synchronized void allocate() throws IOException, YarnException {
+    AllocateResponse resp = rmClient.allocate(getProgress());
+
+    List<Container> allocated = resp.getAllocatedContainers();
+    List<ContainerStatus> completed = resp.getCompletedContainersStatuses();
+
+    boolean hasAllocated = allocated.size() > 0;
+    boolean hasCompleted = completed.size() > 0;
+
+    if (hasAllocated || hasCompleted) {
+      LOG.info("ALLOCATED: " + allocated.size()
+               + ", COMPLETED: " + completed.size());
+    }
+
+    if (hasAllocated) {
+      handleAllocated(allocated);
+    }
+
+    if (hasCompleted) {
+      handleCompleted(completed);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void handleAllocated(List<Container> newContainers) {
+    for (Container c : newContainers) {
+      Priority priority = c.getPriority();
+      Resource resource = c.getResource();
+
+      ServiceTracker tracker = priorities.get(priority);
+      if (tracker != null && tracker.matches(resource)) {
+        tracker.startContainer(c);
+      } else {
+        LOG.warn("No matching service found for resource: " + resource
+                 + ", priority: " + priority + ", releasing " + c.getId());
+        rmClient.releaseAssignedContainer(c.getId());
+      }
+    }
+
+    // Store the next priority for fast access between allocation cycles.
+    if (priorities.size() > 0) {
+      nextPriority = priorities.lastKey().getPriority() + 1;
+    } else {
+      nextPriority = 1;
+    }
+  }
+
+  private void handleCompleted(List<ContainerStatus> containerStatuses) {
     for (ContainerStatus status : containerStatuses) {
       Model.Container container = containers.get(status.getContainerId());
       if (container == null) {
@@ -186,54 +287,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       services.get(container.getServiceName())
               .finishContainer(container.getInstance(), state);
     }
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public synchronized void onContainersAllocated(List<Container> newContainers) {
-    LOG.info("ALLOCATED: " + newContainers.size() + " new containers");
-    for (Container c : newContainers) {
-      boolean found = false;
-      for (ServiceTracker t : trackers) {
-        if (t.matches(c.getResource())) {
-          found = true;
-          t.startContainer(c);
-          break;
-        }
-      }
-      if (!found) {
-        // TODO: For some reason YARN allocates extra containers *sometimes*.
-        // It's not clear yet if this is a bug in skein or in YARN, for now
-        // release extra containers and log the discrepancy.
-        LOG.warn("No matching service found for resource: " + c.getResource()
-                 + " releasing " + c.getId());
-        rmClient.releaseAssignedContainer(c.getId());
-      }
-    }
-  }
-
-  @Override
-  public void onShutdownRequest() {
-    shutdown(FinalApplicationStatus.SUCCEEDED, "Shutdown Requested");
-  }
-
-  @Override
-  public void onError(Throwable exc) {
-    shutdown(FinalApplicationStatus.FAILED, exc.toString());
-  }
-
-  @Override
-  public void onNodesUpdated(List<NodeReport> nodeReports) {}
-
-  @Override
-  public float getProgress() {
-    float completed = 0;
-    float total = 0;
-    for (ServiceTracker tracker : trackers) {
-      completed += tracker.getNumCompleted();
-      total += tracker.getNumTotal();
-    }
-    return completed / total;
   }
 
   /* NodeManager Callbacks */
@@ -322,7 +375,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     ugi.addCredentials(credentials);
 
-    rmClient = AMRMClientAsync.createAMRMClientAsync(1000, this);
+    rmClient = AMRMClient.createAMRMClient();
     rmClient.init(conf);
     rmClient.start();
 
@@ -334,6 +387,8 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
 
     rmClient.registerApplicationMaster(hostname, port, "");
 
+    startAllocator();
+
     intializeServices();
 
     server.awaitTermination();
@@ -343,7 +398,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     // Fail if any service is failed
     // Succeed if all services are finished and none failed
     boolean finished = true;
-    for (ServiceTracker tracker : trackers) {
+    for (ServiceTracker tracker : services.values()) {
       finished &= tracker.isFinished();
       if (tracker.isFailed()) {
         shutdown(FinalApplicationStatus.FAILED,
@@ -361,6 +416,13 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     // wait for completion.
     nmClient.stop();
 
+    try {
+      rmClient.unregisterApplicationMaster(status, msg, null);
+    } catch (Exception ex) {
+      LOG.error("Failed to unregister application", ex);
+    }
+    stopAllocator();
+
     // Delete the app directory
     ugi.doAs(
         new PrivilegedAction<Void>() {
@@ -376,13 +438,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
           }
         });
 
-    try {
-      rmClient.unregisterApplicationMaster(status, msg, null);
-    } catch (Exception ex) {
-      LOG.error("Failed to unregister application", ex);
-    }
-
-    rmClient.stop();
     System.exit(0);  // Trigger exit hooks
   }
 
@@ -403,14 +458,17 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
   }
 
-  private final class ServiceTracker implements Comparable<ServiceTracker> {
+  private final class ServiceTracker {
     private String name;
     private Model.Service service;
     private ContainerLaunchContext ctx;
     private boolean initialRunning = false;
     private final Set<String> depends = new HashSet<String>();
     private final Set<Integer> waiting = new LinkedHashSet<Integer>();
-    private final Set<Integer> requested = new LinkedHashSet<Integer>();
+    // An ordered map of priority -> container. Earlier entries are older
+    // requests. The priority is the same as container.req.getPriority().
+    private final TreeMap<Priority, Model.Container> requested =
+        new TreeMap<Priority, Model.Container>();
     private final Set<Integer> running = new LinkedHashSet<Integer>();
     private final List<Model.Container> containers = new ArrayList<Model.Container>();
     private final List<ServiceTracker> dependents = new ArrayList<ServiceTracker>();
@@ -428,12 +486,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     public boolean matches(Resource r) {
-      // requested and requirement <= response
-      return requested.size() > 0 && service.getResources().compareTo(r) <= 0;
-    }
-
-    public int compareTo(ServiceTracker other) {
-      return service.getResources().compareTo(other.service.getResources());
+      return service.getResources().compareTo(r) <= 0;
     }
 
     public void addDependent(ServiceTracker tracker) {
@@ -468,17 +521,11 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       return numFailed > numRestarted;
     }
 
-    @SuppressWarnings("unchecked")
     public void notifyRunning(String dependency) {
       depends.remove(dependency);
       if (isReady()) {
         for (int instance : waiting) {
-          rmClient.addContainerRequest(
-              new ContainerRequest(service.getResources(),
-                                   null, null, Priority.newInstance(1)));
-          requested.add(instance);
-          containers.get(instance).setState(Model.Container.State.REQUESTED);
-          LOG.info("REQUESTED: " + name + "_" + instance);
+          requestContainer(containers.get(instance));
         }
         waiting.clear();
       }
@@ -502,7 +549,6 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     private Model.Container newContainer(Model.Container.State state) {
       Model.Container out = new Model.Container(name, containers.size(), state);
       containers.add(out);
-      LOG.info(state + ": " + name + "_" + out.getInstance());
       return out;
     }
 
@@ -536,17 +582,27 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     @SuppressWarnings("unchecked")
+    public void requestContainer(Model.Container container) {
+      Priority priority = Priority.newInstance(nextPriority);
+      nextPriority += 1;
+      ContainerRequest req = new ContainerRequest(service.getResources(),
+                                                  null, null, priority);
+      container.setContainerRequest(req);
+      rmClient.addContainerRequest(req);
+      requested.put(priority, container);
+      priorities.put(priority, this);
+      LOG.info("REQUESTED: " + name + "_" + container.getInstance());
+    }
+
     public Model.Container addContainer() {
       Model.Container container;
       if (!isReady()) {
         container = newContainer(Model.Container.State.WAITING);
         waiting.add(container.getInstance());
+        LOG.info("WAITING: " + name + "_" + container.getInstance());
       } else {
-        rmClient.addContainerRequest(
-            new ContainerRequest(service.getResources(),
-                                 null, null, Priority.newInstance(1)));
         container = newContainer(Model.Container.State.REQUESTED);
-        requested.add(container.getInstance());
+        requestContainer(container);
       }
       return container;
     }
@@ -556,7 +612,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
       if (waiting.size() > 0) {
         instance = Utils.popfirst(waiting);
       } else if (requested.size() > 0) {
-        instance = Utils.popfirst(requested);
+        instance = requested.get(requested.firstKey()).getInstance();
       } else {
         instance = Utils.popfirst(running);
       }
@@ -565,13 +621,14 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
     }
 
     public Model.Container startContainer(Container container) {
-      int instance = Utils.popfirst(requested);
+      LOG.info("Starting " + container.getId());
+      Priority priority = container.getPriority();
+      priorities.remove(priority);
+      Model.Container out = requested.remove(priority);
+      int instance = out.getInstance();
       // Remove request so it dosn't get resubmitted
-      rmClient.removeContainerRequest(
-          new ContainerRequest(service.getResources(),
-                               null, null,
-                               Priority.newInstance(1)));
-      Model.Container out = containers.get(instance);
+      rmClient.removeContainerRequest(out.getContainerRequest());
+      out.clearContainerRequest();
 
       // Add fields for running container
       out.setState(Model.Container.State.RUNNING);
@@ -603,11 +660,12 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler,
           waiting.remove(instance);
           break;
         case REQUESTED:
-          rmClient.removeContainerRequest(
-            new ContainerRequest(service.getResources(),
-                                 null, null,
-                                 Priority.newInstance(1)));
-          requested.remove(instance);
+          ContainerRequest req = container.getContainerRequest();
+          container.clearContainerRequest();
+          Priority priority = req.getPriority();
+          priorities.remove(priority);
+          requested.remove(priority);
+          rmClient.removeContainerRequest(req);
           break;
         case RUNNING:
           nmClient.stopContainerAsync(container.getYarnContainerId(),
