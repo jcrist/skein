@@ -42,30 +42,31 @@ public class Utils {
     return new String(out);
   }
 
-  public static final class DaemonFactory implements ThreadFactory {
+  public static final class CustomThreadFactory implements ThreadFactory {
     private String baseName;
+    private boolean isDaemon;
     private int count = 0;
 
-    public DaemonFactory(String baseName) {
+    public CustomThreadFactory(String baseName, boolean isDaemon) {
       this.baseName = baseName;
+      this.isDaemon = isDaemon;
     }
 
     public Thread newThread(Runnable r) {
       String name = baseName + "-" + count;
       count += 1;
       Thread out = new Thread(r, name);
-      out.setDaemon(true);
+      out.setDaemon(isDaemon);
       return out;
     }
   }
 
-  public static ThreadPoolExecutor newDaemonThreadPoolExecutor(String name, int count) {
-    ThreadPoolExecutor pool = new ThreadPoolExecutor(
-        count, count, 60, TimeUnit.SECONDS,
+  public static ThreadPoolExecutor newThreadPoolExecutor(String name,
+      int minCount, int maxCount, boolean isDaemon) {
+    return new ThreadPoolExecutor(
+        minCount, maxCount, 60, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(),
-        new DaemonFactory(name));
-    pool.allowCoreThreadTimeOut(true);
-    return pool;
+        new CustomThreadFactory(name, isDaemon));
   }
 
   public static ApplicationId appIdFromString(String appId) {

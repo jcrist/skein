@@ -6,6 +6,7 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslProvider;
@@ -53,12 +54,23 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 public class ApplicationMaster {
 
   private static final Logger LOG = LogManager.getLogger(ApplicationMaster.class);
+
+  // One for the boss, one for the worker. Should be fine under normal loads.
+  private static final int NUM_EVENT_LOOP_GROUP_THREADS = 2;
+
+  // The thread bounds for handling requests. Since we use locking at some
+  // level, we can only get so much parallelism in *handling* requests.
+  private static final int MIN_GRPC_EXECUTOR_THREADS = 2;
+  private static final int MAX_GRPC_EXECUTOR_THREADS = 10;
+
+  // The thread bounds for launching containers.
+  private static final int MIN_EXECUTOR_THREADS = 0;
+  private static final int MAX_EXECUTOR_THREADS = 25;
 
   private Configuration conf;
 
@@ -101,10 +113,19 @@ public class ApplicationMaster {
         .sslProvider(SslProvider.OPENSSL)
         .build();
 
+    NioEventLoopGroup eg = new NioEventLoopGroup(NUM_EVENT_LOOP_GROUP_THREADS);
+    ThreadPoolExecutor executor = Utils.newThreadPoolExecutor(
+        "grpc-executor",
+        MIN_GRPC_EXECUTOR_THREADS,
+        MAX_GRPC_EXECUTOR_THREADS,
+        true);
+
     server = NettyServerBuilder.forPort(0)
         .sslContext(sslContext)
         .addService(new MasterImpl())
-        .executor(Executors.newSingleThreadExecutor())
+        .workerEventLoopGroup(eg)
+        .bossEventLoopGroup(eg)
+        .executor(executor)
         .build()
         .start();
 
@@ -352,7 +373,11 @@ public class ApplicationMaster {
     nmClient.init(conf);
     nmClient.start();
 
-    executor = Utils.newDaemonThreadPoolExecutor("executor", 25);
+    executor = Utils.newThreadPoolExecutor(
+        "executor",
+        MIN_EXECUTOR_THREADS,
+        MAX_EXECUTOR_THREADS,
+        true);
 
     startServer();
 

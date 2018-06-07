@@ -6,6 +6,7 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslProvider;
@@ -55,10 +56,19 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class Daemon {
 
   private static final Logger LOG = LogManager.getLogger(Daemon.class);
+
+  // One for the boss, one for the worker. Should be fine under normal loads.
+  private static final int NUM_EVENT_LOOP_GROUP_THREADS = 2;
+
+  // The thread bounds for handling requests. Since we use locking at some
+  // level, we can only get so much parallelism in *handling* requests.
+  private static final int MIN_GRPC_EXECUTOR_THREADS = 2;
+  private static final int MAX_GRPC_EXECUTOR_THREADS = 10;
 
   // Owner rwx (700)
   private static final FsPermission SKEIN_DIR_PERM =
@@ -102,9 +112,19 @@ public class Daemon {
         .sslProvider(SslProvider.OPENSSL)
         .build();
 
+    NioEventLoopGroup eg = new NioEventLoopGroup(NUM_EVENT_LOOP_GROUP_THREADS);
+    ThreadPoolExecutor executor = Utils.newThreadPoolExecutor(
+        "grpc-executor",
+        MIN_GRPC_EXECUTOR_THREADS,
+        MAX_GRPC_EXECUTOR_THREADS,
+        true);
+
     server = NettyServerBuilder.forPort(0)
         .sslContext(sslContext)
         .addService(new DaemonImpl())
+        .workerEventLoopGroup(eg)
+        .bossEventLoopGroup(eg)
+        .executor(executor)
         .build()
         .start();
 
