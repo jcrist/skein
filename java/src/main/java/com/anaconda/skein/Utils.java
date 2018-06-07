@@ -16,6 +16,10 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class Utils {
   public static <T> T popfirst(Set<T> s) {
@@ -36,6 +40,32 @@ public class Utils {
       out[j * 2 + 1] = HEX[v & 0x0F];
     }
     return new String(out);
+  }
+
+  public static final class DaemonFactory implements ThreadFactory {
+    private String baseName;
+    private int count = 0;
+
+    public DaemonFactory(String baseName) {
+      this.baseName = baseName;
+    }
+
+    public Thread newThread(Runnable r) {
+      String name = baseName + "-" + count;
+      count += 1;
+      Thread out = new Thread(r, name);
+      out.setDaemon(true);
+      return out;
+    }
+  }
+
+  public static ThreadPoolExecutor newDaemonThreadPoolExecutor(String name, int count) {
+    ThreadPoolExecutor pool = new ThreadPoolExecutor(
+        count, count, 60, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<Runnable>(),
+        new DaemonFactory(name));
+    pool.allowCoreThreadTimeOut(true);
+    return pool;
   }
 
   public static ApplicationId appIdFromString(String appId) {

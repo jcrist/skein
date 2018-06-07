@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
-import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
+import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -54,8 +54,9 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
-public class ApplicationMaster implements NMClientAsync.CallbackHandler {
+public class ApplicationMaster {
 
   private static final Logger LOG = LogManager.getLogger(ApplicationMaster.class);
 
@@ -74,26 +75,8 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
   private final Map<String, ServiceTracker> services =
       new HashMap<String, ServiceTracker>();
   private final Map<ContainerId, Model.Container> containers =
-      new HashMap<ContainerId, Model.Container>();
+      new ConcurrentHashMap<ContainerId, Model.Container>();
 
-  // Due to how YARN container allocation works, sometimes duplicate requests
-  // can be sent. This can be avoided if all outstanding requests are of a
-  // different priority. To handle this, we keep a *sorted* map of all
-  // outstanding priorities -> the service tracker that they are requesting. We
-  // also keep an integer of the next priority to use to speed up allocating a
-  // new ContainerRequest. This layout provides the following benefits:
-  //
-  // - Older requests get lower priorities. Since we always want FIFO for
-  // requests, this makes sense.
-  //
-  // - The max priority is bounded by the maximum outstanding requests, meaning
-  // for realistic workloads this should never grow unbounded.
-  //
-  // - We get O(1) lookup of returned requests. Until recently, returned
-  // containers had no easy way to match them to their request - you had to
-  // compare the resources and understand the rounding strategy. By always
-  // matching priority -> request, this makes the pairing easy. As a safety
-  // check, we also check that the resources match.
   private final TreeMap<Priority, ServiceTracker> priorities =
       new TreeMap<Priority, ServiceTracker>();
   private int nextPriority = 1;
@@ -103,7 +86,8 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
   private int port = -1;
 
   private AMRMClient<ContainerRequest> rmClient;
-  private NMClientAsync nmClient;
+  private NMClient nmClient;
+  private ThreadPoolExecutor executor;
   private Thread allocatorThread;
   private UserGroupInformation ugi;
   private ByteBuffer tokens;
@@ -183,17 +167,11 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
       fatal("Issue loading application specification", exc);
     }
     spec.validate();
-    LOG.info("Application specification successfully loaded");
-  }
 
-  private synchronized void intializeServices() throws Exception {
+    // Setup service trackers
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
-      String serviceName = entry.getKey();
-      Model.Service service = entry.getValue();
-
-      ServiceTracker tracker = new ServiceTracker(serviceName, service);
-
-      services.put(serviceName, tracker);
+      services.put(entry.getKey(),
+          new ServiceTracker(entry.getKey(), entry.getValue()));
     }
 
     // Setup dependents
@@ -203,52 +181,87 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
       }
     }
 
-    // Startup services
-    for (ServiceTracker tracker: services.values()) {
-      tracker.initialize();
+    LOG.info("Application specification successfully loaded");
+  }
+
+  // Due to how YARN container allocation works, sometimes duplicate requests
+  // can be sent. This can be avoided if all outstanding requests are of a
+  // different priority. To handle this, we keep a *sorted* map of all
+  // outstanding priorities -> the service tracker that they are requesting. We
+  // also keep an integer of the next priority to use to speed up allocating a
+  // new ContainerRequest. This layout provides the following benefits:
+  //
+  // - Older requests get lower priorities. Since we always want FIFO for
+  // requests, this makes sense.
+  //
+  // - The max priority is bounded by the maximum outstanding requests, meaning
+  // for realistic workloads this should never grow unbounded.
+  //
+  // - We get O(1) lookup of returned requests. Until recently, returned
+  // containers had no easy way to match them to their request - you had to
+  // compare the resources and understand the rounding strategy. By always
+  // matching priority -> request, this makes the pairing easy. As a safety
+  // check, we also check that the resources match.
+  private Priority newPriority(ServiceTracker tracker) {
+    synchronized (priorities) {
+      Priority priority = Priority.newInstance(nextPriority);
+      nextPriority += 1;
+      priorities.put(priority, tracker);
+      return priority;
     }
   }
 
-  private float getProgress() {
-    float completed = 0;
-    float total = 0;
-    for (ServiceTracker tracker : services.values()) {
-      completed += tracker.getNumCompleted();
-      total += tracker.getNumTotal();
+  private ServiceTracker trackerFromPriority(Priority priority) {
+    synchronized (priorities) {
+      return priorities.get(priority);
     }
-    return completed / total;
   }
 
-  private synchronized void allocate() throws IOException, YarnException {
-    AllocateResponse resp = rmClient.allocate(getProgress());
+  private void removePriority(Priority priority) {
+    synchronized (priorities) {
+      priorities.remove(priority);
+    }
+  }
+
+  private void updatePriorities() {
+    // Store the next priority for fast access between allocation cycles.
+    synchronized (priorities) {
+      if (priorities.size() > 0) {
+        nextPriority = priorities.lastKey().getPriority() + 1;
+      } else {
+        nextPriority = 1;
+      }
+    }
+  }
+
+  private void allocate() throws IOException, YarnException {
+    // Since the application can dynamically allocate containers, we can't
+    // accurately estimate the application progress. Set to started, but not
+    // far along.
+    AllocateResponse resp = rmClient.allocate(0.1f);
 
     List<Container> allocated = resp.getAllocatedContainers();
     List<ContainerStatus> completed = resp.getCompletedContainersStatuses();
 
-    boolean hasAllocated = allocated.size() > 0;
-    boolean hasCompleted = completed.size() > 0;
-
-    if (hasAllocated || hasCompleted) {
-      LOG.info("ALLOCATED: " + allocated.size()
-               + ", COMPLETED: " + completed.size());
-    }
-
-    if (hasAllocated) {
+    if (allocated.size() > 0) {
       handleAllocated(allocated);
     }
 
-    if (hasCompleted) {
+    if (completed.size() > 0) {
       handleCompleted(completed);
+    }
+
+    if (allocated.size() > 0 || completed.size() > 0) {
+      updatePriorities();
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void handleAllocated(List<Container> newContainers) {
     for (Container c : newContainers) {
       Priority priority = c.getPriority();
       Resource resource = c.getResource();
 
-      ServiceTracker tracker = priorities.get(priority);
+      ServiceTracker tracker = trackerFromPriority(priority);
       if (tracker != null && tracker.matches(resource)) {
         tracker.startContainer(c);
       } else {
@@ -256,13 +269,6 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
                  + ", priority: " + priority + ", releasing " + c.getId());
         rmClient.releaseAssignedContainer(c.getId());
       }
-    }
-
-    // Store the next priority for fast access between allocation cycles.
-    if (priorities.size() > 0) {
-      nextPriority = priorities.lastKey().getPriority() + 1;
-    } else {
-      nextPriority = 1;
     }
   }
 
@@ -287,43 +293,6 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
       services.get(container.getServiceName())
               .finishContainer(container.getInstance(), state);
     }
-  }
-
-  /* NodeManager Callbacks */
-
-  @Override
-  public void onContainerStarted(ContainerId cid, Map<String, ByteBuffer> resp) { }
-
-  @Override
-  public void onContainerStatusReceived(ContainerId cid, ContainerStatus status) { }
-
-  @Override
-  public void onContainerStopped(ContainerId cid) { }
-
-  @Override
-  public synchronized void onStartContainerError(ContainerId containerId, Throwable exc) {
-    rmClient.releaseAssignedContainer(containerId);
-    Model.Container container = containers.get(containerId);
-
-    String serviceName = container.getServiceName();
-    int instance = container.getInstance();
-
-    LOG.warn("Failed to start " + serviceName + "_" + instance, exc);
-    services.get(serviceName).finishContainer(instance, Model.Container.State.FAILED);
-  }
-
-  @Override
-  public void onGetContainerStatusError(ContainerId containerId, Throwable exc) { }
-
-  @Override
-  public void onStopContainerError(ContainerId containerId, Throwable exc) {
-    Model.Container container = containers.get(containerId);
-
-    String serviceName = container.getServiceName();
-    int instance = container.getInstance();
-
-    LOG.warn("Failed to stop " + serviceName + "_" + instance, exc);
-    rmClient.releaseAssignedContainer(containerId);
   }
 
   private static void fatal(String msg, Throwable exc) {
@@ -379,9 +348,11 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
     rmClient.init(conf);
     rmClient.start();
 
-    nmClient = NMClientAsync.createNMClientAsync(this);
+    nmClient = NMClient.createNMClient();
     nmClient.init(conf);
     nmClient.start();
+
+    executor = Utils.newDaemonThreadPoolExecutor("executor", 25);
 
     startServer();
 
@@ -389,7 +360,10 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
 
     startAllocator();
 
-    intializeServices();
+    // Start services
+    for (ServiceTracker tracker: services.values()) {
+      tracker.initialize();
+    }
 
     server.awaitTermination();
   }
@@ -413,9 +387,6 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
   }
 
   private void shutdown(FinalApplicationStatus status, String msg) {
-    // wait for completion.
-    nmClient.stop();
-
     try {
       rmClient.unregisterApplicationMaster(status, msg, null);
     } catch (Exception ex) {
@@ -497,16 +468,8 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
       return name;
     }
 
-    public int getNumTotal() {
-      return containers.size();
-    }
-
-    public int getNumCompleted() {
-      return numSucceeded + numFailed + numKilled;
-    }
-
-    public int getNumActive() {
-      return getNumTotal() - getNumCompleted();
+    public synchronized int getNumActive() {
+      return waiting.size() + requested.size() + running.size();
     }
 
     private boolean isReady() {
@@ -514,14 +477,14 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
     }
 
     public boolean isFinished() {
-      return numSucceeded + numKilled == numTarget;
+      return getNumActive() == 0;
     }
 
-    public boolean isFailed() {
+    public synchronized boolean isFailed() {
       return numFailed > numRestarted;
     }
 
-    public void notifyRunning(String dependency) {
+    public synchronized void notifyRunning(String dependency) {
       depends.remove(dependency);
       if (isReady()) {
         for (int instance : waiting) {
@@ -531,7 +494,7 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
       }
     }
 
-    public void initialize() throws IOException {
+    public synchronized void initialize() throws IOException {
       LOG.info("INTIALIZING: " + name);
       // Add appmaster address to environment
       service.getEnv().put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
@@ -546,13 +509,13 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
       }
     }
 
-    private Model.Container newContainer(Model.Container.State state) {
+    private synchronized Model.Container newContainer(Model.Container.State state) {
       Model.Container out = new Model.Container(name, containers.size(), state);
       containers.add(out);
       return out;
     }
 
-    private Model.Container getContainer(int instance) {
+    private synchronized Model.Container getContainer(int instance) {
       if (instance >= 0 && instance < containers.size()) {
         return containers.get(instance);
       }
@@ -581,20 +544,17 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
       return out;
     }
 
-    @SuppressWarnings("unchecked")
-    public void requestContainer(Model.Container container) {
-      Priority priority = Priority.newInstance(nextPriority);
-      nextPriority += 1;
+    private synchronized void requestContainer(Model.Container container) {
+      Priority priority = newPriority(this);
       ContainerRequest req = new ContainerRequest(service.getResources(),
                                                   null, null, priority);
       container.setContainerRequest(req);
       rmClient.addContainerRequest(req);
       requested.put(priority, container);
-      priorities.put(priority, this);
       LOG.info("REQUESTED: " + name + "_" + container.getInstance());
     }
 
-    public Model.Container addContainer() {
+    public synchronized Model.Container addContainer() {
       Model.Container container;
       if (!isReady()) {
         container = newContainer(Model.Container.State.WAITING);
@@ -607,7 +567,7 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
       return container;
     }
 
-    private Model.Container removeContainer() {
+    private synchronized Model.Container removeContainer() {
       int instance;
       if (waiting.size() > 0) {
         instance = Utils.popfirst(waiting);
@@ -620,28 +580,47 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
       return containers.get(instance);
     }
 
-    public Model.Container startContainer(Container container) {
+    public Model.Container startContainer(final Container container) {
       LOG.info("Starting " + container.getId());
       Priority priority = container.getPriority();
-      priorities.remove(priority);
-      Model.Container out = requested.remove(priority);
-      int instance = out.getInstance();
-      // Remove request so it dosn't get resubmitted
-      rmClient.removeContainerRequest(out.getContainerRequest());
-      out.clearContainerRequest();
+      removePriority(priority);
 
-      // Add fields for running container
-      out.setState(Model.Container.State.RUNNING);
-      out.setStartTime(System.currentTimeMillis());
-      out.setYarnContainerId(container.getId());
-      out.setYarnNodeId(container.getNodeId());
-      running.add(instance);
+      Model.Container out;
 
-      ApplicationMaster.this.containers.put(container.getId(), out);
+      // Synchronize only in this block so that only one service is blocked at
+      // a time (instead of potentially multiple).
+      synchronized (this) {
+        out = requested.remove(priority);
+        final int instance = out.getInstance();
+        // Remove request so it dosn't get resubmitted
+        rmClient.removeContainerRequest(out.popContainerRequest());
 
-      nmClient.startContainerAsync(container, ctx);
+        // Add fields for running container
+        out.setState(Model.Container.State.RUNNING);
+        out.setStartTime(System.currentTimeMillis());
+        out.setYarnContainerId(container.getId());
+        out.setYarnNodeId(container.getNodeId());
 
-      LOG.info("RUNNING: " + name + "_" + instance + " on " + container.getId());
+        ApplicationMaster.this.containers.put(container.getId(), out);
+        running.add(instance);
+
+        executor.execute(
+            new Runnable() {
+              @Override
+              public void run() {
+                try {
+                  nmClient.startContainer(container, ServiceTracker.this.ctx);
+                } catch (Throwable exc) {
+                  LOG.warn("Failed to start " + ServiceTracker.this.name
+                          + "_" + instance, exc);
+                  ServiceTracker.this.finishContainer(instance,
+                      Model.Container.State.FAILED);
+                }
+              }
+            });
+
+        LOG.info("RUNNING: " + name + "_" + instance + " on " + container.getId());
+      }
 
       if (!initialRunning && requested.size() == 0) {
         initialRunning = true;
@@ -652,7 +631,8 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
       return out;
     }
 
-    public void finishContainer(int instance, Model.Container.State state) {
+    public synchronized void finishContainer(int instance,
+        Model.Container.State state) {
       Model.Container container = containers.get(instance);
 
       switch (container.getState()) {
@@ -660,16 +640,14 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
           waiting.remove(instance);
           break;
         case REQUESTED:
-          ContainerRequest req = container.getContainerRequest();
-          container.clearContainerRequest();
+          ContainerRequest req = container.popContainerRequest();
           Priority priority = req.getPriority();
-          priorities.remove(priority);
+          removePriority(priority);
           requested.remove(priority);
           rmClient.removeContainerRequest(req);
           break;
         case RUNNING:
-          nmClient.stopContainerAsync(container.getYarnContainerId(),
-                                      container.getYarnNodeId());
+          rmClient.releaseAssignedContainer(container.getYarnContainerId());
           running.remove(instance);
           container.setFinishTime(System.currentTimeMillis());
           break;
@@ -696,7 +674,9 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
         addContainer();
       }
 
-      maybeShutdown();
+      if (isFinished()) {
+        maybeShutdown();
+      }
     }
   }
 
@@ -762,9 +742,14 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
       // Filter containers and build response
       Msg.ContainersResponse.Builder msg = Msg.ContainersResponse.newBuilder();
       for (String name : serviceSet) {
-        for (Model.Container c : services.get(name).containers) {
-          if (stateSet.contains(c.getState())) {
-            msg.addContainers(MsgUtils.writeContainer(c));
+        ServiceTracker tracker = services.get(name);
+        // Lock on tracker to prevent containers from updating while writing.
+        // If this proves costly, may want to copy beforehand.
+        synchronized (tracker) {
+          for (Model.Container c : tracker.containers) {
+            if (stateSet.contains(c.getState())) {
+              msg.addContainers(MsgUtils.writeContainer(c));
+            }
           }
         }
       }
@@ -812,12 +797,14 @@ public class ApplicationMaster implements NMClientAsync.CallbackHandler {
         return;
       }
 
-      ServiceTracker tracker = services.get(service);
-      List<Model.Container> changes = tracker.scale(instances);
-
       Msg.ContainersResponse.Builder msg = Msg.ContainersResponse.newBuilder();
-      for (Model.Container c : changes) {
-        msg.addContainers(MsgUtils.writeContainer(c));
+      ServiceTracker tracker = services.get(service);
+      // Lock on tracker to prevent containers from updating while writing. If
+      // this proves costly, may want to copy beforehand.
+      synchronized (tracker) {
+        for (Model.Container c : tracker.scale(instances)) {
+          msg.addContainers(MsgUtils.writeContainer(c));
+        }
       }
       resp.onNext(msg.build());
       resp.onCompleted();

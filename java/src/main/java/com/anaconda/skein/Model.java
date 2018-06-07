@@ -201,7 +201,10 @@ public class Model {
     public long getFinishTime() { return finishTime; }
 
     public void setContainerRequest(ContainerRequest req) { this.req = req; }
-    public ContainerRequest getContainerRequest() { return this.req; }
-    public void clearContainerRequest() { this.req = null; }
+    public ContainerRequest popContainerRequest() {
+      ContainerRequest out = this.req;
+      this.req = null;
+      return out;
+    }
   }
 }
