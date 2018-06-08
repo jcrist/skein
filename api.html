@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.0.2+32.g7f245f6 documentation</title>
+    <title>API Docs &#8212; Skein 0.0.2+34.g03ca0ff documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -608,7 +608,7 @@ ability to “wait” for keys to be set.</p>
 <h2>Application Specification<a class="headerlink" href="#application-specification" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="skein.ApplicationSpec">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">ApplicationSpec</code><span class="sig-paren">(</span><em>services=required</em>, <em>name='skein'</em>, <em>queue='default'</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">ApplicationSpec</code><span class="sig-paren">(</span><em>services=required</em>, <em>name='skein'</em>, <em>queue='default'</em>, <em>tags=None</em>, <em>max_attempts=1</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec" title="Permalink to this definition">¶</a></dt>
 <dd><p>A complete description of an application.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -623,6 +623,14 @@ ability to “wait” for keys to be set.</p>
 </dd>
 <dt><strong>queue</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string, optional</span></dt>
 <dd><p class="first last">The queue to submit to. Defaults to the default queue.</p>
+</dd>
+<dt><strong>tags</strong> <span class="classifier-delimiter">:</span> <span class="classifier">set, optional</span></dt>
+<dd><p class="first last">A set of strings to use as tags for this application.</p>
+</dd>
+<dt><strong>max_attempts</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">The maximum number of submission attempts before marking the
+application as failed. Note that this only considers failures of the
+application master during startup. Default is 1.</p>
 </dd>
 </dl>
 </td>
@@ -1156,7 +1164,7 @@ error on application submission.</p>
 <dt><strong>queue</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
 <dd><p class="first last">The application queue.</p>
 </dd>
-<dt><strong>tags</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of strings</span></dt>
+<dt><strong>tags</strong> <span class="classifier-delimiter">:</span> <span class="classifier">set of strings</span></dt>
 <dd><p class="first last">The application tags.</p>
 </dd>
 <dt><strong>host</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>

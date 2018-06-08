@@ -17,11 +17,21 @@ This takes the following fields:
 
 - ``name``
 
-  The name of the application. Defaults to ``skein``.
+  The name of the application. Optional, defaults to ``skein``.
 
 - ``queue``
 
-  The queue to submit the application to. Defaults to ``default``.
+  The queue to submit the application to. Optional, defaults to ``default``.
+
+- ``max_attempts``
+
+  The maximum number of submission attempts before marking the application as
+  failed. Note that this only considers failures of the application master
+  during startup. Optional, default is 1 (recommended).
+
+- ``tags``
+
+  A list of strings to use as tags for this application. Optional.
 
 - ``services``
 
@@ -34,6 +44,10 @@ This takes the following fields:
 
     name: my-application
     queue: my-queue
+    tags:
+      - my-tag
+      - my-other-tag
+
     services:
       my_service:
         ...
