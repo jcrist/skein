@@ -9,3 +9,4 @@ docs/build/
 .coverage
 .pytest_cache/
 .eggs/
+htmlcov/

@@ -154,6 +154,7 @@ public class Daemon {
       Daemon daemon = new Daemon();
       daemon.init(args);
       daemon.run();
+      System.exit(0);
     } catch (Throwable exc) {
       LOG.fatal("Error running Daemon", exc);
       System.exit(1);
@@ -215,6 +216,7 @@ public class Daemon {
     } else {
       // Wait until EOF or broken pipe from stdin
       while (System.in.read() != -1) {}
+      LOG.info("Starting process disconnected, shutting down");
     }
   }
 
