@@ -296,7 +296,9 @@ public class MsgUtils {
   public static Msg.ApplicationSpec writeApplicationSpec(Model.ApplicationSpec spec) {
     Msg.ApplicationSpec.Builder builder = Msg.ApplicationSpec.newBuilder()
         .setName(spec.getName())
-        .setQueue(spec.getQueue());
+        .setQueue(spec.getQueue())
+        .setMaxAttempts(spec.getMaxAttempts())
+        .addAllTags(spec.getTags());
 
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
       builder.putServices(entry.getKey(), writeService(entry.getValue()));
@@ -309,7 +311,11 @@ public class MsgUtils {
     for (Map.Entry<String, Msg.Service> entry : spec.getServicesMap().entrySet()) {
       services.put(entry.getKey(), readService(entry.getValue()));
     }
-    return new Model.ApplicationSpec(spec.getName(), spec.getQueue(), services);
+    return new Model.ApplicationSpec(spec.getName(),
+                                     spec.getQueue(),
+                                     spec.getMaxAttempts(),
+                                     new HashSet<String>(spec.getTagsList()),
+                                     services);
   }
 
   public static Msg.Container writeContainer(Model.Container container) {

@@ -85,7 +85,9 @@ message Service {
 message ApplicationSpec {
   string name = 1;
   string queue = 2;
-  map<string, Service> services = 3;
+  int32 max_attempts = 3;
+  repeated string tags = 4;
+  map<string, Service> services = 5;
 }
 
 

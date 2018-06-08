@@ -661,14 +661,23 @@ class ApplicationSpec(Base):
         The name of the application, defaults to 'skein'.
     queue : string, optional
         The queue to submit to. Defaults to the default queue.
+    tags : set, optional
+        A set of strings to use as tags for this application.
+    max_attempts : int, optional
+        The maximum number of submission attempts before marking the
+        application as failed. Note that this only considers failures of the
+        application master during startup. Default is 1.
     """
-    __slots__ = ('name', 'queue', 'services')
+    __slots__ = ('name', 'queue', 'services', 'tags', 'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
-    def __init__(self, services=required, name='skein', queue='default'):
+    def __init__(self, services=required, name='skein', queue='default', tags=None,
+                 max_attempts=1):
         self._assign_required('services', services)
         self.name = name
         self.queue = queue
+        self.tags = set() if tags is None else set(tags)
+        self.max_attempts = max_attempts
         self._validate()
 
     def __repr__(self):
@@ -678,6 +687,8 @@ class ApplicationSpec(Base):
     def _validate(self):
         self._check_is_type('name', str)
         self._check_is_type('queue', str, nullable=True)
+        self._check_is_set_of('tags', str)
+        self._check_is_bounded_int('max_attempts', min=1)
         self._check_is_dict_of('services', str, Service)
         if not self.services:
             raise context.ValueError("There must be at least one service")
@@ -700,15 +711,13 @@ class ApplicationSpec(Base):
         _origin = _pop_origin(kwargs)
         cls._check_keys(obj)
 
-        name = obj.get('name')
-        queue = obj.get('queue')
-
         services = obj.get('services')
         if services is not None and isinstance(services, dict):
-            services = {k: Service.from_dict(v, _origin=_origin)
-                        for k, v in services.items()}
+            obj = dict(obj)
+            obj['services'] = {k: Service.from_dict(v, _origin=_origin)
+                               for k, v in services.items()}
 
-        return cls(name=name, queue=queue, services=services)
+        return cls(**obj)
 
     @classmethod
     @implements(Base.from_protobuf)
@@ -717,6 +726,8 @@ class ApplicationSpec(Base):
                     for k, v in obj.services.items()}
         return cls(name=obj.name,
                    queue=obj.queue,
+                   tags=set(obj.tags),
+                   max_attempts=min(1, obj.max_attempts),
                    services=services)
 
     @classmethod
@@ -853,7 +864,7 @@ class ApplicationReport(Base):
         The user that started the application.
     queue : str
         The application queue.
-    tags : list of strings
+    tags : set of strings
         The application tags.
     host : str
         The host the application master is running on.
@@ -912,7 +923,7 @@ class ApplicationReport(Base):
         self._check_is_type('name', str)
         self._check_is_type('user', str)
         self._check_is_type('queue', str)
-        self._check_is_list_of('tags', str)
+        self._check_is_set_of('tags', str)
         self._check_is_type('host', str, nullable=True)
         self._check_is_type('port', int, nullable=True)
         self._check_is_type('tracking_url', str, nullable=True)
@@ -933,6 +944,7 @@ class ApplicationReport(Base):
         kwargs['usage'] = ResourceUsageReport.from_dict(kwargs['usage'])
         kwargs['state'] = ApplicationState(kwargs['state'])
         kwargs['final_status'] = FinalStatus(kwargs['final_status'])
+        kwargs['tags'] = set(kwargs['tags'])
         for k in ['start_time', 'finish_time']:
             kwargs[k] = _datetime_from_millis(kwargs[k])
         return cls(**kwargs)
@@ -947,7 +959,7 @@ class ApplicationReport(Base):
                    name=obj.name,
                    user=obj.user,
                    queue=obj.queue,
-                   tags=list(obj.tags),
+                   tags=set(obj.tags),
                    host=obj.host,
                    port=obj.port,
                    tracking_url=obj.tracking_url,

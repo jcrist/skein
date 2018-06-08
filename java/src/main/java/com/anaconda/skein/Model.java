@@ -102,13 +102,18 @@ public class Model {
   public static class ApplicationSpec {
     private String name;
     private String queue;
+    private int maxAttempts;
+    private Set<String> tags;
     private Map<String, Service> services;
 
     public ApplicationSpec() {}
 
-    public ApplicationSpec(String name, String queue, Map<String, Service> services) {
+    public ApplicationSpec(String name, String queue, int maxAttempts,
+                           Set<String> tags, Map<String, Service> services) {
       this.name = name;
       this.queue = queue;
+      this.maxAttempts = maxAttempts;
+      this.tags = tags;
       this.services = services;
     }
 
@@ -116,6 +121,8 @@ public class Model {
       return ("ApplicationSpec<"
               + "name: " + name + ", "
               + "queue: " + queue + ", "
+              + "maxAttempts: " + maxAttempts + ", "
+              + "tags: " + tags + ", "
               + "services: " + services + ">");
     }
 
@@ -125,12 +132,20 @@ public class Model {
     public void setQueue(String queue) { this.queue = queue; }
     public String getQueue() { return queue; }
 
+    public void setMaxAttempts(int maxAttempts) { this.maxAttempts = maxAttempts; }
+    public int getMaxAttempts() { return maxAttempts; }
+
+    public void setTags(Set<String> tags) { this.tags = tags; }
+    public Set<String> getTags() { return this.tags; }
+
     public void setServices(Map<String, Service> services) { this.services = services; }
     public Map<String, Service> getServices() { return services; }
 
     public void validate() throws IllegalArgumentException {
       throwIfNull(name, "name");
       throwIfNull(queue, "queue");
+      throwIfNonPositive(maxAttempts, "maxAttempts");
+      throwIfNull(tags, "tags");
       throwIfNull(services, "services");
       if (services.size() == 0) {
         throw new IllegalArgumentException("There must be at least one service");

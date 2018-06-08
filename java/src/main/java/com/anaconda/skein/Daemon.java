@@ -283,6 +283,8 @@ public class Daemon {
     appContext.setResource(Resource.newInstance(amMemory, amVCores));
     appContext.setPriority(Priority.newInstance(0));
     appContext.setQueue(spec.getQueue());
+    appContext.setMaxAppAttempts(spec.getMaxAttempts());
+    appContext.setApplicationTags(spec.getTags());
 
     LOG.info("Submitting application...");
     yarnClient.submitApplication(appContext);

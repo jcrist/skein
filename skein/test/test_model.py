@@ -36,6 +36,10 @@ commands:
 app_spec = """\
 name: test
 queue: default
+max_attempts: 2
+tags:
+    - tag1
+    - tag2
 
 services:
     service_1:
@@ -195,11 +199,13 @@ def test_application_spec_invariants():
     with pytest.raises(ValueError):
         ApplicationSpec(name='dask', queue='default', services={})
 
-    with pytest.raises(TypeError):
-        ApplicationSpec(name=1, services={'service': s})
+    for k, v in [('name', 1), ('queue', 1), ('tags', 1),
+                 ('tags', {1, 2, 3}), ('max_attempts', 'foo')]:
+        with pytest.raises(TypeError):
+            ApplicationSpec(services={'service': s}, **{k: v})
 
-    with pytest.raises(TypeError):
-        ApplicationSpec(queue=1, services={'service': s})
+    with pytest.raises(ValueError):
+        ApplicationSpec(max_attempts=0, services={'service': s})
 
     r = Resources(memory=1024, vcores=1)
     c = ['commands']
@@ -256,6 +262,8 @@ def test_application_spec_from_yaml():
 
     assert spec.name == 'test'
     assert spec.queue == 'default'
+    assert spec.tags == {'tag1', 'tag2'}
+    assert spec.max_attempts == 2
     assert isinstance(spec.services, dict)
     assert isinstance(spec.services['service_1'], Service)
 
