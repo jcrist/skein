@@ -483,7 +483,8 @@ class Client(_ClientBase):
 
         req = proto.ApplicationsRequest(states=[str(s) for s in states])
         resp = self._call('getApplications', req)
-        return [ApplicationReport.from_protobuf(r) for r in resp.reports]
+        return sorted((ApplicationReport.from_protobuf(r) for r in resp.reports),
+                      key=lambda x: x.id)
 
     def status(self, app_id):
         """Get the status of a skein application.
@@ -697,7 +698,8 @@ class ApplicationClient(_ClientBase):
 
         req = proto.ContainersRequest(services=services, states=states)
         resp = self._call('getContainers', req)
-        return [Container.from_protobuf(c) for c in resp.containers]
+        return sorted((Container.from_protobuf(c) for c in resp.containers),
+                      key=lambda x: (x.service_name, x.instance))
 
     def kill(self, id):
         """Kill a container.

@@ -203,7 +203,7 @@ def _print_application_status(apps):
              a.usage.used_resources.vcores,
              a.usage.used_resources.memory,
              humanize_timedelta(a.runtime))
-            for a in sorted(apps, key=lambda x: x.id)]
+            for a in apps]
     print(format_table(header, data))
 
 
@@ -273,7 +273,7 @@ container = node(entry_subs, 'container', 'Manage containers')
 def _print_container_status(containers):
     header = ['service', 'id', 'state', 'runtime']
     data = [(c.service_name, c.id, c.state, humanize_timedelta(c.runtime))
-            for c in sorted(containers, key=lambda x: (x.service_name, x.instance))]
+            for c in containers]
     print(format_table(header, data))
 
 

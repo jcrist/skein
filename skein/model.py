@@ -915,7 +915,7 @@ class ApplicationReport(Base):
         self._validate()
 
     def __repr__(self):
-        return 'ApplicationReport<name=%r>' % self.name
+        return 'ApplicationReport<id=%r, name=%r>' % (self.id, self.name)
 
     @property
     def state(self):
