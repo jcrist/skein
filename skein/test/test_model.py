@@ -1,13 +1,15 @@
 from __future__ import print_function, division, absolute_import
 
 import copy
+import datetime
 import os
 import pickle
 
 import pytest
 
-from skein.model import (ApplicationSpec, Service, Resources, File, ApplicationState,
-                         FinalStatus, FileType)
+from skein.model import (ApplicationSpec, Service, Resources, File,
+                         ApplicationState, FinalStatus, FileType,
+                         Container, ApplicationReport, ResourceUsageReport)
 
 
 def indent(s, n):
@@ -325,3 +327,96 @@ def test_enums():
 
     with pytest.raises(ValueError):
         ApplicationState('foobar')
+
+
+def test_container():
+    start = datetime.datetime(2018, 6, 7, 23, 24, 25, 26 * 1000,
+                              tzinfo=datetime.timezone.utc)
+    finish = datetime.datetime(2018, 6, 7, 23, 21, 25, 26 * 1000,
+                               tzinfo=datetime.timezone.utc)
+
+    kwargs = dict(service_name="foo",
+                  instance=0,
+                  yarn_container_id='container_1528138529205_0038_01_000001')
+
+    c = Container(state='RUNNING',
+                  start_time=start,
+                  finish_time=None,
+                  **kwargs)
+    c2 = Container(state='SUCCEEDED',
+                   start_time=start,
+                   finish_time=finish,
+                   **kwargs)
+    c3 = Container(state='WAITING',
+                   start_time=None,
+                   finish_time=None,
+                   **kwargs)
+
+    check_basic_methods(c, c2)
+
+    assert c.id == "foo_0"
+
+    assert c2.runtime == c2.finish_time - c2.start_time
+
+    before = datetime.datetime.now().astimezone(datetime.timezone.utc)
+    runtime = c.runtime
+    after = datetime.datetime.now().astimezone(datetime.timezone.utc)
+    assert (before - c.start_time) <= runtime <= (after - c.start_time)
+
+    assert c3.runtime == datetime.timedelta(0)
+
+
+def test_resource_usage_report():
+    r1 = Resources(memory=128, vcores=1)
+    r2 = Resources(memory=256, vcores=2)
+    r3 = Resources(memory=384, vcores=3)
+
+    a = ResourceUsageReport(10, 20, 2, r1, r2, r3)
+    b = ResourceUsageReport(11, 20, 2, r1, r2, r3)
+
+    check_basic_methods(a, b)
+
+
+def test_application_report():
+    usage = ResourceUsageReport(10, 20, 2,
+                                Resources(memory=128, vcores=1),
+                                Resources(memory=256, vcores=2),
+                                Resources(memory=384, vcores=3))
+
+    start = datetime.datetime(2018, 6, 7, 23, 24, 25, 26 * 1000,
+                              tzinfo=datetime.timezone.utc)
+    finish = datetime.datetime(2018, 6, 7, 23, 21, 25, 26 * 1000,
+                               tzinfo=datetime.timezone.utc)
+
+    kwargs = dict(id='application_1528138529205_0001',
+                  name='test',
+                  user='testuser',
+                  queue='default',
+                  tags=['foo', 'bar', 'baz'],
+                  host='worker.example.com',
+                  port=8181,
+                  tracking_url='',
+                  usage=usage,
+                  diagnostics='')
+
+    a = ApplicationReport(state='running',
+                          final_status='undefined',
+                          progress=0.5,
+                          start_time=start,
+                          finish_time=None,
+                          **kwargs)
+
+    b = ApplicationReport(state='finished',
+                          final_status='succeeded',
+                          progress=1.0,
+                          start_time=start,
+                          finish_time=finish,
+                          **kwargs)
+
+    check_basic_methods(a, b)
+
+    assert b.runtime == b.finish_time - b.start_time
+    before = datetime.datetime.now().astimezone(datetime.timezone.utc)
+    runtime = a.runtime
+    after = datetime.datetime.now().astimezone(datetime.timezone.utc)
+    assert (before - a.start_time) <= runtime <= (after - a.start_time)

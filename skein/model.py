@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function, division
 
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import yaml
 
@@ -21,11 +21,21 @@ required = type('required', (object,),
                 {'__repr__': lambda s: 'required'})()
 
 
-_EPOCH = datetime(1970, 1, 1)
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 def _datetime_from_millis(x):
-    return None if x == 0 else _EPOCH + timedelta(milliseconds=x)
+    if x is None or x == 0:
+        return None
+    return _EPOCH + timedelta(milliseconds=x)
+
+
+def _runtime(start_time, finish_time):
+    if start_time is None:
+        return timedelta(0)
+    if finish_time is None:
+        return datetime.now().astimezone(timezone.utc) - start_time
+    return finish_time - start_time
 
 
 def _pop_origin(kwargs):
@@ -98,7 +108,7 @@ def _convert(x, method, *args):
     elif typ is dict:
         return {k: _convert(v, method, *args) for k, v in x.items()}
     elif typ is datetime:
-        return int(x.timestamp() * 1000)
+        return int((x - _EPOCH).total_seconds() * 1000)
     elif isinstance(x, Enum):
         return str(x)
     else:
@@ -773,11 +783,6 @@ class ApplicationSpec(Base):
             f.write(data)
 
 
-def _to_camel_case(x):
-    parts = x.split('_')
-    return parts[0] + ''.join(x.title() for x in parts[1:])
-
-
 class ResourceUsageReport(Base):
     """Resource usage report.
 
@@ -801,8 +806,6 @@ class ResourceUsageReport(Base):
     __slots__ = ('memory_seconds', 'vcore_seconds', 'num_used_containers',
                  'needed_resources', 'reserved_resources', 'used_resources')
     _protobuf_cls = _proto.ResourceUsageReport
-
-    _keys = tuple(_to_camel_case(k) for k in __slots__)
 
     def __init__(self, memory_seconds, vcore_seconds, num_used_containers,
                  needed_resources, reserved_resources, used_resources):
@@ -828,16 +831,11 @@ class ResourceUsageReport(Base):
     @classmethod
     @implements(Base.from_dict)
     def from_dict(cls, obj):
-        cls._check_keys(obj, cls._keys)
-        kwargs = dict(memory_seconds=obj['memorySeconds'],
-                      vcore_seconds=obj['vcoreSeconds'],
-                      num_used_containers=max(0, obj['numUsedContainers']))
-        for k, k2 in [('needed_resources', 'neededResources'),
-                      ('reserved_resources', 'reservedResources'),
-                      ('used_resources', 'usedResources')]:
-            val = obj[k2]
-            kwargs[k] = Resources(vcores=max(0, val['vcores']),
-                                  memory=max(0, val['memory']))
+        cls._check_keys(obj)
+        kwargs = dict(obj)
+        for k in ['needed_resources', 'reserved_resources', 'used_resources']:
+            kwargs[k] = Resources(vcores=max(0, obj[k]['vcores']),
+                                  memory=max(0, obj[k]['memory']))
         return cls(**kwargs)
 
     @classmethod
@@ -888,11 +886,12 @@ class ApplicationReport(Base):
         The application finish time.
     """
     __slots__ = ('id', 'name', 'user', 'queue', 'tags', 'host', 'port',
-                 'tracking_url', 'state', 'final_status', 'progress', 'usage',
+                 'tracking_url', '_state', '_final_status', 'progress', 'usage',
                  'diagnostics', 'start_time', 'finish_time')
+    _params = ('id', 'name', 'user', 'queue', 'tags', 'host', 'port',
+               'tracking_url', 'state', 'final_status', 'progress', 'usage',
+               'diagnostics', 'start_time', 'finish_time')
     _protobuf_cls = _proto.ApplicationReport
-
-    _keys = tuple(_to_camel_case(k) for k in __slots__)
 
     def __init__(self, id, name, user, queue, tags, host, port,
                  tracking_url, state, final_status, progress, usage,
@@ -901,7 +900,7 @@ class ApplicationReport(Base):
         self.name = name
         self.user = user
         self.queue = queue
-        self.tags = tags
+        self.tags = set() if tags is None else set(tags)
         self.host = host
         self.port = port
         self.tracking_url = tracking_url
@@ -918,36 +917,54 @@ class ApplicationReport(Base):
     def __repr__(self):
         return 'ApplicationReport<name=%r>' % self.name
 
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, state):
+        self._state = ApplicationState(state)
+
+    @property
+    def final_status(self):
+        return self._final_status
+
+    @final_status.setter
+    def final_status(self, state):
+        self._final_status = FinalStatus(state)
+
+    @property
+    def runtime(self):
+        """The total runtime of the container."""
+        return _runtime(self.start_time, self.finish_time)
+
     def _validate(self):
         self._check_is_type('id', str)
         self._check_is_type('name', str)
         self._check_is_type('user', str)
         self._check_is_type('queue', str)
         self._check_is_set_of('tags', str)
-        self._check_is_type('host', str, nullable=True)
-        self._check_is_type('port', int, nullable=True)
-        self._check_is_type('tracking_url', str, nullable=True)
+        self._check_is_type('host', str)
+        self._check_is_type('port', int)
+        self._check_is_type('tracking_url', str)
         self._check_is_type('state', ApplicationState)
         self._check_is_type('final_status', FinalStatus)
         self._check_is_type('progress', float)
         self._check_is_type('usage', ResourceUsageReport)
         self.usage._validate()
-        self._check_is_type('diagnostics', str, nullable=True)
+        self._check_is_type('diagnostics', str)
         self._check_is_type('start_time', datetime, nullable=True)
         self._check_is_type('finish_time', datetime, nullable=True)
 
     @classmethod
     @implements(Base.from_dict)
     def from_dict(cls, obj):
-        cls._check_keys(obj, cls._keys)
-        kwargs = {k: obj.get(k2) for k, k2 in zip(cls.__slots__, cls._keys)}
-        kwargs['usage'] = ResourceUsageReport.from_dict(kwargs['usage'])
-        kwargs['state'] = ApplicationState(kwargs['state'])
-        kwargs['final_status'] = FinalStatus(kwargs['final_status'])
-        kwargs['tags'] = set(kwargs['tags'])
+        cls._check_keys(obj)
+        obj = dict(obj)
+        obj['usage'] = ResourceUsageReport.from_dict(obj['usage'])
         for k in ['start_time', 'finish_time']:
-            kwargs[k] = _datetime_from_millis(kwargs[k])
-        return cls(**kwargs)
+            obj[k] = _datetime_from_millis(obj.get(k))
+        return cls(**obj)
 
     @classmethod
     @implements(Base.from_protobuf)
@@ -959,7 +976,7 @@ class ApplicationReport(Base):
                    name=obj.name,
                    user=obj.user,
                    queue=obj.queue,
-                   tags=set(obj.tags),
+                   tags=obj.tags,
                    host=obj.host,
                    port=obj.port,
                    tracking_url=obj.tracking_url,
@@ -1004,8 +1021,8 @@ class Container(Base):
 
     Parameters
     ----------
-    service : str
-        The service this container is running.
+    service_name : str
+        The name of the service this container is running.
     instance : int
         The container instance number.
     state : ContainerState
@@ -1017,15 +1034,15 @@ class Container(Base):
     finish_time : datetime
         The finish time, None if container has not finished.
     """
-    __slots__ = ('service', 'instance', 'state', 'yarn_container_id', 'start_time',
-                 'finish_time')
-    _keys = ('serviceName', 'instance', 'state', 'yarnContainerId', 'startTime',
-             'finishTime')
+    __slots__ = ('service_name', 'instance', '_state', 'yarn_container_id',
+                 'start_time', 'finish_time')
+    _params = ('service_name', 'instance', 'state', 'yarn_container_id',
+               'start_time', 'finish_time')
     _protobuf_cls = _proto.Container
 
-    def __init__(self, service, instance, state, yarn_container_id,
+    def __init__(self, service_name, instance, state, yarn_container_id,
                  start_time, finish_time):
-        self.service = service
+        self.service_name = service_name
         self.instance = instance
         self.state = state
         self.yarn_container_id = yarn_container_id
@@ -1035,11 +1052,19 @@ class Container(Base):
         self._validate()
 
     def __repr__(self):
-        return ('Container<service=%r, instance=%d, state=%s>'
-                % (self.service, self.instance, self.state))
+        return ('Container<service_name=%r, instance=%d, state=%s>'
+                % (self.service_name, self.instance, self.state))
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, state):
+        self._state = ContainerState(state)
 
     def _validate(self):
-        self._check_is_type('service', str)
+        self._check_is_type('service_name', str)
         self._check_is_type('instance', int)
         self._check_is_type('state', ContainerState)
         self._check_is_type('yarn_container_id', str)
@@ -1048,32 +1073,29 @@ class Container(Base):
 
     @property
     def id(self):
-        """The complete service & instance identity of this container."""
-        return '%s_%d' % (self.service, self.instance)
+        """The complete service_name & instance identity of this container."""
+        return '%s_%d' % (self.service_name, self.instance)
 
     @property
-    def age(self):
-        """The age of the container."""
-        if self.start_time is None:
-            return None
-        end = datetime.now() if self.finish_time is None else self.finish_time
-        return end - self.start_time
+    def runtime(self):
+        """The total runtime of the application."""
+        return _runtime(self.start_time, self.finish_time)
 
     @classmethod
     @implements(Base.from_dict)
     def from_dict(cls, obj):
-        cls._check_keys(obj, cls._keys)
-        return cls(service=obj['serviceName'],
+        cls._check_keys(obj)
+        return cls(service_name=obj['service_name'],
                    instance=obj['instance'],
                    state=ContainerState(obj['state']),
-                   yarn_container_id=obj['yarnContainerId'],
-                   start_time=_datetime_from_millis(obj['startTime']),
-                   finish_time=_datetime_from_millis(obj['finishTime']))
+                   yarn_container_id=obj['yarn_container_id'],
+                   start_time=_datetime_from_millis(obj.get('start_time')),
+                   finish_time=_datetime_from_millis(obj.get('finish_time')))
 
     @classmethod
     @implements(Base.from_protobuf)
     def from_protobuf(cls, obj):
-        return cls(service=obj.service_name,
+        return cls(service_name=obj.service_name,
                    instance=obj.instance,
                    state=ContainerState(_proto.Container.State.Name(obj.state)),
                    yarn_container_id=obj.yarn_container_id,

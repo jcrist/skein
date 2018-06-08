@@ -197,11 +197,12 @@ application = node(entry_subs, 'application', 'Manage applications')
 
 def _print_application_status(apps):
     header = ['application_id', 'name', 'state', 'status', 'containers',
-              'vcores', 'memory']
+              'vcores', 'memory', 'runtime']
     data = [(a.id, a.name, a.state, a.final_status,
              a.usage.num_used_containers,
              a.usage.used_resources.vcores,
-             a.usage.used_resources.memory)
+             a.usage.used_resources.memory,
+             humanize_timedelta(a.runtime))
             for a in sorted(apps, key=lambda x: x.id)]
     print(format_table(header, data))
 
@@ -270,10 +271,9 @@ container = node(entry_subs, 'container', 'Manage containers')
 
 
 def _print_container_status(containers):
-    header = ['service', 'id', 'state', 'age']
-    data = [(c.service, c.id, c.state,
-             humanize_timedelta(c.age) if c.age is not None else '')
-            for c in sorted(containers, key=lambda x: (x.service, x.instance))]
+    header = ['service', 'id', 'state', 'runtime']
+    data = [(c.service_name, c.id, c.state, humanize_timedelta(c.runtime))
+            for c in sorted(containers, key=lambda x: (x.service_name, x.instance))]
     print(format_table(header, data))
 
 
