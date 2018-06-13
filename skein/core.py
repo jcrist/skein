@@ -547,8 +547,6 @@ class KeyValueStore(MutableMapping):
         return self._get(key)
 
     def __setitem__(self, key, value):
-        if not len(key):
-            raise context.ValueError("key length must be > 0")
         self._client._call('keyvalueSetKey',
                            proto.SetKeyRequest(key=key, val=value))
 
