@@ -69,7 +69,8 @@ class SkeinNotebookApp(NotebookApp):
 
 def start_notebook_application(argv=None):
     if os.environ.get('JUPYTER_RUNTIME_DIR') is None:
-        os.mkdir('.jupyter')
+        if not os.path.exists('.jupyter'):
+            os.mkdir('.jupyter')
         os.environ['JUPYTER_RUNTIME_DIR'] = './.jupyter'
     SkeinNotebookApp.launch_instance(argv=argv)
 
