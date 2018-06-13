@@ -147,7 +147,7 @@ protos_built = bool(_compiled_protos()) and 'clean' not in sys.argv
 if 'build_proto' in sys.argv or (is_build_step and not protos_built):
     setup_requires = ['grpcio-tools']
 else:
-    setup_requires = None
+    setup_requires = []
 
 
 # Due to quirks in setuptools/distutils dependency ordering, to get the java
