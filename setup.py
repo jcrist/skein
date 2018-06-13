@@ -183,7 +183,7 @@ setup(name='skein',
                    "Topic :: System :: Systems Administration",
                    "Topic :: System :: Distributed Computing"],
       keywords='YARN HDFS hadoop distributed cluster',
-      packages=['skein', 'skein.proto'],
+      packages=['skein', 'skein.proto', 'skein.recipes'],
       package_data={'skein': ['java/*.jar']},
       entry_points='''
         [console_scripts]
