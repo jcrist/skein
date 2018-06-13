@@ -1,0 +1,8 @@
+[run]
+omit =
+    skein/test/test_*.py
+    skein/compatibility.py
+    skein/_version.py
+    skein/proto/*.py
+source = 
+    skein
