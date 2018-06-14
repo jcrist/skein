@@ -680,19 +680,28 @@ public class ApplicationMaster {
           return;  // Already finished, should never get here
       }
 
-      if (state == Model.Container.State.SUCCEEDED) {
-        numSucceeded += 1;
-      } else if (state == Model.Container.State.KILLED) {
-        numKilled += 1;
-      } else {
-        numFailed += 1;
+      boolean mayRestart = false;
+      switch (state) {
+        case SUCCEEDED:
+          numSucceeded += 1;
+          break;
+        case KILLED:
+          numKilled += 1;
+          break;
+        case FAILED:
+          numFailed += 1;
+          mayRestart = true;
+          break;
+        default:
+          throw new IllegalArgumentException(
+              "finishContainer got illegal state " + state);
       }
 
       LOG.info(state + ": " + name + "_" + instance);
       container.setState(state);
 
-      if (service.getMaxRestarts() == -1
-          || numRestarted < service.getMaxRestarts()) {
+      if (mayRestart && (service.getMaxRestarts() == -1
+          || numRestarted < service.getMaxRestarts())) {
         numRestarted += 1;
         LOG.info("RESTARTING: adding new container to replace "
                  + name + "_" + instance);
