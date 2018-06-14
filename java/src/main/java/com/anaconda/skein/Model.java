@@ -18,10 +18,10 @@ public class Model {
     }
   }
 
-  private static void throwIfNonPositive(int i, String param)
+  private static void throwIfLessThan(int i, int min, String param)
       throws IllegalArgumentException {
-    if (i <= 0) {
-      throw new IllegalArgumentException(param + " must be > 0");
+    if (i < min) {
+      throw new IllegalArgumentException(param + " must be > " + min + ", got " + i);
     }
   }
 
@@ -85,10 +85,11 @@ public class Model {
     public Set<String> getDepends() { return depends; }
 
     public void validate() throws IllegalArgumentException {
-      throwIfNonPositive(instances, "instances");
+      throwIfLessThan(instances, 0, "instances");
+      throwIfLessThan(instances, -1, "maxRestarts");
       throwIfNull(resources, "resources");
-      throwIfNonPositive(resources.getMemory(), "resources.memory");
-      throwIfNonPositive(resources.getVirtualCores(), "resources.vcores");
+      throwIfLessThan(resources.getMemory(), 1, "resources.memory");
+      throwIfLessThan(resources.getVirtualCores(), 1, "resources.vcores");
       throwIfNull(localResources, "localResources");
       throwIfNull(env, "env");
       throwIfNull(commands, "commands");
@@ -144,7 +145,7 @@ public class Model {
     public void validate() throws IllegalArgumentException {
       throwIfNull(name, "name");
       throwIfNull(queue, "queue");
-      throwIfNonPositive(maxAttempts, "maxAttempts");
+      throwIfLessThan(maxAttempts, 1, "maxAttempts");
       throwIfNull(tags, "tags");
       throwIfNull(services, "services");
       if (services.size() == 0) {
