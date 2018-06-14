@@ -101,6 +101,8 @@ public class ApplicationMaster {
   private NMClient nmClient;
   private ThreadPoolExecutor executor;
   private Thread allocatorThread;
+  private boolean shouldShutdown = false;
+
   private UserGroupInformation ugi;
   private ByteBuffer tokens;
 
@@ -154,7 +156,7 @@ public class ApplicationMaster {
     allocatorThread =
       new Thread() {
         public void run() {
-          while (true) {
+          while (!shouldShutdown) {
             try {
               long start = System.currentTimeMillis();
               allocate();
@@ -177,7 +179,10 @@ public class ApplicationMaster {
   }
 
   private void stopAllocator() {
-    allocatorThread.interrupt();
+    shouldShutdown = true;
+    if (!Thread.currentThread().equals(allocatorThread)) {
+      allocatorThread.interrupt();
+    }
   }
 
   private void loadApplicationSpec() throws Exception {
