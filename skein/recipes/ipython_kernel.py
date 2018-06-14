@@ -46,8 +46,8 @@ class SkeinIPKernelApp(IPKernelApp):
     ip = '0.0.0.0'
 
     def initialize(self, argv=None):
-        super(SkeinIPKernelApp, self).initialize(argv=argv)
         self.skein_app_client = ApplicationClient.from_current()
+        super(SkeinIPKernelApp, self).initialize(argv=argv)
 
     def write_connection_file(self):
         super(SkeinIPKernelApp, self).write_connection_file()
@@ -57,7 +57,6 @@ class SkeinIPKernelApp(IPKernelApp):
 
         if data['ip'] in ('', '0.0.0.0'):
             data['ip'] = socket.gethostbyname(socket.gethostname())
-        print(data)
 
         self.skein_app_client.kv['ipykernel.info'] = json.dumps(data)
 
