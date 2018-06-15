@@ -2,12 +2,12 @@ from __future__ import absolute_import, print_function, division
 
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import yaml
 
 from . import proto as _proto
-from .compatibility import urlparse, with_metaclass
+from .compatibility import urlparse, with_metaclass, UTC
 from .exceptions import context
 from .utils import implements, format_list
 
@@ -21,7 +21,7 @@ required = type('required', (object,),
                 {'__repr__': lambda s: 'required'})()
 
 
-_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 def _datetime_from_millis(x):
@@ -34,7 +34,7 @@ def _runtime(start_time, finish_time):
     if start_time is None:
         return timedelta(0)
     if finish_time is None:
-        return datetime.now().astimezone(timezone.utc) - start_time
+        return datetime.now().astimezone(UTC) - start_time
     return finish_time - start_time
 
 
