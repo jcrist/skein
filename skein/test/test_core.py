@@ -2,6 +2,7 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import time
+import weakref
 from contextlib import contextmanager
 from collections import MutableMapping
 from threading import Thread
@@ -104,6 +105,17 @@ def test_client(security, kinit, tmpdir):
     # Connection error on connecting to missing daemon
     with pytest.raises(skein.ConnectionError):
         skein.Client(address=client.address, security=security)
+
+
+def test_client_closed_when_reference_dropped(security, kinit):
+    client = skein.Client(security=security, log=False)
+    ref = weakref.ref(client)
+
+    pid = client._proc.pid
+
+    del client
+    assert ref() is None
+    assert not pid_exists(pid)
 
 
 def test_simple_app(client):

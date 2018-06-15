@@ -21,7 +21,7 @@ from .exceptions import (context, FileNotFoundError, SkeinConfigurationError,
                          ApplicationError, DaemonNotRunningError, DaemonError)
 from .model import (ApplicationSpec, Service, ApplicationReport,
                     ApplicationState, ContainerState, Container)
-from .utils import cached_property
+from .utils import cached_property, with_finalizers
 
 
 __all__ = ('Client', 'Application', 'ApplicationClient', 'Security')
@@ -269,6 +269,12 @@ class _ClientBase(object):
             raise self._server_error(exc.details())
 
 
+def _close_process(proc):
+    proc.stdin.close()
+    proc.wait()
+
+
+@with_finalizers
 class Client(_ClientBase):
     """Connect to and schedule applications on the YARN cluster.
 
@@ -302,6 +308,7 @@ class Client(_ClientBase):
 
         if address is None:
             address, proc = _start_daemon(security=security, log=log)
+            self._add_finalizer(_close_process, proc)
         else:
             proc = None
 
@@ -383,9 +390,7 @@ class Client(_ClientBase):
 
     def close(self):
         """Closes the java daemon if started by this client. No-op otherwise."""
-        if self._proc is not None:
-            self._proc.stdin.close()
-            self._proc.wait()
+        self._finalize()
 
     def __enter__(self):
         return self

@@ -1,6 +1,97 @@
 from __future__ import print_function, division, absolute_import
 
-from .compatibility import urlparse
+import weakref
+
+from .compatibility import urlparse, PY2, add_method
+
+
+if PY2:
+    def _with_finalizers(cls):
+        _finalizers = weakref.WeakKeyDictionary()
+
+        import atexit
+        import sys
+
+        def run_finalizers(finalizers, error=False):
+            while finalizers:
+                # Pop off the stack to clear the list in place
+                try:
+                    f = finalizers.pop()
+                except IndexError:  # pragma: no cover
+                    break
+                if error:
+                    f()
+                else:
+                    try:
+                        f()
+                    except Exception as exc:
+                        print("Exception %r ignored" % exc, file=sys.stderr)
+
+        @atexit.register
+        def _run_remaining_finalizers():  # pragma: no cover
+            # Grab all finalizers here to ensure that they get run
+            # even if the reference is dropped later on. Otherwise the
+            # `_finalizers` dict might change size while iterating.
+            for func_stack in list(_finalizers.values()):
+                run_finalizers(func_stack)
+
+        @add_method(cls)
+        def _add_finalizer(self, func, *args, **kwargs):
+            def thunk():
+                func(*args, **kwargs)
+
+            if self not in _finalizers:
+                _finalizers[self] = self._finalizers = []
+
+            _finalizers[self].append(thunk)
+
+        @add_method(cls)
+        def _finalize(self):
+            # If `_finalize` is called explicitly, don't silence errors
+            run_finalizers(getattr(self, '_finalizers', ()), error=True)
+
+        # We add a `__del__` method so that *usually* all the finalizers get
+        # run when the object is collected. If the __del__ method is skipped,
+        # then they'll still get run, just on shutdown.
+        @add_method(cls)
+        def __del__(self):
+            run_finalizers(getattr(self, '_finalizers', ()))
+
+        return cls
+else:
+    def _with_finalizers(cls):
+        _finalizers = weakref.WeakKeyDictionary()
+
+        @add_method(cls)
+        def _finalize(self):
+            for f in reversed(_finalizers.pop(self, ())):
+                f()
+
+        @add_method(cls)
+        def _add_finalizer(self, func, *args, **kwargs):
+            if self not in _finalizers:
+                _finalizers[self] = []
+            thunk = weakref.finalize(self, func, *args, **kwargs)
+            _finalizers[self].append(thunk)
+
+        return cls
+
+
+def with_finalizers(cls):
+    """Adds support for robust cleanup of objects by the GC.
+
+    Objects should register handlers during operation using
+    ``self._add_finalizer``. On cleanup, these finalizers will be called in the
+    reverse order that they're added. Objects can also call ``self._finalize``
+    to explicitly trigger finalization. The cleanup functions are only run
+    once.
+
+    On Python 3, finalizers are guaranteed to be run as soon as object is
+    collected. On Python 2 the finalizers usually are one when the object is
+    collected, but in certain situations with reference cycles, they may not
+    run until program termination.
+    """
+    return _with_finalizers(cls)
 
 
 def ensure_bytes(x):
