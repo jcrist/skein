@@ -3,7 +3,6 @@ from __future__ import print_function, division, absolute_import
 import os
 import time
 import weakref
-from contextlib import contextmanager
 from collections import MutableMapping
 from threading import Thread
 
@@ -11,35 +10,7 @@ import pytest
 
 import skein
 from skein.exceptions import FileNotFoundError, FileExistsError
-
-
-sleeper = skein.Service(resources=skein.Resources(memory=128, vcores=1),
-                        commands=['sleep infinity'])
-
-
-sleep_until_killed = skein.ApplicationSpec(name="sleep_until_killed",
-                                           queue="default",
-                                           tags={'sleeps'},
-                                           services={'sleeper': sleeper})
-
-
-@contextmanager
-def run_sleeper_app(client):
-    app = client.submit(sleep_until_killed)
-
-    try:
-        yield app
-    finally:
-        app.kill()
-
-        timeleft = 5
-        while timeleft:
-            if not app.is_running():
-                break
-            time.sleep(0.1)
-            timeleft -= 0.1
-        else:
-            raise ValueError("Application wasn't properly terminated")
+from skein.test.conftest import run_sleeper_app, wait_for_containers
 
 
 def test_security(tmpdir):
@@ -220,20 +191,6 @@ def test_key_value(client):
         # Get immediately for set keys
         val2 = ac.kv.wait('foo')
         assert val2 == 'baz'
-
-
-def wait_for_containers(ac, n, **kwargs):
-    timeleft = 5
-    while timeleft:
-        containers = ac.containers(**kwargs)
-        if len(containers) == n:
-            break
-        time.sleep(0.1)
-        timeleft -= 0.1
-    else:
-        assert False, "timeout"
-
-    return containers
 
 
 def test_dynamic_containers(client):
