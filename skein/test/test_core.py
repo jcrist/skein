@@ -156,6 +156,15 @@ def test_simple_app(client):
     assert report.id in {a.id for a in killed_apps}
 
 
+def test_shutdown_app(client):
+    with run_sleeper_app(client) as app:
+        ac = app.connect()
+
+        ac.shutdown(status='SUCCEEDED')
+
+    assert app.status().final_status == 'SUCCEEDED'
+
+
 def test_describe(client):
     with run_sleeper_app(client) as app:
         ac = app.connect()

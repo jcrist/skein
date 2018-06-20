@@ -175,6 +175,8 @@ message ApplicationsResponse {
 
 
 service Master {
+  rpc shutdown (ShutdownRequest) returns (Empty);
+
   rpc keyvalueGetKey (GetKeyRequest) returns (GetKeyResponse);
 
   rpc keyvalueSetKey (SetKeyRequest) returns (Empty);
@@ -192,6 +194,11 @@ service Master {
   rpc killContainer (ContainerInstance) returns (Empty);
 
   rpc scale (ScaleRequest) returns (ContainersResponse);
+}
+
+
+message ShutdownRequest {
+  FinalStatus.Type final_status = 1;
 }
 
 

@@ -20,7 +20,8 @@ from .exceptions import (context, FileNotFoundError, SkeinConfigurationError,
                          ConnectionError, ApplicationNotRunningError,
                          ApplicationError, DaemonNotRunningError, DaemonError)
 from .model import (ApplicationSpec, Service, ApplicationReport,
-                    ApplicationState, ContainerState, Container)
+                    ApplicationState, ContainerState, Container,
+                    FinalStatus)
 from .utils import cached_property, with_finalizers
 
 
@@ -588,6 +589,19 @@ class ApplicationClient(_ClientBase):
 
     def __repr__(self):
         return 'ApplicationClient<%s>' % self.address
+
+    def shutdown(self, status='SUCCEEDED'):
+        """Shutdown the application.
+
+        Stop all running containers and shutdown the application.
+
+        Parameters
+        ----------
+        status : FinalStatus, optional
+            The final application status. Default is 'SUCCEEDED'.
+        """
+        status = str(FinalStatus(status))
+        self._call('shutdown', proto.ShutdownRequest(final_status=status))
 
     @cached_property
     def kv(self):
