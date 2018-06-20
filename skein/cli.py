@@ -249,6 +249,15 @@ def application_kill(app_id):
 
 
 @subcommand(application.subs,
+            'shutdown', 'Shutdown a Skein application',
+            app_id,
+            arg('--status', default='SUCCEEDED',
+                help='Final Application Status. Default is SUCCEEDED'))
+def application_shutdown(app_id, status):
+    Client.from_global_daemon().connect(app_id).shutdown(status)
+
+
+@subcommand(application.subs,
             'describe', 'Get specifications for a running skein application',
             app_id,
             arg('--service', '-s', help='Service name'))

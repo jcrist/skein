@@ -417,6 +417,12 @@ public class ApplicationMaster {
   }
 
   private void shutdown(FinalApplicationStatus status, String msg) {
+    preshutdown(status, msg);
+
+    System.exit(0);  // Trigger exit hooks
+  }
+
+  private void preshutdown(FinalApplicationStatus status, String msg) {
     try {
       rmClient.unregisterApplicationMaster(status, msg, null);
     } catch (Exception ex) {
@@ -438,8 +444,6 @@ public class ApplicationMaster {
             return null;
           }
         });
-
-    System.exit(0);  // Trigger exit hooks
   }
 
   /** Main entrypoint for the ApplicationMaster. **/
@@ -729,6 +733,21 @@ public class ApplicationMaster {
         return false;
       }
       return true;
+    }
+
+    @Override
+    public void shutdown(Msg.ShutdownRequest req,
+        StreamObserver<Msg.Empty> resp) {
+      FinalApplicationStatus status = MsgUtils.readFinalStatus(req.getFinalStatus());
+
+      // Shutdown everything but the grpc server
+      preshutdown(status, "Shutdown by user");
+
+      resp.onNext(MsgUtils.EMPTY);
+      resp.onCompleted();
+
+      // Finish shutdown
+      System.exit(0);
     }
 
     @Override
