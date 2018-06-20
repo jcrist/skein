@@ -61,7 +61,7 @@ def subcommand(subparsers, name, help, *args):
 def node(subs, name, help):
     @subcommand(subs, name, help)
     def f():
-        f.parser.print_usage()
+        fail(f.parser.format_usage(), prefix=False)
     f.subs = f.parser.add_subparsers(metavar='command')
     return f
 
@@ -74,16 +74,22 @@ add_help(entry)
 entry.add_argument("--version", action='version',
                    version='%(prog)s ' + __version__,
                    help="Show version then exit")
-entry.set_defaults(func=lambda: entry.print_usage())
+entry.set_defaults(func=lambda: fail(entry.format_usage(), prefix=False))
 entry_subs = entry.add_subparsers(metavar='command')
 
 # Common arguments
 app_id = arg('app_id', help='The application id', metavar='APP_ID')
-optional_app_id = arg('app_id', metavar='APP_ID',
-                      help='The application id. To use in a container during '
-                           'a skein applications, pass in "current"')
+app_id_or_current = arg('app_id', metavar='APP_ID',
+                        help='The application id. To use in a container inside '
+                             'a skein application, pass in "current"')
 container_id = arg('--id', required=True,
                    help='The container id', metavar='CONTAINER_ID')
+
+
+def application_client_from_app_id(app_id):
+    if app_id == 'current':
+        return ApplicationClient.from_current()
+    return Client.from_global_daemon().connect(app_id)
 
 
 ###################
@@ -110,7 +116,7 @@ def daemon_address():
         client = Client.from_global_daemon()
         print(client.address)
     except DaemonNotRunningError:
-        print("No skein daemon is running")
+        fail("No skein daemon is running")
 
 
 @subcommand(daemon.subs,
@@ -136,21 +142,18 @@ kv = node(entry_subs, 'kv', 'Manage the skein key-value store')
 
 @subcommand(kv.subs,
             'get', 'Get a value from the key-value store',
-            optional_app_id,
+            app_id_or_current,
             arg('--key', help='The key to get. Omit to get the whole '
                               'key-value store.'),
             arg('--wait', action='store_true',
                 help='If true, will block until the key is set'))
 def kv_get(app_id, key=None, wait=False):
-    if app_id == 'current':
-        app = ApplicationClient.from_current()
-    else:
-        app = Client.from_global_daemon().connect(app_id)
+    app = application_client_from_app_id(app_id)
 
     if key is None:
         result = app.kv.to_dict()
         if result:
-            print('\n'.join('%s: %s' % i for i in result.items()))
+            print('\n'.join('%s: %s' % i for i in sorted(result.items())))
     else:
         result = app.kv.wait(key) if wait else app.kv[key]
         print(result)
@@ -158,33 +161,20 @@ def kv_get(app_id, key=None, wait=False):
 
 @subcommand(kv.subs,
             'set', 'Set a value in the key-value store',
-            optional_app_id,
+            app_id_or_current,
             arg('--key', required=True, help='The key to set'),
             arg('--value', required=True, help='The value to set'))
-def kv_set(app_id, key=None, value=None):
-    if key is None:
-        fail("--key is required")
-    elif value is None:
-        fail("--value is required")
-
-    if app_id == 'current':
-        app = ApplicationClient.from_current()
-    else:
-        app = Client.from_global_daemon().connect(app_id)
-
+def kv_set(app_id, key, value):
+    app = application_client_from_app_id(app_id)
     app.kv[key] = value
 
 
 @subcommand(kv.subs,
             'del', 'Delete a value from the key-value store',
-            optional_app_id,
-            arg('--key', help='The key to delete.'))
-def kv_del(app_id, key=None, wait=False):
-    if app_id == 'current':
-        app = ApplicationClient.from_current()
-    else:
-        app = Client.from_global_daemon().connect(app_id)
-
+            app_id_or_current,
+            arg('--key', required=True, help='The key to delete.'))
+def kv_del(app_id, key):
+    app = application_client_from_app_id(app_id)
     del app.kv[key]
 
 
@@ -212,7 +202,7 @@ def _print_application_status(apps):
             arg('spec', help='The specification file'))
 def application_submit(spec):
     if not os.path.exists(spec):
-        fail("No applications specification file at %r" % spec)
+        fail("No application specification file at %r" % spec)
     try:
         spec = ApplicationSpec.from_file(spec)
     except SkeinError as exc:
@@ -250,11 +240,11 @@ def application_kill(app_id):
 
 @subcommand(application.subs,
             'shutdown', 'Shutdown a Skein application',
-            app_id,
+            app_id_or_current,
             arg('--status', default='SUCCEEDED',
                 help='Final Application Status. Default is SUCCEEDED'))
 def application_shutdown(app_id, status):
-    Client.from_global_daemon().connect(app_id).shutdown(status)
+    application_client_from_app_id(app_id).shutdown(status)
 
 
 @subcommand(application.subs,
@@ -288,55 +278,35 @@ def _print_container_status(containers):
 
 @subcommand(container.subs,
             'ls', 'List containers',
-            optional_app_id,
+            app_id_or_current,
             arg("--service", action='append',
                 help=('Filter by container services. May be repeated '
                       'to select multiple services.')),
             arg("--state", action='append',
                 help=('Filter by container states. May be repeated '
                       'to select multiple states.')))
-def container_ls(app_id=None, service=None, state=None):
-    if app_id == 'current':
-        app = ApplicationClient.from_current()
-    else:
-        app = Client.from_global_daemon().connect(app_id)
-
+def container_ls(app_id, service=None, state=None):
+    app = application_client_from_app_id(app_id)
     containers = app.containers(states=state, services=service)
     _print_container_status(containers)
 
 
 @subcommand(container.subs,
             'kill', 'Kill a container',
-            optional_app_id,
+            app_id_or_current,
             container_id)
-def container_kill(app_id=None, id=None):
-    if id is None:
-        fail("--id is required")
-
-    if app_id == 'current':
-        app = ApplicationClient.from_current()
-    else:
-        app = Client.from_global_daemon().connect(app_id)
-    app.kill(id)
+def container_kill(app_id, id):
+    application_client_from_app_id(app_id).kill(id)
 
 
 @subcommand(container.subs,
             'scale', 'Scale a service to a requested number of containers',
-            optional_app_id,
+            app_id_or_current,
             arg('--service', '-s', required=True, help='Service name'),
             arg('--number', '-n', type=int, required=True,
                 help='The requested number of instances'))
-def container_scale(app_id, service=None, number=None):
-    if service is None:
-        fail("--service is required")
-    if number is None:
-        fail("--number is required")
-
-    if app_id == 'current':
-        app = ApplicationClient.from_current()
-    else:
-        app = Client.from_global_daemon().connect(app_id)
-    app.scale(service, number)
+def container_scale(app_id, service, number):
+    application_client_from_app_id(app_id).scale(service, number)
 
 
 ################
@@ -360,12 +330,13 @@ def main(args=None):
             func(**kwargs)
     except KeyError as exc:
         fail("Key %s is not set" % str(exc))
-    except SkeinError as exc:
-        fail(str(exc))
     except DaemonNotRunningError as exc:
         fail("Skein daemon not found, please run `skein daemon start`")
+    except SkeinError as exc:
+        fail(str(exc))
     except Exception as exc:
         fail("Unexpected Error:\n%s" % traceback.format_exc(), prefix=False)
+    sys.exit(0)
 
 
 if __name__ == '__main__':

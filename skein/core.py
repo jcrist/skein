@@ -29,10 +29,10 @@ __all__ = ('Client', 'Application', 'ApplicationClient', 'Security')
 
 
 ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'
-CONFIG_DIR = os.path.join(os.path.expanduser('~'), '.skein')
-DAEMON_PATH = os.path.join(CONFIG_DIR, 'daemon')
-SKEIN_DIR = os.path.abspath(os.path.dirname(os.path.relpath(__file__)))
-SKEIN_JAR = os.path.join(SKEIN_DIR, 'java', 'skein.jar')
+CONFIG_DIR = os.environ.get('SKEIN_CONFIG',
+                            os.path.join(os.path.expanduser('~'), '.skein'))
+_SKEIN_DIR = os.path.abspath(os.path.dirname(os.path.relpath(__file__)))
+SKEIN_JAR = os.path.join(_SKEIN_DIR, 'java', 'skein.jar')
 
 
 def _get_env_var(name):
@@ -169,7 +169,7 @@ def secure_channel(address, security=None):
 
 def _read_daemon():
     try:
-        with open(DAEMON_PATH, 'r') as fil:
+        with open(os.path.join(CONFIG_DIR, 'daemon'), 'r') as fil:
             data = json.load(fil)
             address = data['address']
             pid = data['pid']
@@ -182,7 +182,7 @@ def _write_daemon(address, pid):
     # Ensure the config dir exists
     os.makedirs(CONFIG_DIR, exist_ok=True)
     # Write to the daemon file
-    with open(DAEMON_PATH, 'w') as fil:
+    with open(os.path.join(CONFIG_DIR, 'daemon'), 'w') as fil:
         json.dump({'address': address, 'pid': pid}, fil)
 
 
@@ -382,7 +382,7 @@ class Client(_ClientBase):
             os.kill(pid, signal.SIGTERM)
 
         try:
-            os.remove(DAEMON_PATH)
+            os.remove(os.path.join(CONFIG_DIR, 'daemon'))
         except OSError:
             pass
 

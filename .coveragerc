@@ -1,8 +1,9 @@
 [run]
 omit =
-    skein/test/test_*.py
+    skein/test/*.py
     skein/compatibility.py
     skein/_version.py
     skein/proto/*.py
+    skein/recipes/*.py
 source = 
     skein
