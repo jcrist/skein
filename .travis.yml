@@ -24,8 +24,13 @@ jobs:
         - env:
             - DOCS=true
             - CLUSTER_TYPE=base
+            - PYTHON=3.6
         - env:
             - CLUSTER_TYPE=kerberos
+            - PYTHON=3.6
+        - env:
+            - CLUSTER_TYPE=base
+            - PYTHON=2.7
 
 before_install:
     # Upgrade docker-compose
@@ -42,19 +47,25 @@ install:
         source continuous_integration/travis/install_conda.sh
         ./continuous_integration/travis/install.sh
       fi
-    - ./continuous_integration/docker_hadoop/hcluster exec -- ./workdir/continuous_integration/travis/docker_install.sh
+    - ./continuous_integration/docker_hadoop/hcluster exec -- ./workdir/continuous_integration/travis/docker_install.sh $PYTHON
 
 script:
     - set -e
+    - |
+      if [[ "$PYTHON" == "2.7" ]]; then
+        export CONDA_ENV="/home/testuser/miniconda/envs/py27"
+      else
+        export CONDA_ENV="/home/testuser/miniconda/"
+      fi
     # kinit if needed
     - |
       if [[ "$CLUSTER_TYPE" == "kerberos" ]]; then
         ./continuous_integration/docker_hadoop/hcluster exec -- kinit testuser -kt testuser.keytab
       fi
     # Run py.test inside docker
-    - ./continuous_integration/docker_hadoop/hcluster exec -- py.test skein/ -vv
+    - ./continuous_integration/docker_hadoop/hcluster exec -- $CONDA_ENV/bin/py.test skein/ -vv
     # linting
-    - ./continuous_integration/docker_hadoop/hcluster exec -- flake8 skein/
+    - ./continuous_integration/docker_hadoop/hcluster exec -- $CONDA_ENV/bin/flake8 skein/
     # If everything passes, build (and deploy) the docs
     - |
       if [[ "$DOCS" == "true" ]]; then

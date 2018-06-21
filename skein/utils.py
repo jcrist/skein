@@ -2,7 +2,7 @@ from __future__ import print_function, division, absolute_import
 
 import weakref
 
-from .compatibility import urlparse, PY2, add_method, unicode
+from .compatibility import PY2, add_method, unicode
 
 
 if PY2:
