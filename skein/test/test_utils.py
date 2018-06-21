@@ -2,11 +2,12 @@ from __future__ import absolute_import, print_function, division
 
 import gc
 import weakref
+from datetime import timedelta
 
 import pytest
 
 from skein.compatibility import PY2
-from skein.utils import with_finalizers
+from skein.utils import with_finalizers, humanize_timedelta, format_table
 
 
 @with_finalizers
@@ -109,3 +110,24 @@ def test_with_finalizers_finalize_raises_on_exception():
         a._finalize()
 
     assert log == [('a', 2)]
+
+
+def test_humanize_timedelta():
+    assert humanize_timedelta(timedelta(0, 6)) == '6s'
+    assert humanize_timedelta(timedelta(0, 601)) == '10m'
+    assert humanize_timedelta(timedelta(0, 6001)) == '1h 40m'
+
+
+def test_format_table():
+    res = format_table(['fruit', 'color'],
+                       [('apple', 'red'),
+                        ('banana', 'yellow'),
+                        ('tomato', 'red'),
+                        ('pear', 'green')])
+    sol = ('FRUIT     COLOR\n'
+           'apple     red\n'
+           'banana    yellow\n'
+           'tomato    red\n'
+           'pear      green')
+    assert res == sol
+    assert format_table(['fruit', 'color'], []) == 'FRUIT    COLOR'
