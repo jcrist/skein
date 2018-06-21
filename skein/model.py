@@ -7,14 +7,22 @@ from datetime import datetime, timedelta
 import yaml
 
 from . import proto as _proto
-from .compatibility import urlparse, with_metaclass, UTC
+from .compatibility import urlparse, with_metaclass, UTC, string, integer
 from .exceptions import context
-from .utils import implements, format_list
+from .utils import implements, format_list, ensure_unicode
 
 __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
            'FileVisibility', 'ApplicationState', 'FinalStatus',
            'ResourceUsageReport', 'ApplicationReport', 'ContainerState',
            'Container')
+
+
+def typename(cls):
+    if cls is string:
+        return 'string'
+    elif cls is integer:
+        return 'integer'
+    return cls.__name__
 
 
 required = type('required', (object,),
@@ -34,7 +42,7 @@ def _runtime(start_time, finish_time):
     if start_time is None:
         return timedelta(0)
     if finish_time is None:
-        return datetime.now().astimezone(UTC) - start_time
+        return datetime.now(UTC) - start_time
     return finish_time - start_time
 
 
@@ -136,6 +144,7 @@ def _infer_format(path, format='infer'):
 
 class EnumMeta(type):
     def __init__(cls, name, parents, dct):
+        cls._values = tuple(ensure_unicode(v) for v in cls._values)
         for name in cls._values:
             out = object.__new__(cls)
             out._value = name
@@ -156,9 +165,9 @@ class Enum(with_metaclass(EnumMeta)):
     def __new__(cls, x):
         if isinstance(x, cls):
             return x
-        if type(x) is not str:
+        if not isinstance(x, string):
             raise TypeError("Expected 'str' or %r" % cls.__name__)
-        x = x.upper()
+        x = ensure_unicode(x).upper()
         if x not in cls._values:
             raise context.ValueError("%r must be in %r"
                                      % (cls.__name__, cls._values))
@@ -175,7 +184,7 @@ class Enum(with_metaclass(EnumMeta)):
 
     def __eq__(self, other):
         return (self is other or
-                (type(other) is str and self._value == other.upper()))
+                (isinstance(other, string) and self._value == other.upper()))
 
     def __hash__(self):
         return hash(self._value)
@@ -270,29 +279,29 @@ class Base(object):
         val = getattr(self, field)
         if not (isinstance(val, type) or (nullable and val is None)):
             if nullable:
-                msg = "%s must be an instance of %s, or None"
+                msg = "%s must be a %s, or None"
             else:
-                msg = "%s must be an instance of %s"
-            raise context.TypeError(msg % (field, type.__name__))
+                msg = "%s must be a %s"
+            raise context.TypeError(msg % (field, typename(type)))
 
     def _check_is_set_of(self, field, type):
         if not is_set_of(getattr(self, field), type):
             msg = "%s must be a set of %s"
-            raise context.TypeError(msg % (field, type.__name__))
+            raise context.TypeError(msg % (field, typename(type)))
 
     def _check_is_list_of(self, field, type):
         if not is_list_of(getattr(self, field), type):
             msg = "%s must be a list of %s"
-            raise context.TypeError(msg % (field, type.__name__))
+            raise context.TypeError(msg % (field, typename(type)))
 
     def _check_is_dict_of(self, field, key, val):
         if not is_dict_of(getattr(self, field), key, val):
             msg = "%s must be a list of %s -> %s"
-            raise context.TypeError(msg % (field, key.__name__, val.__name__))
+            raise context.TypeError(msg % (field, typename(key), typename(val)))
 
     def _check_is_bounded_int(self, field, min=0, nullable=False):
         x = getattr(self, field)
-        self._check_is_type(field, int, nullable=nullable)
+        self._check_is_type(field, integer, nullable=nullable)
         if x is not None and x < min:
             raise context.ValueError("%s must be >= %d" % (field, min))
 
@@ -348,8 +357,8 @@ class Base(object):
 
     def to_yaml(self, skip_nulls=True):
         """Convert object to a yaml string"""
-        return yaml.dump(self.to_dict(skip_nulls=skip_nulls),
-                         default_flow_style=False)
+        return yaml.safe_dump(self.to_dict(skip_nulls=skip_nulls),
+                              default_flow_style=False)
 
 
 class Resources(Base):
@@ -454,7 +463,7 @@ class File(Base):
         return 'File<source=%r, type=%r>' % (self.source, self.type)
 
     def _validate(self):
-        self._check_is_type('source', str)
+        self._check_is_type('source', string)
         self._check_is_type('type', FileType)
         self._check_is_type('visibility', FileVisibility)
         self._check_is_bounded_int('size')
@@ -466,8 +475,8 @@ class File(Base):
 
     @source.setter
     def source(self, val):
-        if not isinstance(val, str):
-            raise context.TypeError("'source' must be an instance of 'str'")
+        if not isinstance(val, string):
+            raise context.TypeError("'source' must be a string")
         self._source = self._normpath(val)
 
     @property
@@ -525,7 +534,7 @@ class File(Base):
         Keys in the dict should match parameter names"""
         _origin = _pop_origin(kwargs)
 
-        if isinstance(obj, str):
+        if isinstance(obj, string):
             obj = {'source': obj}
 
         cls._check_keys(obj)
@@ -612,17 +621,17 @@ class Service(Base):
         self._check_is_type('resources', Resources)
         self.resources._validate(is_request=True)
 
-        self._check_is_dict_of('files', str, File)
+        self._check_is_dict_of('files', string, File)
         for f in self.files.values():
             f._validate()
 
-        self._check_is_dict_of('env', str, str)
+        self._check_is_dict_of('env', string, string)
 
-        self._check_is_list_of('commands', str)
+        self._check_is_list_of('commands', string)
         if not self.commands:
             raise context.ValueError("There must be at least one command")
 
-        self._check_is_set_of('depends', str)
+        self._check_is_set_of('depends', string)
 
     @classmethod
     @implements(Base.from_dict)
@@ -695,11 +704,11 @@ class ApplicationSpec(Base):
                 (self.name, self.queue))
 
     def _validate(self):
-        self._check_is_type('name', str)
-        self._check_is_type('queue', str, nullable=True)
-        self._check_is_set_of('tags', str)
+        self._check_is_type('name', string)
+        self._check_is_type('queue', string)
+        self._check_is_set_of('tags', string)
         self._check_is_bounded_int('max_attempts', min=1)
-        self._check_is_dict_of('services', str, Service)
+        self._check_is_dict_of('services', string, Service)
         if not self.services:
             raise context.ValueError("There must be at least one service")
 
@@ -939,20 +948,20 @@ class ApplicationReport(Base):
         return _runtime(self.start_time, self.finish_time)
 
     def _validate(self):
-        self._check_is_type('id', str)
-        self._check_is_type('name', str)
-        self._check_is_type('user', str)
-        self._check_is_type('queue', str)
-        self._check_is_set_of('tags', str)
-        self._check_is_type('host', str)
-        self._check_is_type('port', int)
-        self._check_is_type('tracking_url', str)
+        self._check_is_type('id', string)
+        self._check_is_type('name', string)
+        self._check_is_type('user', string)
+        self._check_is_type('queue', string)
+        self._check_is_set_of('tags', string)
+        self._check_is_type('host', string)
+        self._check_is_type('port', integer)
+        self._check_is_type('tracking_url', string)
         self._check_is_type('state', ApplicationState)
         self._check_is_type('final_status', FinalStatus)
         self._check_is_type('progress', float)
         self._check_is_type('usage', ResourceUsageReport)
         self.usage._validate()
-        self._check_is_type('diagnostics', str)
+        self._check_is_type('diagnostics', string)
         self._check_is_type('start_time', datetime, nullable=True)
         self._check_is_type('finish_time', datetime, nullable=True)
 
@@ -1064,10 +1073,10 @@ class Container(Base):
         self._state = ContainerState(state)
 
     def _validate(self):
-        self._check_is_type('service_name', str)
-        self._check_is_type('instance', int)
+        self._check_is_type('service_name', string)
+        self._check_is_type('instance', integer)
         self._check_is_type('state', ContainerState)
-        self._check_is_type('yarn_container_id', str)
+        self._check_is_type('yarn_container_id', string)
         self._check_is_type('start_time', datetime, nullable=True)
         self._check_is_type('finish_time', datetime, nullable=True)
 

@@ -15,7 +15,7 @@ from contextlib import closing
 import grpc
 
 from . import proto
-from .compatibility import PY2
+from .compatibility import PY2, makedirs
 from .exceptions import (context, FileNotFoundError, SkeinConfigurationError,
                          ConnectionError, ApplicationNotRunningError,
                          ApplicationError, DaemonNotRunningError, DaemonError)
@@ -108,7 +108,7 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
         directory = directory or CONFIG_DIR
 
         # Create directory if it doesn't exist
-        os.makedirs(directory, exist_ok=True)
+        makedirs(directory, exist_ok=True)
 
         key = rsa.generate_private_key(public_exponent=65537,
                                        key_size=2048,
@@ -119,7 +119,7 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
             encryption_algorithm=serialization.NoEncryption())
 
         subject = issuer = x509.Name(
-            [x509.NameAttribute(NameOID.COMMON_NAME, 'skein-internal')])
+            [x509.NameAttribute(NameOID.COMMON_NAME, u'skein-internal')])
         now = datetime.datetime.utcnow()
         cert = (x509.CertificateBuilder()
                     .subject_name(subject)
@@ -180,7 +180,7 @@ def _read_daemon():
 
 def _write_daemon(address, pid):
     # Ensure the config dir exists
-    os.makedirs(CONFIG_DIR, exist_ok=True)
+    makedirs(CONFIG_DIR, exist_ok=True)
     # Write to the daemon file
     with open(os.path.join(CONFIG_DIR, 'daemon'), 'w') as fil:
         json.dump({'address': address, 'pid': pid}, fil)
@@ -215,7 +215,10 @@ def _start_daemon(security=None, set_global=False, log=None):
         if log is None:
             outfil = None
         elif log is False:
-            outfil = subprocess.DEVNULL
+            if PY2:
+                outfil = open(os.devnull, 'w')
+            else:
+                outfil = subprocess.DEVNULL
         else:
             outfil = open(log, mode='w')
         infil = None if set_global else subprocess.PIPE

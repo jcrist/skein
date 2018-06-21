@@ -25,10 +25,13 @@ services:
 """
 
 
-def run_command(command, exitcode=0):
+def run_command(command, error=False):
     with pytest.raises(SystemExit) as exc:
         main([arg for arg in command.split(' ') if arg])
-    assert exc.value.code == exitcode
+    if error:
+        assert exc.value.code != 0
+    else:
+        assert exc.value.code == 0
 
 
 @contextmanager
@@ -42,6 +45,7 @@ def ensure_app_shutdown(client, app_id):
 
 @contextmanager
 def set_skein_config(tmpdir):
+    tmpdir = str(tmpdir)
     old = skein.core.CONFIG_DIR
     try:
         skein.core.CONFIG_DIR = tmpdir
@@ -109,7 +113,7 @@ def test_cli_help(command, capsys):
 @pytest.mark.parametrize('group',
                          ['', 'daemon', 'application', 'container', 'kv'])
 def test_cli_call_command_group(group, capsys):
-    run_command(group, exitcode=1)
+    run_command(group, error=True)
 
     out, err = capsys.readouterr()
     assert not out
@@ -139,7 +143,7 @@ def test_cli_init(capsys, skein_config):
         key = f.read()
 
     # Running again fails due to missing --force
-    run_command('init', exitcode=1)
+    run_command('init', error=True)
     out, err = capsys.readouterr()
     assert not out
     assert err.startswith('Error: ')
@@ -173,7 +177,7 @@ def test_cli_init(capsys, skein_config):
 
 
 def test_cli_daemon_not_running(capsys, skein_config):
-    run_command('application ls', exitcode=1)
+    run_command('application ls', error=True)
     out, err = capsys.readouterr()
     assert not out
     assert 'Skein daemon not found' in err
@@ -182,7 +186,7 @@ def test_cli_daemon_not_running(capsys, skein_config):
 def test_cli_daemon(capsys, skein_config):
     with stop_global_daemon():
         # Errors if skein init not run
-        run_command('daemon start', exitcode=1)
+        run_command('daemon start', error=True)
         out, err = capsys.readouterr()
         assert not out
         assert 'skein init' in err
@@ -191,7 +195,7 @@ def test_cli_daemon(capsys, skein_config):
         run_command('init')
 
         # Errors if no daemon currently running
-        run_command('daemon address', exitcode=1)
+        run_command('daemon address', error=True)
         out, err = capsys.readouterr()
         assert not out
         assert 'No skein daemon is running' in err
@@ -237,7 +241,7 @@ def test_cli_application_submit_errors(tmpdir, capsys, global_client):
     spec_path = os.path.join(str(tmpdir), 'spec.yaml')
 
     # No spec at path
-    run_command('application submit %s' % spec_path, exitcode=1)
+    run_command('application submit %s' % spec_path, error=True)
     out, err = capsys.readouterr()
     assert not out
     assert 'No application specification file' in err
@@ -246,7 +250,7 @@ def test_cli_application_submit_errors(tmpdir, capsys, global_client):
     # Error in file
     with open(spec_path, 'w') as f:
         f.write(bad_spec_yaml)
-    run_command('application submit %s' % spec_path, exitcode=1)
+    run_command('application submit %s' % spec_path, error=True)
     out, err = capsys.readouterr()
     assert not out
     assert ('Error: In file %r' % spec_path) in err
@@ -335,7 +339,7 @@ def test_cli_kv(global_client, capsys):
         assert not err
 
         # Get missing key
-        run_command('kv get %s --key fizz' % app_id, exitcode=1)
+        run_command('kv get %s --key fizz' % app_id, error=True)
         out, err = capsys.readouterr()
         assert not out
         assert "Error: Key 'fizz' is not set\n" == err
@@ -376,7 +380,7 @@ def test_cli_container(global_client, capsys):
         wait_for_containers(ac, 2, services=['sleeper'], states=['RUNNING'])
 
         # Errors bubble up nicely
-        run_command('container kill %s --id foobar_0' % app_id, exitcode=1)
+        run_command('container kill %s --id foobar_0' % app_id, error=True)
         out, err = capsys.readouterr()
         assert not out
         assert err.startswith('Error: ')

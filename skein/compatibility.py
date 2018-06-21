@@ -7,8 +7,12 @@ PY2 = sys.version_info.major == 2
 PY3 = not PY2
 
 if PY2:
+    import os
     import types
     from urlparse import urlparse, urlsplit  # noqa
+    unicode = unicode  # noqa
+    string = basestring  # noqa
+    integer = (int, long)  # noqa
 
     # UTC tzinfo singleton
     UTC = type('utc', (datetime.tzinfo,),
@@ -23,8 +27,19 @@ if PY2:
             setattr(cls, func.__name__, types.MethodType(func, None, cls))
             return func
         return bind
+
+    def makedirs(name, mode=0o777, exist_ok=True):
+        try:
+            os.makedirs(name, mode=mode)
+        except OSError:
+            if not exist_ok or not os.path.isdir(name):
+                raise
 else:
     from urllib.parse import urlparse, urlsplit  # noqa
+    from os import makedirs  # noqa
+    unicode = str
+    string = str
+    integer = int
 
     UTC = datetime.timezone.utc
 

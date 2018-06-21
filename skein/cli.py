@@ -26,6 +26,19 @@ class _Formatter(argparse.HelpFormatter):
         pass
 
 
+class _VersionAction(argparse.Action):
+    def __init__(self, option_strings, version=None, dest=argparse.SUPPRESS,
+                 default=argparse.SUPPRESS, help="Show version then exit"):
+        super(_VersionAction, self).__init__(option_strings=option_strings,
+                                             dest=dest, default=default,
+                                             nargs=0, help=help)
+        self.version = version
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(self.version % {'prog': parser.prog})
+        sys.exit(0)
+
+
 def fail(msg, prefix=True):
     if prefix:
         msg = 'Error: %s' % msg
@@ -62,7 +75,8 @@ def node(subs, name, help):
     @subcommand(subs, name, help)
     def f():
         fail(f.parser.format_usage(), prefix=False)
-    f.subs = f.parser.add_subparsers(metavar='command')
+    f.subs = f.parser.add_subparsers(metavar='command', dest='command')
+    f.subs.required = True
     return f
 
 
@@ -71,11 +85,12 @@ entry = argparse.ArgumentParser(prog="skein",
                                 formatter_class=_Formatter,
                                 add_help=False)
 add_help(entry)
-entry.add_argument("--version", action='version',
+entry.add_argument("--version", action=_VersionAction,
                    version='%(prog)s ' + __version__,
                    help="Show version then exit")
 entry.set_defaults(func=lambda: fail(entry.format_usage(), prefix=False))
-entry_subs = entry.add_subparsers(metavar='command')
+entry_subs = entry.add_subparsers(metavar='command', dest='command')
+entry_subs.required = True
 
 # Common arguments
 app_id = arg('app_id', help='The application id', metavar='APP_ID')
@@ -255,8 +270,8 @@ def application_describe(app_id, service=None):
     client = Client.from_global_daemon()
     resp = client.connect(app_id).describe(service=service)
     if service is not None:
-        out = yaml.dump({service: resp.to_dict(skip_nulls=True)},
-                        default_flow_style=False)
+        out = yaml.safe_dump({service: resp.to_dict(skip_nulls=True)},
+                             default_flow_style=False)
     else:
         out = resp.to_yaml(skip_nulls=True)
     print(out)
@@ -324,6 +339,7 @@ def entry_init(force=False):
 
 def main(args=None):
     kwargs = vars(entry.parse_args(args=args))
+    kwargs.pop('command', None)  # Drop unnecessary `command` arg
     func = kwargs.pop('func')
     try:
         with context.set_cli():
