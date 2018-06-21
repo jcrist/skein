@@ -2,7 +2,7 @@ from __future__ import print_function, division, absolute_import
 
 import weakref
 
-from .compatibility import urlparse, PY2, add_method
+from .compatibility import urlparse, PY2, add_method, unicode
 
 
 if PY2:
@@ -94,9 +94,9 @@ def with_finalizers(cls):
     return _with_finalizers(cls)
 
 
-def ensure_bytes(x):
-    if type(x) is not bytes:
-        x = x.encode('utf-8')
+def ensure_unicode(x):
+    if type(x) is not unicode:
+        x = x.decode('utf-8')
     return x
 
 
@@ -105,11 +105,12 @@ def format_list(x):
 
 
 def humanize_timedelta(td):
+    """Pretty-print a timedelta in a human readable format."""
     secs = int(td.total_seconds())
     hours, secs = divmod(secs, 60 * 60)
-    if hours:
-        return '%dh' % hours
     mins, secs = divmod(secs, 60)
+    if hours:
+        return '%dh %dm' % (hours, mins)
     if mins:
         return '%dm' % mins
     return '%ds' % secs
@@ -134,18 +135,12 @@ def format_table(columns, rows):
     else:
         widths = tuple(map(len, columns))
     row_template = ('    '.join('%%-%ds' for _ in columns)) % widths
-    header = row_template % tuple(columns)
+    header = (row_template % tuple(columns)).strip()
     if rows:
         data = '\n'.join((row_template % r).strip() for r in rows)
         return '\n'.join([header, data])
     else:
         return header
-
-
-def normalize_address(addr, scheme='http'):
-    p = urlparse(addr)
-    address = p.netloc if p.scheme else p.path
-    return '%s://%s' % (scheme, address)
 
 
 class cached_property(object):
