@@ -10,7 +10,7 @@ import yaml
 from . import __version__
 from .core import Client, ApplicationClient, Security
 from .exceptions import context, SkeinError, DaemonNotRunningError
-from .model import ApplicationSpec
+from .model import ApplicationSpec, ContainerState, ApplicationState
 from .utils import format_table, humanize_timedelta
 
 
@@ -230,10 +230,15 @@ def application_submit(spec):
 
 @subcommand(application.subs,
             'ls', 'List applications',
+            arg('--all', '-a', action='store_true',
+                help=('Show all applications (default is only active '
+                      'applications)')),
             arg("--state", "-s", action='append',
                 help=('Filter by application states. May be repeated '
                       'to select multiple states.')))
-def application_ls(state=None):
+def application_ls(all=False, state=None):
+    if all and state is None:
+        state = tuple(ApplicationState)
     apps = Client.from_global_daemon().applications(states=state)
     _print_application_status(apps)
 
@@ -294,14 +299,18 @@ def _print_container_status(containers):
 @subcommand(container.subs,
             'ls', 'List containers',
             app_id_or_current,
+            arg('--all', '-a', action='store_true',
+                help='Show all containers (default is only active containers)'),
             arg("--service", action='append',
                 help=('Filter by container services. May be repeated '
                       'to select multiple services.')),
             arg("--state", action='append',
                 help=('Filter by container states. May be repeated '
                       'to select multiple states.')))
-def container_ls(app_id, service=None, state=None):
+def container_ls(app_id, all=False, service=None, state=None):
     app = application_client_from_app_id(app_id)
+    if all and state is None:
+        state = tuple(ContainerState)
     containers = app.containers(states=state, services=service)
     _print_container_status(containers)
 

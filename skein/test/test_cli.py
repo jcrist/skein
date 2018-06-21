@@ -305,6 +305,12 @@ def test_cli_application(tmpdir, capsys, global_client):
         assert not err
         check_is_shutdown(global_client, app_id, 'SUCCEEDED')
 
+        # `skein application ls -a`
+        run_command('application ls -a')
+        out, err = capsys.readouterr()
+        assert not err
+        assert app_id in out
+
 
 def test_cli_kv(global_client, capsys):
     with run_sleeper_app(global_client) as app:
@@ -378,6 +384,12 @@ def test_cli_container(global_client, capsys):
         assert not out
         assert not err
         wait_for_containers(ac, 2, services=['sleeper'], states=['RUNNING'])
+
+        # `skein container ls -a`
+        run_command('container ls %s -a' % app_id)
+        out, err = capsys.readouterr()
+        assert not err
+        assert container_id in out
 
         # Errors bubble up nicely
         run_command('container kill %s --id foobar_0' % app_id, error=True)
