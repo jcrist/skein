@@ -359,9 +359,9 @@ def test_container():
 
     assert c2.runtime == c2.finish_time - c2.start_time
 
-    before = datetime.datetime.now().astimezone(UTC)
+    before = datetime.datetime.now(UTC)
     runtime = c.runtime
-    after = datetime.datetime.now().astimezone(UTC)
+    after = datetime.datetime.now(UTC)
     assert (before - c.start_time) <= runtime <= (after - c.start_time)
 
     assert c3.runtime == datetime.timedelta(0)
@@ -415,7 +415,7 @@ def test_application_report():
     check_basic_methods(a, b)
 
     assert b.runtime == b.finish_time - b.start_time
-    before = datetime.datetime.now().astimezone(UTC)
+    before = datetime.datetime.now(UTC)
     runtime = a.runtime
-    after = datetime.datetime.now().astimezone(UTC)
+    after = datetime.datetime.now(UTC)
     assert (before - a.start_time) <= runtime <= (after - a.start_time)
