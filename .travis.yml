@@ -2,6 +2,8 @@ language: python
 sudo: required
 dist: trusty
 os: linux
+python:
+    - "3.6"
 
 services:
     - docker
