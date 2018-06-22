@@ -43,7 +43,7 @@ before_install:
     # Install the test cluster
     - pip install git+https://github.com/jcrist/hadoop-test-cluster.git
     # Start the test cluster
-    - htcluster startup --kind $CLUSTER_TYPE --mount .:skein
+    - htcluster startup --image $CLUSTER_TYPE:latest --mount .:skein
 
 install:
     - htcluster exec -- ./skein/continuous_integration/travis/docker_install.sh $PYTHON
