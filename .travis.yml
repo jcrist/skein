@@ -68,7 +68,7 @@ script:
     # If everything passes, build (and deploy) the docs
     - |
       if [[ "$DOCS" == "true" ]]; then
-        htcluster exec -- ./continuous_integration/travis/build_docs.sh
+        htcluster exec -- ./skein/continuous_integration/travis/build_docs.sh
         if [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_EVENT_TYPE" == "push" ]]; then
             pip install doctr
             doctr deploy . --built-docs docs/build/html/
