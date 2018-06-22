@@ -12,10 +12,6 @@ fi
 
 pip install grpcio-tools
 
-# Copy and chown the built files, due to docker permissions issue
-cp -r ~/workdir ~/skein
-chown -R testuser:testuser /home/testuser/skein
-
 cd ~/skein
 pip install -v --no-deps -e .
 

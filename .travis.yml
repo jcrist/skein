@@ -1,4 +1,4 @@
-language: generic
+language: python
 sudo: required
 dist: trusty
 os: linux
@@ -38,16 +38,13 @@ before_install:
     - curl -L https://github.com/docker/compose/releases/download/1.19.0/docker-compose-`uname -s`-`uname -m` > docker-compose
     - chmod +x docker-compose
     - sudo mv docker-compose /usr/local/bin
-    # Start the docker cluster
-    - ./continuous_integration/docker_hadoop/hcluster startup $CLUSTER_TYPE -w .
+    # Install the test cluster
+    - pip install git+https://github.com/jcrist/hadoop-test-cluster.git
+    # Start the test cluster
+    - htcluster startup --kind $CLUSTER_TYPE --mount .:skein
 
 install:
-    - |
-      if [[ "$DOCS" == "true" ]]; then
-        source continuous_integration/travis/install_conda.sh
-        ./continuous_integration/travis/install.sh
-      fi
-    - ./continuous_integration/docker_hadoop/hcluster exec -- ./workdir/continuous_integration/travis/docker_install.sh $PYTHON
+    - htcluster exec -- ./skein/continuous_integration/travis/docker_install.sh $PYTHON
 
 script:
     - set -e
@@ -60,16 +57,16 @@ script:
     # kinit if needed
     - |
       if [[ "$CLUSTER_TYPE" == "kerberos" ]]; then
-        ./continuous_integration/docker_hadoop/hcluster exec -- kinit testuser -kt testuser.keytab
+        htcluster exec -- kinit testuser -kt testuser.keytab
       fi
     # Run py.test inside docker
-    - ./continuous_integration/docker_hadoop/hcluster exec -- $CONDA_ENV/bin/py.test skein/ -vv
+    - htcluster exec -- $CONDA_ENV/bin/py.test skein/ -vv
     # linting
-    - ./continuous_integration/docker_hadoop/hcluster exec -- $CONDA_ENV/bin/flake8 skein/
+    - htcluster exec -- $CONDA_ENV/bin/flake8 skein/
     # If everything passes, build (and deploy) the docs
     - |
       if [[ "$DOCS" == "true" ]]; then
-        ./continuous_integration/travis/build_docs.sh
+        htcluster exec -- ./continuous_integration/travis/build_docs.sh
         if [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_EVENT_TYPE" == "push" ]]; then
             pip install doctr
             doctr deploy . --built-docs docs/build/html/
