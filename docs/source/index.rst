@@ -24,7 +24,13 @@ needs.
 Installation
 ------------
 
-**Install from pypi:**
+**Install with Conda:**
+
+.. code::
+
+    conda install -c conda-forge skein
+
+**Install with Pip:**
 
 .. code::
 
