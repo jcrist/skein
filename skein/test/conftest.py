@@ -18,7 +18,7 @@ def security(tmpdir_factory):
 @pytest.fixture(scope="session")
 def has_kerberos_enabled():
     command = ["hdfs", "getconf", "-confKey", "hadoop.security.authentication"]
-    return subprocess.check_output(command).decode() == "kerberos"
+    return "kerberos" in subprocess.check_output(command).decode()
 
 
 @pytest.fixture(scope="session")
@@ -97,5 +97,11 @@ def wait_for_containers(ac, n, **kwargs):
     return containers
 
 
-def get_logs(app_id):
-    return subprocess.check_output(["yarn", "logs", "-applicationId", app_id]).decode()
+def get_logs(app_id, tries=3):
+    command = ["yarn", "logs", "-applicationId", app_id]
+    for i in range(tries - 1):
+        try:
+            return subprocess.check_output(command).decode()
+        except Exception:
+            pass
+    return subprocess.check_output(command).decode()
