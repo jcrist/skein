@@ -531,10 +531,15 @@ public class ApplicationMaster {
     public synchronized void initialize() throws IOException {
       LOG.info("INTIALIZING: " + name);
       // Add appmaster address to environment
-      service.getEnv().put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
+      Map<String, String> env = service.getEnv();
+      env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
+      if (ugi.isSecurityEnabled()) {
+        // Add HADOOP_USER_NAME to environment for *simple* authentication only
+        env.put("HADOOP_USER_NAME", ugi.getUserName());
+      }
 
       ctx = ContainerLaunchContext.newInstance(
-          service.getLocalResources(), service.getEnv(), service.getCommands(),
+          service.getLocalResources(), env, service.getCommands(),
           null, tokens, null);
 
       // Request initial containers

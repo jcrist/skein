@@ -16,6 +16,12 @@ def security(tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
+def has_kerberos_enabled():
+    command = ["hdfs", "getconf", "-confKey", "hadoop.security.authentication"]
+    return subprocess.check_output(command).decode() == "kerberos"
+
+
+@pytest.fixture(scope="session")
 def kinit():
     keytab = "/home/testuser/testuser.keytab"
     if os.path.exists(keytab):
@@ -53,9 +59,22 @@ def check_is_shutdown(client, app_id, status=None):
         assert client.status(app_id).final_status == status
 
 
+def wait_for_success(app, timeout=30):
+    while timeout:
+        state = app.status().state
+        if state == 'FINISHED':
+            return
+        elif state in ['FAILED', 'KILLED']:
+            assert False, "Application state = %r, expected 'FINISHED'" % state
+        time.sleep(0.1)
+        timeout -= 0.1
+    else:
+        assert False, "Application timed out"
+
+
 @contextmanager
-def run_sleeper_app(client):
-    app = client.submit(sleep_until_killed)
+def run_application(client, spec=sleep_until_killed):
+    app = client.submit(spec)
 
     try:
         yield app
@@ -76,3 +95,7 @@ def wait_for_containers(ac, n, **kwargs):
         assert False, "timeout"
 
     return containers
+
+
+def get_logs(app_id):
+    return subprocess.check_output(["yarn", "logs", "-applicationId", app_id]).decode()
