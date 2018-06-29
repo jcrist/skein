@@ -8,7 +8,7 @@ import yaml
 
 import skein
 from skein.cli import main
-from skein.test.conftest import (run_sleeper_app, sleep_until_killed,
+from skein.test.conftest import (run_application, sleep_until_killed,
                                  check_is_shutdown, wait_for_containers)
 
 
@@ -313,7 +313,7 @@ def test_cli_application(tmpdir, capsys, global_client):
 
 
 def test_cli_kv(global_client, capsys):
-    with run_sleeper_app(global_client) as app:
+    with run_application(global_client) as app:
         # Wait until started
         app.connect()
         app_id = app.app_id
@@ -358,7 +358,7 @@ def test_cli_kv(global_client, capsys):
 
 
 def test_cli_container(global_client, capsys):
-    with run_sleeper_app(global_client) as app:
+    with run_application(global_client) as app:
         app_id = app.app_id
 
         ac = app.connect()

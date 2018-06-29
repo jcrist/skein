@@ -97,7 +97,7 @@ def test_with_finalizers_del_warns_on_exception(capsys):
     assert log == [('a', 2), ('a', 1)]
 
 
-def test_with_finalizers_finalize_raises_on_exception():
+def test_with_finalizers_finalize_raises_on_exception(capsys):
     log = []
 
     def finalizer(tag):
@@ -110,6 +110,16 @@ def test_with_finalizers_finalize_raises_on_exception():
         a._finalize()
 
     assert log == [('a', 2)]
+
+    # doesn't raise again
+    a._finalize()
+
+    # deleting object runs second finalizer, prints to stderr
+    del a
+    out, err = capsys.readouterr()
+
+    assert not out
+    assert "('a', 1)" in err
 
 
 def test_humanize_timedelta():

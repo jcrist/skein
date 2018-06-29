@@ -22,6 +22,8 @@ SKEIN_JAVA_DIR = os.path.join(ROOT_DIR, 'skein', 'java')
 SKEIN_JAR = os.path.join(SKEIN_JAVA_DIR, 'skein.jar')
 SKEIN_PROTO_DIR = os.path.join(ROOT_DIR, 'skein', 'proto')
 
+PY2 = sys.version_info.major == 2
+
 
 class build_proto(Command):
     description = "build protobuf artifacts"
@@ -150,6 +152,15 @@ else:
     setup_requires = []
 
 
+install_requires = ['grpcio>=1.11.0',
+                    'protobuf>=3.5.0',
+                    'pyyaml',
+                    'cryptography']
+
+if PY2:
+    install_requires.append('backports.weakref')
+
+
 # Due to quirks in setuptools/distutils dependency ordering, to get the java
 # and protobuf sources to build automatically in most cases, we need to check
 # for them in multiple locations. This is unfortunate, but seems necessary.
@@ -189,9 +200,6 @@ setup(name='skein',
         [console_scripts]
         skein=skein.cli:main
       ''',
-      install_requires=['grpcio>=1.11.0',
-                        'protobuf>=3.5.0',
-                        'pyyaml',
-                        'cryptography'],
+      install_requires=install_requires,
       setup_requires=setup_requires,
       zip_safe=False)

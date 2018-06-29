@@ -10,7 +10,8 @@ import pytest
 
 import skein
 from skein.exceptions import FileNotFoundError, FileExistsError
-from skein.test.conftest import run_sleeper_app, wait_for_containers
+from skein.test.conftest import (run_application, wait_for_containers,
+                                 wait_for_success, get_logs)
 
 
 def test_security(tmpdir):
@@ -90,7 +91,7 @@ def test_client_closed_when_reference_dropped(security, kinit):
 
 
 def test_simple_app(client):
-    with run_sleeper_app(client) as app:
+    with run_application(client) as app:
         # Nest manager here to call cleanup manually in this test
         with app:
             # wait for app to start
@@ -128,7 +129,7 @@ def test_simple_app(client):
 
 
 def test_shutdown_app(client):
-    with run_sleeper_app(client) as app:
+    with run_application(client) as app:
         ac = app.connect()
 
         ac.shutdown(status='SUCCEEDED')
@@ -137,7 +138,7 @@ def test_shutdown_app(client):
 
 
 def test_describe(client):
-    with run_sleeper_app(client) as app:
+    with run_application(client) as app:
         ac = app.connect()
 
         s = ac.describe(service='sleeper')
@@ -148,7 +149,7 @@ def test_describe(client):
 
 
 def test_key_value(client):
-    with run_sleeper_app(client) as app:
+    with run_application(client) as app:
         ac = app.connect()
 
         assert isinstance(ac.kv, MutableMapping)
@@ -194,7 +195,7 @@ def test_key_value(client):
 
 
 def test_dynamic_containers(client):
-    with run_sleeper_app(client) as app:
+    with run_application(client) as app:
         ac = app.connect()
 
         initial = wait_for_containers(ac, 1, states=['RUNNING'])
@@ -262,3 +263,24 @@ def test_dynamic_containers(client):
         # Can't get containers for non-existant service
         with pytest.raises(ValueError):
             ac.containers(services=['sleeper', 'missing'])
+
+
+def test_container_permissions(client, has_kerberos_enabled):
+    commands = ['echo "USER_ENV=[$USER]"',
+                'echo "LOGIN_ID=[$(whoami)]"',
+                'hdfs dfs -touchz /user/testuser/test_container_permissions']
+    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+                            commands=commands)
+    spec = skein.ApplicationSpec(name="test_container_permissions",
+                                 queue="default",
+                                 services={'service': service})
+
+    with run_application(client, spec=spec) as app:
+        wait_for_success(app)
+
+    logs = get_logs(app.app_id)
+    assert "USER_ENV=[testuser]" in logs
+    if has_kerberos_enabled:
+        assert "LOGIN_ID=[testuser]" in logs
+    else:
+        assert "LOGIN_ID=[yarn]" in logs
