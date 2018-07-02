@@ -507,7 +507,11 @@ class File(Base):
                 if origin is not None:
                     path = os.path.normpath(os.path.join(origin, url.path))
                 else:
-                    raise ValueError("paths must be absolute")
+                    msg = ("Environment paths must be absolute. \n"
+                           "You provided %s\n"
+                           "Perhaps you meant %s" %
+                           (url.path, os.path.abspath(url.path)))
+                    raise ValueError(msg)
             else:
                 path = url.path
             return 'file://%s%s' % (url.netloc, path)
