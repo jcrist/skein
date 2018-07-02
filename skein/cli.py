@@ -43,6 +43,7 @@ def fail(msg, prefix=True):
     if prefix:
         msg = 'Error: %s' % msg
     print(msg, file=sys.stderr)
+    context.is_cli = False  # contextmanager skipped by SystemExit
     sys.exit(1)
 
 

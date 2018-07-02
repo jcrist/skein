@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 import skein
+from skein.exceptions import context
 from skein.cli import main
 from skein.test.conftest import (run_application, sleep_until_killed,
                                  check_is_shutdown, wait_for_containers,
@@ -29,6 +30,7 @@ services:
 def run_command(command, error=False):
     with pytest.raises(SystemExit) as exc:
         main([arg for arg in command.split(' ') if arg])
+    assert not context.is_cli
     if error:
         assert exc.value.code != 0
     else:
