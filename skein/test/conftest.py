@@ -10,6 +10,23 @@ import pytest
 import skein
 
 
+@contextmanager
+def set_skein_config(tmpdir):
+    tmpdir = str(tmpdir)
+    old = skein.core.CONFIG_DIR
+    try:
+        skein.core.CONFIG_DIR = tmpdir
+        yield tmpdir
+    finally:
+        skein.core.CONFIG_DIR = old
+
+
+@pytest.fixture
+def skein_config(tmpdir_factory):
+    with set_skein_config(tmpdir_factory.mktemp('config')) as config:
+        yield config
+
+
 @pytest.fixture(scope="session")
 def security(tmpdir_factory):
     return skein.Security.from_new_directory(str(tmpdir_factory.mktemp('security')))

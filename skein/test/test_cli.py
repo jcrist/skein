@@ -9,7 +9,8 @@ import yaml
 import skein
 from skein.cli import main
 from skein.test.conftest import (run_application, sleep_until_killed,
-                                 check_is_shutdown, wait_for_containers)
+                                 check_is_shutdown, wait_for_containers,
+                                 set_skein_config)
 
 
 bad_spec_yaml = """
@@ -44,28 +45,11 @@ def ensure_app_shutdown(client, app_id):
 
 
 @contextmanager
-def set_skein_config(tmpdir):
-    tmpdir = str(tmpdir)
-    old = skein.core.CONFIG_DIR
-    try:
-        skein.core.CONFIG_DIR = tmpdir
-        yield tmpdir
-    finally:
-        skein.core.CONFIG_DIR = old
-
-
-@contextmanager
 def stop_global_daemon():
     try:
         yield
     finally:
         run_command('daemon stop')
-
-
-@pytest.fixture
-def skein_config(tmpdir_factory):
-    with set_skein_config(tmpdir_factory.mktemp('config')) as config:
-        yield config
 
 
 @pytest.fixture(scope='module')
@@ -185,25 +169,16 @@ def test_cli_daemon_not_running(capsys, skein_config):
 
 def test_cli_daemon(capsys, skein_config):
     with stop_global_daemon():
-        # Errors if skein init not run
-        run_command('daemon start', error=True)
-        out, err = capsys.readouterr()
-        assert not out
-        assert 'skein init' in err
-
-        # Initialize skein
-        run_command('init')
-
         # Errors if no daemon currently running
         run_command('daemon address', error=True)
         out, err = capsys.readouterr()
         assert not out
         assert 'No skein daemon is running' in err
 
-        # Start daemon
+        # Start daemon without init
         run_command('daemon start')
         out, err = capsys.readouterr()
-        assert not err
+        assert "Skein global security credentials not found" in err
         assert 'localhost' in out
 
         # Daemon start is idempotent

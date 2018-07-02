@@ -39,6 +39,22 @@ def test_security(tmpdir):
         skein.Security.from_directory(path)
 
 
+def test_security_auto_inits(skein_config):
+    with pytest.warns(None) as rec:
+        sec = skein.Security.from_default()
+
+    assert len(rec) == 1
+    assert 'Skein global security credentials not found' in str(rec[0])
+    assert os.path.exists(sec.cert_path)
+    assert os.path.exists(sec.key_path)
+
+    with pytest.warns(None) as rec:
+        sec2 = skein.Security.from_default()
+
+    assert not rec
+    assert sec == sec2
+
+
 def pid_exists(pid):
     try:
         os.kill(pid, 0)
