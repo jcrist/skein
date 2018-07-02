@@ -16,9 +16,9 @@ import grpc
 
 from . import proto
 from .compatibility import PY2, makedirs
-from .exceptions import (context, FileNotFoundError, SkeinConfigurationError,
-                         ConnectionError, ApplicationNotRunningError,
-                         ApplicationError, DaemonNotRunningError, DaemonError)
+from .exceptions import (context, FileNotFoundError, ConnectionError,
+                         ApplicationNotRunningError, ApplicationError,
+                         DaemonNotRunningError, DaemonError)
 from .model import (ApplicationSpec, Service, ApplicationReport,
                     ApplicationState, ContainerState, Container,
                     FinalStatus)
@@ -66,9 +66,9 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
             return cls.from_directory(CONFIG_DIR)
         except FileNotFoundError:
             pass
-        raise SkeinConfigurationError(
-            "Skein global configuration directory is not initialized. "
-            "Please run ``skein init``.")
+        context.warn("Skein global security credentials not found, writing now "
+                     "to %r." % CONFIG_DIR)
+        return cls.from_new_directory(directory=CONFIG_DIR)
 
     @classmethod
     def from_directory(cls, directory):

@@ -9,19 +9,6 @@ using the commandline -- for more information please see the `API <api.html>`__
 or `CLI <cli.html>`__ documentation.
 
 
-Initialize Configuration
-------------------------
-
-Skein relies on a ``.skein`` directory in your home directory to store security
-credentials and runtime state. To initialize this directory, run `skein init
-<cli.html#skein-init>`__. Note that this only needs to be done once upon
-install.
-
-.. code::
-
-    $ skein init
-
-
 Kinit (optional)
 ----------------
 
