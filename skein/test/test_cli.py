@@ -57,7 +57,7 @@ def stop_global_daemon():
 @pytest.fixture(scope='module')
 def global_client(kinit, tmpdir_factory):
     with set_skein_config(tmpdir_factory.mktemp('config')):
-        run_command('init')
+        run_command('config gencerts')
         try:
             run_command('daemon start')
             yield skein.Client.from_global_daemon()
@@ -67,7 +67,8 @@ def global_client(kinit, tmpdir_factory):
 
 @pytest.mark.parametrize('command',
                          ['',
-                          'init',
+                          'config',
+                          'config gencerts',
                           'daemon',
                           'daemon start',
                           'daemon stop',
@@ -114,9 +115,9 @@ def test_cli_version(capsys):
     assert skein.__version__ in out
 
 
-def test_cli_init(capsys, skein_config):
-    # Init on clean directory
-    run_command('init')
+def test_cli_config_gencerts(capsys, skein_config):
+    # Generate certificates in clean directory
+    run_command('config gencerts')
     out, err = capsys.readouterr()
     assert not err
     assert not out
@@ -129,7 +130,7 @@ def test_cli_init(capsys, skein_config):
         key = f.read()
 
     # Running again fails due to missing --force
-    run_command('init', error=True)
+    run_command('config gencerts', error=True)
     out, err = capsys.readouterr()
     assert not out
     assert err.startswith('Error: ')
@@ -146,7 +147,7 @@ def test_cli_init(capsys, skein_config):
     assert key == key2
 
     # Run again with --force
-    run_command('init --force')
+    run_command('config gencerts --force')
     out, err = capsys.readouterr()
     assert not out
     assert not err
@@ -177,7 +178,7 @@ def test_cli_daemon(capsys, skein_config):
         assert not out
         assert 'No skein daemon is running' in err
 
-        # Start daemon without init
+        # Start daemon without generating certificates
         run_command('daemon start')
         out, err = capsys.readouterr()
         assert "Skein global security credentials not found" in err
