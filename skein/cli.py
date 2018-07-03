@@ -334,17 +334,32 @@ def container_scale(app_id, service, number):
     application_client_from_app_id(app_id).scale(service, number)
 
 
-################
-# INIT COMMAND #
-################
+##################
+# CONFIG COMMAND #
+##################
+
+config = node(entry_subs, 'config', 'Manage skein configuration')
 
 
+@subcommand(config.subs,
+            'gencerts',
+            'Generate security credentials. Creates a self-signed TLS '
+            'key/certificate pair for securing Skein communication, and writes '
+            'it to the skein configuration directory ("~.skein/" by default).',
+            arg('--force', '-f', action='store_true',
+                help='Overwrite existing configuration'))
+def config_gencerts(force=False):
+    Security.from_new_directory(force=force)
+
+
+# deprecated
 @subcommand(entry_subs,
-            'init', 'Initialize skein configuration',
+            'init', '[deprecated]',
             arg('--force', '-f', action='store_true',
                 help='Overwrite existing configuration'))
 def entry_init(force=False):
-    Security.from_new_directory(force=force)
+    context.warn("Deprecated, will be removed in next release")
+    config_gencerts(force=force)
 
 
 def main(args=None):

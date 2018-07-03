@@ -84,10 +84,10 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
     def from_new_directory(cls, directory=None, force=False):
         """Create a Security object from a new certificate/key pair.
 
-        This is equivalent to the cli command ``skein init`` with the option to
-        specify an alternate directory *if needed*. Should only need to be
-        called once per user upon install. Call again with ``force=True`` to
-        generate new TLS keys and certificates.
+        This is equivalent to the cli command ``skein config gencerts`` with
+        the option to specify an alternate directory *if needed*. Should only
+        need to be called once per user upon install. Call again with
+        ``force=True`` to generate new TLS keys and certificates.
 
         Parameters
         ----------
