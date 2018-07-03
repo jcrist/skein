@@ -110,9 +110,6 @@ def test_file_invariants():
     with pytest.raises(ValueError):
         File('/foo/bar.zip', visibility='invalid')
 
-    with pytest.raises(ValueError):
-        File('foo/bar.zip')
-
     fil = File(source='/test/path')
 
     with pytest.raises(ValueError):
@@ -120,6 +117,19 @@ def test_file_invariants():
 
     with pytest.raises(ValueError):
         fil.visibility = 'invalid'
+
+    # relative paths
+    sol = 'file://%s' % os.path.join(os.getcwd(), 'foo/bar.zip')
+    assert File('foo/bar.zip').source == sol
+
+    # relative path, with _origin specified (only used when reading from file)
+    f = File.from_dict({'source': '../../file'}, _origin='/path/to/origin/spot')
+    assert f.source == 'file:///path/to/file'
+
+    # scheme specified
+    assert File('hdfs:///foo/bar.zip').source == 'hdfs:///foo/bar.zip'
+    assert (File('hdfs://foo.com:9000/foo/bar.zip').source ==
+            'hdfs://foo.com:9000/foo/bar.zip')
 
     assert (File(source='/test/path', type='file') ==
             File(source='/test/path', type='FILE'))
