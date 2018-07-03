@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Quickstart &#8212; Skein 0.0.3+5.g43a3861 documentation</title>
+    <title>Quickstart &#8212; Skein 0.0.4 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -48,11 +48,12 @@ make sure you have an active ticket-granting-ticket before continuing:</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="start-the-skein-daemon">
-<h2>Start the Skein Daemon<a class="headerlink" href="#start-the-skein-daemon" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="start-the-skein-daemon-optional">
+<h2>Start the Skein Daemon (optional)<a class="headerlink" href="#start-the-skein-daemon-optional" title="Permalink to this headline">¶</a></h2>
 <p>To communicate with the YARN Resource manager, Skein uses a background daemon
-process written in Java. How this process is managed is configurable, but for
-most users the pattern will be:</p>
+process written in Java. Since this process can be slow to start, sometimes it
+can be nice to start it once and have it persist through all CLI calls. This
+may look like:</p>
 <ol class="arabic simple">
 <li>Start the Skein daemon</li>
 <li>Run yarn application/applications</li>
@@ -63,6 +64,8 @@ most users the pattern will be:</p>
 localhost:12345
 </pre></div>
 </div>
+<p>Note that if you don’t start the daemon process, one will be started for you,
+but not persisted between calls.</p>
 </div>
 <div class="section" id="write-an-application-specification">
 <h2>Write an Application Specification<a class="headerlink" href="#write-an-application-specification" title="Permalink to this headline">¶</a></h2>
@@ -157,9 +160,10 @@ application_1526497750451_0009    hello_world    KILLED    KILLED    0          
 </pre></div>
 </div>
 </div>
-<div class="section" id="stop-the-skein-daemon">
-<h2>Stop the Skein Daemon<a class="headerlink" href="#stop-the-skein-daemon" title="Permalink to this headline">¶</a></h2>
-<p>Once you’ve completed your work, you can shutdown the Skein daemon. This isn’t
+<div class="section" id="stop-the-skein-daemon-optional">
+<h2>Stop the Skein Daemon (optional)<a class="headerlink" href="#stop-the-skein-daemon-optional" title="Permalink to this headline">¶</a></h2>
+<p>If you started the Daemon process (see <a class="reference internal" href="#start-the-skein-daemon-optional">Start the Skein Daemon (optional)</a>
+above), you’ll probably want to shut it down when you’re done.  This isn’t
 strictly necessary (the daemon can run for long periods), but helps keep
 resource usage on the edge node low.</p>
 <p>To do this from the command line, use <a class="reference external" href="cli.html#skein-daemon-stop">skein daemon stop</a>.</p>
@@ -210,12 +214,12 @@ resource usage on the edge node low.</p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#kinit-optional">Kinit (optional)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#start-the-skein-daemon">Start the Skein Daemon</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#start-the-skein-daemon-optional">Start the Skein Daemon (optional)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#write-an-application-specification">Write an Application Specification</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#submit-the-application">Submit the Application</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#query-existing-applications">Query existing applications</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#kill-a-running-application">Kill a running application</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#stop-the-skein-daemon">Stop the Skein Daemon</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stop-the-skein-daemon-optional">Stop the Skein Daemon (optional)</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="specification.html">Specification</a></li>
