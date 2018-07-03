@@ -296,7 +296,7 @@ class Base(object):
 
     def _check_is_dict_of(self, field, key, val):
         if not is_dict_of(getattr(self, field), key, val):
-            msg = "%s must be a list of %s -> %s"
+            msg = "%s must be a dict of %s -> %s"
             raise context.TypeError(msg % (field, typename(key), typename(val)))
 
     def _check_is_bounded_int(self, field, min=0, nullable=False):
@@ -507,7 +507,7 @@ class File(Base):
                 if origin is not None:
                     path = os.path.normpath(os.path.join(origin, url.path))
                 else:
-                    raise ValueError("paths must be absolute")
+                    path = os.path.abspath(url.path)
             else:
                 path = url.path
             return 'file://%s%s' % (url.netloc, path)
