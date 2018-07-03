@@ -163,11 +163,11 @@ def test_cli_config_gencerts(capsys, skein_config):
     assert key != key2
 
 
-def test_cli_daemon_not_running(capsys, skein_config):
-    run_command('application ls', error=True)
-    out, err = capsys.readouterr()
-    assert not out
-    assert 'Skein daemon not found' in err
+def test_works_if_cli_daemon_not_running(capfd, skein_config):
+    run_command('application ls')
+    out, err = capfd.readouterr()
+    assert 'APPLICATION_ID' in out
+    assert 'INFO' in err  # daemon logs go to stderr
 
 
 def test_cli_daemon(capsys, skein_config):

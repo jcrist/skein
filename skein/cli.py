@@ -102,10 +102,17 @@ container_id = arg('--id', required=True,
                    help='The container id', metavar='CONTAINER_ID')
 
 
+def get_daemon():
+    try:
+        return Client.from_global_daemon()
+    except DaemonNotRunningError:
+        return Client()
+
+
 def application_client_from_app_id(app_id):
     if app_id == 'current':
         return ApplicationClient.from_current()
-    return Client.from_global_daemon().connect(app_id)
+    return get_daemon().connect(app_id)
 
 
 ###################
@@ -225,7 +232,7 @@ def application_submit(spec):
         # Prettify expected errors, let rest bubble up
         fail('In file %r, %s' % (spec, exc))
 
-    app = Client.from_global_daemon().submit(spec)
+    app = get_daemon().submit(spec)
     print(app.app_id)
 
 
@@ -240,7 +247,7 @@ def application_submit(spec):
 def application_ls(all=False, state=None):
     if all and state is None:
         state = tuple(ApplicationState)
-    apps = Client.from_global_daemon().applications(states=state)
+    apps = get_daemon().applications(states=state)
     _print_application_status(apps)
 
 
@@ -248,7 +255,7 @@ def application_ls(all=False, state=None):
             'status', 'Status of a Skein application',
             app_id)
 def application_status(app_id):
-    apps = Client.from_global_daemon().status(app_id)
+    apps = get_daemon().status(app_id)
     _print_application_status([apps])
 
 
@@ -256,7 +263,7 @@ def application_status(app_id):
             'kill', 'Kill a Skein application',
             app_id)
 def application_kill(app_id):
-    Client.from_global_daemon().kill(app_id)
+    get_daemon().kill(app_id)
 
 
 @subcommand(application.subs,
@@ -273,7 +280,7 @@ def application_shutdown(app_id, status):
             app_id,
             arg('--service', '-s', help='Service name'))
 def application_describe(app_id, service=None):
-    client = Client.from_global_daemon()
+    client = get_daemon()
     resp = client.connect(app_id).describe(service=service)
     if service is not None:
         out = yaml.safe_dump({service: resp.to_dict(skip_nulls=True)},
@@ -371,8 +378,6 @@ def main(args=None):
             func(**kwargs)
     except KeyError as exc:
         fail("Key %s is not set" % str(exc))
-    except DaemonNotRunningError as exc:
-        fail("Skein daemon not found, please run `skein daemon start`")
     except SkeinError as exc:
         fail(str(exc))
     except Exception as exc:
