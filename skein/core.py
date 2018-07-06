@@ -19,9 +19,8 @@ from .compatibility import PY2, makedirs
 from .exceptions import (context, FileNotFoundError, ConnectionError,
                          ApplicationNotRunningError, ApplicationError,
                          DaemonNotRunningError, DaemonError)
-from .model import (ApplicationSpec, Service, ApplicationReport,
-                    ApplicationState, ContainerState, Container,
-                    FinalStatus)
+from .model import (ApplicationSpec, ApplicationReport, ApplicationState,
+                    ContainerState, Container, FinalStatus)
 from .utils import cached_property, with_finalizers
 
 
@@ -300,8 +299,7 @@ class Client(_ClientBase):
     Examples
     --------
     >>> with skein.Client() as client:
-    ...     print(client.status(app_id='application_1526134340424_0012'))
-    ApplicationReport<name='demo'>
+    ...     app_id = client.submit('spec.yaml')
     """
     _server_name = 'daemon'
     _server_error = DaemonError
@@ -461,7 +459,7 @@ class Client(_ClientBase):
         return ApplicationClient('%s:%d' % (report.host, report.port),
                                  security=self.security)
 
-    def applications(self, states=None):
+    def get_applications(self, states=None):
         """Get the status of current skein applications.
 
         Parameters
@@ -478,7 +476,7 @@ class Client(_ClientBase):
         --------
         Get all the finished and failed applications
 
-        >>> client.status(states=['FINISHED', 'FAILED'])
+        >>> client.get_applications(states=['FINISHED', 'FAILED'])
         [ApplicationReport<name='demo'>,
          ApplicationReport<name='dask'>,
          ApplicationReport<name='demo'>]
@@ -495,13 +493,13 @@ class Client(_ClientBase):
         return sorted((ApplicationReport.from_protobuf(r) for r in resp.reports),
                       key=lambda x: x.id)
 
-    def status(self, app_id):
-        """Get the status of a skein application.
+    def application_report(self, app_id):
+        """Get a report on the status of a skein application.
 
         Parameters
         ----------
         app_id : str
-            A single application id to check the status of.
+            The id of the application.
 
         Returns
         -------
@@ -509,15 +507,13 @@ class Client(_ClientBase):
 
         Examples
         --------
-        Get the status of a single application
-
-        >>> client.status(app_id='application_1526134340424_0012')
+        >>> client.application_report('application_1526134340424_0012')
         ApplicationReport<name='demo'>
         """
         resp = self._call('getStatus', proto.Application(id=app_id))
         return ApplicationReport.from_protobuf(resp)
 
-    def kill(self, app_id):
+    def kill_application(self, app_id):
         """Kill an application.
 
         Parameters
@@ -631,26 +627,15 @@ class ApplicationClient(_ClientBase):
         """
         return KeyValueStore(self)
 
-    def describe(self, service=None):
-        """Information about the running application.
-
-        Parameters
-        ----------
-        service : str, optional
-            If provided, returns information on that service.
+    def get_specification(self):
+        """Get the specification for the running application.
 
         Returns
         -------
-        spec : ApplicationSpec or Service
-            Returns a service if ``service`` is specified, otherwise returns
-            the whole ``ApplicationSpec``.
+        spec : ApplicationSpec
         """
-        if service is None:
-            resp = self._call('getApplicationSpec', proto.Empty())
-            return ApplicationSpec.from_protobuf(resp)
-        else:
-            resp = self._call('getService', proto.ServiceRequest(name=service))
-            return Service.from_protobuf(resp)
+        resp = self._call('getApplicationSpec', proto.Empty())
+        return ApplicationSpec.from_protobuf(resp)
 
     def scale(self, service, instances):
         """Scale a service to a requested number of instances.
@@ -698,7 +683,7 @@ class ApplicationClient(_ClientBase):
         raise FileNotFoundError(
             "Failed to resolve .skein.{crt,pem} in 'LOCAL_DIRS'")
 
-    def containers(self, services=None, states=None):
+    def get_containers(self, services=None, states=None):
         """Get information on containers in this application.
 
         Parameters
@@ -724,7 +709,7 @@ class ApplicationClient(_ClientBase):
         return sorted((Container.from_protobuf(c) for c in resp.containers),
                       key=lambda x: (x.service_name, x.instance))
 
-    def kill(self, id):
+    def kill_container(self, id):
         """Kill a container.
 
         Parameters
@@ -756,22 +741,22 @@ class Application(object):
     def __repr__(self):
         return 'Application<id=%r>' % self.app_id
 
-    def status(self):
-        """The application status.
+    def report(self):
+        """A report on the application status.
 
         Returns
         -------
         status : ApplicationReport
         """
-        return self._client.status(self.app_id)
+        return self._client.application_report(self.app_id)
 
     def is_running(self):
         """Return True if the application state is RUNNING"""
-        return self.status().state == ApplicationState.RUNNING
+        return self.report().state == ApplicationState.RUNNING
 
     def kill(self):
         """Kill the application."""
-        return self._client.kill(self.app_id)
+        return self._client.kill_application(self.app_id)
 
     def connect(self, wait=True):
         """Connect to the application.
@@ -799,7 +784,7 @@ class Application(object):
 
     def __exit__(self, *args):
         try:
-            if self.status().state not in {ApplicationState.FINISHED,
+            if self.report().state not in {ApplicationState.FINISHED,
                                            ApplicationState.FAILED,
                                            ApplicationState.KILLED}:
                 self.kill()

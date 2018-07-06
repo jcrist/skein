@@ -68,14 +68,14 @@ def test_client(security, kinit, tmpdir):
 
     with skein.Client(security=security, log=logpath) as client:
         # smoketests
-        client.applications()
+        client.get_applications()
         repr(client)
 
         client2 = skein.Client(address=client.address, security=security)
         assert client2._proc is None
 
         # smoketests
-        client2.applications()
+        client2.get_applications()
         repr(client2)
 
     # Process was definitely closed
@@ -88,7 +88,7 @@ def test_client(security, kinit, tmpdir):
 
     # Connection error on closed client
     with pytest.raises(skein.ConnectionError):
-        client2.applications()
+        client2.get_applications()
 
     # Connection error on connecting to missing daemon
     with pytest.raises(skein.ConnectionError):
@@ -123,24 +123,24 @@ def test_simple_app(client):
             repr(app)
             repr(ac)
 
-            report = app.status()
-            running_apps = client.applications()
+            report = app.report()
+            running_apps = client.get_applications()
             assert report.id in {a.id for a in running_apps}
 
             assert report.state == 'RUNNING'
             assert report.final_status == 'UNDEFINED'
 
-    report = app.status()
+    report = app.report()
     assert report.state == 'KILLED'
     assert report.final_status == 'KILLED'
 
     with pytest.raises(skein.ConnectionError):
         app.connect()
 
-    running_apps = client.applications()
+    running_apps = client.get_applications()
     assert report.id not in {a.id for a in running_apps}
 
-    killed_apps = client.applications(states=['killed'])
+    killed_apps = client.get_applications(states=['killed'])
     assert report.id in {a.id for a in killed_apps}
 
 
@@ -150,18 +150,15 @@ def test_shutdown_app(client):
 
         ac.shutdown(status='SUCCEEDED')
 
-    assert app.status().final_status == 'SUCCEEDED'
+    assert app.report().final_status == 'SUCCEEDED'
 
 
-def test_describe(client):
+def test_get_specification(client):
     with run_application(client) as app:
         ac = app.connect()
-
-        s = ac.describe(service='sleeper')
-        assert isinstance(s, skein.Service)
-        a = ac.describe()
+        a = ac.get_specification()
         assert isinstance(a, skein.ApplicationSpec)
-        assert a.services['sleeper'] == s
+        assert 'sleeper' in a.services
 
 
 def test_key_value(client):
@@ -244,16 +241,16 @@ def test_dynamic_containers(client):
         assert current[1].instance == 3
 
         # Manually kill instance 3
-        ac.kill('sleeper_3')
-        current = ac.containers()
+        ac.kill_container('sleeper_3')
+        current = ac.get_containers()
         assert len(current) == 1
         assert current[0].instance == 2
 
         # Fine to kill already killed container
-        ac.kill('sleeper_1')
+        ac.kill_container('sleeper_1')
 
         # All killed containers
-        killed = ac.containers(states=['killed'])
+        killed = ac.get_containers(states=['killed'])
         assert len(killed) == 3
         assert [c.instance for c in killed] == [0, 1, 3]
 
@@ -267,18 +264,18 @@ def test_dynamic_containers(client):
 
         # Can't kill non-existant container
         with pytest.raises(ValueError):
-            ac.kill('foobar_1')
+            ac.kill_container('foobar_1')
 
         with pytest.raises(ValueError):
-            ac.kill('sleeper_500')
+            ac.kill_container('sleeper_500')
 
         # Invalid container id
         with pytest.raises(ValueError):
-            ac.kill('fooooooo')
+            ac.kill_container('fooooooo')
 
         # Can't get containers for non-existant service
         with pytest.raises(ValueError):
-            ac.containers(services=['sleeper', 'missing'])
+            ac.get_containers(services=['sleeper', 'missing'])
 
 
 def test_container_permissions(client, has_kerberos_enabled):

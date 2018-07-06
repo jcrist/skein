@@ -65,7 +65,7 @@ sleep_until_killed = skein.ApplicationSpec(name="sleep_until_killed",
 def check_is_shutdown(client, app_id, status=None):
     timeleft = 5
     while timeleft:
-        if client.status(app_id).state != 'RUNNING':
+        if client.application_report(app_id).state != 'RUNNING':
             break
         time.sleep(0.1)
         timeleft -= 0.1
@@ -73,12 +73,12 @@ def check_is_shutdown(client, app_id, status=None):
         assert False, "Application wasn't properly terminated"
 
     if status is not None:
-        assert client.status(app_id).final_status == status
+        assert client.application_report(app_id).final_status == status
 
 
 def wait_for_success(app, timeout=30):
     while timeout:
-        state = app.status().state
+        state = app.report().state
         if state == 'FINISHED':
             return
         elif state in ['FAILED', 'KILLED']:
@@ -103,7 +103,7 @@ def run_application(client, spec=sleep_until_killed):
 def wait_for_containers(ac, n, **kwargs):
     timeleft = 5
     while timeleft:
-        containers = ac.containers(**kwargs)
+        containers = ac.get_containers(**kwargs)
         if len(containers) == n:
             break
         time.sleep(0.1)

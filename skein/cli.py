@@ -5,8 +5,6 @@ import os
 import sys
 import traceback
 
-import yaml
-
 from . import __version__
 from .core import Client, ApplicationClient, Security
 from .exceptions import context, SkeinError, DaemonNotRunningError
@@ -247,7 +245,7 @@ def application_submit(spec):
 def application_ls(all=False, state=None):
     if all and state is None:
         state = tuple(ApplicationState)
-    apps = get_daemon().applications(states=state)
+    apps = get_daemon().get_applications(states=state)
     _print_application_status(apps)
 
 
@@ -255,7 +253,7 @@ def application_ls(all=False, state=None):
             'status', 'Status of a Skein application',
             app_id)
 def application_status(app_id):
-    apps = get_daemon().status(app_id)
+    apps = get_daemon().application_report(app_id)
     _print_application_status([apps])
 
 
@@ -263,7 +261,7 @@ def application_status(app_id):
             'kill', 'Kill a Skein application',
             app_id)
 def application_kill(app_id):
-    get_daemon().kill(app_id)
+    get_daemon().kill_application(app_id)
 
 
 @subcommand(application.subs,
@@ -276,18 +274,12 @@ def application_shutdown(app_id, status):
 
 
 @subcommand(application.subs,
-            'describe', 'Get specifications for a running skein application',
-            app_id,
-            arg('--service', '-s', help='Service name'))
-def application_describe(app_id, service=None):
-    client = get_daemon()
-    resp = client.connect(app_id).describe(service=service)
-    if service is not None:
-        out = yaml.safe_dump({service: resp.to_dict(skip_nulls=True)},
-                             default_flow_style=False)
-    else:
-        out = resp.to_yaml(skip_nulls=True)
-    print(out)
+            'specification', 'Get specification for a running skein application',
+            app_id)
+def application_specification(app_id):
+    print(get_daemon().connect(app_id)
+                      .get_specification()
+                      .to_yaml(skip_nulls=True))
 
 
 ######################
@@ -319,7 +311,7 @@ def container_ls(app_id, all=False, service=None, state=None):
     app = application_client_from_app_id(app_id)
     if all and state is None:
         state = tuple(ContainerState)
-    containers = app.containers(states=state, services=service)
+    containers = app.get_containers(states=state, services=service)
     _print_container_status(containers)
 
 
@@ -328,7 +320,7 @@ def container_ls(app_id, all=False, service=None, state=None):
             app_id_or_current,
             container_id)
 def container_kill(app_id, id):
-    application_client_from_app_id(app_id).kill(id)
+    application_client_from_app_id(app_id).kill_container(id)
 
 
 @subcommand(container.subs,

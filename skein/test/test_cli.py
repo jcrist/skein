@@ -4,7 +4,6 @@ import os
 from contextlib import contextmanager
 
 import pytest
-import yaml
 
 import skein
 from skein.exceptions import context
@@ -42,7 +41,7 @@ def ensure_app_shutdown(client, app_id):
     try:
         yield
     finally:
-        client.kill(app_id)
+        client.kill_application(app_id)
     check_is_shutdown(client, app_id)
 
 
@@ -78,7 +77,7 @@ def global_client(kinit, tmpdir_factory):
                           'application submit',
                           'application status',
                           'application ls',
-                          'application describe',
+                          'application specification',
                           'application kill',
                           'application shutdown',
                           'container',
@@ -262,19 +261,11 @@ def test_cli_application(tmpdir, capsys, global_client):
         assert len(out.splitlines()) >= 2
         assert app_id in out
 
-        # `skein application describe`
-        run_command('application describe %s' % app_id)
+        # `skein application specification`
+        run_command('application specification %s' % app_id)
         out, err = capsys.readouterr()
         assert not err
         skein.ApplicationSpec.from_yaml(out)
-
-        # `skein application describe --service sleeper`
-        run_command('application describe %s --service sleeper' % app_id)
-        out, err = capsys.readouterr()
-        assert not err
-        services = yaml.safe_load(out)
-        assert len(services) == 1
-        skein.Service.from_dict(services['sleeper'])
 
         # `skein application shutdown`
         run_command('application shutdown %s' % app_id)
@@ -356,7 +347,7 @@ def test_cli_container(global_client, capsys):
         assert len(out.splitlines()) == 4
 
         # skein container kill
-        container_id = ac.containers()[0].id
+        container_id = ac.get_containers()[0].id
         run_command('container kill %s --id %s' % (app_id, container_id))
         out, err = capsys.readouterr()
         assert not out
