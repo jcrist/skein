@@ -687,13 +687,16 @@ class ApplicationClient(_ClientBase):
         """
         address = _get_env_var(ADDRESS_ENV_VAR)
 
-        local_dirs = _get_env_var('LOCAL_DIRS')
         container_id = _get_env_var('CONTAINER_ID')
-        container_dir = os.path.join(local_dirs, container_id)
-        security = Security(os.path.join(container_dir, ".skein.crt"),
-                            os.path.join(container_dir, ".skein.pem"))
+        for local_dir in _get_env_var('LOCAL_DIRS').split(','):
+            container_dir = os.path.join(local_dir, container_id)
+            crt_path = os.path.join(container_dir, '.skein.crt')
+            pem_path = os.path.join(container_dir, '.skein.pem')
+            if os.path.exists(crt_path) and os.path.exists(pem_path):
+                return cls(address, security=Security(crt_path, pem_path))
 
-        return cls(address, security=security)
+        raise FileNotFoundError(
+            "Failed to resolve .skein.{crt,pem} in 'LOCAL_DIRS'")
 
     def containers(self, services=None, states=None):
         """Get information on containers in this application.
