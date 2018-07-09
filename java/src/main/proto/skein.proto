@@ -185,8 +185,6 @@ service Master {
 
   rpc keyvalueGetAll (Empty) returns (KeyValueResponse);
 
-  rpc getService (ServiceRequest) returns (Service);
-
   rpc getApplicationSpec (Empty) returns (ApplicationSpec);
 
   rpc getContainers (ContainersRequest) returns (ContainersResponse);
@@ -224,11 +222,6 @@ message DelKeyRequest {
 
 message KeyValueResponse {
   map<string, string> items = 1;
-}
-
-
-message ServiceRequest {
-  string name = 1;
 }
 
 

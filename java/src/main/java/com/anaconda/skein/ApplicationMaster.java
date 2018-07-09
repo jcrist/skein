@@ -767,19 +767,6 @@ public class ApplicationMaster {
     }
 
     @Override
-    public void getService(Msg.ServiceRequest req,
-        StreamObserver<Msg.Service> resp) {
-      String name = req.getName();
-
-      if (!checkService(name, resp)) {
-        return;
-      }
-      Model.Service service = spec.getServices().get(name);
-      resp.onNext(MsgUtils.writeService(service));
-      resp.onCompleted();
-    }
-
-    @Override
     public void getContainers(Msg.ContainersRequest req,
         StreamObserver<Msg.ContainersResponse> resp) {
 
