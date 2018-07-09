@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Index &#8212; Skein 0.0.4+1.g42cb137 documentation</title>
+    <title>Index &#8212; Skein 0.0.4+2.g3028809 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -41,7 +41,7 @@
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
  | <a href="#F"><strong>F</strong></a>
- | <a href="#I"><strong>I</strong></a>
+ | <a href="#G"><strong>G</strong></a>
  | <a href="#K"><strong>K</strong></a>
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
@@ -68,8 +68,6 @@
       <ul>
         <li><a href="cli.html#cmdoption-skein-config-gencerts-force">skein-config-gencerts command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-skein-init-force">skein-init command line option</a>
-</li>
       </ul></li>
       <li>
     --help, -h
@@ -79,13 +77,13 @@
 </li>
         <li><a href="cli.html#cmdoption-skein-application-help">skein-application command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-skein-application-describe-help">skein-application-describe command line option</a>
-</li>
         <li><a href="cli.html#cmdoption-skein-application-kill-help">skein-application-kill command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-skein-application-ls-help">skein-application-ls command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-skein-application-shutdown-help">skein-application-shutdown command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-application-specification-help">skein-application-specification command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-skein-application-status-help">skein-application-status command line option</a>
 </li>
@@ -112,8 +110,6 @@
         <li><a href="cli.html#cmdoption-skein-daemon-start-help">skein-daemon-start command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-skein-daemon-stop-help">skein-daemon-stop command line option</a>
-</li>
-        <li><a href="cli.html#cmdoption-skein-init-help">skein-init command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-skein-kv-help">skein-kv command line option</a>
 </li>
@@ -171,8 +167,6 @@
     --service &lt;service&gt;, -s &lt;service&gt;
 
       <ul>
-        <li><a href="cli.html#cmdoption-skein-application-describe-service">skein-application-describe command line option</a>
-</li>
         <li><a href="cli.html#cmdoption-skein-container-scale-service">skein-container-scale command line option</a>
 </li>
       </ul></li>
@@ -228,11 +222,11 @@
     app_id
 
       <ul>
-        <li><a href="cli.html#cmdoption-skein-application-describe-arg-app-id">skein-application-describe command line option</a>
-</li>
         <li><a href="cli.html#cmdoption-skein-application-kill-arg-app-id">skein-application-kill command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-skein-application-shutdown-arg-app-id">skein-application-shutdown command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-application-specification-arg-app-id">skein-application-specification command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-skein-application-status-arg-app-id">skein-application-status command line option</a>
 </li>
@@ -251,7 +245,7 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#skein.Application">Application (class in skein)</a>
+      <li><a href="api.html#skein.Client.application_report">application_report() (skein.Client method)</a>
 </li>
       <li><a href="api.html#skein.ApplicationClient">ApplicationClient (class in skein)</a>
 </li>
@@ -260,8 +254,6 @@
       <li><a href="api.html#skein.ApplicationNotRunningError">ApplicationNotRunningError</a>
 </li>
       <li><a href="api.html#skein.model.ApplicationReport">ApplicationReport (class in skein.model)</a>
-</li>
-      <li><a href="api.html#skein.Client.applications">applications() (skein.Client method)</a>
 </li>
       <li><a href="api.html#skein.ApplicationSpec">ApplicationSpec (class in skein)</a>
 </li>
@@ -277,17 +269,11 @@
 </li>
       <li><a href="api.html#skein.Client.close">close() (skein.Client method)</a>
 </li>
-      <li><a href="api.html#skein.Application.connect">connect() (skein.Application method)</a>
-
-      <ul>
-        <li><a href="api.html#skein.Client.connect">(skein.Client method)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#skein.ConnectionError">ConnectionError</a>
+      <li><a href="api.html#skein.Client.connect">connect() (skein.Client method)</a>
 </li>
-      <li><a href="api.html#skein.ApplicationClient.containers">containers() (skein.ApplicationClient method)</a>
+      <li><a href="api.html#skein.ConnectionError">ConnectionError</a>
 </li>
   </ul></td>
 </tr></table>
@@ -300,8 +286,6 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#skein.DaemonNotRunningError">DaemonNotRunningError</a>
-</li>
-      <li><a href="api.html#skein.ApplicationClient.describe">describe() (skein.ApplicationClient method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -390,10 +374,16 @@
   </ul></td>
 </tr></table>
 
-<h2 id="I">I</h2>
+<h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#skein.Application.is_running">is_running() (skein.Application method)</a>
+      <li><a href="api.html#skein.Client.get_applications">get_applications() (skein.Client method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.ApplicationClient.get_containers">get_containers() (skein.ApplicationClient method)</a>
+</li>
+      <li><a href="api.html#skein.ApplicationClient.get_specification">get_specification() (skein.ApplicationClient method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -403,16 +393,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#skein.core.KeyValueStore">KeyValueStore (class in skein.core)</a>
 </li>
-      <li><a href="api.html#skein.Application.kill">kill() (skein.Application method)</a>
-
-      <ul>
-        <li><a href="api.html#skein.ApplicationClient.kill">(skein.ApplicationClient method)</a>
+      <li><a href="api.html#skein.Client.kill_application">kill_application() (skein.Client method)</a>
 </li>
-        <li><a href="api.html#skein.Client.kill">(skein.Client method)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.ApplicationClient.kill_container">kill_container() (skein.ApplicationClient method)</a>
+</li>
       <li><a href="api.html#skein.ApplicationClient.kv">kv (skein.ApplicationClient attribute)</a>
 </li>
   </ul></td>
@@ -460,17 +446,6 @@
 </li>
       </ul></li>
       <li>
-    skein-application-describe command line option
-
-      <ul>
-        <li><a href="cli.html#cmdoption-skein-application-describe-help">--help, -h</a>
-</li>
-        <li><a href="cli.html#cmdoption-skein-application-describe-service">--service &lt;service&gt;, -s &lt;service&gt;</a>
-</li>
-        <li><a href="cli.html#cmdoption-skein-application-describe-arg-app-id">app_id</a>
-</li>
-      </ul></li>
-      <li>
     skein-application-kill command line option
 
       <ul>
@@ -499,6 +474,15 @@
         <li><a href="cli.html#cmdoption-skein-application-shutdown-status">--status &lt;status&gt;</a>
 </li>
         <li><a href="cli.html#cmdoption-skein-application-shutdown-arg-app-id">app_id</a>
+</li>
+      </ul></li>
+      <li>
+    skein-application-specification command line option
+
+      <ul>
+        <li><a href="cli.html#cmdoption-skein-application-specification-help">--help, -h</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-application-specification-arg-app-id">app_id</a>
 </li>
       </ul></li>
       <li>
@@ -623,15 +607,6 @@
 </li>
       </ul></li>
       <li>
-    skein-init command line option
-
-      <ul>
-        <li><a href="cli.html#cmdoption-skein-init-force">--force, -f</a>
-</li>
-        <li><a href="cli.html#cmdoption-skein-init-help">--help, -h</a>
-</li>
-      </ul></li>
-      <li>
     skein-kv command line option
 
       <ul>
@@ -688,15 +663,11 @@
       </ul></li>
       <li><a href="api.html#skein.Client.start_global_daemon">start_global_daemon() (skein.Client static method)</a>
 </li>
-      <li><a href="api.html#skein.Application.status">status() (skein.Application method)</a>
-
-      <ul>
-        <li><a href="api.html#skein.Client.status">(skein.Client method)</a>
-</li>
-      </ul></li>
       <li><a href="api.html#skein.Client.stop_global_daemon">stop_global_daemon() (skein.Client static method)</a>
 </li>
       <li><a href="api.html#skein.Client.submit">submit() (skein.Client method)</a>
+</li>
+      <li><a href="api.html#skein.Client.submit_and_connect">submit_and_connect() (skein.Client method)</a>
 </li>
   </ul></td>
 </tr></table>
