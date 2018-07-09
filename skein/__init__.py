@@ -1,4 +1,4 @@
-from .core import Client, Application, ApplicationClient, Security
+from .core import Client, ApplicationClient, Security
 from .exceptions import (SkeinError, SkeinConfigurationError, ConnectionError,
                          DaemonNotRunningError, ApplicationNotRunningError,
                          DaemonError, ApplicationError)

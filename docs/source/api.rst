@@ -19,14 +19,6 @@ Client
     :inherited-members:
 
 
-Application
------------
-
-.. autoclass:: Application
-    :members:
-    :inherited-members:
-
-
 Application Client
 ------------------
 

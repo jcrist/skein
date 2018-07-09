@@ -1,46 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
-import weakref
-
-from .compatibility import PY2, add_method, unicode
-
-
-if PY2:
-    from backports.weakref import finalize
-else:
-    from weakref import finalize
-
-
-def with_finalizers(cls):
-    """Adds support for robust cleanup of objects by the GC.
-
-    Objects should register handlers during operation using
-    ``self._add_finalizer``. On cleanup, these finalizers will be called in the
-    reverse order that they're added. Objects can also call ``self._finalize``
-    to explicitly trigger finalization. Each finalizer is only run once, even
-    upon error. If ``self._finalize`` is called explicitly and an exception
-    occurs in one of the finalizers, the remaining finalizers won't be run until
-    the object is collected, even if ``self._finalize`` is called again.
-
-    On Python 3, finalizers are guaranteed to be run as soon as object is
-    collected. On Python 2 the finalizers usually are run when the object is
-    collected, but in certain situations with reference cycles, they may not
-    run until program termination.
-    """
-    _finalizers = weakref.WeakKeyDictionary()
-
-    @add_method(cls)
-    def _finalize(self):
-        for f in reversed(_finalizers.pop(self, ())):
-            f()
-
-    @add_method(cls)
-    def _add_finalizer(self, func, *args, **kwargs):
-        if self not in _finalizers:
-            _finalizers[self] = []
-        _finalizers[self].append(finalize(self, func, *args, **kwargs))
-
-    return cls
+from .compatibility import unicode
 
 
 def ensure_unicode(x):

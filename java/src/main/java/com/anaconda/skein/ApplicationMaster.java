@@ -19,6 +19,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -77,6 +78,8 @@ public class ApplicationMaster {
   private Model.ApplicationSpec spec;
 
   private Path appDir;
+
+  private ApplicationId appId;
 
   private final ConcurrentHashMap<String, String> keyValueStore =
       new ConcurrentHashMap<String, String>();
@@ -332,11 +335,12 @@ public class ApplicationMaster {
   }
 
   public void init(String[] args) {
-    if (args.length == 0 || args.length > 1) {
-      LOG.fatal("Usage: <command> applicationDirectory");
+    if (args.length == 0 || args.length > 2) {
+      LOG.fatal("Usage: <command> applicationDirectory applicationId");
       System.exit(1);
     }
     appDir = new Path(args[0]);
+    appId = Utils.appIdFromString(args[1]);
   }
 
   public void run() throws Exception {
@@ -530,9 +534,10 @@ public class ApplicationMaster {
 
     public synchronized void initialize() throws IOException {
       LOG.info("INTIALIZING: " + name);
-      // Add appmaster address to environment
+      // Add appmaster address and application id to environment
       Map<String, String> env = service.getEnv();
       env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
+      env.put("SKEIN_APPLICATION_ID", appId.toString());
       if (ugi.isSecurityEnabled()) {
         // Add HADOOP_USER_NAME to environment for *simple* authentication only
         env.put("HADOOP_USER_NAME", ugi.getUserName());
@@ -758,19 +763,6 @@ public class ApplicationMaster {
     @Override
     public void getApplicationSpec(Msg.Empty req, StreamObserver<Msg.ApplicationSpec> resp) {
       resp.onNext(MsgUtils.writeApplicationSpec(spec));
-      resp.onCompleted();
-    }
-
-    @Override
-    public void getService(Msg.ServiceRequest req,
-        StreamObserver<Msg.Service> resp) {
-      String name = req.getName();
-
-      if (!checkService(name, resp)) {
-        return;
-      }
-      Model.Service service = spec.getServices().get(name);
-      resp.onNext(MsgUtils.writeService(service));
       resp.onCompleted();
     }
 

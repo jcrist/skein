@@ -8,7 +8,6 @@ import signal
 import socket
 import struct
 import subprocess
-import warnings
 from collections import namedtuple, MutableMapping
 from contextlib import closing
 
@@ -19,16 +18,16 @@ from .compatibility import PY2, makedirs
 from .exceptions import (context, FileNotFoundError, ConnectionError,
                          ApplicationNotRunningError, ApplicationError,
                          DaemonNotRunningError, DaemonError)
-from .model import (ApplicationSpec, Service, ApplicationReport,
-                    ApplicationState, ContainerState, Container,
-                    FinalStatus)
-from .utils import cached_property, with_finalizers
+from .model import (ApplicationSpec, ApplicationReport, ApplicationState,
+                    ContainerState, Container, FinalStatus)
+from .utils import cached_property
 
 
-__all__ = ('Client', 'Application', 'ApplicationClient', 'Security')
+__all__ = ('Client', 'ApplicationClient', 'Security')
 
 
 ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'
+APPID_ENV_VAR = 'SKEIN_APPLICATION_ID'
 CONFIG_DIR = os.environ.get('SKEIN_CONFIG',
                             os.path.join(os.path.expanduser('~'), '.skein'))
 _SKEIN_DIR = os.path.abspath(os.path.dirname(os.path.relpath(__file__)))
@@ -255,6 +254,8 @@ def _start_daemon(security=None, set_global=False, log=None):
 
 
 class _ClientBase(object):
+    __slots__ = ('__weakref__',)
+
     def _call(self, method, req):
         try:
             return getattr(self._stub, method)(req)
@@ -273,12 +274,6 @@ class _ClientBase(object):
             raise self._server_error(exc.details())
 
 
-def _close_process(proc):
-    proc.stdin.close()
-    proc.wait()
-
-
-@with_finalizers
 class Client(_ClientBase):
     """Connect to and schedule applications on the YARN cluster.
 
@@ -300,9 +295,9 @@ class Client(_ClientBase):
     Examples
     --------
     >>> with skein.Client() as client:
-    ...     print(client.status(app_id='application_1526134340424_0012'))
-    ApplicationReport<name='demo'>
+    ...     app_id = client.submit('spec.yaml')
     """
+    __slots__ = ('address', 'security', '_stub', '_proc')
     _server_name = 'daemon'
     _server_error = DaemonError
 
@@ -312,7 +307,6 @@ class Client(_ClientBase):
 
         if address is None:
             address, proc = _start_daemon(security=security, log=log)
-            self._add_finalizer(_close_process, proc)
         else:
             proc = None
 
@@ -394,12 +388,17 @@ class Client(_ClientBase):
 
     def close(self):
         """Closes the java daemon if started by this client. No-op otherwise."""
-        self._finalize()
+        if self._proc is not None:
+            self._proc.stdin.close()
+            self._proc.wait()
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
+        self.close()
+
+    def __del__(self):
         self.close()
 
     def submit(self, spec):
@@ -414,7 +413,8 @@ class Client(_ClientBase):
 
         Returns
         -------
-        app : Application
+        app_id : str
+            The id of the submitted application.
         """
         if isinstance(spec, str):
             spec = ApplicationSpec.from_file(spec)
@@ -425,7 +425,31 @@ class Client(_ClientBase):
                                     "path, or dict, got "
                                     "%s" % type(spec).__name__)
         resp = self._call('submit', spec.to_protobuf())
-        return Application(self, resp.id)
+        return resp.id
+
+    def submit_and_connect(self, spec):
+        """Submit a new skein application, and wait to connect to it.
+
+        If an error occurs before the application connects, the application is
+        killed.
+
+        Parameters
+        ----------
+        spec : ApplicationSpec, str, or dict
+            A description of the application to run. Can be an
+            ``ApplicationSpec`` object, a path to a yaml/json file, or a
+            dictionary description of an application specification.
+
+        Returns
+        -------
+        app_client : ApplicationClient
+        """
+        app_id = self.submit(spec)
+        try:
+            return self.connect(app_id)
+        except BaseException:
+            self.kill_application(app_id)
+            raise
 
     def connect(self, app_id, wait=True):
         """Connect to a running application.
@@ -459,9 +483,10 @@ class Client(_ClientBase):
                 "%s" % (app_id, report.state))
 
         return ApplicationClient('%s:%d' % (report.host, report.port),
+                                 app_id,
                                  security=self.security)
 
-    def applications(self, states=None):
+    def get_applications(self, states=None):
         """Get the status of current skein applications.
 
         Parameters
@@ -478,7 +503,7 @@ class Client(_ClientBase):
         --------
         Get all the finished and failed applications
 
-        >>> client.status(states=['FINISHED', 'FAILED'])
+        >>> client.get_applications(states=['FINISHED', 'FAILED'])
         [ApplicationReport<name='demo'>,
          ApplicationReport<name='dask'>,
          ApplicationReport<name='demo'>]
@@ -495,13 +520,13 @@ class Client(_ClientBase):
         return sorted((ApplicationReport.from_protobuf(r) for r in resp.reports),
                       key=lambda x: x.id)
 
-    def status(self, app_id):
-        """Get the status of a skein application.
+    def application_report(self, app_id):
+        """Get a report on the status of a skein application.
 
         Parameters
         ----------
         app_id : str
-            A single application id to check the status of.
+            The id of the application.
 
         Returns
         -------
@@ -509,15 +534,13 @@ class Client(_ClientBase):
 
         Examples
         --------
-        Get the status of a single application
-
-        >>> client.status(app_id='application_1526134340424_0012')
+        >>> client.application_report('application_1526134340424_0012')
         ApplicationReport<name='demo'>
         """
         resp = self._call('getStatus', proto.Application(id=app_id))
         return ApplicationReport.from_protobuf(resp)
 
-    def kill(self, app_id):
+    def kill_application(self, app_id):
         """Kill an application.
 
         Parameters
@@ -578,6 +601,8 @@ class ApplicationClient(_ClientBase):
     ----------
     address : str
         The address of the application master.
+    app_id : str
+        The application id
     security : Security, optional
         The security configuration to use to communicate with the daemon.
         Defaults to the global configuration.
@@ -585,13 +610,14 @@ class ApplicationClient(_ClientBase):
     _server_name = 'application'
     _server_error = ApplicationError
 
-    def __init__(self, address, security=None):
+    def __init__(self, address, app_id, security=None):
         self.address = address
-        self.security = security
+        self.id = app_id
         self._stub = proto.MasterStub(secure_channel(address, security))
+        self._shutdown = False
 
     def __repr__(self):
-        return 'ApplicationClient<%s>' % self.address
+        return 'ApplicationClient<%s, %s>' % (self.id, self.address)
 
     def shutdown(self, status='SUCCEEDED'):
         """Shutdown the application.
@@ -605,6 +631,7 @@ class ApplicationClient(_ClientBase):
         """
         status = str(FinalStatus(status))
         self._call('shutdown', proto.ShutdownRequest(final_status=status))
+        self._shutdown = True
 
     @cached_property
     def kv(self):
@@ -631,26 +658,15 @@ class ApplicationClient(_ClientBase):
         """
         return KeyValueStore(self)
 
-    def describe(self, service=None):
-        """Information about the running application.
-
-        Parameters
-        ----------
-        service : str, optional
-            If provided, returns information on that service.
+    def get_specification(self):
+        """Get the specification for the running application.
 
         Returns
         -------
-        spec : ApplicationSpec or Service
-            Returns a service if ``service`` is specified, otherwise returns
-            the whole ``ApplicationSpec``.
+        spec : ApplicationSpec
         """
-        if service is None:
-            resp = self._call('getApplicationSpec', proto.Empty())
-            return ApplicationSpec.from_protobuf(resp)
-        else:
-            resp = self._call('getService', proto.ServiceRequest(name=service))
-            return Service.from_protobuf(resp)
+        resp = self._call('getApplicationSpec', proto.Empty())
+        return ApplicationSpec.from_protobuf(resp)
 
     def scale(self, service, instances):
         """Scale a service to a requested number of instances.
@@ -686,6 +702,7 @@ class ApplicationClient(_ClientBase):
         container in a application.
         """
         address = _get_env_var(ADDRESS_ENV_VAR)
+        app_id = _get_env_var(APPID_ENV_VAR)
 
         container_id = _get_env_var('CONTAINER_ID')
         for local_dir in _get_env_var('LOCAL_DIRS').split(','):
@@ -693,12 +710,12 @@ class ApplicationClient(_ClientBase):
             crt_path = os.path.join(container_dir, '.skein.crt')
             pem_path = os.path.join(container_dir, '.skein.pem')
             if os.path.exists(crt_path) and os.path.exists(pem_path):
-                return cls(address, security=Security(crt_path, pem_path))
+                return cls(address, app_id, security=Security(crt_path, pem_path))
 
         raise FileNotFoundError(
             "Failed to resolve .skein.{crt,pem} in 'LOCAL_DIRS'")
 
-    def containers(self, services=None, states=None):
+    def get_containers(self, services=None, states=None):
         """Get information on containers in this application.
 
         Parameters
@@ -724,7 +741,7 @@ class ApplicationClient(_ClientBase):
         return sorted((Container.from_protobuf(c) for c in resp.containers),
                       key=lambda x: (x.service_name, x.instance))
 
-    def kill(self, id):
+    def kill_container(self, id):
         """Kill a container.
 
         Parameters
@@ -739,70 +756,3 @@ class ApplicationClient(_ClientBase):
             raise context.ValueError("Invalid container id %r" % id)
         req = proto.ContainerInstance(service_name=service, instance=instance)
         self._call('killContainer', req)
-
-
-class Application(object):
-    """A possibly running Skein application.
-
-    May be used as a contextmanager to ensure that the enclosed application is
-    stopped before exiting.
-
-    The constructor shouldn't be used directly, instead use
-    ``Client.submit``."""
-    def __init__(self, client, app_id):
-        self._client = client
-        self.app_id = app_id
-
-    def __repr__(self):
-        return 'Application<id=%r>' % self.app_id
-
-    def status(self):
-        """The application status.
-
-        Returns
-        -------
-        status : ApplicationReport
-        """
-        return self._client.status(self.app_id)
-
-    def is_running(self):
-        """Return True if the application state is RUNNING"""
-        return self.status().state == ApplicationState.RUNNING
-
-    def kill(self):
-        """Kill the application."""
-        return self._client.kill(self.app_id)
-
-    def connect(self, wait=True):
-        """Connect to the application.
-
-        Parameters
-        ----------
-        wait : bool, optional
-            If true [default], blocks until the application starts. If False,
-            will raise a ``ApplicationNotRunningError`` immediately if the
-            application isn't running.
-
-        Returns
-        -------
-        app_client : ApplicationClient
-
-        Raises
-        ------
-        ApplicationNotRunningError
-            If the application isn't running.
-        """
-        return self._client.connect(self.app_id, wait=wait)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        try:
-            if self.status().state not in {ApplicationState.FINISHED,
-                                           ApplicationState.FAILED,
-                                           ApplicationState.KILLED}:
-                self.kill()
-        except Exception as exc:
-            warnings.warn("Failed to ensure application %s was stopped. "
-                          "Exception: %s" % (self.app_id, exc))

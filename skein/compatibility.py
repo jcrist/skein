@@ -8,7 +8,6 @@ PY3 = not PY2
 
 if PY2:
     import os
-    import types
     from urlparse import urlparse, urlsplit  # noqa
     unicode = unicode  # noqa
     string = basestring  # noqa
@@ -21,12 +20,6 @@ if PY2:
                 '__reduce__': lambda self: 'UTC',
                 'utcoffset': lambda self, dt: self._offset,
                 'fromutc': lambda self, dt: dt + self._offset})()
-
-    def add_method(cls):
-        def bind(func):
-            setattr(cls, func.__name__, types.MethodType(func, None, cls))
-            return func
-        return bind
 
     def makedirs(name, mode=0o777, exist_ok=True):
         try:
@@ -42,12 +35,6 @@ else:
     integer = int
 
     UTC = datetime.timezone.utc
-
-    def add_method(cls):
-        def bind(func):
-            setattr(cls, func.__name__, func)
-            return func
-        return bind
 
 
 def with_metaclass(meta):

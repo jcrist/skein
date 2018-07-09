@@ -153,8 +153,7 @@ else:
 install_requires = ['grpcio>=1.11.0',
                     'protobuf>=3.5.0',
                     'pyyaml',
-                    'cryptography',
-                    'backports.weakref;python_version<="3.4"']
+                    'cryptography']
 
 # Due to quirks in setuptools/distutils dependency ordering, to get the java
 # and protobuf sources to build automatically in most cases, we need to check
