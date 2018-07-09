@@ -20,7 +20,7 @@ from .exceptions import (context, FileNotFoundError, ConnectionError,
                          DaemonNotRunningError, DaemonError)
 from .model import (ApplicationSpec, ApplicationReport, ApplicationState,
                     ContainerState, Container, FinalStatus)
-from .utils import cached_property, with_finalizers
+from .utils import cached_property
 
 
 __all__ = ('Client', 'ApplicationClient', 'Security')
@@ -254,6 +254,8 @@ def _start_daemon(security=None, set_global=False, log=None):
 
 
 class _ClientBase(object):
+    __slots__ = ('__weakref__',)
+
     def _call(self, method, req):
         try:
             return getattr(self._stub, method)(req)
@@ -272,12 +274,6 @@ class _ClientBase(object):
             raise self._server_error(exc.details())
 
 
-def _close_process(proc):
-    proc.stdin.close()
-    proc.wait()
-
-
-@with_finalizers
 class Client(_ClientBase):
     """Connect to and schedule applications on the YARN cluster.
 
@@ -301,6 +297,7 @@ class Client(_ClientBase):
     >>> with skein.Client() as client:
     ...     app_id = client.submit('spec.yaml')
     """
+    __slots__ = ('address', 'security', '_stub', '_proc')
     _server_name = 'daemon'
     _server_error = DaemonError
 
@@ -310,7 +307,6 @@ class Client(_ClientBase):
 
         if address is None:
             address, proc = _start_daemon(security=security, log=log)
-            self._add_finalizer(_close_process, proc)
         else:
             proc = None
 
@@ -392,12 +388,17 @@ class Client(_ClientBase):
 
     def close(self):
         """Closes the java daemon if started by this client. No-op otherwise."""
-        self._finalize()
+        if self._proc is not None:
+            self._proc.stdin.close()
+            self._proc.wait()
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
+        self.close()
+
+    def __del__(self):
         self.close()
 
     def submit(self, spec):

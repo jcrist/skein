@@ -81,6 +81,9 @@ def test_client(security, kinit, tmpdir):
     # Process was definitely closed
     assert not pid_exists(client._proc.pid)
 
+    # no-op to call close again
+    client.close()
+
     # Log was written
     assert os.path.exists(logpath)
     with open(logpath) as fil:
