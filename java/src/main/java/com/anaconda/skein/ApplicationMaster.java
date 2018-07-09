@@ -538,7 +538,7 @@ public class ApplicationMaster {
       Map<String, String> env = service.getEnv();
       env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
       env.put("SKEIN_APPLICATION_ID", appId.toString());
-      if (ugi.isSecurityEnabled()) {
+      if (!ugi.isSecurityEnabled()) {
         // Add HADOOP_USER_NAME to environment for *simple* authentication only
         env.put("HADOOP_USER_NAME", ugi.getUserName());
       }

@@ -258,6 +258,7 @@ def test_dynamic_containers(client):
 def test_container_permissions(client, has_kerberos_enabled):
     commands = ['echo "USER_ENV=[$USER]"',
                 'echo "LOGIN_ID=[$(whoami)]"',
+                'env',
                 'hdfs dfs -touchz /user/testuser/test_container_permissions']
     service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
                             commands=commands)
@@ -272,5 +273,7 @@ def test_container_permissions(client, has_kerberos_enabled):
     assert "USER_ENV=[testuser]" in logs
     if has_kerberos_enabled:
         assert "LOGIN_ID=[testuser]" in logs
+        assert "HADOOP_USER_NAME" not in logs
     else:
         assert "LOGIN_ID=[yarn]" in logs
+        assert "HADOOP_USER_NAME" in logs
