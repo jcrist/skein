@@ -350,16 +350,6 @@ def config_gencerts(force=False):
     Security.from_new_directory(force=force)
 
 
-# deprecated
-@subcommand(entry_subs,
-            'init', '[deprecated]',
-            arg('--force', '-f', action='store_true',
-                help='Overwrite existing configuration'))
-def entry_init(force=False):
-    context.warn("Deprecated, will be removed in next release")
-    config_gencerts(force=force)
-
-
 def main(args=None):
     kwargs = vars(entry.parse_args(args=args))
     kwargs.pop('command', None)  # Drop unnecessary `command` arg
