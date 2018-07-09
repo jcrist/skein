@@ -255,12 +255,11 @@ def test_dynamic_containers(client):
         app.shutdown()
 
 
-def test_container_permissions(client, has_kerberos_enabled):
-    commands = ['echo "USER_ENV=[$USER]"',
+def test_container_environment(client, has_kerberos_enabled):
+    commands = ['env',
                 'echo "LOGIN_ID=[$(whoami)]"',
-                'env',
                 'hdfs dfs -touchz /user/testuser/test_container_permissions']
-    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+    service = skein.Service(resources=skein.Resources(memory=124, vcores=1),
                             commands=commands)
     spec = skein.ApplicationSpec(name="test_container_permissions",
                                  queue="default",
@@ -270,7 +269,13 @@ def test_container_permissions(client, has_kerberos_enabled):
         wait_for_success(client, app.id)
 
     logs = get_logs(app.id)
-    assert "USER_ENV=[testuser]" in logs
+    assert "USER=testuser" in logs
+    assert 'SKEIN_APPMASTER_ADDRESS=' in logs
+    assert 'SKEIN_APPLICATION_ID=%s' % app.id in logs
+    assert 'SKEIN_CONTAINER_ID=service_0' in logs
+    assert 'SKEIN_RESOURCE_MEMORY=128' in logs
+    assert 'SKEIN_RESOURCE_VCORES=1' in logs
+
     if has_kerberos_enabled:
         assert "LOGIN_ID=[testuser]" in logs
         assert "HADOOP_USER_NAME" not in logs
