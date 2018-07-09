@@ -292,7 +292,7 @@ public class ApplicationMaster {
 
       ServiceTracker tracker = trackerFromPriority(priority);
       if (tracker != null && tracker.matches(resource)) {
-        tracker.startContainer(c);
+        tracker.startContainer(c, resource);
       } else {
         LOG.warn("No matching service found for resource: " + resource
                  + ", priority: " + priority + ", releasing " + c.getId());
@@ -470,7 +470,6 @@ public class ApplicationMaster {
   private final class ServiceTracker {
     private String name;
     private Model.Service service;
-    private ContainerLaunchContext ctx;
     private boolean initialRunning = false;
     private final Set<String> depends = new HashSet<String>();
     private final Set<Integer> waiting = new LinkedHashSet<Integer>();
@@ -534,19 +533,6 @@ public class ApplicationMaster {
 
     public synchronized void initialize() throws IOException {
       LOG.info("INTIALIZING: " + name);
-      // Add appmaster address and application id to environment
-      Map<String, String> env = service.getEnv();
-      env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
-      env.put("SKEIN_APPLICATION_ID", appId.toString());
-      if (!ugi.isSecurityEnabled()) {
-        // Add HADOOP_USER_NAME to environment for *simple* authentication only
-        env.put("HADOOP_USER_NAME", ugi.getUserName());
-      }
-
-      ctx = ContainerLaunchContext.newInstance(
-          service.getLocalResources(), env, service.getCommands(),
-          null, tokens, null);
-
       // Request initial containers
       for (int i = 0; i < service.getInstances(); i++) {
         addContainer();
@@ -595,7 +581,7 @@ public class ApplicationMaster {
       container.setContainerRequest(req);
       rmClient.addContainerRequest(req);
       requested.put(priority, container);
-      LOG.info("REQUESTED: " + name + "_" + container.getInstance());
+      LOG.info("REQUESTED: " + container.getId());
     }
 
     public synchronized Model.Container addContainer() {
@@ -603,7 +589,7 @@ public class ApplicationMaster {
       if (!isReady()) {
         container = newContainer(Model.Container.State.WAITING);
         waiting.add(container.getInstance());
-        LOG.info("WAITING: " + name + "_" + container.getInstance());
+        LOG.info("WAITING: " + container.getId());
       } else {
         container = newContainer(Model.Container.State.REQUESTED);
         requestContainer(container);
@@ -624,7 +610,8 @@ public class ApplicationMaster {
       return containers.get(instance);
     }
 
-    public Model.Container startContainer(final Container container) {
+    public Model.Container startContainer(final Container container,
+        Resource resource) {
       LOG.info("Starting " + container.getId());
       Priority priority = container.getPriority();
       removePriority(priority);
@@ -648,22 +635,43 @@ public class ApplicationMaster {
         ApplicationMaster.this.containers.put(container.getId(), out);
         running.add(instance);
 
+        // Update container environment variables
+        Map<String, String> env = new HashMap<String, String>(service.getEnv());
+        env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
+        env.put("SKEIN_APPLICATION_ID", appId.toString());
+        env.put("SKEIN_CONTAINER_ID", out.getId());
+        env.put("SKEIN_RESOURCE_VCORES", String.valueOf(resource.getVirtualCores()));
+        env.put("SKEIN_RESOURCE_MEMORY", String.valueOf(resource.getMemory()));
+        if (!ugi.isSecurityEnabled()) {
+          // Add HADOOP_USER_NAME to environment for *simple* authentication only
+          env.put("HADOOP_USER_NAME", ugi.getUserName());
+        }
+
+        final ContainerLaunchContext ctx =
+            ContainerLaunchContext.newInstance(
+                service.getLocalResources(),
+                env,
+                service.getCommands(),
+                null,
+                tokens,
+                null);
+
         executor.execute(
             new Runnable() {
               @Override
               public void run() {
                 try {
-                  nmClient.startContainer(container, ServiceTracker.this.ctx);
+                  nmClient.startContainer(container, ctx);
                 } catch (Throwable exc) {
                   LOG.warn("Failed to start " + ServiceTracker.this.name
-                          + "_" + instance, exc);
+                           + "_" + instance, exc);
                   ServiceTracker.this.finishContainer(instance,
                       Model.Container.State.FAILED);
                 }
               }
             });
 
-        LOG.info("RUNNING: " + name + "_" + instance + " on " + container.getId());
+        LOG.info("RUNNING: " + out.getId() + " on " + container.getId());
       }
 
       if (!initialRunning && requested.size() == 0) {
@@ -716,14 +724,13 @@ public class ApplicationMaster {
               "finishContainer got illegal state " + state);
       }
 
-      LOG.info(state + ": " + name + "_" + instance);
+      LOG.info(state + ": " + container.getId());
       container.setState(state);
 
       if (mayRestart && (service.getMaxRestarts() == -1
           || numRestarted < service.getMaxRestarts())) {
         numRestarted += 1;
-        LOG.info("RESTARTING: adding new container to replace "
-                 + name + "_" + instance);
+        LOG.info("RESTARTING: adding new container to replace " + container.getId());
         addContainer();
       }
 
