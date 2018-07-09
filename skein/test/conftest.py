@@ -76,9 +76,9 @@ def check_is_shutdown(client, app_id, status=None):
         assert client.application_report(app_id).final_status == status
 
 
-def wait_for_success(app, timeout=30):
+def wait_for_success(client, app_id, timeout=30):
     while timeout:
-        state = app.report().state
+        state = client.application_report(app_id).state
         if state == 'FINISHED':
             return
         elif state in ['FAILED', 'KILLED']:
@@ -90,20 +90,31 @@ def wait_for_success(app, timeout=30):
 
 
 @contextmanager
-def run_application(client, spec=sleep_until_killed):
-    app = client.submit(spec)
-
+def ensure_shutdown(client, app_id, status=None):
     try:
-        yield app
+        yield
+    except Exception:
+        client.kill_application(app_id)
+        raise
     finally:
-        app.kill()
-    check_is_shutdown(client, app.app_id)
+        try:
+            check_is_shutdown(client, app_id, status=status)
+        except AssertionError:
+            client.kill_application(app_id)
+            raise
 
 
-def wait_for_containers(ac, n, **kwargs):
+@contextmanager
+def run_application(client, spec=sleep_until_killed):
+    app = client.submit_and_connect(spec)
+    with ensure_shutdown(client, app.id):
+        yield app
+
+
+def wait_for_containers(app, n, **kwargs):
     timeleft = 5
     while timeleft:
-        containers = ac.get_containers(**kwargs)
+        containers = app.get_containers(**kwargs)
         if len(containers) == n:
             break
         time.sleep(0.1)

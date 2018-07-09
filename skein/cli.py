@@ -230,8 +230,7 @@ def application_submit(spec):
         # Prettify expected errors, let rest bubble up
         fail('In file %r, %s' % (spec, exc))
 
-    app = get_daemon().submit(spec)
-    print(app.app_id)
+    print(get_daemon().submit(spec))
 
 
 @subcommand(application.subs,
@@ -275,11 +274,11 @@ def application_shutdown(app_id, status):
 
 @subcommand(application.subs,
             'specification', 'Get specification for a running skein application',
-            app_id)
+            app_id_or_current)
 def application_specification(app_id):
-    print(get_daemon().connect(app_id)
-                      .get_specification()
-                      .to_yaml(skip_nulls=True))
+    app = application_client_from_app_id(app_id)
+    print(app.get_specification()
+             .to_yaml(skip_nulls=True))
 
 
 ######################

@@ -257,7 +257,7 @@ public class Daemon {
         (Environment.JAVA_HOME.$$() + "/bin/java "
          + "-Xmx128M "
          + "com.anaconda.skein.ApplicationMaster "
-         + appDir
+         + appDir + " " + appId.toString()
          + " >" + logdir + "/appmaster.log 2>&1"));
 
     // Add security tokens as needed

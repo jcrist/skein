@@ -8,7 +8,6 @@ import signal
 import socket
 import struct
 import subprocess
-import warnings
 from collections import namedtuple, MutableMapping
 from contextlib import closing
 
@@ -24,10 +23,11 @@ from .model import (ApplicationSpec, ApplicationReport, ApplicationState,
 from .utils import cached_property, with_finalizers
 
 
-__all__ = ('Client', 'Application', 'ApplicationClient', 'Security')
+__all__ = ('Client', 'ApplicationClient', 'Security')
 
 
 ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'
+APPID_ENV_VAR = 'SKEIN_APPLICATION_ID'
 CONFIG_DIR = os.environ.get('SKEIN_CONFIG',
                             os.path.join(os.path.expanduser('~'), '.skein'))
 _SKEIN_DIR = os.path.abspath(os.path.dirname(os.path.relpath(__file__)))
@@ -412,7 +412,8 @@ class Client(_ClientBase):
 
         Returns
         -------
-        app : Application
+        app_id : str
+            The id of the submitted application.
         """
         if isinstance(spec, str):
             spec = ApplicationSpec.from_file(spec)
@@ -423,7 +424,31 @@ class Client(_ClientBase):
                                     "path, or dict, got "
                                     "%s" % type(spec).__name__)
         resp = self._call('submit', spec.to_protobuf())
-        return Application(self, resp.id)
+        return resp.id
+
+    def submit_and_connect(self, spec):
+        """Submit a new skein application, and wait to connect to it.
+
+        If an error occurs before the application connects, the application is
+        killed.
+
+        Parameters
+        ----------
+        spec : ApplicationSpec, str, or dict
+            A description of the application to run. Can be an
+            ``ApplicationSpec`` object, a path to a yaml/json file, or a
+            dictionary description of an application specification.
+
+        Returns
+        -------
+        app_client : ApplicationClient
+        """
+        app_id = self.submit(spec)
+        try:
+            return self.connect(app_id)
+        except BaseException:
+            self.kill_application(app_id)
+            raise
 
     def connect(self, app_id, wait=True):
         """Connect to a running application.
@@ -457,6 +482,7 @@ class Client(_ClientBase):
                 "%s" % (app_id, report.state))
 
         return ApplicationClient('%s:%d' % (report.host, report.port),
+                                 app_id,
                                  security=self.security)
 
     def get_applications(self, states=None):
@@ -574,6 +600,8 @@ class ApplicationClient(_ClientBase):
     ----------
     address : str
         The address of the application master.
+    app_id : str
+        The application id
     security : Security, optional
         The security configuration to use to communicate with the daemon.
         Defaults to the global configuration.
@@ -581,13 +609,14 @@ class ApplicationClient(_ClientBase):
     _server_name = 'application'
     _server_error = ApplicationError
 
-    def __init__(self, address, security=None):
+    def __init__(self, address, app_id, security=None):
         self.address = address
-        self.security = security
+        self.id = app_id
         self._stub = proto.MasterStub(secure_channel(address, security))
+        self._shutdown = False
 
     def __repr__(self):
-        return 'ApplicationClient<%s>' % self.address
+        return 'ApplicationClient<%s, %s>' % (self.id, self.address)
 
     def shutdown(self, status='SUCCEEDED'):
         """Shutdown the application.
@@ -601,6 +630,7 @@ class ApplicationClient(_ClientBase):
         """
         status = str(FinalStatus(status))
         self._call('shutdown', proto.ShutdownRequest(final_status=status))
+        self._shutdown = True
 
     @cached_property
     def kv(self):
@@ -671,6 +701,7 @@ class ApplicationClient(_ClientBase):
         container in a application.
         """
         address = _get_env_var(ADDRESS_ENV_VAR)
+        app_id = _get_env_var(APPID_ENV_VAR)
 
         container_id = _get_env_var('CONTAINER_ID')
         for local_dir in _get_env_var('LOCAL_DIRS').split(','):
@@ -678,7 +709,7 @@ class ApplicationClient(_ClientBase):
             crt_path = os.path.join(container_dir, '.skein.crt')
             pem_path = os.path.join(container_dir, '.skein.pem')
             if os.path.exists(crt_path) and os.path.exists(pem_path):
-                return cls(address, security=Security(crt_path, pem_path))
+                return cls(address, app_id, security=Security(crt_path, pem_path))
 
         raise FileNotFoundError(
             "Failed to resolve .skein.{crt,pem} in 'LOCAL_DIRS'")
@@ -724,70 +755,3 @@ class ApplicationClient(_ClientBase):
             raise context.ValueError("Invalid container id %r" % id)
         req = proto.ContainerInstance(service_name=service, instance=instance)
         self._call('killContainer', req)
-
-
-class Application(object):
-    """A possibly running Skein application.
-
-    May be used as a contextmanager to ensure that the enclosed application is
-    stopped before exiting.
-
-    The constructor shouldn't be used directly, instead use
-    ``Client.submit``."""
-    def __init__(self, client, app_id):
-        self._client = client
-        self.app_id = app_id
-
-    def __repr__(self):
-        return 'Application<id=%r>' % self.app_id
-
-    def report(self):
-        """A report on the application status.
-
-        Returns
-        -------
-        status : ApplicationReport
-        """
-        return self._client.application_report(self.app_id)
-
-    def is_running(self):
-        """Return True if the application state is RUNNING"""
-        return self.report().state == ApplicationState.RUNNING
-
-    def kill(self):
-        """Kill the application."""
-        return self._client.kill_application(self.app_id)
-
-    def connect(self, wait=True):
-        """Connect to the application.
-
-        Parameters
-        ----------
-        wait : bool, optional
-            If true [default], blocks until the application starts. If False,
-            will raise a ``ApplicationNotRunningError`` immediately if the
-            application isn't running.
-
-        Returns
-        -------
-        app_client : ApplicationClient
-
-        Raises
-        ------
-        ApplicationNotRunningError
-            If the application isn't running.
-        """
-        return self._client.connect(self.app_id, wait=wait)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        try:
-            if self.report().state not in {ApplicationState.FINISHED,
-                                           ApplicationState.FAILED,
-                                           ApplicationState.KILLED}:
-                self.kill()
-        except Exception as exc:
-            warnings.warn("Failed to ensure application %s was stopped. "
-                          "Exception: %s" % (self.app_id, exc))

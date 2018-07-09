@@ -10,7 +10,7 @@ from skein.exceptions import context
 from skein.cli import main
 from skein.test.conftest import (run_application, sleep_until_killed,
                                  check_is_shutdown, wait_for_containers,
-                                 set_skein_config)
+                                 set_skein_config, ensure_shutdown)
 
 
 bad_spec_yaml = """
@@ -34,15 +34,6 @@ def run_command(command, error=False):
         assert exc.value.code != 0
     else:
         assert exc.value.code == 0
-
-
-@contextmanager
-def ensure_app_shutdown(client, app_id):
-    try:
-        yield
-    finally:
-        client.kill_application(app_id)
-    check_is_shutdown(client, app_id)
 
 
 @contextmanager
@@ -243,7 +234,7 @@ def test_cli_application(tmpdir, capsys, global_client):
 
     app_id = out.strip()
 
-    with ensure_app_shutdown(global_client, app_id):
+    with ensure_shutdown(global_client, app_id):
         # Wait for app to start
         global_client.connect(app_id)
 
@@ -283,44 +274,40 @@ def test_cli_application(tmpdir, capsys, global_client):
 
 def test_cli_kv(global_client, capsys):
     with run_application(global_client) as app:
-        # Wait until started
-        app.connect()
-        app_id = app.app_id
-
         # Set keys
-        run_command('kv set %s --key foo --value bar' % app_id)
-        run_command('kv set %s --key fizz --value buzz' % app_id)
+        run_command('kv set %s --key foo --value bar' % app.id)
+        run_command('kv set %s --key fizz --value buzz' % app.id)
         out, err = capsys.readouterr()
         assert not out
         assert not err
 
         # Get key
-        run_command('kv get %s --key foo' % app_id)
+        run_command('kv get %s --key foo' % app.id)
         out, err = capsys.readouterr()
         assert not err
         assert out == 'bar\n'
 
         # Get whole key-value store
-        run_command('kv get %s' % app_id)
+        run_command('kv get %s' % app.id)
         out, err = capsys.readouterr()
         assert not err
         assert out == ('fizz: buzz\n'
                        'foo: bar\n')
 
         # Delete key
-        run_command('kv del %s --key fizz' % app_id)
+        run_command('kv del %s --key fizz' % app.id)
         out, err = capsys.readouterr()
         assert not out
         assert not err
 
         # Get missing key
-        run_command('kv get %s --key fizz' % app_id, error=True)
+        run_command('kv get %s --key fizz' % app.id, error=True)
         out, err = capsys.readouterr()
         assert not out
         assert "Error: Key 'fizz' is not set\n" == err
 
         # Kill application
-        run_command('application kill %s' % app_id)
+        run_command('application kill %s' % app.id)
         out, err = capsys.readouterr()
         assert not out
         assert not err
@@ -328,40 +315,39 @@ def test_cli_kv(global_client, capsys):
 
 def test_cli_container(global_client, capsys):
     with run_application(global_client) as app:
-        app_id = app.app_id
-
-        ac = app.connect()
-        wait_for_containers(ac, 1, states=['RUNNING'])
+        wait_for_containers(app, 1, states=['RUNNING'])
 
         # skein container scale
-        run_command('container scale %s --service sleeper --number 3' % app_id)
+        run_command('container scale %s --service sleeper --number 3' % app.id)
         out, err = capsys.readouterr()
         assert not out
         assert not err
-        wait_for_containers(ac, 3, services=['sleeper'], states=['RUNNING'])
+        wait_for_containers(app, 3, services=['sleeper'], states=['RUNNING'])
 
         # skein container ls
-        run_command('container ls %s' % app_id)
+        run_command('container ls %s' % app.id)
         out, err = capsys.readouterr()
         assert not err
         assert len(out.splitlines()) == 4
 
         # skein container kill
-        container_id = ac.get_containers()[0].id
-        run_command('container kill %s --id %s' % (app_id, container_id))
+        container_id = app.get_containers()[0].id
+        run_command('container kill %s --id %s' % (app.id, container_id))
         out, err = capsys.readouterr()
         assert not out
         assert not err
-        wait_for_containers(ac, 2, services=['sleeper'], states=['RUNNING'])
+        wait_for_containers(app, 2, services=['sleeper'], states=['RUNNING'])
 
         # `skein container ls -a`
-        run_command('container ls %s -a' % app_id)
+        run_command('container ls %s -a' % app.id)
         out, err = capsys.readouterr()
         assert not err
         assert container_id in out
 
         # Errors bubble up nicely
-        run_command('container kill %s --id foobar_0' % app_id, error=True)
+        run_command('container kill %s --id foobar_0' % app.id, error=True)
         out, err = capsys.readouterr()
         assert not out
         assert err.startswith('Error: ')
+
+        app.shutdown()

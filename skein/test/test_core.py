@@ -108,174 +108,148 @@ def test_client_closed_when_reference_dropped(security, kinit):
 
 def test_simple_app(client):
     with run_application(client) as app:
-        # Nest manager here to call cleanup manually in this test
-        with app:
-            # wait for app to start
-            ac = app.connect()
+        # smoketest repr
+        repr(app)
 
-            assert app.is_running()
-
-            # calling again is fine
-            isinstance(app.connect(), skein.ApplicationClient)
-            isinstance(app.connect(wait=False), skein.ApplicationClient)
-
-            # smoketest reprs
-            repr(app)
-            repr(ac)
-
-            report = app.report()
-            running_apps = client.get_applications()
-            assert report.id in {a.id for a in running_apps}
-
-            assert report.state == 'RUNNING'
-            assert report.final_status == 'UNDEFINED'
-
-    report = app.report()
-    assert report.state == 'KILLED'
-    assert report.final_status == 'KILLED'
-
-    with pytest.raises(skein.ConnectionError):
-        app.connect()
-
-    running_apps = client.get_applications()
-    assert report.id not in {a.id for a in running_apps}
-
-    killed_apps = client.get_applications(states=['killed'])
-    assert report.id in {a.id for a in killed_apps}
-
-
-def test_shutdown_app(client):
-    with run_application(client) as app:
-        ac = app.connect()
-
-        ac.shutdown(status='SUCCEEDED')
-
-    assert app.report().final_status == 'SUCCEEDED'
-
-
-def test_get_specification(client):
-    with run_application(client) as app:
-        ac = app.connect()
-        a = ac.get_specification()
+        # Test get_specification
+        a = app.get_specification()
         assert isinstance(a, skein.ApplicationSpec)
         assert 'sleeper' in a.services
+
+        assert client.application_report(app.id).state == 'RUNNING'
+
+        app.shutdown()
+
+    with pytest.raises(skein.ConnectionError):
+        client.connect(app.id)
+
+    with pytest.raises(skein.ConnectionError):
+        client.connect(app.id, wait=False)
+
+    with pytest.raises(skein.ConnectionError):
+        app.get_specification()
+
+    running_apps = client.get_applications()
+    assert app.id not in {a.id for a in running_apps}
+
+    finished_apps = client.get_applications(states=['finished'])
+    assert app.id in {a.id for a in finished_apps}
 
 
 def test_key_value(client):
     with run_application(client) as app:
-        ac = app.connect()
+        assert isinstance(app.kv, MutableMapping)
+        assert app.kv is app.kv
 
-        assert isinstance(ac.kv, MutableMapping)
-        assert ac.kv is ac.kv
+        assert dict(app.kv) == {}
 
-        assert dict(ac.kv) == {}
+        app.kv['foo'] = 'bar'
+        assert app.kv['foo'] == 'bar'
 
-        ac.kv['foo'] = 'bar'
-        assert ac.kv['foo'] == 'bar'
+        assert dict(app.kv) == {'foo': 'bar'}
+        assert app.kv.to_dict() == {'foo': 'bar'}
+        assert len(app.kv) == 1
 
-        assert dict(ac.kv) == {'foo': 'bar'}
-        assert ac.kv.to_dict() == {'foo': 'bar'}
-        assert len(ac.kv) == 1
-
-        del ac.kv['foo']
-        assert ac.kv.to_dict() == {}
-        assert len(ac.kv) == 0
+        del app.kv['foo']
+        assert app.kv.to_dict() == {}
+        assert len(app.kv) == 0
 
         with pytest.raises(KeyError):
-            ac.kv['fizz']
+            app.kv['fizz']
 
         with pytest.raises(TypeError):
-            ac.kv[1] = 'foo'
+            app.kv[1] = 'foo'
 
         with pytest.raises(TypeError):
-            ac.kv['foo'] = 1
+            app.kv['foo'] = 1
 
         def set_foo():
             time.sleep(0.5)
-            ac2 = app.connect()
-            ac2.kv['foo'] = 'baz'
+            app.kv['foo'] = 'baz'
 
         setter = Thread(target=set_foo)
         setter.daemon = True
         setter.start()
 
-        val = ac.kv.wait('foo')
+        val = app.kv.wait('foo')
         assert val == 'baz'
 
         # Get immediately for set keys
-        val2 = ac.kv.wait('foo')
+        val2 = app.kv.wait('foo')
         assert val2 == 'baz'
+
+        app.shutdown()
 
 
 def test_dynamic_containers(client):
     with run_application(client) as app:
-        ac = app.connect()
-
-        initial = wait_for_containers(ac, 1, states=['RUNNING'])
+        initial = wait_for_containers(app, 1, states=['RUNNING'])
         assert initial[0].state == 'RUNNING'
         assert initial[0].service_name == 'sleeper'
 
         # Scale sleepers up to 3 containers
-        new = ac.scale('sleeper', 3)
+        new = app.scale('sleeper', 3)
         assert len(new) == 2
         for c in new:
             assert c.state == 'REQUESTED'
-        wait_for_containers(ac, 3, services=['sleeper'], states=['RUNNING'])
+        wait_for_containers(app, 3, services=['sleeper'], states=['RUNNING'])
 
         # Scale down to 1 container
-        stopped = ac.scale('sleeper', 1)
+        stopped = app.scale('sleeper', 1)
         assert len(stopped) == 2
         # Stopped oldest 2 instances
         assert stopped[0].instance == 0
         assert stopped[1].instance == 1
 
         # Scale up to 2 containers
-        new = ac.scale('sleeper', 2)
+        new = app.scale('sleeper', 2)
         # Calling twice is no-op
-        new2 = ac.scale('sleeper', 2)
+        new2 = app.scale('sleeper', 2)
         assert len(new2) == 0
         assert new[0].instance == 3
-        current = wait_for_containers(ac, 2, services=['sleeper'],
+        current = wait_for_containers(app, 2, services=['sleeper'],
                                       states=['RUNNING'])
         assert current[0].instance == 2
         assert current[1].instance == 3
 
         # Manually kill instance 3
-        ac.kill_container('sleeper_3')
-        current = ac.get_containers()
+        app.kill_container('sleeper_3')
+        current = app.get_containers()
         assert len(current) == 1
         assert current[0].instance == 2
 
         # Fine to kill already killed container
-        ac.kill_container('sleeper_1')
+        app.kill_container('sleeper_1')
 
         # All killed containers
-        killed = ac.get_containers(states=['killed'])
+        killed = app.get_containers(states=['killed'])
         assert len(killed) == 3
         assert [c.instance for c in killed] == [0, 1, 3]
 
         # Can't scale non-existant service
         with pytest.raises(ValueError):
-            ac.scale('foobar', 2)
+            app.scale('foobar', 2)
 
         # Can't scale negative
         with pytest.raises(ValueError):
-            ac.scale('sleeper', -5)
+            app.scale('sleeper', -5)
 
         # Can't kill non-existant container
         with pytest.raises(ValueError):
-            ac.kill_container('foobar_1')
+            app.kill_container('foobar_1')
 
         with pytest.raises(ValueError):
-            ac.kill_container('sleeper_500')
+            app.kill_container('sleeper_500')
 
         # Invalid container id
         with pytest.raises(ValueError):
-            ac.kill_container('fooooooo')
+            app.kill_container('fooooooo')
 
         # Can't get containers for non-existant service
         with pytest.raises(ValueError):
-            ac.get_containers(services=['sleeper', 'missing'])
+            app.get_containers(services=['sleeper', 'missing'])
+
+        app.shutdown()
 
 
 def test_container_permissions(client, has_kerberos_enabled):
@@ -289,9 +263,9 @@ def test_container_permissions(client, has_kerberos_enabled):
                                  services={'service': service})
 
     with run_application(client, spec=spec) as app:
-        wait_for_success(app)
+        wait_for_success(client, app.id)
 
-    logs = get_logs(app.app_id)
+    logs = get_logs(app.id)
     assert "USER_ENV=[testuser]" in logs
     if has_kerberos_enabled:
         assert "LOGIN_ID=[testuser]" in logs
