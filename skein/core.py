@@ -566,6 +566,9 @@ class KeyValueStore(MutableMapping):
         """Return the whole key-value store as a dictionary"""
         return dict(self._client._call('keyvalueGetAll', proto.Empty()).items)
 
+    def _keys(self):
+        return list(self._client._call('keyvalueListAll', proto.Empty()).keys)
+
     def _get(self, key=None, wait=False):
         req = proto.GetKeyRequest(key=key, wait=wait)
         resp = self._client._call('keyvalueGetKey', req)
@@ -586,10 +589,10 @@ class KeyValueStore(MutableMapping):
         self._client._call('keyvalueDelKey', proto.DelKeyRequest(key=key))
 
     def __iter__(self):
-        return iter(self.to_dict())
+        return iter(self._keys())
 
     def __len__(self):
-        return len(self.to_dict())
+        return len(self._keys())
 
 
 class ApplicationClient(_ClientBase):
@@ -640,13 +643,14 @@ class ApplicationClient(_ClientBase):
         Used by applications to coordinate configuration and global state.
 
         This implements the standard MutableMapping interface, along with the
-        ability to "wait" for keys to be set.
+        ability to "wait" for keys to be set. Keys are strings, with values as
+        bytes.
 
         Examples
         --------
-        >>> app_client.kv['foo'] = 'bar'
+        >>> app_client.kv['foo'] = b'bar'
         >>> app_client.kv['foo']
-        'bar'
+        b'bar'
         >>> del app_client.kv['foo']
         >>> 'foo' in app_client.kv
         False

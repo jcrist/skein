@@ -146,11 +146,11 @@ def test_key_value(client):
 
         assert dict(app.kv) == {}
 
-        app.kv['foo'] = 'bar'
-        assert app.kv['foo'] == 'bar'
+        app.kv['foo'] = b'bar'
+        assert app.kv['foo'] == b'bar'
 
-        assert dict(app.kv) == {'foo': 'bar'}
-        assert app.kv.to_dict() == {'foo': 'bar'}
+        assert dict(app.kv) == {'foo': b'bar'}
+        assert app.kv.to_dict() == {'foo': b'bar'}
         assert len(app.kv) == 1
 
         del app.kv['foo']
@@ -164,22 +164,25 @@ def test_key_value(client):
             app.kv[1] = 'foo'
 
         with pytest.raises(TypeError):
+            app.kv['foo'] = u'bar'
+
+        with pytest.raises(TypeError):
             app.kv['foo'] = 1
 
         def set_foo():
             time.sleep(0.5)
-            app.kv['foo'] = 'baz'
+            app.kv['foo'] = b'baz'
 
         setter = Thread(target=set_foo)
         setter.daemon = True
         setter.start()
 
         val = app.kv.wait('foo')
-        assert val == 'baz'
+        assert val == b'baz'
 
         # Get immediately for set keys
         val2 = app.kv.wait('foo')
-        assert val2 == 'baz'
+        assert val2 == b'baz'
 
         app.shutdown()
 

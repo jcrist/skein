@@ -1,11 +1,14 @@
 from __future__ import absolute_import, print_function, division
 
+import io
 import os
+import sys
 from contextlib import contextmanager
 
 import pytest
 
 import skein
+from skein.compatibility import PY2
 from skein.exceptions import context
 from skein.cli import main
 from skein.test.conftest import (run_application, sleep_until_killed,
@@ -77,7 +80,7 @@ def global_client(kinit, tmpdir_factory):
                           'container ls',
                           'kv',
                           'kv get',
-                          'kv set',
+                          'kv put',
                           'kv del'])
 def test_cli_help(command, capsys):
     run_command(command + ' -h')
@@ -272,43 +275,65 @@ def test_cli_application(tmpdir, capsys, global_client):
         assert app_id in out
 
 
-def test_cli_kv(global_client, capsys):
+def test_cli_kv(global_client, capfdbinary):
     with run_application(global_client) as app:
+        # List empty key-value store
+        run_command('kv ls %s' % app.id)
+        out, err = capfdbinary.readouterr()
+        assert not err
+        assert not out
+
         # Set keys
-        run_command('kv set %s --key foo --value bar' % app.id)
-        run_command('kv set %s --key fizz --value buzz' % app.id)
-        out, err = capsys.readouterr()
+        run_command('kv put %s --key foo --value bar' % app.id)
+        run_command('kv put %s --key fizz --value buzz' % app.id)
+        out, err = capfdbinary.readouterr()
         assert not out
         assert not err
 
+        # Set key from stdin. Not valid unicode.
+        bytes_val = b'H\x9e[\x0e\xa6~\x7fVb\xea'
+        buf = io.BytesIO(bytes_val)
+        mock_stdin = buf if PY2 else io.TextIOWrapper(buf)
+        old_stdin = sys.stdin
+        try:
+            sys.stdin = mock_stdin
+            run_command('kv put %s --key from_stdin' % app.id)
+        except Exception:
+            sys.stdin = old_stdin
+
         # Get key
         run_command('kv get %s --key foo' % app.id)
-        out, err = capsys.readouterr()
+        out, err = capfdbinary.readouterr()
         assert not err
-        assert out == 'bar\n'
+        assert out == b'bar\n'
 
-        # Get whole key-value store
-        run_command('kv get %s' % app.id)
-        out, err = capsys.readouterr()
+        # Get binary key
+        run_command('kv get %s --key from_stdin' % app.id)
+        out, err = capfdbinary.readouterr()
         assert not err
-        assert out == ('fizz: buzz\n'
-                       'foo: bar\n')
+        assert out == bytes_val + b'\n'
+
+        # List whole key-value store
+        run_command('kv ls %s' % app.id)
+        out, err = capfdbinary.readouterr()
+        assert not err
+        assert out == b'fizz\nfoo\nfrom_stdin\n'
 
         # Delete key
         run_command('kv del %s --key fizz' % app.id)
-        out, err = capsys.readouterr()
+        out, err = capfdbinary.readouterr()
         assert not out
         assert not err
 
         # Get missing key
         run_command('kv get %s --key fizz' % app.id, error=True)
-        out, err = capsys.readouterr()
+        out, err = capfdbinary.readouterr()
         assert not out
-        assert "Error: Key 'fizz' is not set\n" == err
+        assert b"Error: Key 'fizz' is not set\n" == err
 
         # Kill application
         run_command('application kill %s' % app.id)
-        out, err = capsys.readouterr()
+        out, err = capfdbinary.readouterr()
         assert not out
         assert not err
 

@@ -1,5 +1,6 @@
 package com.anaconda.skein;
 
+import com.google.protobuf.ByteString;
 import io.grpc.Server;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -81,8 +82,8 @@ public class ApplicationMaster {
 
   private ApplicationId appId;
 
-  private final ConcurrentHashMap<String, String> keyValueStore =
-      new ConcurrentHashMap<String, String>();
+  private final ConcurrentHashMap<String, ByteString> keyValueStore =
+      new ConcurrentHashMap<String, ByteString>();
 
   private final ConcurrentHashMap<String, List<StreamObserver<Msg.GetKeyResponse>>> alerts =
       new ConcurrentHashMap<String, List<StreamObserver<Msg.GetKeyResponse>>>();
@@ -876,7 +877,7 @@ public class ApplicationMaster {
     public void keyvalueGetKey(Msg.GetKeyRequest req,
         StreamObserver<Msg.GetKeyResponse> resp) {
       String key = req.getKey();
-      String val = keyValueStore.get(key);
+      ByteString val = keyValueStore.get(key);
       if (val == null) {
         if (req.getWait()) {
           if (alerts.get(key) == null) {
@@ -898,7 +899,7 @@ public class ApplicationMaster {
     public void keyvalueSetKey(Msg.SetKeyRequest req,
         StreamObserver<Msg.Empty> resp) {
       String key = req.getKey();
-      String val = req.getVal();
+      ByteString val = req.getVal();
 
       keyValueStore.put(key, val);
 
@@ -942,6 +943,16 @@ public class ApplicationMaster {
       resp.onNext(Msg.KeyValueResponse
           .newBuilder()
           .putAllItems(keyValueStore)
+          .build());
+      resp.onCompleted();
+    }
+
+    @Override
+    public void keyvalueListAll(Msg.Empty req,
+        StreamObserver<Msg.KeyValueListResponse> resp) {
+      resp.onNext(Msg.KeyValueListResponse
+          .newBuilder()
+          .addAllKeys(keyValueStore.keySet())
           .build());
       resp.onCompleted();
     }

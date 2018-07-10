@@ -27,6 +27,13 @@ if PY2:
         except OSError:
             if not exist_ok or not os.path.isdir(name):
                 raise
+
+    def read_stdin_bytes():
+        return sys.stdin.read()
+
+    def write_stdout_bytes(b):
+        sys.stdout.write(b)
+
 else:
     from urllib.parse import urlparse, urlsplit  # noqa
     from os import makedirs  # noqa
@@ -35,6 +42,12 @@ else:
     integer = int
 
     UTC = datetime.timezone.utc
+
+    def read_stdin_bytes():
+        return sys.stdin.buffer.read()
+
+    def write_stdout_bytes(b):
+        sys.stdout.buffer.write(b)
 
 
 def with_metaclass(meta):

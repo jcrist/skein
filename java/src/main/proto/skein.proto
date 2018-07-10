@@ -184,6 +184,8 @@ service Master {
 
   rpc keyvalueDelKey (DelKeyRequest) returns (Empty);
 
+  rpc keyvalueListAll (Empty) returns (KeyValueListResponse);
+
   rpc keyvalueGetAll (Empty) returns (KeyValueResponse);
 
   rpc getApplicationSpec (Empty) returns (ApplicationSpec);
@@ -208,13 +210,13 @@ message GetKeyRequest {
 
 
 message GetKeyResponse {
-  string val = 1;
+  bytes val = 1;
 }
 
 
 message SetKeyRequest {
   string key = 1;
-  string val = 2;
+  bytes val = 2;
 }
 
 message DelKeyRequest {
@@ -222,7 +224,12 @@ message DelKeyRequest {
 }
 
 message KeyValueResponse {
-  map<string, string> items = 1;
+  map<string, bytes> items = 1;
+}
+
+
+message KeyValueListResponse {
+  repeated string keys = 1;
 }
 
 
