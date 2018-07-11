@@ -178,15 +178,13 @@ message ApplicationsResponse {
 service Master {
   rpc shutdown (ShutdownRequest) returns (Empty);
 
-  rpc keyvalueGetKey (GetKeyRequest) returns (GetKeyResponse);
+  rpc GetRange (GetRangeRequest) returns (GetRangeResponse);
 
-  rpc keyvalueSetKey (SetKeyRequest) returns (Empty);
+  rpc Put (PutRequest) returns (PutResponse);
 
-  rpc keyvalueDelKey (DelKeyRequest) returns (Empty);
+  rpc DeleteRange (DeleteRangeRequest) returns (DeleteRangeResponse);
 
-  rpc keyvalueListAll (Empty) returns (KeyValueListResponse);
-
-  rpc keyvalueGetAll (Empty) returns (KeyValueResponse);
+  rpc Transaction (TransactionRequest) returns (TransactionResponse);
 
   rpc getApplicationSpec (Empty) returns (ApplicationSpec);
 
@@ -203,33 +201,108 @@ message ShutdownRequest {
 }
 
 
-message GetKeyRequest {
+message KeyValue {
   string key = 1;
-  bool wait = 2;
+  bytes value = 2;
 }
 
 
-message GetKeyResponse {
-  bytes val = 1;
+message GetRangeRequest {
+  enum ResultType {
+    ITEMS = 0;
+    KEYS = 1;
+    NONE = 2;
+  }
+  string range_start = 1;
+  string range_end = 2;
+  int32 limit = 3;
+  ResultType result_type = 4;
 }
 
 
-message SetKeyRequest {
-  string key = 1;
-  bytes val = 2;
-}
-
-message DelKeyRequest {
-  string key = 1;
-}
-
-message KeyValueResponse {
-  map<string, bytes> items = 1;
+message GetRangeResponse {
+  GetRangeRequest.ResultType result_type = 1;
+  int32 count = 2;
+  repeated KeyValue kv = 3;
 }
 
 
-message KeyValueListResponse {
-  repeated string keys = 1;
+message PutRequest {
+  KeyValue kv = 1;
+  bool prev_kv = 2;
+}
+
+
+message PutResponse {
+  KeyValue prev_kv = 1;
+}
+
+
+message DeleteRangeRequest {
+  enum ResultType {
+    NONE = 0;
+    ITEMS = 1;
+    KEYS = 2;
+  }
+  string range_start = 1;
+  string range_end = 2;
+  ResultType result_type = 3;
+}
+
+
+message DeleteRangeResponse {
+  DeleteRangeRequest.ResultType result_type = 1;
+  int32 count = 2;
+  repeated KeyValue prev_kv = 3;
+}
+
+
+message Condition {
+  message Exists {
+    string key = 1;
+  }
+
+  message Equals {
+    string key = 1;
+    bytes value = 2;
+  }
+
+  bool inverse = 1;
+  oneof op {
+    Exists op_exists = 2;
+    Equals op_equals = 3;
+  }
+}
+
+
+message RequestOp {
+  oneof request {
+    GetRangeRequest request_get_range = 1;
+    PutRequest request_put = 2;
+    DeleteRangeRequest request_del_range = 3;
+  }
+}
+
+
+message ResponseOp {
+  oneof response {
+    GetRangeResponse response_get = 1;
+    PutResponse response_put = 2;
+    DeleteRangeResponse response_del_range = 3;
+  }
+}
+
+
+message TransactionRequest {
+  repeated Condition conditions = 1;
+  repeated RequestOp on_true = 2;
+  repeated RequestOp on_false = 3;
+}
+
+
+message TransactionResponse {
+  bool succeeded = 1;
+  repeated ResponseOp responses = 2;
 }
 
 

@@ -1,9 +1,10 @@
 package com.anaconda.skein;
 
+import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
+
 import io.grpc.Server;
 import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
@@ -54,6 +55,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -82,11 +84,8 @@ public class ApplicationMaster {
 
   private ApplicationId appId;
 
-  private final ConcurrentHashMap<String, ByteString> keyValueStore =
-      new ConcurrentHashMap<String, ByteString>();
-
-  private final ConcurrentHashMap<String, List<StreamObserver<Msg.GetKeyResponse>>> alerts =
-      new ConcurrentHashMap<String, List<StreamObserver<Msg.GetKeyResponse>>>();
+  private final TreeMap<String, ByteString> keyValueStore =
+      new TreeMap<String, ByteString>();
 
   private final Map<String, ServiceTracker> services =
       new HashMap<String, ServiceTracker>();
@@ -874,86 +873,123 @@ public class ApplicationMaster {
     }
 
     @Override
-    public void keyvalueGetKey(Msg.GetKeyRequest req,
-        StreamObserver<Msg.GetKeyResponse> resp) {
-      String key = req.getKey();
-      ByteString val = keyValueStore.get(key);
-      if (val == null) {
-        if (req.getWait()) {
-          if (alerts.get(key) == null) {
-            alerts.put(key, new ArrayList<StreamObserver<Msg.GetKeyResponse>>());
-          }
-          alerts.get(key).add(resp);
-        } else {
-          resp.onError(Status.NOT_FOUND
-              .withDescription(key)
-              .asRuntimeException());
-        }
+    public synchronized void getRange(Msg.GetRangeRequest req,
+        StreamObserver<Msg.GetRangeResponse> resp) {
+      String start = req.getRangeStart();
+      String end = req.getRangeEnd();
+
+      boolean openLeft = start.isEmpty() || start.equals("\u0000");
+      boolean openRight = end.isEmpty();
+
+      SortedMap<String, ByteString> selection;
+
+      if (openLeft && openRight) {
+        selection = keyValueStore;
+      } else if (openRight ) {
+        selection = keyValueStore.tailMap(start);
+      } else if (openLeft) {
+        selection = keyValueStore.headMap(end);
       } else {
-        resp.onNext(Msg.GetKeyResponse.newBuilder().setVal(val).build());
-        resp.onCompleted();
+        selection = keyValueStore.subMap(start, end);
       }
-    }
 
-    @Override
-    public void keyvalueSetKey(Msg.SetKeyRequest req,
-        StreamObserver<Msg.Empty> resp) {
-      String key = req.getKey();
-      ByteString val = req.getVal();
+      int count = selection.size();
+      int limit = req.getLimit() == 0 ? count : req.getLimit();
 
-      keyValueStore.put(key, val);
+      Msg.GetRangeResponse.Builder builder =
+          Msg.GetRangeResponse
+             .newBuilder()
+             .setCount(count)
+             .setResultType(req.getResultType());
 
-      resp.onNext(MsgUtils.EMPTY);
-      resp.onCompleted();
-
-      // Handle alerts
-      List<StreamObserver<Msg.GetKeyResponse>> callbacks = alerts.get(key);
-      if (callbacks != null) {
-        Msg.GetKeyResponse cbResp =
-            Msg.GetKeyResponse.newBuilder().setVal(val).build();
-        for (StreamObserver<Msg.GetKeyResponse> cb : callbacks) {
-          try {
-            cb.onNext(cbResp);
-            cb.onCompleted();
-          } catch (StatusRuntimeException exc) {
-            if (exc.getStatus().getCode() != Status.Code.CANCELLED) {
-              LOG.info("Callback failed on key: " + key
-                       + ", status: " + exc.getStatus());
-            }
+      switch (req.getResultType()) {
+        case ITEMS:
+          for (Map.Entry<String, ByteString> entry : Iterables.limit(selection.entrySet(), limit)) {
+            builder.addKvBuilder()
+                   .setKey(entry.getKey())
+                   .setValue(entry.getValue());
           }
-        }
-        alerts.remove(key);
+          break;
+        case KEYS:
+          for (String key : Iterables.limit(selection.keySet(), limit)) {
+            builder.addKvBuilder().setKey(key);
+          }
+          break;
+        case NONE:
+          break;
       }
-    }
 
-    @Override
-    public void keyvalueDelKey(Msg.DelKeyRequest req, StreamObserver<Msg.Empty> resp) {
-      String key = req.getKey();
-      if (keyValueStore.remove(key) == null) {
-        resp.onError(Status.NOT_FOUND.withDescription(key).asRuntimeException());
-      } else {
-        resp.onNext(MsgUtils.EMPTY);
-        resp.onCompleted();
-      }
-    }
-
-    @Override
-    public void keyvalueGetAll(Msg.Empty req,
-        StreamObserver<Msg.KeyValueResponse> resp) {
-      resp.onNext(Msg.KeyValueResponse
-          .newBuilder()
-          .putAllItems(keyValueStore)
-          .build());
+      resp.onNext(builder.build());
       resp.onCompleted();
     }
 
     @Override
-    public void keyvalueListAll(Msg.Empty req,
-        StreamObserver<Msg.KeyValueListResponse> resp) {
-      resp.onNext(Msg.KeyValueListResponse
-          .newBuilder()
-          .addAllKeys(keyValueStore.keySet())
-          .build());
+    public synchronized void deleteRange(Msg.DeleteRangeRequest req,
+        StreamObserver<Msg.DeleteRangeResponse> resp) {
+
+      String start = req.getRangeStart();
+      String end = req.getRangeEnd();
+
+      boolean openLeft = start.isEmpty() || start.equals("\u0000");
+      boolean openRight = end.isEmpty();
+
+      SortedMap<String, ByteString> selection;
+
+      if (openLeft && openRight) {
+        selection = keyValueStore;
+      } else if (openRight ) {
+        selection = keyValueStore.tailMap(start);
+      } else if (openLeft) {
+        selection = keyValueStore.headMap(end);
+      } else {
+        selection = keyValueStore.subMap(start, end);
+      }
+
+      Msg.DeleteRangeResponse.Builder builder =
+          Msg.DeleteRangeResponse
+             .newBuilder()
+             .setCount(selection.size())
+             .setResultType(req.getResultType());
+
+      switch (req.getResultType()) {
+        case ITEMS:
+          for (Map.Entry<String, ByteString> entry : selection.entrySet()) {
+            builder.addPrevKvBuilder()
+                  .setKey(entry.getKey())
+                  .setValue(entry.getValue());
+          }
+          break;
+        case KEYS:
+          for (String key : selection.keySet()) {
+            builder.addPrevKvBuilder().setKey(key);
+          }
+          break;
+        case NONE:
+          break;
+      }
+      selection.clear();
+
+      resp.onNext(builder.build());
+      resp.onCompleted();
+    }
+
+    @Override
+    public synchronized void put(Msg.PutRequest req,
+        StreamObserver<Msg.PutResponse> resp) {
+      String key = req.getKv().getKey();
+      ByteString value = req.getKv().getValue();
+      ByteString prev = keyValueStore.put(key, value);
+
+      Msg.PutResponse.Builder builder = Msg.PutResponse.newBuilder();
+
+      if (req.getPrevKv()) {
+        Msg.KeyValue.Builder kvBuilder = builder.getPrevKvBuilder();
+        kvBuilder.setKey(key);
+        if (prev != null) {
+          kvBuilder.setValue(prev);
+        }
+      }
+      resp.onNext(builder.build());
       resp.onCompleted();
     }
   }

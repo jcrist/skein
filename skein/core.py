@@ -8,7 +8,7 @@ import signal
 import socket
 import struct
 import subprocess
-from collections import namedtuple, MutableMapping
+from collections import namedtuple
 from contextlib import closing
 
 import grpc
@@ -18,6 +18,7 @@ from .compatibility import PY2, makedirs
 from .exceptions import (context, FileNotFoundError, ConnectionError,
                          ApplicationNotRunningError, ApplicationError,
                          DaemonNotRunningError, DaemonError)
+from .kv import KeyValueStore
 from .model import (ApplicationSpec, ApplicationReport, ApplicationState,
                     ContainerState, Container, FinalStatus)
 from .utils import cached_property
@@ -549,50 +550,6 @@ class Client(_ClientBase):
             The id of the application to kill.
         """
         self._call('kill', proto.Application(id=app_id))
-
-
-class KeyValueStore(MutableMapping):
-    """The Skein Key-Value store.
-
-    Used by applications to coordinate configuration and global state.
-
-    This implements the standard MutableMapping interface, along with the
-    ability to "wait" for keys to be set.
-    """
-    def __init__(self, client):
-        self._client = client
-
-    def to_dict(self):
-        """Return the whole key-value store as a dictionary"""
-        return dict(self._client._call('keyvalueGetAll', proto.Empty()).items)
-
-    def _keys(self):
-        return list(self._client._call('keyvalueListAll', proto.Empty()).keys)
-
-    def _get(self, key=None, wait=False):
-        req = proto.GetKeyRequest(key=key, wait=wait)
-        resp = self._client._call('keyvalueGetKey', req)
-        return resp.val
-
-    def wait(self, key):
-        """Get a key from the key-value store, blocking until the key is set."""
-        return self._get(key=key, wait=True)
-
-    def __getitem__(self, key):
-        return self._get(key)
-
-    def __setitem__(self, key, value):
-        self._client._call('keyvalueSetKey',
-                           proto.SetKeyRequest(key=key, val=value))
-
-    def __delitem__(self, key):
-        self._client._call('keyvalueDelKey', proto.DelKeyRequest(key=key))
-
-    def __iter__(self):
-        return iter(self._keys())
-
-    def __len__(self):
-        return len(self._keys())
 
 
 class ApplicationClient(_ClientBase):

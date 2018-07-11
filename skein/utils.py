@@ -1,6 +1,8 @@
 from __future__ import print_function, division, absolute_import
 
-from .compatibility import unicode
+from datetime import datetime, timedelta
+
+from .compatibility import unicode, UTC
 
 
 def ensure_unicode(x):
@@ -23,6 +25,27 @@ def humanize_timedelta(td):
     if mins:
         return '%dm' % mins
     return '%ds' % secs
+
+
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+
+
+def datetime_from_millis(x):
+    if x is None or x == 0:
+        return None
+    return _EPOCH + timedelta(milliseconds=x)
+
+
+def datetime_to_millis(x):
+    return int((x - _EPOCH).total_seconds() * 1000)
+
+
+def runtime(start_time, finish_time):
+    if start_time is None:
+        return timedelta(0)
+    if finish_time is None:
+        return datetime.now(UTC) - start_time
+    return finish_time - start_time
 
 
 def format_table(columns, rows):
