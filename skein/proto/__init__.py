@@ -6,7 +6,7 @@ from .skein_pb2 import (Empty, FinalStatus, ApplicationState, Resources, File,
                         Url, ContainersRequest, Container, ContainerInstance,
                         ScaleRequest, ShutdownRequest)
 from .skein_pb2 import (GetRangeRequest, GetRangeResponse,
-                        PutRequest, PutResponse,
+                        PutKeyRequest, PutKeyResponse,
                         DeleteRangeRequest, DeleteRangeResponse,
                         KeyValue)
 from .skein_pb2_grpc import DaemonStub, MasterStub

@@ -18,8 +18,15 @@ def typename(cls):
     return cls.__name__
 
 
+# constants used to detect no parameter passed to keyword argument
+# These are all used semantically the same, but have different reprs
+# to show up nicely when used interactively/in docs.
 required = type('required', (object,),
                 {'__repr__': lambda s: 'required'})()
+no_change = type('no_change', (object,),
+                 {'__repr__': lambda s: 'no_change'})()
+no_default = type('no_default', (object,),
+                  {'__repr__': lambda s: 'no_default'})()
 
 
 def is_list_of(x, typ):
@@ -147,9 +154,9 @@ class Base(object):
         val = getattr(self, field)
         if not (isinstance(val, type) or (nullable and val is None)):
             if nullable:
-                msg = "%s must be a %s, or None"
+                msg = '%s must be a %s, or None'
             else:
-                msg = "%s must be a %s"
+                msg = '%s must be a %s'
             raise context.TypeError(msg % (field, typename(type)))
 
     def _check_is_set_of(self, field, type):
@@ -173,6 +180,8 @@ class Base(object):
         if x is not None and x < min:
             raise context.ValueError("%s must be >= %d" % (field, min))
 
+
+class ProtobufMessage(Base):
     @classmethod
     def from_protobuf(cls, msg):
         """Create an instance from a protobuf message."""
@@ -190,7 +199,7 @@ class Base(object):
         return self._protobuf_cls(**kwargs)
 
 
-class Specification(Base):
+class Specification(ProtobufMessage):
     """Base class for objects that are part of the specification"""
     @classmethod
     def from_dict(cls, obj):

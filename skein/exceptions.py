@@ -11,6 +11,7 @@ __all__ = ('FileExistsError',    # py2 compat
            'SkeinError',
            'SkeinConfigurationError',
            'ConnectionError',
+           'TimeoutError',
            'DaemonNotRunningError',
            'ApplicationNotRunningError',
            'DaemonError',
@@ -21,6 +22,9 @@ if PY2:
     class _ConnectionError(OSError):
         pass
 
+    class _TimeoutError(OSError):
+        pass
+
     class FileExistsError(OSError):
         pass
 
@@ -29,6 +33,7 @@ if PY2:
 
 else:
     _ConnectionError = ConnectionError  # noqa
+    _TimeoutError = TimeoutError  # noqa
     FileExistsError = FileExistsError
     FileNotFoundError = FileNotFoundError
 
@@ -43,6 +48,10 @@ class SkeinConfigurationError(SkeinError, FileNotFoundError):
 
 class ConnectionError(SkeinError, _ConnectionError):
     """Failed to connect to the daemon or application master"""
+
+
+class TimeoutError(SkeinError, _TimeoutError):
+    """Request to daemon or application master timed out"""
 
 
 class DaemonNotRunningError(ConnectionError):

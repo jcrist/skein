@@ -8,7 +8,7 @@ import yaml
 
 from . import proto as _proto
 from .compatibility import urlparse, string, integer
-from .objects import Enum, Base, Specification, required
+from .objects import Enum, ProtobufMessage, Specification, required
 from .exceptions import context
 from .utils import implements, format_list, datetime_from_millis, runtime
 
@@ -24,6 +24,21 @@ def _pop_origin(kwargs):
         raise TypeError("from_dict() got an unexpected keyword argument "
                         "%s" % next(iter(kwargs)))
     return _origin
+
+
+def container_instance_from_string(id):
+    """Create a ContainerInstance from an id string"""
+    try:
+        service, instance = id.rsplit('_', 1)
+        instance = int(instance)
+    except (TypeError, ValueError):
+        raise context.ValueError("Invalid container id %r" % id)
+    return _proto.ContainerInstance(service_name=service, instance=instance)
+
+
+def container_instance_to_string(id):
+    """Create an id string from a ContainerInstance"""
+    return '%s_%d' % (id.service_name, id.instance)
 
 
 def check_no_cycles(dependencies):
@@ -288,7 +303,7 @@ class File(Specification):
             return 'file://%s%s' % (url.netloc, path)
         return path
 
-    @implements(Base.to_protobuf)
+    @implements(ProtobufMessage.to_protobuf)
     def to_protobuf(self):
         self._validate()
         url = urlparse(self.source)
@@ -567,7 +582,7 @@ class ApplicationSpec(Specification):
             f.write(data)
 
 
-class ResourceUsageReport(Base):
+class ResourceUsageReport(ProtobufMessage):
     """Resource usage report.
 
     Parameters
@@ -623,7 +638,7 @@ class ResourceUsageReport(Base):
         return cls(**kwargs)
 
 
-class ApplicationReport(Base):
+class ApplicationReport(ProtobufMessage):
     """Report of application status.
 
     Parameters
@@ -731,7 +746,7 @@ class ApplicationReport(Base):
         self._check_is_type('finish_time', datetime, nullable=True)
 
     @classmethod
-    @implements(Base.from_protobuf)
+    @implements(ProtobufMessage.from_protobuf)
     def from_protobuf(cls, obj):
         state = ApplicationState(_proto.ApplicationState.Type.Name(obj.state))
         final_status = FinalStatus(_proto.FinalStatus.Type.Name(obj.final_status))
@@ -780,7 +795,7 @@ class ContainerState(Enum):
                'KILLED')
 
 
-class Container(Base):
+class Container(ProtobufMessage):
     """Current container state.
 
     Parameters
@@ -850,7 +865,7 @@ class Container(Base):
         return runtime(self.start_time, self.finish_time)
 
     @classmethod
-    @implements(Base.from_protobuf)
+    @implements(ProtobufMessage.from_protobuf)
     def from_protobuf(cls, obj):
         return cls(service_name=obj.service_name,
                    instance=obj.instance,

@@ -6,6 +6,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -175,6 +176,7 @@ public class Model {
     private long startTime;
     private long finishTime;
     private ContainerRequest req;
+    private Set<String> ownedKeys;
 
     public Container() {}
 
@@ -185,6 +187,7 @@ public class Model {
       this.yarnContainerId = null;
       this.startTime = 0;
       this.finishTime = 0;
+      this.ownedKeys = new HashSet<String>();
     }
 
     public String toString() {
@@ -224,5 +227,15 @@ public class Model {
       this.req = null;
       return out;
     }
+
+    public void addOwnedKey(String key) {
+      ownedKeys.add(key);
+    }
+
+    public void removeOwnedKey(String key) {
+      ownedKeys.remove(key);
+    }
+
+    public Set<String> getOwnedKeys() { return ownedKeys; }
   }
 }

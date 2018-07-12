@@ -16,11 +16,12 @@ import grpc
 from . import proto
 from .compatibility import PY2, makedirs
 from .exceptions import (context, FileNotFoundError, ConnectionError,
-                         ApplicationNotRunningError, ApplicationError,
-                         DaemonNotRunningError, DaemonError)
+                         TimeoutError, ApplicationNotRunningError,
+                         ApplicationError, DaemonNotRunningError, DaemonError)
 from .kv import KeyValueStore
 from .model import (ApplicationSpec, ApplicationReport, ApplicationState,
-                    ContainerState, Container, FinalStatus)
+                    ContainerState, Container, FinalStatus,
+                    container_instance_from_string)
 from .utils import cached_property
 
 
@@ -257,15 +258,17 @@ def _start_daemon(security=None, set_global=False, log=None):
 class _ClientBase(object):
     __slots__ = ('__weakref__',)
 
-    def _call(self, method, req):
+    def _call(self, method, req, timeout=None):
         try:
-            return getattr(self._stub, method)(req)
+            return getattr(self._stub, method)(req, timeout=timeout)
         except grpc.RpcError as _exc:
             exc = _exc
 
         code = exc.code()
         if code == grpc.StatusCode.UNAVAILABLE:
             raise ConnectionError("Unable to connect to %s" % self._server_name)
+        if code == grpc.StatusCode.DEADLINE_EXCEEDED:
+            raise TimeoutError("Unable to connect to %s" % self._server_name)
         elif code == grpc.StatusCode.NOT_FOUND:
             raise context.KeyError(exc.details())
         elif code in (grpc.StatusCode.INVALID_ARGUMENT,
@@ -710,10 +713,4 @@ class ApplicationClient(_ClientBase):
         id : str
             The id of the container to kill.
         """
-        try:
-            service, instance = id.rsplit('_', 1)
-            instance = int(instance)
-        except (TypeError, ValueError):
-            raise context.ValueError("Invalid container id %r" % id)
-        req = proto.ContainerInstance(service_name=service, instance=instance)
-        self._call('killContainer', req)
+        self._call('killContainer', container_instance_from_string(id))

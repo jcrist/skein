@@ -4,6 +4,7 @@ from .exceptions import (SkeinError, SkeinConfigurationError, ConnectionError,
                          DaemonError, ApplicationError)
 from .model import (ApplicationSpec, Service, File, Resources, FileType,
                     FileVisibility)
+from .kv import ops
 
 from ._version import get_versions
 __version__ = get_versions()['version']

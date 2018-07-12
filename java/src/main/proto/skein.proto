@@ -180,7 +180,7 @@ service Master {
 
   rpc GetRange (GetRangeRequest) returns (GetRangeResponse);
 
-  rpc Put (PutRequest) returns (PutResponse);
+  rpc PutKey (PutKeyRequest) returns (PutKeyResponse);
 
   rpc DeleteRange (DeleteRangeRequest) returns (DeleteRangeResponse);
 
@@ -204,6 +204,7 @@ message ShutdownRequest {
 message KeyValue {
   string key = 1;
   bytes value = 2;
+  ContainerInstance owner = 3;
 }
 
 
@@ -215,26 +216,30 @@ message GetRangeRequest {
   }
   string range_start = 1;
   string range_end = 2;
-  int32 limit = 3;
-  ResultType result_type = 4;
+  ResultType result_type = 3;
 }
 
 
 message GetRangeResponse {
-  GetRangeRequest.ResultType result_type = 1;
-  int32 count = 2;
-  repeated KeyValue kv = 3;
+  int32 count = 1;
+  GetRangeRequest.ResultType result_type = 2;
+  repeated KeyValue result = 3;
 }
 
 
-message PutRequest {
-  KeyValue kv = 1;
-  bool prev_kv = 2;
+message PutKeyRequest {
+  string key = 1;
+  bytes value = 2;
+  ContainerInstance owner = 3;
+  bool ignore_value = 4;
+  bool ignore_owner = 5;
+  bool return_previous = 6;
 }
 
 
-message PutResponse {
-  KeyValue prev_kv = 1;
+message PutKeyResponse {
+  bool return_previous = 1;
+  KeyValue previous = 2;
 }
 
 
@@ -251,9 +256,9 @@ message DeleteRangeRequest {
 
 
 message DeleteRangeResponse {
-  DeleteRangeRequest.ResultType result_type = 1;
-  int32 count = 2;
-  repeated KeyValue prev_kv = 3;
+  int32 count = 1;
+  DeleteRangeRequest.ResultType result_type = 2;
+  repeated KeyValue result = 3;
 }
 
 
@@ -278,7 +283,7 @@ message Condition {
 message RequestOp {
   oneof request {
     GetRangeRequest request_get_range = 1;
-    PutRequest request_put = 2;
+    PutKeyRequest request_put = 2;
     DeleteRangeRequest request_del_range = 3;
   }
 }
@@ -287,7 +292,7 @@ message RequestOp {
 message ResponseOp {
   oneof response {
     GetRangeResponse response_get = 1;
-    PutResponse response_put = 2;
+    PutKeyResponse response_put = 2;
     DeleteRangeResponse response_del_range = 3;
   }
 }

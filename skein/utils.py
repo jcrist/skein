@@ -15,6 +15,19 @@ def format_list(x):
     return "\n".join("- %s" % s for s in sorted(x))
 
 
+def format_comma_separated_list(x, conjunction='or'):
+    n = len(x)
+    if n == 0:
+        return ''
+    if n == 1:
+        return str(x[0])
+    if n == 2:
+        left, right = x
+        return '%s %s %s' % (left, conjunction, right)
+    left, right = ', '.join(map(str, x[:-1])), x[-1]
+    return '%s, %s %s' % (left, conjunction, right)
+
+
 def humanize_timedelta(td):
     """Pretty-print a timedelta in a human readable format."""
     secs = int(td.total_seconds())

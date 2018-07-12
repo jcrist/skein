@@ -1,6 +1,5 @@
 package com.anaconda.skein;
 
-import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 
 import io.grpc.Server;
@@ -531,6 +530,24 @@ public class ApplicationMaster {
       }
     }
 
+    public synchronized boolean addOwnedKey(int instance, String key) {
+      Model.Container container = getContainer(instance);
+      if (container == null) {
+        return false;
+      }
+      container.addOwnedKey(key);
+      return true;
+    }
+
+    public synchronized boolean removeOwnedKey(int instance, String key) {
+      Model.Container container = getContainer(instance);
+      if (container == null) {
+        return false;
+      }
+      container.removeOwnedKey(key);
+      return true;
+    }
+
     public synchronized void initialize() throws IOException {
       LOG.info("INTIALIZING: " + name);
       // Request initial containers
@@ -894,7 +911,6 @@ public class ApplicationMaster {
       }
 
       int count = selection.size();
-      int limit = req.getLimit() == 0 ? count : req.getLimit();
 
       Msg.GetRangeResponse.Builder builder =
           Msg.GetRangeResponse
@@ -904,15 +920,15 @@ public class ApplicationMaster {
 
       switch (req.getResultType()) {
         case ITEMS:
-          for (Map.Entry<String, ByteString> entry : Iterables.limit(selection.entrySet(), limit)) {
-            builder.addKvBuilder()
+          for (Map.Entry<String, ByteString> entry : selection.entrySet()) {
+            builder.addResultBuilder()
                    .setKey(entry.getKey())
                    .setValue(entry.getValue());
           }
           break;
         case KEYS:
-          for (String key : Iterables.limit(selection.keySet(), limit)) {
-            builder.addKvBuilder().setKey(key);
+          for (String key : selection.keySet()) {
+            builder.addResultBuilder().setKey(key);
           }
           break;
         case NONE:
@@ -954,14 +970,14 @@ public class ApplicationMaster {
       switch (req.getResultType()) {
         case ITEMS:
           for (Map.Entry<String, ByteString> entry : selection.entrySet()) {
-            builder.addPrevKvBuilder()
+            builder.addResultBuilder()
                   .setKey(entry.getKey())
                   .setValue(entry.getValue());
           }
           break;
         case KEYS:
           for (String key : selection.keySet()) {
-            builder.addPrevKvBuilder().setKey(key);
+            builder.addResultBuilder().setKey(key);
           }
           break;
         case NONE:
@@ -974,19 +990,19 @@ public class ApplicationMaster {
     }
 
     @Override
-    public synchronized void put(Msg.PutRequest req,
-        StreamObserver<Msg.PutResponse> resp) {
-      String key = req.getKv().getKey();
-      ByteString value = req.getKv().getValue();
+    public synchronized void putKey(Msg.PutKeyRequest req,
+        StreamObserver<Msg.PutKeyResponse> resp) {
+      String key = req.getKey();
+      ByteString value = req.getValue();
       ByteString prev = keyValueStore.put(key, value);
 
-      Msg.PutResponse.Builder builder = Msg.PutResponse.newBuilder();
+      Msg.PutKeyResponse.Builder builder = Msg.PutKeyResponse.newBuilder();
 
-      if (req.getPrevKv()) {
-        Msg.KeyValue.Builder kvBuilder = builder.getPrevKvBuilder();
-        kvBuilder.setKey(key);
+      if (req.getReturnPrevious()) {
+        Msg.KeyValue.Builder previousBuilder = builder.getPreviousBuilder();
+        previousBuilder.setKey(key);
         if (prev != null) {
-          kvBuilder.setValue(prev);
+          previousBuilder.setValue(prev);
         }
       }
       resp.onNext(builder.build());

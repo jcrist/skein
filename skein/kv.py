@@ -3,19 +3,19 @@ from __future__ import absolute_import, print_function, division
 from collections import namedtuple, MutableMapping, OrderedDict
 
 from . import proto
-from .objects import Base, Enum
-from .utils import implements
+from .model import (container_instance_from_string,
+                    container_instance_to_string)
+
+from .objects import Base, no_change
 
 
-__all__ = ('ResultType',
-           'get_range',
-           'get',
-           'delete_range',
-           'delete',
-           'put',
-           'GetRangeResponse',
-           'DeleteRangeResponse',
-           'PutResponse')
+__all__ = ('ValueOwnerPair',
+           'ops',
+           'count', 'keys', 'contains',
+           'get', 'get_prefix', 'get_range',
+           'pop', 'pop_prefix', 'pop_range',
+           'discard', 'discard_prefix', 'discard_range',
+           'put', 'swap')
 
 
 def _next_key(prefix):
@@ -24,25 +24,299 @@ def _next_key(prefix):
     return bytes(b).decode('utf-8')
 
 
-class ResultType(Enum):
-    """Enum of Result Types for get_range.
+@object.__new__
+class ops(object):
+    """A registry of key-value store operators"""
+    pass
 
-    Attributes
+
+def register_op(cls):
+    """Register a key-value store operator"""
+    setattr(ops, cls.__name__, cls)
+    return cls
+
+
+class Operator(Base):
+    """Base class for all operators"""
+    pass
+
+
+class ValueOwnerPair(namedtuple('ValueOwnerPair', ['value', 'owner'])):
+    """A Value and owner pair in the Key-Value store.
+
+    Parameters
     ----------
-    ITEMS : ResultType
-        Both keys and values are returned for the selection.
-    KEYS : ResultType
-        Only keys are returned for the selection.
-    NONE : ResultType
-        Neither keys or values are returned for the selection.
+    'value': bytes
+        The value.
+    'owner': str or None
+        The owner container_id, or None for no owner.
     """
-    _values = ('ITEMS',
-               'KEYS',
-               'NONE')
-    _extra_mappings = {None: 'NONE'}
+    @classmethod
+    def _from_kv_protobuf(cls, obj):
+        if obj.HasField("owner"):
+            owner = container_instance_to_string(obj.owner)
+        else:
+            owner = None
+        return cls(obj.value, owner)
 
 
-class get_range(Base):
+class _CountOrKeys(Operator):
+    """Base class for count & keys"""
+    __slots__ = ('range_start', 'range_end', 'prefix')
+    _rpc = 'GetRange'
+
+    def __init__(self, range_start=None, range_end=None, prefix=None):
+        self.range_start = range_start
+        self.range_end = range_end
+        self.prefix = prefix
+        self._validate()
+
+    @property
+    def _is_prefix(self):
+        return self.prefix is not None
+
+    @property
+    def _is_range(self):
+        return self.range_start is not None or self.range_end is not None
+
+    def _validate(self):
+        self._check_is_type('range_start', str, nullable=True)
+        self._check_is_type('range_end', str, nullable=True)
+        self._check_is_type('prefix', str, nullable=True)
+        if self._is_prefix and self._is_range:
+            raise ValueError("Cannot specify `prefix` and `range_start`/`range_end`")
+
+    def __repr__(self):
+        typ = type(self).__name__
+        if self._is_prefix:
+            return '%s(prefix=%r)' % (typ, self.prefix)
+        return ('%s(range_start=%r, range_end=%r)'
+                % (typ, self.range_start, self.range_end))
+
+    def _to_protobuf(self):
+        self._validate()
+        if self._is_prefix:
+            return proto.GetRangeRequest(range_start=self.prefix,
+                                         range_end=_next_key(self.prefix),
+                                         result_type=self._result_type)
+        return proto.GetRangeRequest(range_start=self.range_start,
+                                     range_end=self.range_end,
+                                     result_type=self._result_type)
+
+
+@register_op
+class count(_CountOrKeys):
+    """A request to count keys in the key-value store.
+
+    Parameters
+    ----------
+    range_start : str, optional
+        The lower bound of the a key range, inclusive. If not provided no
+        lower bound will be used.
+    range_end : str, optional
+        The upper bound of the a key range, exclusive. If not provided, no
+        upper bound will be used.
+    prefix : str, optional
+        If provided, will count the number keys matching this prefix.
+    """
+    _result_type = 'NONE'
+
+    def _build_result(self, result):
+        return result.count
+
+
+@register_op
+class keys(_CountOrKeys):
+    """A request to get a list of keys in the key-value store.
+
+    Parameters
+    ----------
+    range_start : str, optional
+        The lower bound of the a key range, inclusive. If not provided no
+        lower bound will be used.
+    range_end : str, optional
+        The upper bound of the a key range, exclusive. If not provided, no
+        upper bound will be used.
+    prefix : str, optional
+        If provided, will return all keys matching this prefix.
+    """
+    _result_type = 'KEYS'
+
+    def _build_result(self, result):
+        return [kv.key for kv in result.result]
+
+
+class _GetOrPop(Operator):
+    """Base class for get & pop"""
+    __slots__ = ('key', 'default', 'return_owner')
+
+    def __init__(self, key, default=None, return_owner=False):
+        self.key = key
+        self.default = default
+        self.return_owner = return_owner
+        self._validate()
+
+    def _validate(self):
+        self._check_is_type('key', str)
+        self._check_is_type('default', bytes, nullable=True)
+        self._check_is_type('return_owner', bool)
+
+    def __repr__(self):
+        return ('%s(%r, default=%r, return_owner=%r)'
+                % (type(self).__name__, self.key, self.default,
+                   self.return_owner))
+
+    def _to_protobuf(self):
+        self._validate()
+        return self._proto(range_start=self.key,
+                           range_end=self.key + '\x00',
+                           result_type='ITEMS')
+
+    def _build_result(self, result):
+        if result.count == 0:
+            if self.return_owner:
+                return ValueOwnerPair(self.default, None)
+            return self.default
+        if self.return_owner:
+            return ValueOwnerPair._from_kv_protobuf(result.result[0])
+        return result.result[0].value
+
+
+@register_op
+class get(_GetOrPop):
+    """A request for a single key.
+
+    Parameters
+    ----------
+    key : str
+        The key to get.
+    default : bytes or None, optional
+        Default value to return if the key is not present.
+    return_owner : bool, optional
+        If True, the owner will also be returned along with the value. Default
+        is False.
+    """
+    _proto = proto.GetRangeRequest
+    _rpc = 'GetRange'
+
+
+@register_op
+class pop(_GetOrPop):
+    """A request to remove a single key and return its corresponding value.
+
+    Parameters
+    ----------
+    key : str
+        The key to pop.
+    default : bytes or None, optional
+        Default value to return if the key is not present.
+    return_owner : bool, optional
+        If True, the owner will also be returned along with the value. Default
+        is False.
+    """
+    _proto = proto.DeleteRangeRequest
+    _rpc = 'DeleteRange'
+
+
+def _output_to_ordered_dict(result, return_owner=False):
+    if return_owner:
+        return OrderedDict((kv.key, ValueOwnerPair._from_kv_protobuf(kv))
+                           for kv in result.result)
+    return OrderedDict((kv.key, kv.value) for kv in result.result)
+
+
+class _GetOrPopPrefix(Operator):
+    """Base class for (get/pop)_prefix"""
+    __slots__ = ('prefix', 'return_owner')
+
+    def __init__(self, prefix, return_owner=False):
+        self.prefix = prefix
+        self.return_owner = return_owner
+        self._validate()
+
+    def _validate(self):
+        self._check_is_type('prefix', str)
+        self._check_is_type('return_owner', bool)
+
+    def __repr__(self):
+        return ('%s(%r, return_owner=%r)'
+                % (type(self).__name__, self.prefix, self.return_owner))
+
+    def _to_protobuf(self):
+        self._validate()
+        return self._proto(range_start=self.prefix,
+                           range_end=_next_key(self.prefix),
+                           result_type='ITEMS')
+
+    def _build_result(self, result):
+        return _output_to_ordered_dict(result, self.return_owner)
+
+
+@register_op
+class get_prefix(_GetOrPopPrefix):
+    """A request to get all key-value pairs whose keys start with ``prefix``.
+
+    Parameters
+    ----------
+    prefix : str
+        The key prefix.
+    return_owner : bool, optional
+        If True, the owner will also be returned along with the value. Default
+        is False.
+    """
+    _proto = proto.GetRangeRequest
+    _rpc = 'GetRange'
+
+
+@register_op
+class pop_prefix(_GetOrPopPrefix):
+    """A request to remove all key-value pairs whose keys start with ``prefix``,
+    and return their corresponding values.
+
+    Parameters
+    ----------
+    prefix : str
+        The key prefix.
+    return_owner : bool, optional
+        If True, the owner will also be returned along with the value. Default
+        is False.
+    """
+    _proto = proto.GetRangeRequest
+    _rpc = 'DeleteRange'
+
+
+class _GetOrPopRange(Operator):
+    """Base class for (get/pop)_prefix"""
+    __slots__ = ('start', 'end', 'return_owner')
+
+    def __init__(self, start=None, end=None, return_owner=False):
+        self.start = start
+        self.end = end
+        self.return_owner = return_owner
+        self._validate()
+
+    def _validate(self):
+        self._check_is_type('start', str, nullable=True)
+        self._check_is_type('end', str, nullable=True)
+        self._check_is_type('return_owner', bool)
+
+    def __repr__(self):
+        return ('%s(start=%r, end=%r, return_owner=%r)'
+                % (type(self).__name__, self.start, self.end,
+                   self.return_owner))
+
+    def _to_protobuf(self):
+        self._validate()
+        return self._proto(range_start=self.start,
+                           range_end=self.end,
+                           result_type='ITEMS')
+
+    def _build_result(self, result):
+        return _output_to_ordered_dict(result, self.return_owner)
+
+
+@register_op
+class get_range(_GetOrPopRange):
     """A request to get a range of keys.
 
     Parameters
@@ -53,77 +327,17 @@ class get_range(Base):
     end : str, optional
         The upper bound of the key range, exclusive. If not provided, no upper
         bound will be used.
-    limit : int, optional
-        If provided, only ``limit`` results will be returned.
-    result_type : ResultType, optional
-        Determines the result type. One of:
-        - 'items': Both keys and values are returned for the selection
-        - 'keys': Only keys are returned
-        - 'none': Neither keys or items are returned, ``results`` is None.
+    return_owner : bool, optional
+        If True, the owner will also be returned along with the value. Default
+        is False.
     """
-    __slots__ = ('start', 'end', 'limit', '_result_type')
-    _params = ('start', 'end', 'limit', 'result_type')
-
-    def __init__(self, start=None, end=None, limit=None, result_type='items'):
-        self.start = start
-        self.end = end
-        self.limit = limit
-        self.result_type = result_type
-
-        self._validate()
-
-    def _validate(self):
-        self._check_is_type('start', str, nullable=True)
-        self._check_is_type('end', str, nullable=True)
-        self._check_is_bounded_int('limit', 1, nullable=True)
-        self._check_is_type('result_type', ResultType)
-
-    @property
-    def result_type(self):
-        return self._result_type
-
-    @result_type.setter
-    def result_type(self, val):
-        self._result_type = ResultType(val)
-
-    def __repr__(self):
-        return 'get_range<start=%r, end=%r>' % (self.start, self.end)
-
-    @classmethod
-    @implements(Base.from_protobuf)
-    def from_protobuf(cls, obj):
-        return cls(start=obj.range_start,
-                   end=obj.range_end,
-                   limit=obj.limit or None,
-                   result_type=obj.result_type)
-
-    @implements(Base.to_protobuf)
-    def to_protobuf(self):
-        self._validate()
-        return proto.GetRangeRequest(range_start=self.start,
-                                     range_end=self.end,
-                                     limit=self.limit,
-                                     result_type=str(self.result_type))
+    _proto = proto.GetRangeRequest
+    _rpc = 'GetRange'
 
 
-def get(key):
-    """A request for a single key.
-
-    Parameters
-    ----------
-    key : str, optional
-        The key to get.
-
-    Returns
-    -------
-    req : get_range
-        The get_range request.
-    """
-    return get_range(start=key, end=key + '\x00')
-
-
-class delete_range(Base):
-    """A request to delete a range of keys.
+@register_op
+class pop_range(_GetOrPopRange):
+    """A request to remove a range of keys and return their corresponding values.
 
     Parameters
     ----------
@@ -133,271 +347,303 @@ class delete_range(Base):
     end : str, optional
         The upper bound of the key range, exclusive. If not provided, no upper
         bound will be used.
-    result_type : ResultType, optional
-        Determines the result type. One of:
-        - 'none': Neither keys or items are returned, ``results`` is None.
-        - 'items': Both keys and values are returned for the previous items
-          in the selection.
-        - 'keys': Only keys are returned for the previous items in the selection.
+    return_owner : bool, optional
+        If True, the owner will also be returned along with the value. Default
+        is False.
     """
-    __slots__ = ('start', 'end', '_result_type')
-    _params = ('start', 'end', 'result_type')
+    _proto = proto.DeleteRangeRequest
+    _rpc = 'DeleteRange'
 
-    def __init__(self, start=None, end=None, result_type='items'):
+
+class _ContainsOrDiscard(Operator):
+    """Base class for contains & discard"""
+    __slots__ = ('key',)
+
+    def __init__(self, key):
+        self.key = key
+        self._validate()
+
+    def _validate(self):
+        self._check_is_type('key', str)
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, self.key)
+
+    def _to_protobuf(self):
+        self._validate()
+        return self._proto(range_start=self.key,
+                           range_end=self.key + '\x00',
+                           result_type='NONE')
+
+    def _build_result(self, result):
+        return result.count == 1
+
+
+@register_op
+class contains(_ContainsOrDiscard):
+    """A request to see if a key is in the key-value store.
+
+    Parameters
+    ----------
+    key : str
+        The key to get.
+    """
+    _proto = proto.GetRangeRequest
+    _rpc = 'GetRange'
+
+
+@register_op
+class discard(_ContainsOrDiscard):
+    """A request to discard a single key.
+
+    Parameters
+    ----------
+    key : str
+        The key to discard.
+    """
+    _proto = proto.DeleteRangeRequest
+    _rpc = 'DeleteRange'
+
+
+def _build_discard_result(result, return_keys=False):
+    if return_keys:
+        return [kv.key for kv in result.result]
+    return result.count
+
+
+@register_op
+class discard_prefix(Operator):
+    """A request to discard all key-value pairs whose keys start with ``prefix``.
+
+    Parameters
+    ----------
+    prefix : str
+        The key prefix.
+    return_keys : bool, optional
+        If True, the discarded keys will be returned instead of their count.
+        Default is False.
+    """
+    __slots__ = ('prefix', 'return_owner')
+    _rpc = 'DeleteRange'
+
+    def __init__(self, prefix, return_keys=False):
+        self.prefix = prefix
+        self.return_keys = return_keys
+        self._validate()
+
+    def _validate(self):
+        self._check_is_type('prefix', str)
+        self._check_is_type('return_keys', bool)
+
+    def __repr__(self):
+        return ('discard_prefix(%r, return_keys=%r)' %
+                (self.prefix, self.return_keys))
+
+    def _to_protobuf(self):
+        self._validate()
+        result_type = 'KEYS' if self.return_keys else 'NONE'
+        return proto.DeleteRangeRequest(range_start=self.prefix,
+                                        range_end=_next_key(self.prefix),
+                                        result_type=result_type)
+
+    def _build_result(self, result):
+        return _build_discard_result(result, self.return_keys)
+
+
+@register_op
+class discard_range(Operator):
+    """A request to discard a range of keys.
+
+    Parameters
+    ----------
+    start : str, optional
+        The lower bound of the key range, inclusive. If not provided no lower
+        bound will be used.
+    end : str, optional
+        The upper bound of the key range, exclusive. If not provided, no upper
+        bound will be used.
+    return_keys : bool, optional
+        If True, the discarded keys will be returned instead of their count.
+        Default is False.
+    """
+    __slots__ = ('start', 'end', 'return_keys')
+    _rpc = 'DeleteRange'
+
+    def __init__(self, start=None, end=None, return_keys=False):
         self.start = start
         self.end = end
-        self.result_type = result_type
-
+        self.return_keys = return_keys
         self._validate()
 
     def _validate(self):
         self._check_is_type('start', str, nullable=True)
         self._check_is_type('end', str, nullable=True)
-        self._check_is_type('result_type', ResultType)
-
-    @property
-    def result_type(self):
-        return self._result_type
-
-    @result_type.setter
-    def result_type(self, val):
-        self._result_type = ResultType(val)
+        self._check_is_type('return_keys', bool)
 
     def __repr__(self):
-        return 'delete_range<start=%r, end=%r>' % (self.start, self.end)
+        return ('discard_range(start=%r, end=%r, return_keys=%r)'
+                % (self.start, self.end, self.return_keys))
 
-    @classmethod
-    @implements(Base.from_protobuf)
-    def from_protobuf(cls, obj):
-        return cls(start=obj.range_start,
-                   end=obj.range_end,
-                   result_type=obj.result_type)
-
-    @implements(Base.to_protobuf)
-    def to_protobuf(self):
+    def _to_protobuf(self):
         self._validate()
+        result_type = 'KEYS' if self.return_keys else 'NONE'
         return proto.DeleteRangeRequest(range_start=self.start,
                                         range_end=self.end,
-                                        result_type=str(self.result_type))
+                                        result_type=result_type)
+
+    def _build_result(self, result):
+        return _build_discard_result(result, self.return_keys)
 
 
-def delete(key):
-    """A request to delete a single key.
+class _PutOrSwap(Operator):
+    """Shared base class between put and swap"""
+    __slots__ = ('_owner', '_owner_proto')
+    _rpc = 'PutKey'
 
-    Parameters
-    ----------
-    key : str, optional
-        The key to delete.
+    @property
+    def owner(self):
+        return self._owner
 
-    Returns
-    -------
-    req : delete_range
-        The delete_range request.
-    """
-    return delete_range(start=key, end=key + '\x00')
+    @owner.setter
+    def owner(self, owner):
+        if owner is no_change:
+            self._owner_proto = None
+            self._owner = no_change
+        elif owner is None:
+            self._owner_proto = self._owner = None
+        elif isinstance(owner, str):
+            # do this before setting owner to nice python owner,
+            # ensures validity check is performed beforehand
+            self._owner_proto = container_instance_from_string(owner)
+            self._owner = owner
+        else:
+            raise TypeError("owner must be a string or None")
+
+    def _validate(self):
+        self._check_is_type('key', str)
+        if self.value is no_change and self.owner is no_change:
+            raise ValueError("Must specify 'value', 'owner', or both")
+        if self.value is not no_change:
+            self._check_is_type('value', bytes)
+
+    def _to_protobuf(self):
+        self._validate()
+        ignore_value = self.value is no_change
+        value = None if ignore_value else self.value
+        ignore_owner = self.owner is no_change
+        owner = self._owner_proto
+        return proto.PutKeyRequest(key=self.key,
+                                   ignore_value=ignore_value,
+                                   value=value,
+                                   ignore_owner=ignore_owner,
+                                   owner=owner,
+                                   return_previous=self._return_previous)
 
 
-class put(Base):
-    """A request to put a key-value pair.
+@register_op
+class put(_PutOrSwap):
+    """A request to put a single key.
 
     Parameters
     ----------
     key : str
         The key to put.
-    value : bytes
-        The value to put.
-    return_previous : bool, optional
-        If True, the previous key-value pair will be returned. Default is False.
+    value : bytes, optional
+        The value to put. Default is to leave value unchanged;
+        an error will be raised if the key doesn't exist.
+    owner : str or None, optional
+        The container id to claim ownership. Provide ``None`` to set to
+        no owner. Default is to leave value unchanged.
     """
-    __slots__ = ('key', 'value', 'return_previous')
+    __slots__ = ('key', 'value')
+    _return_previous = False
 
-    def __init__(self, key, value, return_previous=False):
+    def __init__(self, key, value=no_change, owner=no_change):
         self.key = key
         self.value = value
-        self.return_previous = return_previous
-
+        self.owner = owner
         self._validate()
 
-    def _validate(self):
-        self._check_is_type('key', str)
-        self._check_is_type('value', bytes)
-        self._check_is_type('return_previous', bool)
+    def __repr__(self):
+        return ('put(key=%r, value=%r, owner=%r)'
+                % (self.key, self.value, self.owner))
+
+    def _build_result(self, result):
+        return None
+
+
+@register_op
+class swap(_PutOrSwap):
+    """A request to swap a single key.
+
+    Parameters
+    ----------
+    key : str
+        The key to put.
+    value : bytes, optional
+        The value to put. Default is to leave value unchanged;
+        an error will be raised if the key doesn't exist.
+    owner : str or None, optional
+        The container id to claim ownership. Provide ``None`` to set to
+        no owner. Default is to leave value unchanged.
+    return_owner : bool, optional
+        If True, the owner will also be returned along with the value. Default
+        is False.
+    """
+    __slots__ = ('key', 'value', 'return_owner')
+    _return_previous = False
+
+    def __init__(self, key, value=no_change, owner=no_change, return_owner=False):
+        self.key = key
+        self.value = value
+        self.owner = owner
+        self.return_owner = return_owner
+        self._validate()
 
     def __repr__(self):
-        return 'put<key=%r>' % self.key
+        return ('swap(key=%r, value=%r, owner=%r, return_owner=%r)'
+                % (self.key, self.value, self.owner, self.return_owner))
 
-
-class GetRangeResponse(namedtuple('GetRangeResponse',
-                                  ['count', 'result_type', 'results'])):
-    """Response from a ``get_range`` action.
-
-    Attributes
-    ----------
-    count : int
-        The total number of key-value pairs that matched the query.  If a limit
-        was specified in the query, this number may be greater than the number
-        of items actually returned.
-    result_type : ResultType
-        The type of the result.
-    result : OrderedDict, list, or None
-        The type of this attribute depends on ``result_type``:
-        - ``ResultType.ITEMS`` (default): an OrderedDict of key-value pairs
-          matching the query, sorted by key.
-        - ``ResultType.KEYS``: a list of keys, sorted by key.
-        - ``ResultType.NONE``: None.
-    """
-    pass
-
-
-class DeleteRangeResponse(namedtuple('DeleteRangeResponse',
-                                     ['count', 'result_type', 'results'])):
-    """Response from a ``del_range`` action.
-
-    Attributes
-    ----------
-    count : int
-        The total number of key-value pairs that were deleted.
-    result_type : ResultType
-        The type of the result.
-    previous : None or OrderedDict
-        The type of this attribute depends on ``result_type``:
-        - By default this is None
-        - If ``prev_kv`` was ``True``, this is an OrderedDict of the deleted
-          key-value pairs, sorted by key.
-    """
-    pass
-
-
-class PutResponse(namedtuple('PutResponse', ['previous'])):
-    """Response from a ``put`` action.
-
-    Attributes
-    ----------
-    previous : None or tuple
-        The type of this attribute depends on the ``put`` action:
-        - By default this is None
-        - If ``return_previous`` was ``True``, this is an tuple of
-        ``(key, previous_value)``.
-    """
-    pass
+    def _build_result(self, result):
+        if self.return_owner:
+            return ValueOwnerPair._from_kv_protobuf(result.previous)
+        return result.previous.value
 
 
 class KeyValueStore(MutableMapping):
     """The Skein Key-Value store.
 
     Used by applications to coordinate configuration and global state.
-
-    This implements the standard MutableMapping interface, along with the
-    ability to "wait" for keys to be set.
     """
     def __init__(self, client):
         self._client = client
 
+    def _apply_op(self, op, timeout=None):
+        req = op._to_protobuf()
+        resp = self._client._call(op._rpc, req, timeout=timeout)
+        return op._build_result(resp)
+
     def __iter__(self):
-        req = proto.GetRangeRequest(result_type='KEYS')
-        resp = self._client._call('GetRange', req)
-        return (kv.key for kv in resp.kv)
+        return iter(self._apply_op(ops.keys()))
 
     def __len__(self):
-        req = proto.GetRangeRequest(result_type='NONE')
-        resp = self._client._call('GetRange', req)
-        return resp.count
+        return self._apply_op(ops.count())
 
     def __setitem__(self, key, value):
-        req = proto.PutRequest(kv=proto.KeyValue(key=key, value=value))
-        self._client._call('Put', req)
-
-    @staticmethod
-    def _check_slice(k):
-        if k.step is not None:
-            raise TypeError("Slicing with step not supported")
-
-    @staticmethod
-    def _check_limit(limit):
-        if limit is not None and limit <= 0:
-            raise ValueError("limit must be > 0")
+        self._apply_op(ops.put(key, value=value))
 
     def __getitem__(self, key):
-        if isinstance(key, slice):
-            self._check_slice(key)
-            req = proto.GetRangeRequest(range_start=key.start,
-                                        range_end=key.stop)
-            resp = self._client._call('GetRange', req)
-            return OrderedDict((kv.key, kv.value) for kv in resp.kv)
-        else:
-            req = proto.GetRangeRequest(range_start=key,
-                                        range_end=key + '\x00')
-            resp = self._client._call('GetRange', req)
-            if resp.count == 0:
-                raise KeyError(key)
-            return resp.kv[0].value
+        result = self._apply_op(ops.get(key))
+        if result is None:
+            raise KeyError(key)
+        return result
 
     def __delitem__(self, key):
-        if isinstance(key, slice):
-            self._check_slice(key)
-            req = proto.DeleteRangeRequest(range_start=key.start,
-                                           range_end=key.stop)
-            self._client._call('DeleteRange', req)
-        else:
-            req = proto.DeleteRangeRequest(range_start=key,
-                                           range_end=key + '\x00')
-            resp = self._client._call('DeleteRange', req)
-            if resp.count == 0:
-                raise KeyError(key)
+        if not self._apply_op(ops.discard(key)):
+            raise KeyError(key)
+
+    def __contains__(self, key):
+        return self._apply_op(ops.contains(key))
 
     def clear(self):
-        req = proto.DeleteRangeRequest()
-        self._cleint.call('DeleteRange', req)
-
-    def pop(self, key, default=None):
-        req = proto.DeleteRangeRequest(range_start=key,
-                                       range_end=key + '\x00',
-                                       result_type='ITEMS')
-        resp = self._client._call('DeleteRange', req)
-        if resp.count == 0:
-            if default is None:
-                raise KeyError(key)
-            return default
-        return resp.prev_kv[0].value
-
-    def get_prefix(self, prefix, limit=None):
-        """Get all key-value pairs whose keys start with ``prefix``.
-
-        Parameters
-        ----------
-        prefix : str
-            The key prefix.
-        limit : int, optional
-            The maximum number of key-value pairs to return. Default is all
-            matching pairs.
-
-        Returns
-        -------
-        submap : OrderedDict
-            A sub-map of the key-value store, containing all matching key-value
-            pairs, sorted by key.
-        """
-        self._check_limit(limit)
-        req = proto.GetRangeRequest(range_start=prefix,
-                                    range_end=_next_key(prefix),
-                                    limit=limit)
-        resp = self._client._call('GetRange', req)
-        return OrderedDict((kv.key, kv.value) for kv in resp.kv)
-
-    def delete_prefix(self, prefix):
-        """Delete all key-value pairs whose keys start with ``prefix``.
-
-        Parameters
-        ----------
-        prefix : str
-            The key prefix.
-
-        Returns
-        -------
-        count : int
-            The number of items deleted
-        """
-        req = proto.DeleteRangeRequest(range_start=prefix,
-                                       range_end=_next_key(prefix))
-        resp = self._client._call('DeleteRange', req)
-        return resp.count
+        self._apply_op(ops.discard_range())
