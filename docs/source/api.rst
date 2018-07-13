@@ -30,7 +30,55 @@ Application Client
 Key Value Store
 ---------------
 
-.. autoclass:: skein.core.KeyValueStore
+.. autoclass:: skein.kv.KeyValueStore
+    :members:
+
+.. autoclass:: skein.kv.ValueOwnerPair
+    :members:
+
+.. autoclass:: skein.kv.count
+    :members:
+
+.. autoclass:: skein.kv.count
+    :members:
+
+.. autoclass:: skein.kv.list_keys
+    :members:
+
+.. autoclass:: skein.kv.contains
+    :members:
+
+.. autoclass:: skein.kv.get
+    :members:
+
+.. autoclass:: skein.kv.get_prefix
+    :members:
+
+.. autoclass:: skein.kv.get_range
+    :members:
+
+.. autoclass:: skein.kv.pop
+    :members:
+
+.. autoclass:: skein.kv.pop_prefix
+    :members:
+
+.. autoclass:: skein.kv.pop_range
+    :members:
+
+.. autoclass:: skein.kv.discard
+    :members:
+
+.. autoclass:: skein.kv.discard_prefix
+    :members:
+
+.. autoclass:: skein.kv.discard_range
+    :members:
+
+.. autoclass:: skein.kv.put
+    :members:
+
+.. autoclass:: skein.kv.swap
     :members:
 
 

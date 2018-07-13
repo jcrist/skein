@@ -1,20 +1,25 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import (absolute_import as _,
+                        print_function as _,
+                        division as _)
 
-import textwrap
-from collections import namedtuple, MutableMapping, OrderedDict
-from functools import wraps
+import textwrap as _textwrap
+from collections import (namedtuple as _namedtuple,
+                         MutableMapping as _MutableMapping,
+                         OrderedDict as _OrderedDict)
+from functools import wraps as _wraps
 
-from . import proto
-from .compatibility import bind_method
-from .model import (container_instance_from_string,
-                    container_instance_to_string)
+from . import proto as _proto
+from .compatibility import bind_method as _bind_method
+from .model import (
+    container_instance_from_string as _container_instance_from_string,
+    container_instance_to_string as _container_instance_to_string)
 
-from .objects import Base, no_change
+from .objects import (Base as _Base,
+                      no_change as _no_change)
 
 
 __all__ = ('KeyValueStore',
            'ValueOwnerPair',
-           'ops',
            'count', 'list_keys', 'contains',
            'get', 'get_prefix', 'get_range',
            'pop', 'pop_prefix', 'pop_range',
@@ -22,7 +27,7 @@ __all__ = ('KeyValueStore',
            'put', 'swap')
 
 
-class KeyValueStore(MutableMapping):
+class KeyValueStore(_MutableMapping):
     """The Skein Key-Value store.
 
     Used by applications to coordinate configuration and global state.
@@ -67,19 +72,11 @@ def _next_key(prefix):
     return bytes(b).decode('utf-8')
 
 
-@object.__new__
-class ops(object):
-    """A registry of key-value store operators"""
-    pass
-
-
 def register_op(return_type=None):
     """Register a key-value store operator"""
 
     def inner(cls):
-        setattr(ops, cls.__name__, cls)
-
-        @wraps(cls)
+        @_wraps(cls)
         def method(self, *args, **kwargs):
             return self._apply_op(cls(*args, **kwargs))
 
@@ -90,10 +87,10 @@ def register_op(return_type=None):
             header, _, footer = doc.partition('\n\n')
             header_words = header.split()
             header_words[0] = header_words[0].capitalize()
-            header = '\n'.join(textwrap.wrap(' '.join(header_words),
-                                             width=76,
-                                             initial_indent="    ",
-                                             subsequent_indent="    "))
+            header = '\n'.join(_textwrap.wrap(' '.join(header_words),
+                                              width=76,
+                                              initial_indent="    ",
+                                              subsequent_indent="    "))
 
             if return_type:
                 returns = ("\n"
@@ -106,18 +103,18 @@ def register_op(return_type=None):
 
             method.__doc__ = "%s\n\n%s%s" % (header, footer, returns)
 
-        bind_method(KeyValueStore, cls.__name__, method)
+        _bind_method(KeyValueStore, cls.__name__, method)
         return cls
 
     return inner
 
 
-class Operator(Base):
+class _Operator(_Base):
     """Base class for all operators"""
     pass
 
 
-class ValueOwnerPair(namedtuple('ValueOwnerPair', ['value', 'owner'])):
+class ValueOwnerPair(_namedtuple('ValueOwnerPair', ['value', 'owner'])):
     """A Value and owner pair in the Key-Value store.
 
     Parameters
@@ -130,13 +127,13 @@ class ValueOwnerPair(namedtuple('ValueOwnerPair', ['value', 'owner'])):
     @classmethod
     def _from_kv_protobuf(cls, obj):
         if obj.HasField("owner"):
-            owner = container_instance_to_string(obj.owner)
+            owner = _container_instance_to_string(obj.owner)
         else:
             owner = None
         return cls(obj.value, owner)
 
 
-class _CountOrKeys(Operator):
+class _CountOrKeys(_Operator):
     """Base class for count & keys"""
     __slots__ = ('range_start', 'range_end', 'prefix')
     _rpc = 'GetRange'
@@ -172,12 +169,12 @@ class _CountOrKeys(Operator):
     def _to_protobuf(self):
         self._validate()
         if self._is_prefix:
-            return proto.GetRangeRequest(range_start=self.prefix,
-                                         range_end=_next_key(self.prefix),
-                                         result_type=self._result_type)
-        return proto.GetRangeRequest(range_start=self.range_start,
-                                     range_end=self.range_end,
-                                     result_type=self._result_type)
+            return _proto.GetRangeRequest(range_start=self.prefix,
+                                          range_end=_next_key(self.prefix),
+                                          result_type=self._result_type)
+        return _proto.GetRangeRequest(range_start=self.range_start,
+                                      range_end=self.range_end,
+                                      result_type=self._result_type)
 
 
 @register_op('int')
@@ -222,7 +219,7 @@ class list_keys(_CountOrKeys):
         return [kv.key for kv in result.result]
 
 
-class _GetOrPop(Operator):
+class _GetOrPop(_Operator):
     """Base class for get & pop"""
     __slots__ = ('key', 'default', 'return_owner')
 
@@ -272,7 +269,7 @@ class get(_GetOrPop):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
-    _proto = proto.GetRangeRequest
+    _proto = _proto.GetRangeRequest
     _rpc = 'GetRange'
 
 
@@ -290,18 +287,18 @@ class pop(_GetOrPop):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
-    _proto = proto.DeleteRangeRequest
+    _proto = _proto.DeleteRangeRequest
     _rpc = 'DeleteRange'
 
 
 def _output_to_ordered_dict(result, return_owner=False):
     if return_owner:
-        return OrderedDict((kv.key, ValueOwnerPair._from_kv_protobuf(kv))
-                           for kv in result.result)
-    return OrderedDict((kv.key, kv.value) for kv in result.result)
+        return _OrderedDict((kv.key, ValueOwnerPair._from_kv_protobuf(kv))
+                            for kv in result.result)
+    return _OrderedDict((kv.key, kv.value) for kv in result.result)
 
 
-class _GetOrPopPrefix(Operator):
+class _GetOrPopPrefix(_Operator):
     """Base class for (get/pop)_prefix"""
     __slots__ = ('prefix', 'return_owner')
 
@@ -340,7 +337,7 @@ class get_prefix(_GetOrPopPrefix):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
-    _proto = proto.GetRangeRequest
+    _proto = _proto.GetRangeRequest
     _rpc = 'GetRange'
 
 
@@ -357,11 +354,11 @@ class pop_prefix(_GetOrPopPrefix):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
-    _proto = proto.GetRangeRequest
+    _proto = _proto.GetRangeRequest
     _rpc = 'DeleteRange'
 
 
-class _GetOrPopRange(Operator):
+class _GetOrPopRange(_Operator):
     """Base class for (get/pop)_prefix"""
     __slots__ = ('start', 'end', 'return_owner')
 
@@ -407,7 +404,7 @@ class get_range(_GetOrPopRange):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
-    _proto = proto.GetRangeRequest
+    _proto = _proto.GetRangeRequest
     _rpc = 'GetRange'
 
 
@@ -427,11 +424,11 @@ class pop_range(_GetOrPopRange):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
-    _proto = proto.DeleteRangeRequest
+    _proto = _proto.DeleteRangeRequest
     _rpc = 'DeleteRange'
 
 
-class _ContainsOrDiscard(Operator):
+class _ContainsOrDiscard(_Operator):
     """Base class for contains & discard"""
     __slots__ = ('key',)
 
@@ -457,14 +454,14 @@ class _ContainsOrDiscard(Operator):
 
 @register_op('bool')
 class contains(_ContainsOrDiscard):
-    """A request to see if a key is in the key-value store.
+    """A request to check if a key is in the key-value store.
 
     Parameters
     ----------
     key : str
         The key to get.
     """
-    _proto = proto.GetRangeRequest
+    _proto = _proto.GetRangeRequest
     _rpc = 'GetRange'
 
 
@@ -472,12 +469,14 @@ class contains(_ContainsOrDiscard):
 class discard(_ContainsOrDiscard):
     """A request to discard a single key.
 
+    Returns true if the key was present, false otherwise.
+
     Parameters
     ----------
     key : str
         The key to discard.
     """
-    _proto = proto.DeleteRangeRequest
+    _proto = _proto.DeleteRangeRequest
     _rpc = 'DeleteRange'
 
 
@@ -488,8 +487,11 @@ def _build_discard_result(result, return_keys=False):
 
 
 @register_op('int or list of keys')
-class discard_prefix(Operator):
+class discard_prefix(_Operator):
     """A request to discard all key-value pairs whose keys start with ``prefix``.
+
+    Returns either the number of keys discarded or a list of those keys,
+    depending on the value of ``return_keys``.
 
     Parameters
     ----------
@@ -518,17 +520,20 @@ class discard_prefix(Operator):
     def _to_protobuf(self):
         self._validate()
         result_type = 'KEYS' if self.return_keys else 'NONE'
-        return proto.DeleteRangeRequest(range_start=self.prefix,
-                                        range_end=_next_key(self.prefix),
-                                        result_type=result_type)
+        return _proto.DeleteRangeRequest(range_start=self.prefix,
+                                         range_end=_next_key(self.prefix),
+                                         result_type=result_type)
 
     def _build_result(self, result):
         return _build_discard_result(result, self.return_keys)
 
 
 @register_op('int or list of keys')
-class discard_range(Operator):
+class discard_range(_Operator):
     """A request to discard a range of keys.
+
+    Returns either the number of keys discarded or a list of those keys,
+    depending on the value of ``return_keys``.
 
     Parameters
     ----------
@@ -563,15 +568,15 @@ class discard_range(Operator):
     def _to_protobuf(self):
         self._validate()
         result_type = 'KEYS' if self.return_keys else 'NONE'
-        return proto.DeleteRangeRequest(range_start=self.start,
-                                        range_end=self.end,
-                                        result_type=result_type)
+        return _proto.DeleteRangeRequest(range_start=self.start,
+                                         range_end=self.end,
+                                         result_type=result_type)
 
     def _build_result(self, result):
         return _build_discard_result(result, self.return_keys)
 
 
-class _PutOrSwap(Operator):
+class _PutOrSwap(_Operator):
     """Shared base class between put and swap"""
     __slots__ = ('_owner', '_owner_proto')
     _rpc = 'PutKey'
@@ -582,38 +587,38 @@ class _PutOrSwap(Operator):
 
     @owner.setter
     def owner(self, owner):
-        if owner is no_change:
+        if owner is _no_change:
             self._owner_proto = None
-            self._owner = no_change
+            self._owner = _no_change
         elif owner is None:
             self._owner_proto = self._owner = None
         elif isinstance(owner, str):
             # do this before setting owner to nice python owner,
             # ensures validity check is performed beforehand
-            self._owner_proto = container_instance_from_string(owner)
+            self._owner_proto = _container_instance_from_string(owner)
             self._owner = owner
         else:
             raise TypeError("owner must be a string or None")
 
     def _validate(self):
         self._check_is_type('key', str)
-        if self.value is no_change and self.owner is no_change:
+        if self.value is _no_change and self.owner is _no_change:
             raise ValueError("Must specify 'value', 'owner', or both")
-        if self.value is not no_change:
+        if self.value is not _no_change:
             self._check_is_type('value', bytes)
 
     def _to_protobuf(self):
         self._validate()
-        ignore_value = self.value is no_change
+        ignore_value = self.value is _no_change
         value = None if ignore_value else self.value
-        ignore_owner = self.owner is no_change
+        ignore_owner = self.owner is _no_change
         owner = self._owner_proto
-        return proto.PutKeyRequest(key=self.key,
-                                   ignore_value=ignore_value,
-                                   value=value,
-                                   ignore_owner=ignore_owner,
-                                   owner=owner,
-                                   return_previous=self._return_previous)
+        return _proto.PutKeyRequest(key=self.key,
+                                    ignore_value=ignore_value,
+                                    value=value,
+                                    ignore_owner=ignore_owner,
+                                    owner=owner,
+                                    return_previous=self._return_previous)
 
 
 @register_op()
@@ -634,7 +639,7 @@ class put(_PutOrSwap):
     __slots__ = ('key', 'value')
     _return_previous = False
 
-    def __init__(self, key, value=no_change, owner=no_change):
+    def __init__(self, key, value=_no_change, owner=_no_change):
         self.key = key
         self.value = value
         self.owner = owner
@@ -670,7 +675,8 @@ class swap(_PutOrSwap):
     __slots__ = ('key', 'value', 'return_owner')
     _return_previous = False
 
-    def __init__(self, key, value=no_change, owner=no_change, return_owner=False):
+    def __init__(self, key, value=_no_change, owner=_no_change,
+                 return_owner=False):
         self.key = key
         self.value = value
         self.owner = owner
