@@ -8,6 +8,7 @@ PY3 = not PY2
 
 if PY2:
     import os
+    import types
     from urlparse import urlparse, urlsplit  # noqa
     unicode = unicode  # noqa
     string = basestring  # noqa
@@ -34,6 +35,9 @@ if PY2:
     def write_stdout_bytes(b):
         sys.stdout.write(b)
 
+    def bind_method(cls, name, func):
+        setattr(cls, name, types.MethodType(func, None, cls))
+
 else:
     from urllib.parse import urlparse, urlsplit  # noqa
     from os import makedirs  # noqa
@@ -48,6 +52,9 @@ else:
 
     def write_stdout_bytes(b):
         sys.stdout.buffer.write(b)
+
+    def bind_method(cls, name, func):
+        setattr(cls, name, func)
 
 
 def with_metaclass(meta):

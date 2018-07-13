@@ -1,21 +1,64 @@
 from __future__ import absolute_import, print_function, division
 
+import textwrap
 from collections import namedtuple, MutableMapping, OrderedDict
+from functools import wraps
 
 from . import proto
+from .compatibility import bind_method
 from .model import (container_instance_from_string,
                     container_instance_to_string)
 
 from .objects import Base, no_change
 
 
-__all__ = ('ValueOwnerPair',
+__all__ = ('KeyValueStore',
+           'ValueOwnerPair',
            'ops',
-           'count', 'keys', 'contains',
+           'count', 'list_keys', 'contains',
            'get', 'get_prefix', 'get_range',
            'pop', 'pop_prefix', 'pop_range',
            'discard', 'discard_prefix', 'discard_range',
            'put', 'swap')
+
+
+class KeyValueStore(MutableMapping):
+    """The Skein Key-Value store.
+
+    Used by applications to coordinate configuration and global state.
+    """
+    def __init__(self, client):
+        self._client = client
+
+    def _apply_op(self, op, timeout=None):
+        req = op._to_protobuf()
+        resp = self._client._call(op._rpc, req, timeout=timeout)
+        return op._build_result(resp)
+
+    def __iter__(self):
+        return iter(self.list_keys())
+
+    def __len__(self):
+        return self.count()
+
+    def __setitem__(self, key, value):
+        self.put(key, value=value)
+
+    def __getitem__(self, key):
+        result = self.get(key)
+        if result is None:
+            raise KeyError(key)
+        return result
+
+    def __delitem__(self, key):
+        if not self.discard(key):
+            raise KeyError(key)
+
+    def __contains__(self, key):
+        return self.contains(key)
+
+    def clear(self):
+        self.discard_range()
 
 
 def _next_key(prefix):
@@ -30,10 +73,43 @@ class ops(object):
     pass
 
 
-def register_op(cls):
+def register_op(return_type=None):
     """Register a key-value store operator"""
-    setattr(ops, cls.__name__, cls)
-    return cls
+
+    def inner(cls):
+        setattr(ops, cls.__name__, cls)
+
+        @wraps(cls)
+        def method(self, *args, **kwargs):
+            return self._apply_op(cls(*args, **kwargs))
+
+        if cls.__doc__ is not None:
+            prefix = 'A request to '
+            assert cls.__doc__.startswith(prefix)
+            doc = cls.__doc__[len(prefix):].strip()
+            header, _, footer = doc.partition('\n\n')
+            header_words = header.split()
+            header_words[0] = header_words[0].capitalize()
+            header = '\n'.join(textwrap.wrap(' '.join(header_words),
+                                             width=76,
+                                             initial_indent="    ",
+                                             subsequent_indent="    "))
+
+            if return_type:
+                returns = ("\n"
+                           "\n"
+                           "    Returns\n"
+                           "    -------\n"
+                           "    %s" % return_type)
+            else:
+                returns = ""
+
+            method.__doc__ = "%s\n\n%s%s" % (header, footer, returns)
+
+        bind_method(KeyValueStore, cls.__name__, method)
+        return cls
+
+    return inner
 
 
 class Operator(Base):
@@ -104,7 +180,7 @@ class _CountOrKeys(Operator):
                                      result_type=self._result_type)
 
 
-@register_op
+@register_op('int')
 class count(_CountOrKeys):
     """A request to count keys in the key-value store.
 
@@ -125,8 +201,8 @@ class count(_CountOrKeys):
         return result.count
 
 
-@register_op
-class keys(_CountOrKeys):
+@register_op('list of keys')
+class list_keys(_CountOrKeys):
     """A request to get a list of keys in the key-value store.
 
     Parameters
@@ -182,9 +258,9 @@ class _GetOrPop(Operator):
         return result.result[0].value
 
 
-@register_op
+@register_op('bytes or ValueOwnerPair')
 class get(_GetOrPop):
-    """A request for a single key.
+    """A request to get the value associated with a single key.
 
     Parameters
     ----------
@@ -200,7 +276,7 @@ class get(_GetOrPop):
     _rpc = 'GetRange'
 
 
-@register_op
+@register_op('bytes or ValueOwnerPair')
 class pop(_GetOrPop):
     """A request to remove a single key and return its corresponding value.
 
@@ -252,7 +328,7 @@ class _GetOrPopPrefix(Operator):
         return _output_to_ordered_dict(result, self.return_owner)
 
 
-@register_op
+@register_op('OrderedDict')
 class get_prefix(_GetOrPopPrefix):
     """A request to get all key-value pairs whose keys start with ``prefix``.
 
@@ -268,7 +344,7 @@ class get_prefix(_GetOrPopPrefix):
     _rpc = 'GetRange'
 
 
-@register_op
+@register_op('OrderedDict')
 class pop_prefix(_GetOrPopPrefix):
     """A request to remove all key-value pairs whose keys start with ``prefix``,
     and return their corresponding values.
@@ -315,7 +391,7 @@ class _GetOrPopRange(Operator):
         return _output_to_ordered_dict(result, self.return_owner)
 
 
-@register_op
+@register_op('OrderedDict')
 class get_range(_GetOrPopRange):
     """A request to get a range of keys.
 
@@ -335,7 +411,7 @@ class get_range(_GetOrPopRange):
     _rpc = 'GetRange'
 
 
-@register_op
+@register_op('OrderedDict')
 class pop_range(_GetOrPopRange):
     """A request to remove a range of keys and return their corresponding values.
 
@@ -379,7 +455,7 @@ class _ContainsOrDiscard(Operator):
         return result.count == 1
 
 
-@register_op
+@register_op('bool')
 class contains(_ContainsOrDiscard):
     """A request to see if a key is in the key-value store.
 
@@ -392,7 +468,7 @@ class contains(_ContainsOrDiscard):
     _rpc = 'GetRange'
 
 
-@register_op
+@register_op('bool')
 class discard(_ContainsOrDiscard):
     """A request to discard a single key.
 
@@ -411,7 +487,7 @@ def _build_discard_result(result, return_keys=False):
     return result.count
 
 
-@register_op
+@register_op('int or list of keys')
 class discard_prefix(Operator):
     """A request to discard all key-value pairs whose keys start with ``prefix``.
 
@@ -450,7 +526,7 @@ class discard_prefix(Operator):
         return _build_discard_result(result, self.return_keys)
 
 
-@register_op
+@register_op('int or list of keys')
 class discard_range(Operator):
     """A request to discard a range of keys.
 
@@ -540,9 +616,9 @@ class _PutOrSwap(Operator):
                                    return_previous=self._return_previous)
 
 
-@register_op
+@register_op()
 class put(_PutOrSwap):
-    """A request to put a single key.
+    """A request to assign a value and/or owner for a single key.
 
     Parameters
     ----------
@@ -572,9 +648,10 @@ class put(_PutOrSwap):
         return None
 
 
-@register_op
+@register_op('bytes or ValueOwnerPair')
 class swap(_PutOrSwap):
-    """A request to swap a single key.
+    """A request to assign a new value and/or owner for a single key, and
+    return the previous value.
 
     Parameters
     ----------
@@ -608,42 +685,3 @@ class swap(_PutOrSwap):
         if self.return_owner:
             return ValueOwnerPair._from_kv_protobuf(result.previous)
         return result.previous.value
-
-
-class KeyValueStore(MutableMapping):
-    """The Skein Key-Value store.
-
-    Used by applications to coordinate configuration and global state.
-    """
-    def __init__(self, client):
-        self._client = client
-
-    def _apply_op(self, op, timeout=None):
-        req = op._to_protobuf()
-        resp = self._client._call(op._rpc, req, timeout=timeout)
-        return op._build_result(resp)
-
-    def __iter__(self):
-        return iter(self._apply_op(ops.keys()))
-
-    def __len__(self):
-        return self._apply_op(ops.count())
-
-    def __setitem__(self, key, value):
-        self._apply_op(ops.put(key, value=value))
-
-    def __getitem__(self, key):
-        result = self._apply_op(ops.get(key))
-        if result is None:
-            raise KeyError(key)
-        return result
-
-    def __delitem__(self, key):
-        if not self._apply_op(ops.discard(key)):
-            raise KeyError(key)
-
-    def __contains__(self, key):
-        return self._apply_op(ops.contains(key))
-
-    def clear(self):
-        self._apply_op(ops.discard_range())
