@@ -53,6 +53,7 @@ def check_base_methods(obj, obj2):
     # equality
     assert obj == copy.deepcopy(obj)
     assert not (obj != copy.deepcopy(obj))
+    assert obj2 == copy.deepcopy(obj2)
     assert obj != obj2
     assert obj != 'incorrect_type'
 

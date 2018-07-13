@@ -81,7 +81,8 @@ def global_client(kinit, tmpdir_factory):
                           'kv',
                           'kv get',
                           'kv put',
-                          'kv del'])
+                          'kv del',
+                          'kv ls'])
 def test_cli_help(command, capsys):
     run_command(command + ' -h')
 

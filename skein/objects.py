@@ -22,11 +22,11 @@ def typename(cls):
 # These are all used semantically the same, but have different reprs
 # to show up nicely when used interactively/in docs.
 required = type('required', (object,),
-                {'__repr__': lambda s: 'required'})()
+                dict.fromkeys(['__repr__', '__reduce__'],
+                              lambda s: 'required'))()
 no_change = type('no_change', (object,),
-                 {'__repr__': lambda s: 'no_change'})()
-no_default = type('no_default', (object,),
-                  {'__repr__': lambda s: 'no_default'})()
+                 dict.fromkeys(['__repr__', '__reduce__'],
+                               lambda s: 'no_change'))()
 
 
 def is_list_of(x, typ):
@@ -118,6 +118,10 @@ def _convert(x, method, *args):
         return x
 
 
+def rebuild(cls, params):
+    return cls(**params)
+
+
 class Base(object):
     """Base class for typed objects"""
     __slots__ = ()
@@ -129,6 +133,10 @@ class Base(object):
 
     def __ne__(self, other):
         return not (self == other)
+
+    def __reduce__(self):
+        params = {p: getattr(self, p) for p in self._get_params()}
+        return (rebuild, (type(self), params))
 
     @classmethod
     def _get_params(cls):

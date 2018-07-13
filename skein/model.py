@@ -477,7 +477,7 @@ class ApplicationSpec(Specification):
         application as failed. Note that this only considers failures of the
         application master during startup. Default is 1.
     """
-    __slots__ = ('name', 'queue', 'services', 'tags', 'max_attempts')
+    __slots__ = ('services', 'name', 'queue', 'tags', 'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
     def __init__(self, services=required, name='skein', queue='default', tags=None,

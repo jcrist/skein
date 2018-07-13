@@ -72,7 +72,7 @@ def _next_key(prefix):
     return bytes(b).decode('utf-8')
 
 
-def register_op(return_type=None):
+def _register_op(return_type=None):
     """Register a key-value store operator"""
 
     def inner(cls):
@@ -111,6 +111,7 @@ def register_op(return_type=None):
 
 class _Operator(_Base):
     """Base class for all operators"""
+    __slots__ = ()
     pass
 
 
@@ -135,7 +136,7 @@ class ValueOwnerPair(_namedtuple('ValueOwnerPair', ['value', 'owner'])):
 
 class _CountOrKeys(_Operator):
     """Base class for count & keys"""
-    __slots__ = ('range_start', 'range_end', 'prefix')
+    __slots__ = ()
     _rpc = 'GetRange'
 
     def __init__(self, range_start=None, range_end=None, prefix=None):
@@ -177,7 +178,7 @@ class _CountOrKeys(_Operator):
                                       result_type=self._result_type)
 
 
-@register_op('int')
+@_register_op('int')
 class count(_CountOrKeys):
     """A request to count keys in the key-value store.
 
@@ -192,13 +193,14 @@ class count(_CountOrKeys):
     prefix : str, optional
         If provided, will count the number keys matching this prefix.
     """
+    __slots__ = ('range_start', 'range_end', 'prefix')
     _result_type = 'NONE'
 
     def _build_result(self, result):
         return result.count
 
 
-@register_op('list of keys')
+@_register_op('list of keys')
 class list_keys(_CountOrKeys):
     """A request to get a list of keys in the key-value store.
 
@@ -213,6 +215,7 @@ class list_keys(_CountOrKeys):
     prefix : str, optional
         If provided, will return all keys matching this prefix.
     """
+    __slots__ = ('range_start', 'range_end', 'prefix')
     _result_type = 'KEYS'
 
     def _build_result(self, result):
@@ -221,7 +224,7 @@ class list_keys(_CountOrKeys):
 
 class _GetOrPop(_Operator):
     """Base class for get & pop"""
-    __slots__ = ('key', 'default', 'return_owner')
+    __slots__ = ()
 
     def __init__(self, key, default=None, return_owner=False):
         self.key = key
@@ -255,7 +258,7 @@ class _GetOrPop(_Operator):
         return result.result[0].value
 
 
-@register_op('bytes or ValueOwnerPair')
+@_register_op('bytes or ValueOwnerPair')
 class get(_GetOrPop):
     """A request to get the value associated with a single key.
 
@@ -269,11 +272,12 @@ class get(_GetOrPop):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
+    __slots__ = ('key', 'default', 'return_owner')
     _proto = _proto.GetRangeRequest
     _rpc = 'GetRange'
 
 
-@register_op('bytes or ValueOwnerPair')
+@_register_op('bytes or ValueOwnerPair')
 class pop(_GetOrPop):
     """A request to remove a single key and return its corresponding value.
 
@@ -287,6 +291,7 @@ class pop(_GetOrPop):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
+    __slots__ = ('key', 'default', 'return_owner')
     _proto = _proto.DeleteRangeRequest
     _rpc = 'DeleteRange'
 
@@ -300,7 +305,7 @@ def _output_to_ordered_dict(result, return_owner=False):
 
 class _GetOrPopPrefix(_Operator):
     """Base class for (get/pop)_prefix"""
-    __slots__ = ('prefix', 'return_owner')
+    __slots__ = ()
 
     def __init__(self, prefix, return_owner=False):
         self.prefix = prefix
@@ -325,7 +330,7 @@ class _GetOrPopPrefix(_Operator):
         return _output_to_ordered_dict(result, self.return_owner)
 
 
-@register_op('OrderedDict')
+@_register_op('OrderedDict')
 class get_prefix(_GetOrPopPrefix):
     """A request to get all key-value pairs whose keys start with ``prefix``.
 
@@ -337,11 +342,12 @@ class get_prefix(_GetOrPopPrefix):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
+    __slots__ = ('prefix', 'return_owner')
     _proto = _proto.GetRangeRequest
     _rpc = 'GetRange'
 
 
-@register_op('OrderedDict')
+@_register_op('OrderedDict')
 class pop_prefix(_GetOrPopPrefix):
     """A request to remove all key-value pairs whose keys start with ``prefix``,
     and return their corresponding values.
@@ -354,13 +360,14 @@ class pop_prefix(_GetOrPopPrefix):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
+    __slots__ = ('prefix', 'return_owner')
     _proto = _proto.GetRangeRequest
     _rpc = 'DeleteRange'
 
 
 class _GetOrPopRange(_Operator):
     """Base class for (get/pop)_prefix"""
-    __slots__ = ('start', 'end', 'return_owner')
+    __slots__ = ()
 
     def __init__(self, start=None, end=None, return_owner=False):
         self.start = start
@@ -388,7 +395,7 @@ class _GetOrPopRange(_Operator):
         return _output_to_ordered_dict(result, self.return_owner)
 
 
-@register_op('OrderedDict')
+@_register_op('OrderedDict')
 class get_range(_GetOrPopRange):
     """A request to get a range of keys.
 
@@ -404,11 +411,12 @@ class get_range(_GetOrPopRange):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
+    __slots__ = ('start', 'end', 'return_owner')
     _proto = _proto.GetRangeRequest
     _rpc = 'GetRange'
 
 
-@register_op('OrderedDict')
+@_register_op('OrderedDict')
 class pop_range(_GetOrPopRange):
     """A request to remove a range of keys and return their corresponding values.
 
@@ -424,13 +432,14 @@ class pop_range(_GetOrPopRange):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
+    __slots__ = ('start', 'end', 'return_owner')
     _proto = _proto.DeleteRangeRequest
     _rpc = 'DeleteRange'
 
 
 class _ContainsOrDiscard(_Operator):
     """Base class for contains & discard"""
-    __slots__ = ('key',)
+    __slots__ = ()
 
     def __init__(self, key):
         self.key = key
@@ -452,7 +461,7 @@ class _ContainsOrDiscard(_Operator):
         return result.count == 1
 
 
-@register_op('bool')
+@_register_op('bool')
 class contains(_ContainsOrDiscard):
     """A request to check if a key is in the key-value store.
 
@@ -461,11 +470,12 @@ class contains(_ContainsOrDiscard):
     key : str
         The key to get.
     """
+    __slots__ = ('key',)
     _proto = _proto.GetRangeRequest
     _rpc = 'GetRange'
 
 
-@register_op('bool')
+@_register_op('bool')
 class discard(_ContainsOrDiscard):
     """A request to discard a single key.
 
@@ -476,6 +486,7 @@ class discard(_ContainsOrDiscard):
     key : str
         The key to discard.
     """
+    __slots__ = ('key',)
     _proto = _proto.DeleteRangeRequest
     _rpc = 'DeleteRange'
 
@@ -486,7 +497,7 @@ def _build_discard_result(result, return_keys=False):
     return result.count
 
 
-@register_op('int or list of keys')
+@_register_op('int or list of keys')
 class discard_prefix(_Operator):
     """A request to discard all key-value pairs whose keys start with ``prefix``.
 
@@ -501,7 +512,7 @@ class discard_prefix(_Operator):
         If True, the discarded keys will be returned instead of their count.
         Default is False.
     """
-    __slots__ = ('prefix', 'return_owner')
+    __slots__ = ('prefix', 'return_keys')
     _rpc = 'DeleteRange'
 
     def __init__(self, prefix, return_keys=False):
@@ -528,7 +539,7 @@ class discard_prefix(_Operator):
         return _build_discard_result(result, self.return_keys)
 
 
-@register_op('int or list of keys')
+@_register_op('int or list of keys')
 class discard_range(_Operator):
     """A request to discard a range of keys.
 
@@ -578,7 +589,7 @@ class discard_range(_Operator):
 
 class _PutOrSwap(_Operator):
     """Shared base class between put and swap"""
-    __slots__ = ('_owner', '_owner_proto')
+    __slots__ = ()
     _rpc = 'PutKey'
 
     @property
@@ -621,7 +632,7 @@ class _PutOrSwap(_Operator):
                                     return_previous=self._return_previous)
 
 
-@register_op()
+@_register_op()
 class put(_PutOrSwap):
     """A request to assign a value and/or owner for a single key.
 
@@ -636,7 +647,8 @@ class put(_PutOrSwap):
         The container id to claim ownership. Provide ``None`` to set to
         no owner. Default is to leave value unchanged.
     """
-    __slots__ = ('key', 'value')
+    __slots__ = ('key', 'value', '_owner', '_owner_proto')
+    _params = ('key', 'value', 'owner')
     _return_previous = False
 
     def __init__(self, key, value=_no_change, owner=_no_change):
@@ -646,14 +658,14 @@ class put(_PutOrSwap):
         self._validate()
 
     def __repr__(self):
-        return ('put(key=%r, value=%r, owner=%r)'
+        return ('put(%r, value=%r, owner=%r)'
                 % (self.key, self.value, self.owner))
 
     def _build_result(self, result):
         return None
 
 
-@register_op('bytes or ValueOwnerPair')
+@_register_op('bytes or ValueOwnerPair')
 class swap(_PutOrSwap):
     """A request to assign a new value and/or owner for a single key, and
     return the previous value.
@@ -672,7 +684,8 @@ class swap(_PutOrSwap):
         If True, the owner will also be returned along with the value. Default
         is False.
     """
-    __slots__ = ('key', 'value', 'return_owner')
+    __slots__ = ('key', 'value', 'return_owner', '_owner', '_owner_proto')
+    _params = ('key', 'value', 'owner', 'return_owner')
     _return_previous = False
 
     def __init__(self, key, value=_no_change, owner=_no_change,
@@ -684,7 +697,7 @@ class swap(_PutOrSwap):
         self._validate()
 
     def __repr__(self):
-        return ('swap(key=%r, value=%r, owner=%r, return_owner=%r)'
+        return ('swap(%r, value=%r, owner=%r, return_owner=%r)'
                 % (self.key, self.value, self.owner, self.return_owner))
 
     def _build_result(self, result):
