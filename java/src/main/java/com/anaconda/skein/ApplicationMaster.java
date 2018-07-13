@@ -530,34 +530,26 @@ public class ApplicationMaster {
 
     public synchronized boolean addOwnedKey(int instance, String key) {
       Model.Container container = getContainer(instance);
-      if (container == null) {
-        return false;
+      assert container != null;  // pre-checked before calling
+      if (!container.completed()) {
+        container.addOwnedKey(key);
+        return true;
       }
-      container.addOwnedKey(key);
-      return true;
+      return false;
     }
 
-    public synchronized boolean removeOwnedKey(int instance, String key) {
+    public synchronized void removeOwnedKey(int instance, String key) {
       Model.Container container = getContainer(instance);
-      if (container == null) {
-        return false;
-      }
+      assert container != null;  // should never get here.
       container.removeOwnedKey(key);
-      return true;
     }
 
-    public synchronized void initialize() throws IOException {
+    public void initialize() throws IOException {
       LOG.info("INTIALIZING: " + name);
       // Request initial containers
       for (int i = 0; i < service.getInstances(); i++) {
         addContainer();
       }
-    }
-
-    private synchronized Model.Container newContainer(Model.Container.State state) {
-      Model.Container out = new Model.Container(name, containers.size(), state);
-      containers.add(out);
-      return out;
     }
 
     private synchronized Model.Container getContainer(int instance) {
@@ -567,23 +559,38 @@ public class ApplicationMaster {
       return null;
     }
 
-    public synchronized List<Model.Container> scale(int instances) {
+    public List<Model.Container> scale(int instances) {
       List<Model.Container> out =  new ArrayList<Model.Container>();
 
-      int active = getNumActive();
-      int delta = instances - active;
-      LOG.info("Scaling service '" + name + "' to " + instances
-               + " instances, a delta of " + delta);
-      if (delta > 0) {
-        // Scale up
-        for (int i = 0; i < delta; i++) {
-          out.add(addContainer());
-          numTarget += 1;
-        }
-      } else if (delta < 0) {
-        // Scale down
-        for (int i = delta; i < 0; i++) {
-          out.add(removeContainer());
+      // Any function that may remove containers, needs to lock the kv store
+      // outside the tracker to prevent deadlocks.
+      synchronized (keyValueStore) {
+        synchronized (this) {
+          int active = getNumActive();
+          int delta = instances - active;
+          LOG.info("Scaling service '" + name + "' to " + instances
+                   + " instances, a delta of " + delta);
+          if (delta > 0) {
+            // Scale up
+            for (int i = 0; i < delta; i++) {
+              out.add(addContainer());
+              numTarget += 1;
+            }
+          } else if (delta < 0) {
+            // Scale down
+            for (int i = delta; i < 0; i++) {
+              int instance;
+              if (waiting.size() > 0) {
+                instance = Utils.popfirst(waiting);
+              } else if (requested.size() > 0) {
+                instance = requested.get(requested.firstKey()).getInstance();
+              } else {
+                instance = Utils.popfirst(running);
+              }
+              finishContainer(instance, Model.Container.State.KILLED);
+              out.add(containers.get(instance));
+            }
+          }
         }
       }
       return out;
@@ -602,27 +609,17 @@ public class ApplicationMaster {
     public synchronized Model.Container addContainer() {
       Model.Container container;
       if (!isReady()) {
-        container = newContainer(Model.Container.State.WAITING);
+        container = new Model.Container(name, containers.size(),
+                                        Model.Container.State.WAITING);
         waiting.add(container.getInstance());
         LOG.info("WAITING: " + container.getId());
       } else {
-        container = newContainer(Model.Container.State.REQUESTED);
+        container = new Model.Container(name, containers.size(),
+                                        Model.Container.State.REQUESTED);
         requestContainer(container);
       }
+      containers.add(container);
       return container;
-    }
-
-    private synchronized Model.Container removeContainer() {
-      int instance;
-      if (waiting.size() > 0) {
-        instance = Utils.popfirst(waiting);
-      } else if (requested.size() > 0) {
-        instance = requested.get(requested.firstKey()).getInstance();
-      } else {
-        instance = Utils.popfirst(running);
-      }
-      finishContainer(instance, Model.Container.State.KILLED);
-      return containers.get(instance);
     }
 
     public Model.Container startContainer(final Container container,
@@ -698,59 +695,71 @@ public class ApplicationMaster {
       return out;
     }
 
-    public synchronized void finishContainer(int instance,
-        Model.Container.State state) {
-      Model.Container container = containers.get(instance);
+    public void finishContainer(int instance, Model.Container.State state) {
+      // Any function that may remove containers, needs to lock the kv store
+      // outside the tracker to prevent deadlocks.
+      synchronized (keyValueStore) {
+        synchronized (this) {
+          Model.Container container = containers.get(instance);
 
-      switch (container.getState()) {
-        case WAITING:
-          waiting.remove(instance);
-          break;
-        case REQUESTED:
-          ContainerRequest req = container.popContainerRequest();
-          Priority priority = req.getPriority();
-          removePriority(priority);
-          requested.remove(priority);
-          rmClient.removeContainerRequest(req);
-          break;
-        case RUNNING:
-          rmClient.releaseAssignedContainer(container.getYarnContainerId());
-          running.remove(instance);
-          container.setFinishTime(System.currentTimeMillis());
-          break;
-        default:
-          return;  // Already finished, should never get here
-      }
+          switch (container.getState()) {
+            case WAITING:
+              waiting.remove(instance);
+              break;
+            case REQUESTED:
+              ContainerRequest req = container.popContainerRequest();
+              Priority priority = req.getPriority();
+              removePriority(priority);
+              requested.remove(priority);
+              rmClient.removeContainerRequest(req);
+              break;
+            case RUNNING:
+              rmClient.releaseAssignedContainer(container.getYarnContainerId());
+              running.remove(instance);
+              container.setFinishTime(System.currentTimeMillis());
+              break;
+            default:
+              return;  // Already finished, should never get here
+          }
 
-      boolean mayRestart = false;
-      switch (state) {
-        case SUCCEEDED:
-          numSucceeded += 1;
-          break;
-        case KILLED:
-          numKilled += 1;
-          break;
-        case FAILED:
-          numFailed += 1;
-          mayRestart = true;
-          break;
-        default:
-          throw new IllegalArgumentException(
-              "finishContainer got illegal state " + state);
-      }
+          boolean mayRestart = false;
+          switch (state) {
+            case SUCCEEDED:
+              numSucceeded += 1;
+              break;
+            case KILLED:
+              numKilled += 1;
+              break;
+            case FAILED:
+              numFailed += 1;
+              mayRestart = true;
+              break;
+            default:
+              throw new IllegalArgumentException(
+                  "finishContainer got illegal state " + state);
+          }
 
-      LOG.info(state + ": " + container.getId());
-      container.setState(state);
+          LOG.info(state + ": " + container.getId());
+          container.setState(state);
 
-      if (mayRestart && (service.getMaxRestarts() == -1
-          || numRestarted < service.getMaxRestarts())) {
-        numRestarted += 1;
-        LOG.info("RESTARTING: adding new container to replace " + container.getId());
-        addContainer();
-      }
+          // Remove any owned keys from the key-value store
+          // NOTE: deleteRange may have already removed these
+          for (String key : container.getOwnedKeys()) {
+            keyValueStore.remove(key);
+          }
+          container.clearOwnedKeys();
 
-      if (isFinished()) {
-        maybeShutdown();
+          if (mayRestart && (service.getMaxRestarts() == -1
+              || numRestarted < service.getMaxRestarts())) {
+            numRestarted += 1;
+            LOG.info("RESTARTING: adding new container to replace " + container.getId());
+            addContainer();
+          }
+
+          if (isFinished()) {
+            maybeShutdown();
+          }
+        }
       }
     }
   }
@@ -760,7 +769,32 @@ public class ApplicationMaster {
     private boolean checkService(String name, StreamObserver<?> resp) {
       if (services.get(name) == null) {
         resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("Unknown Service '" + name + "'")
+            .withDescription("Unknown service '" + name + "'")
+            .asRuntimeException());
+        return false;
+      }
+      return true;
+    }
+
+    private boolean checkContainerInstance(String service, int instance,
+                                           boolean checkNotCompleted,
+                                           StreamObserver<?> resp) {
+      if (!checkService(service, resp)) {
+        return false;
+      }
+      ServiceTracker tracker = services.get(service);
+      Model.Container container = tracker.getContainer(instance);
+      if (container == null) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Service '" + service + "' has no container "
+                             + "instance " + instance)
+            .asRuntimeException());
+        return false;
+      }
+      if (checkNotCompleted && container.completed()) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Container '" + service + "_" + instance
+                             + "' has already completed")
             .asRuntimeException());
         return false;
       }
@@ -840,19 +874,12 @@ public class ApplicationMaster {
 
       String service = req.getServiceName();
       int instance = req.getInstance();
-      if (!checkService(service, resp)) {
+      if (!checkContainerInstance(service, instance, false, resp)) {
+        // invalid container id
         return;
       }
 
-      ServiceTracker tracker = services.get(service);
-      if (tracker.getContainer(instance) == null) {
-        resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("Service '" + service + "' has no container "
-                             + "instance " + instance)
-            .asRuntimeException());
-        return;
-      }
-      tracker.finishContainer(instance, Model.Container.State.KILLED);
+      services.get(service).finishContainer(instance, Model.Container.State.KILLED);
       resp.onNext(MsgUtils.EMPTY);
       resp.onCompleted();
     }
@@ -876,10 +903,11 @@ public class ApplicationMaster {
 
       Msg.ContainersResponse.Builder msg = Msg.ContainersResponse.newBuilder();
       ServiceTracker tracker = services.get(service);
+      List<Model.Container> containers = tracker.scale(instances);
       // Lock on tracker to prevent containers from updating while writing. If
       // this proves costly, may want to copy beforehand.
       synchronized (tracker) {
-        for (Model.Container c : tracker.scale(instances)) {
+        for (Model.Container c : containers) {
           msg.addContainers(MsgUtils.writeContainer(c));
         }
       }
@@ -888,7 +916,7 @@ public class ApplicationMaster {
     }
 
     @Override
-    public synchronized void getRange(Msg.GetRangeRequest req,
+    public void getRange(Msg.GetRangeRequest req,
         StreamObserver<Msg.GetRangeResponse> resp) {
       String start = req.getRangeStart();
       String end = req.getRangeEnd();
@@ -896,47 +924,48 @@ public class ApplicationMaster {
       boolean openLeft = start.isEmpty() || start.equals("\u0000");
       boolean openRight = end.isEmpty();
 
-      SortedMap<String, Msg.KeyValue.Builder> selection = null;
+      Msg.GetRangeResponse.Builder builder;
 
-      if (openLeft && openRight) {
-        selection = keyValueStore;
-      } else if (openRight ) {
-        selection = keyValueStore.tailMap(start);
-      } else if (openLeft) {
-        selection = keyValueStore.headMap(end);
-      } else if (start.compareTo(end) <= 0) {
-        selection = keyValueStore.subMap(start, end);
-      }
+      synchronized (keyValueStore) {
+        SortedMap<String, Msg.KeyValue.Builder> selection = null;
+        if (openLeft && openRight) {
+          selection = keyValueStore;
+        } else if (openRight ) {
+          selection = keyValueStore.tailMap(start);
+        } else if (openLeft) {
+          selection = keyValueStore.headMap(end);
+        } else if (start.compareTo(end) <= 0) {
+          selection = keyValueStore.subMap(start, end);
+        }
 
-      Msg.GetRangeResponse.Builder builder =
-          Msg.GetRangeResponse
-             .newBuilder()
-             .setCount(selection == null ? 0 : selection.size())
-             .setResultType(req.getResultType());
+        builder = Msg.GetRangeResponse
+                     .newBuilder()
+                     .setCount(selection == null ? 0 : selection.size())
+                     .setResultType(req.getResultType());
 
-      if (selection != null) {
-        switch (req.getResultType()) {
-          case ITEMS:
-            for (Map.Entry<String, Msg.KeyValue.Builder> entry : selection.entrySet()) {
-              builder.addResult(entry.getValue());
-            }
-            break;
-          case KEYS:
-            for (String key : selection.keySet()) {
-              builder.addResultBuilder().setKey(key);
-            }
-            break;
-          case NONE:
-            break;
+        if (selection != null) {
+          switch (req.getResultType()) {
+            case ITEMS:
+              for (Map.Entry<String, Msg.KeyValue.Builder> entry : selection.entrySet()) {
+                builder.addResult(entry.getValue());
+              }
+              break;
+            case KEYS:
+              for (String key : selection.keySet()) {
+                builder.addResultBuilder().setKey(key);
+              }
+              break;
+            case NONE:
+              break;
+          }
         }
       }
-
       resp.onNext(builder.build());
       resp.onCompleted();
     }
 
     @Override
-    public synchronized void deleteRange(Msg.DeleteRangeRequest req,
+    public void deleteRange(Msg.DeleteRangeRequest req,
         StreamObserver<Msg.DeleteRangeResponse> resp) {
 
       String start = req.getRangeStart();
@@ -945,40 +974,42 @@ public class ApplicationMaster {
       boolean openLeft = start.isEmpty() || start.equals("\u0000");
       boolean openRight = end.isEmpty();
 
-      SortedMap<String, Msg.KeyValue.Builder> selection = null;
+      Msg.DeleteRangeResponse.Builder builder;
 
-      if (openLeft && openRight) {
-        selection = keyValueStore;
-      } else if (openRight ) {
-        selection = keyValueStore.tailMap(start);
-      } else if (openLeft) {
-        selection = keyValueStore.headMap(end);
-      } else if (start.compareTo(end) <= 0) {
-        selection = keyValueStore.subMap(start, end);
-      }
-
-      Msg.DeleteRangeResponse.Builder builder =
-          Msg.DeleteRangeResponse
-             .newBuilder()
-             .setCount(selection == null ? 0 : selection.size())
-             .setResultType(req.getResultType());
-
-      if (selection != null) {
-        switch (req.getResultType()) {
-          case ITEMS:
-            for (Map.Entry<String, Msg.KeyValue.Builder> entry : selection.entrySet()) {
-              builder.addResult(entry.getValue());
-            }
-            break;
-          case KEYS:
-            for (String key : selection.keySet()) {
-              builder.addResultBuilder().setKey(key);
-            }
-            break;
-          case NONE:
-            break;
+      synchronized (keyValueStore) {
+        SortedMap<String, Msg.KeyValue.Builder> selection = null;
+        if (openLeft && openRight) {
+          selection = keyValueStore;
+        } else if (openRight ) {
+          selection = keyValueStore.tailMap(start);
+        } else if (openLeft) {
+          selection = keyValueStore.headMap(end);
+        } else if (start.compareTo(end) <= 0) {
+          selection = keyValueStore.subMap(start, end);
         }
-        selection.clear();
+
+        builder = Msg.DeleteRangeResponse
+                     .newBuilder()
+                     .setCount(selection == null ? 0 : selection.size())
+                     .setResultType(req.getResultType());
+
+        if (selection != null) {
+          switch (req.getResultType()) {
+            case ITEMS:
+              for (Map.Entry<String, Msg.KeyValue.Builder> entry : selection.entrySet()) {
+                builder.addResult(entry.getValue());
+              }
+              break;
+            case KEYS:
+              for (String key : selection.keySet()) {
+                builder.addResultBuilder().setKey(key);
+              }
+              break;
+            case NONE:
+              break;
+          }
+          selection.clear();
+        }
       }
 
       resp.onNext(builder.build());
@@ -986,49 +1017,81 @@ public class ApplicationMaster {
     }
 
     @Override
-    public synchronized void putKey(Msg.PutKeyRequest req,
-        StreamObserver<Msg.PutKeyResponse> resp) {
+    public void putKey(Msg.PutKeyRequest req, StreamObserver<Msg.PutKeyResponse> resp) {
 
       String key = req.getKey();
       boolean ignoreValue = req.getIgnoreValue();
       boolean ignoreOwner = req.getIgnoreOwner();
       boolean returnPrevious = req.getReturnPrevious();
 
-      if (ignoreValue && ignoreOwner) {
-        resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("ignore_value & ignore_owner can't both be true")
-            .asRuntimeException());
-        return;
-      }
+      Msg.KeyValue.Builder prev;
 
-      Msg.KeyValue.Builder prev = keyValueStore.get(key);
-      Msg.KeyValue.Builder kvBuilder = Msg.KeyValue.newBuilder().setKey(key);
+      synchronized (keyValueStore) {
+        // -- pre-checks --
+        if (ignoreValue && ignoreOwner) {
+          // can't ignore both value and owner
+          resp.onError(Status.INVALID_ARGUMENT
+              .withDescription("ignore_value & ignore_owner can't both be true")
+              .asRuntimeException());
+          return;
+        }
 
-      if (ignoreValue) {
-        if (prev == null) {
+        prev = keyValueStore.get(key);
+        Msg.ContainerInstance owner = req.hasOwner() ? req.getOwner() : null;
+
+        if (ignoreValue && prev == null) {
+          // ignore_value & key doesn't exist
           resp.onError(Status.FAILED_PRECONDITION
               .withDescription("ignore_value=True & key isn't already set")
               .asRuntimeException());
           return;
         }
-        kvBuilder.setValue(prev.getValue());
-      } else {
-        kvBuilder.setValue(req.getValue());
-      }
 
-      if (ignoreOwner && prev != null && prev.hasOwner()) {
-        kvBuilder.setOwner(prev.getOwner());
-      } else if (req.hasOwner()) {
-        // TODO:
-        // - Check owner is valid earlier on
-        // - Set owner on trackers
-        kvBuilder.setOwner(req.getOwner());
-      } else {
-        // TODO:
-        // - Clear owner on trackers
-      }
+        if (!ignoreOwner && owner != null) {
+          if (!checkContainerInstance(owner.getServiceName(), owner.getInstance(),
+                                      true, resp)) {
+            // Either invalid container id, or container already completed
+            return;
+          }
+        }
 
-      keyValueStore.put(key, kvBuilder);
+        // -- Build up new record, and update internal state --
+        Msg.KeyValue.Builder kvBuilder = Msg.KeyValue.newBuilder().setKey(key);
+
+        if (ignoreValue) {
+          // prev == null was forbidden above
+          kvBuilder.setValue(prev.getValue());
+        } else {
+          kvBuilder.setValue(req.getValue());
+        }
+
+        if (ignoreOwner) {
+          // Copy over previous owner if one exists
+          if (prev != null && prev.hasOwner()) {
+            kvBuilder.setOwner(prev.getOwner());
+          }
+        } else {
+          // First clear any previous owner.
+          if (prev != null && prev.hasOwner()) {
+            services.get(prev.getOwner().getServiceName())
+                    .removeOwnedKey(prev.getOwner().getInstance(), key);
+          }
+          // Only need to update internal state if we're setting a new owner
+          if (owner != null) {
+            if (services.get(owner.getServiceName())
+                        .addOwnedKey(owner.getInstance(), key)) {
+              kvBuilder.setOwner(owner);
+            } else {
+              // Race Condition! Between checking if new owner is valid
+              // and actually assigning owner, the container has shutdown.
+              // We need to delete the key.
+              keyValueStore.remove(key);
+            }
+          }
+        }
+
+        keyValueStore.put(key, kvBuilder);
+      }
 
       Msg.PutKeyResponse.Builder builder =
           Msg.PutKeyResponse.newBuilder().setReturnPrevious(returnPrevious);
@@ -1036,6 +1099,7 @@ public class ApplicationMaster {
       if (returnPrevious && prev != null) {
         builder.setPrevious(prev);
       }
+
       resp.onNext(builder.build());
       resp.onCompleted();
     }

@@ -12,6 +12,9 @@ from skein.test.conftest import run_application
 @pytest.fixture(scope="module")
 def kv_test_app_persistent(client):
     with run_application(client) as app:
+        # ensure one container id exists, but already completed
+        app.scale('sleeper', 2)
+        app.kill_container('sleeper_0')
         try:
             yield app
         finally:
@@ -24,6 +27,7 @@ def kv_test_app(kv_test_app_persistent):
         yield kv_test_app_persistent
     finally:
         kv_test_app_persistent.kv.clear()
+        kv_test_app_persistent.scale('sleeper', 1)
 
 
 kv_test_data = {'bar': b'a',
@@ -465,33 +469,35 @@ def test_key_value_pop_range(kv_test_app):
 
 
 def test_key_value_put(kv_test_app):
+    cid = kv_test_app.get_containers()[0].id
+
     # New, value only
     kv_test_app.kv.put('foo', value=b'a')
     assert kv_test_app.kv.get('foo', return_owner=True) == (b'a', None)
 
     # New, owner and value
-    kv_test_app.kv.put('bar', value=b'a', owner='sleeper_0')
-    assert kv_test_app.kv.get('bar', return_owner=True) == (b'a', 'sleeper_0')
+    kv_test_app.kv.put('bar', value=b'a', owner=cid)
+    assert kv_test_app.kv.get('bar', return_owner=True) == (b'a', cid)
 
     # Overwrite existing key
     kv_test_app.kv.put('foo', value=b'b')
     assert kv_test_app.kv.get('foo', return_owner=True) == (b'b', None)
 
     # Set owner only, value remains unchanged
-    kv_test_app.kv.put('foo', owner='sleeper_0')
-    assert kv_test_app.kv.get('foo', return_owner=True) == (b'b', 'sleeper_0')
+    kv_test_app.kv.put('foo', owner=cid)
+    assert kv_test_app.kv.get('foo', return_owner=True) == (b'b', cid)
 
     # Set value only, owner remains unchanged
     kv_test_app.kv.put('foo', value=b'c')
-    assert kv_test_app.kv.get('foo', return_owner=True) == (b'c', 'sleeper_0')
+    assert kv_test_app.kv.get('foo', return_owner=True) == (b'c', cid)
 
     # Clear owner, value remains unchanged
     kv_test_app.kv.put('foo', owner=None)
     assert kv_test_app.kv.get('foo', return_owner=True) == (b'c', None)
 
     # Set both value and owner
-    kv_test_app.kv.put('foo', value=b'd', owner='sleeper_0')
-    assert kv_test_app.kv.get('foo', return_owner=True) == (b'd', 'sleeper_0')
+    kv_test_app.kv.put('foo', value=b'd', owner=cid)
+    assert kv_test_app.kv.get('foo', return_owner=True) == (b'd', cid)
 
     # Set value, clear owner
     kv_test_app.kv.put('foo', value=b'e', owner=None)
@@ -499,11 +505,28 @@ def test_key_value_put(kv_test_app):
 
     # Can't create new key without setting value as well
     with pytest.raises(ValueError) as exc:
-        kv_test_app.kv.put('missing', owner='sleeper_0')
+        kv_test_app.kv.put('missing', owner=cid)
     assert str(exc.value) == "ignore_value=True & key isn't already set"
+
+    # Owner service doesn't exist
+    with pytest.raises(ValueError) as exc:
+        kv_test_app.kv.put('bar', owner='unknown_0')
+    assert str(exc.value) == "Unknown service 'unknown'"
+
+    # Owner instance doesn't exist
+    with pytest.raises(ValueError) as exc:
+        kv_test_app.kv.put('bar', owner='sleeper_100')
+    assert str(exc.value) == "Service 'sleeper' has no container instance 100"
+
+    # Owner instance already completed
+    with pytest.raises(ValueError) as exc:
+        kv_test_app.kv.put('bar', owner='sleeper_0')
+    assert str(exc.value) == "Container 'sleeper_0' has already completed"
 
 
 def test_key_value_swap(kv_test_app):
+    cid = kv_test_app.get_containers()[0].id
+
     # New, return value only
     assert kv_test_app.kv.swap('bar', value=b'a') is None
 
@@ -522,28 +545,68 @@ def test_key_value_swap(kv_test_app):
     assert kv_test_app.kv.get('foo', **ro) == (b'b', None)
 
     # Set owner only, value remains unchanged
-    assert kv_test_app.kv.swap('foo', owner='sleeper_0', **ro) == (b'b', None)
-    assert kv_test_app.kv.get('foo', **ro) == (b'b', 'sleeper_0')
+    assert kv_test_app.kv.swap('foo', owner=cid, **ro) == (b'b', None)
+    assert kv_test_app.kv.get('foo', **ro) == (b'b', cid)
 
     # Set value only, owner remains unchanged
-    assert kv_test_app.kv.swap('foo', value=b'c', **ro) == (b'b', 'sleeper_0')
-    assert kv_test_app.kv.get('foo', **ro) == (b'c', 'sleeper_0')
+    assert kv_test_app.kv.swap('foo', value=b'c', **ro) == (b'b', cid)
+    assert kv_test_app.kv.get('foo', **ro) == (b'c', cid)
 
     # Clear owner, value remains unchanged
-    assert kv_test_app.kv.swap('foo', owner=None, **ro) == (b'c', 'sleeper_0')
+    assert kv_test_app.kv.swap('foo', owner=None, **ro) == (b'c', cid)
     assert kv_test_app.kv.get('foo', **ro) == (b'c', None)
 
     # Set both value and owner
-    assert (kv_test_app.kv.swap('foo', value=b'd', owner='sleeper_0', **ro) ==
+    assert (kv_test_app.kv.swap('foo', value=b'd', owner=cid, **ro) ==
             (b'c', None))
-    assert kv_test_app.kv.get('foo', **ro) == (b'd', 'sleeper_0')
+    assert kv_test_app.kv.get('foo', **ro) == (b'd', cid)
 
     # Set value, clear owner
     assert (kv_test_app.kv.swap('foo', value=b'e', owner=None, **ro) ==
-            (b'd', 'sleeper_0'))
+            (b'd', cid))
     assert kv_test_app.kv.get('foo', return_owner=True) == (b'e', None)
 
     # Can't create new key without setting value as well
     with pytest.raises(ValueError) as exc:
-        kv_test_app.kv.swap('missing', owner='sleeper_0')
+        kv_test_app.kv.swap('missing', owner=cid)
     assert str(exc.value) == "ignore_value=True & key isn't already set"
+
+    # Owner service doesn't exist
+    with pytest.raises(ValueError) as exc:
+        kv_test_app.kv.swap('bar', owner='unknown_0')
+    assert str(exc.value) == "Unknown service 'unknown'"
+
+    # Owner instance doesn't exist
+    with pytest.raises(ValueError) as exc:
+        kv_test_app.kv.swap('bar', owner='sleeper_100')
+    assert str(exc.value) == "Service 'sleeper' has no container instance 100"
+
+    # Owner instance already completed
+    with pytest.raises(ValueError) as exc:
+        kv_test_app.kv.swap('bar', owner='sleeper_0')
+    assert str(exc.value) == "Container 'sleeper_0' has already completed"
+
+
+def test_key_value_ownership(kv_test_app):
+    kv_test_app.scale('sleeper', 2)
+    c1, c2 = (c.id for c in kv_test_app.get_containers())
+
+    # Create some owned keys
+    kv_test_app.kv.put('c1_1', value=b'a', owner=c1)
+    kv_test_app.kv.put('c1_2', value=b'b', owner=c1)
+    kv_test_app.kv.put('c1_3', value=b'c', owner=c1)
+    # Change the owners for two of them
+    kv_test_app.kv.put('c1_2', owner=c2)
+    kv_test_app.kv.put('c1_3', owner=None)
+
+    state = kv_test_app.kv.get_range(return_owner=True)
+    assert state['c1_1'] == (b'a', c1)
+    assert state['c1_2'] == (b'b', c2)
+    assert state['c1_3'] == (b'c', None)
+
+    kv_test_app.kill_container(c1)
+
+    # c1_1 should be deleted, the others should remain
+    assert not kv_test_app.kv.contains('c1_1')
+    assert kv_test_app.kv.contains('c1_2')
+    assert kv_test_app.kv.contains('c1_3')

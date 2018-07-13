@@ -207,6 +207,17 @@ public class Model {
     public void setState(State state) { this.state = state; }
     public State getState() { return state; }
 
+    public boolean completed() {
+      switch (state) {
+        case WAITING:
+        case REQUESTED:
+        case RUNNING:
+          return false;
+        default:
+          return true;
+      }
+    }
+
     public void setYarnContainerId(ContainerId yarnContainerId) {
       this.yarnContainerId = yarnContainerId;
     }
@@ -237,5 +248,6 @@ public class Model {
     }
 
     public Set<String> getOwnedKeys() { return ownedKeys; }
+    public void clearOwnedKeys() { ownedKeys.clear(); }
   }
 }
