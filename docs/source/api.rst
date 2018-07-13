@@ -48,6 +48,9 @@ Key Value Store
 .. autoclass:: skein.kv.contains
     :members:
 
+.. autoclass:: skein.kv.missing
+    :members:
+
 .. autoclass:: skein.kv.get
     :members:
 

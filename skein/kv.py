@@ -20,11 +20,24 @@ from .objects import (Base as _Base,
 
 __all__ = ('KeyValueStore',
            'ValueOwnerPair',
-           'count', 'list_keys', 'contains',
+           'count', 'list_keys',
+           'contains', 'missing',
            'get', 'get_prefix', 'get_range',
            'pop', 'pop_prefix', 'pop_range',
            'discard', 'discard_prefix', 'discard_range',
-           'put', 'swap')
+           'put', 'swap',
+           'value', 'owner', 'comparison',
+           'is_operation', 'is_condition')
+
+
+def is_operation(obj):
+    """Return if ``obj`` is a valid skein key-value store operation"""
+    return hasattr(obj, '_build_operation') and hasattr(obj, '_build_result')
+
+
+def is_condition(obj):
+    """Return if ``x`` is a valid skein key-value store condition"""
+    return hasattr(obj, '_build_condition')
 
 
 class KeyValueStore(_MutableMapping):
@@ -36,7 +49,7 @@ class KeyValueStore(_MutableMapping):
         self._client = client
 
     def _apply_op(self, op, timeout=None):
-        req = op._to_protobuf()
+        req = op._build_operation()
         resp = self._client._call(op._rpc, req, timeout=timeout)
         return op._build_result(resp)
 
@@ -109,9 +122,128 @@ def _register_op(return_type=None):
     return inner
 
 
-class _Operator(_Base):
-    """Base class for all operators"""
-    __slots__ = ()
+class comparison(_Base):
+    """A comparison of the value or owner for a specified key.
+
+    Parameters
+    ----------
+    key : str
+        The corresponding key.
+    field : {'value', 'owner'}
+        The field to compare on.
+    operator : {'==', '!=', '>', '>=', '<', '<='}
+        The comparison operator to use.
+    rhs : bytes, str or None
+        The right-hand-side of the condition expression.
+        Must be a ``bytes`` if  ``field='value'``, or ``str`` or ``None`` if
+        ``field='owner'``.
+    """
+    __slots__ = ('_key', '_field', '_operator', '_rhs', '_rhs_proto')
+    _params = ('key', 'field', 'operator', 'rhs')
+    _operator_lk = {'==': 'EQUAL', '!=': 'NOT_EQUAL',
+                    '<': 'LESS', '<=': 'LESS_EQUAL',
+                    '>': 'GREATER', '>=': 'GREATER_EQUAL'}
+
+    def __init__(self, key, field, operator, rhs):
+        if not isinstance(key, str):
+            raise TypeError("key must be a str")
+        self._key = key
+
+        if field not in {'value', 'owner'}:
+            raise ValueError("field must be either 'value' or 'owner'")
+        self._field = field
+
+        if operator not in self._operator_lk:
+            raise ValueError("operator must be in {'==', '!=', '<', '>', "
+                             "'<=', '>='}")
+        self._operator = operator
+
+        if field == 'owner':
+            if rhs is None:
+                if operator not in ('==', '!='):
+                    raise TypeError("Comparison (owner(%r) %s None) is "
+                                    "unsupported" % (key, operator))
+                self._rhs_proto = self._rhs = None
+            elif isinstance(rhs, str):
+                self._rhs_proto = _container_instance_from_string(rhs)
+                self._rhs = rhs
+            else:
+                raise TypeError("rhs must be a string or None")
+        else:
+            if not isinstance(rhs, bytes):
+                raise TypeError("rhs must be bytes")
+            self._rhs_proto = self._rhs = rhs
+
+    key = property(lambda self: self._key)
+    field = property(lambda self: self._field)
+    operator = property(lambda self: self._operator)
+    rhs = property(lambda self: self._rhs)
+
+    def __repr__(self):
+        return '%s(%r) %s %r' % (self._field, self.key, self.operator, self.rhs)
+
+    def _build_condition(self):
+        kwargs = {'key': self.key,
+                  'operator': self._operator_lk[self.operator],
+                  'field': self.field.upper(),
+                  self.field: self._rhs_proto}
+        return _proto.Condition(**kwargs)
+
+
+class _ComparisonBuilder(_Base):
+    """Base class for `value` and `owner`"""
+    __slots__ = ('_key',)
+    _params = ('key',)
+
+    def __init__(self, key):
+        if not isinstance(key, str):
+            raise TypeError("key must be a str")
+        self._key = key
+
+    key = property(lambda self: self._key)
+    _field = property(lambda self: type(self).__name__)
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, self.key)
+
+    def __eq__(self, other):
+        return comparison(self.key, self._field, '==', other)
+
+    def __ne__(self, other):
+        return comparison(self.key, self._field, '!=', other)
+
+    def __lt__(self, other):
+        return comparison(self.key, self._field, '<', other)
+
+    def __le__(self, other):
+        return comparison(self.key, self._field, '<=', other)
+
+    def __gt__(self, other):
+        return comparison(self.key, self._field, '>', other)
+
+    def __ge__(self, other):
+        return comparison(self.key, self._field, '>=', other)
+
+
+class value(_ComparisonBuilder):
+    """Represents the value for a key, for use in transaction conditions.
+
+    Parameters
+    ----------
+    key : str
+        The key to lookup
+    """
+    pass
+
+
+class owner(_ComparisonBuilder):
+    """Represents the owner for a key, for use in transaction conditions.
+
+    Parameters
+    ----------
+    key : str
+        The key to lookup
+    """
     pass
 
 
@@ -134,7 +266,7 @@ class ValueOwnerPair(_namedtuple('ValueOwnerPair', ['value', 'owner'])):
         return cls(obj.value, owner)
 
 
-class _CountOrKeys(_Operator):
+class _CountOrKeys(_Base):
     """Base class for count & keys"""
     __slots__ = ()
     _rpc = 'GetRange'
@@ -167,7 +299,7 @@ class _CountOrKeys(_Operator):
         return ('%s(range_start=%r, range_end=%r)'
                 % (typ, self.range_start, self.range_end))
 
-    def _to_protobuf(self):
+    def _build_operation(self):
         self._validate()
         if self._is_prefix:
             return _proto.GetRangeRequest(range_start=self.prefix,
@@ -222,7 +354,7 @@ class list_keys(_CountOrKeys):
         return [kv.key for kv in result.result]
 
 
-class _GetOrPop(_Operator):
+class _GetOrPop(_Base):
     """Base class for get & pop"""
     __slots__ = ()
 
@@ -242,7 +374,7 @@ class _GetOrPop(_Operator):
                 % (type(self).__name__, self.key, self.default,
                    self.return_owner))
 
-    def _to_protobuf(self):
+    def _build_operation(self):
         self._validate()
         return self._proto(range_start=self.key,
                            range_end=self.key + '\x00',
@@ -303,7 +435,7 @@ def _output_to_ordered_dict(result, return_owner=False):
     return _OrderedDict((kv.key, kv.value) for kv in result.result)
 
 
-class _GetOrPopPrefix(_Operator):
+class _GetOrPopPrefix(_Base):
     """Base class for (get/pop)_prefix"""
     __slots__ = ()
 
@@ -320,7 +452,7 @@ class _GetOrPopPrefix(_Operator):
         return ('%s(%r, return_owner=%r)'
                 % (type(self).__name__, self.prefix, self.return_owner))
 
-    def _to_protobuf(self):
+    def _build_operation(self):
         self._validate()
         return self._proto(range_start=self.prefix,
                            range_end=_next_key(self.prefix),
@@ -365,7 +497,7 @@ class pop_prefix(_GetOrPopPrefix):
     _rpc = 'DeleteRange'
 
 
-class _GetOrPopRange(_Operator):
+class _GetOrPopRange(_Base):
     """Base class for (get/pop)_prefix"""
     __slots__ = ()
 
@@ -385,7 +517,7 @@ class _GetOrPopRange(_Operator):
                 % (type(self).__name__, self.start, self.end,
                    self.return_owner))
 
-    def _to_protobuf(self):
+    def _build_operation(self):
         self._validate()
         return self._proto(range_start=self.start,
                            range_end=self.end,
@@ -437,8 +569,8 @@ class pop_range(_GetOrPopRange):
     _rpc = 'DeleteRange'
 
 
-class _ContainsOrDiscard(_Operator):
-    """Base class for contains & discard"""
+class _ContainsMissingDiscard(_Base):
+    """Base class for contains, missing & discard"""
     __slots__ = ()
 
     def __init__(self, key):
@@ -451,7 +583,7 @@ class _ContainsOrDiscard(_Operator):
     def __repr__(self):
         return '%s(%r)' % (type(self).__name__, self.key)
 
-    def _to_protobuf(self):
+    def _build_operation(self):
         self._validate()
         return self._proto(range_start=self.key,
                            range_end=self.key + '\x00',
@@ -462,21 +594,54 @@ class _ContainsOrDiscard(_Operator):
 
 
 @_register_op('bool')
-class contains(_ContainsOrDiscard):
+class contains(_ContainsMissingDiscard):
     """A request to check if a key is in the key-value store.
 
     Parameters
     ----------
     key : str
-        The key to get.
+        The key to check the presence of.
     """
     __slots__ = ('key',)
     _proto = _proto.GetRangeRequest
     _rpc = 'GetRange'
 
+    def _build_condition(self):
+        self._validate()
+        return _proto.Condition(key=self.key,
+                                operator='NOT_EQUAL',
+                                field='VALUE',
+                                value=None)
+
 
 @_register_op('bool')
-class discard(_ContainsOrDiscard):
+class missing(_ContainsMissingDiscard):
+    """A request to check if a key is not in the key-value store.
+
+    This is the inverse of ``contains``.
+
+    Parameters
+    ----------
+    key : str
+        The key to check the absence of.
+    """
+    __slots__ = ('key',)
+    _proto = _proto.GetRangeRequest
+    _rpc = 'GetRange'
+
+    def _build_result(self, result):
+        return result.count == 0
+
+    def _build_condition(self):
+        self._validate()
+        return _proto.Condition(key=self.key,
+                                operator='EQUAL',
+                                field='VALUE',
+                                value=None)
+
+
+@_register_op('bool')
+class discard(_ContainsMissingDiscard):
     """A request to discard a single key.
 
     Returns true if the key was present, false otherwise.
@@ -498,7 +663,7 @@ def _build_discard_result(result, return_keys=False):
 
 
 @_register_op('int or list of keys')
-class discard_prefix(_Operator):
+class discard_prefix(_Base):
     """A request to discard all key-value pairs whose keys start with ``prefix``.
 
     Returns either the number of keys discarded or a list of those keys,
@@ -528,7 +693,7 @@ class discard_prefix(_Operator):
         return ('discard_prefix(%r, return_keys=%r)' %
                 (self.prefix, self.return_keys))
 
-    def _to_protobuf(self):
+    def _build_operation(self):
         self._validate()
         result_type = 'KEYS' if self.return_keys else 'NONE'
         return _proto.DeleteRangeRequest(range_start=self.prefix,
@@ -540,7 +705,7 @@ class discard_prefix(_Operator):
 
 
 @_register_op('int or list of keys')
-class discard_range(_Operator):
+class discard_range(_Base):
     """A request to discard a range of keys.
 
     Returns either the number of keys discarded or a list of those keys,
@@ -576,7 +741,7 @@ class discard_range(_Operator):
         return ('discard_range(start=%r, end=%r, return_keys=%r)'
                 % (self.start, self.end, self.return_keys))
 
-    def _to_protobuf(self):
+    def _build_operation(self):
         self._validate()
         result_type = 'KEYS' if self.return_keys else 'NONE'
         return _proto.DeleteRangeRequest(range_start=self.start,
@@ -587,7 +752,7 @@ class discard_range(_Operator):
         return _build_discard_result(result, self.return_keys)
 
 
-class _PutOrSwap(_Operator):
+class _PutOrSwap(_Base):
     """Shared base class between put and swap"""
     __slots__ = ()
     _rpc = 'PutKey'
@@ -618,7 +783,7 @@ class _PutOrSwap(_Operator):
         if self.value is not _no_change:
             self._check_is_type('value', bytes)
 
-    def _to_protobuf(self):
+    def _build_operation(self):
         self._validate()
         ignore_value = self.value is _no_change
         value = None if ignore_value else self.value

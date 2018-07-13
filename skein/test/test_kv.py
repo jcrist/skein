@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import copy
+import operator
 from collections import MutableMapping, OrderedDict
 
 import pytest
@@ -44,6 +45,102 @@ def test_clean_tab_completion_kv_namespace():
     assert set(public) == set(skein.kv.__all__)
 
 
+@pytest.mark.parametrize('field', ['value', 'owner'])
+def test_field_accessor_types(field):
+    cls = getattr(skein.kv, field)
+    rec = cls('foo')
+
+    assert repr(rec) == "%s('foo')" % field
+
+    assert not skein.kv.is_condition(rec)
+
+    rec2 = copy.deepcopy(rec)
+    assert rec2.key == 'foo'
+    assert isinstance(rec2, cls)
+
+    with pytest.raises(TypeError):
+        cls(b'foo')
+
+
+def test_comparison_type():
+    # test using `comparison` directly
+    v = skein.kv.comparison('foo', 'value', '==', b'bar')
+    assert v == (skein.kv.value('foo') == b'bar')
+
+    o = skein.kv.comparison('foo', 'owner', '==', 'bar_1')
+    assert o == (skein.kv.owner('foo') == 'bar_1')
+
+    with pytest.raises(TypeError):
+        skein.kv.comparison(b'foo', 'value', '==', b'bar')
+
+    with pytest.raises(ValueError):
+        skein.kv.comparison('foo', 'unknown', '==', b'bar')
+
+    with pytest.raises(ValueError):
+        skein.kv.comparison('foo', 'value', 'unknown', b'bar')
+
+    with pytest.raises(TypeError):
+        skein.kv.comparison('foo', 'owner', '<=', None)
+
+
+@pytest.mark.parametrize('field, rhs1, rhs2, supports_none',
+                         [('value', b'rhs1', b'rhs2', False),
+                          ('owner', 'c_1', 'c_2', True)])
+@pytest.mark.parametrize('op, symbol', [(operator.eq, '=='), (operator.ne, '!='),
+                                        (operator.lt, '<'), (operator.le, '<='),
+                                        (operator.gt, '>'), (operator.ge, '>=')])
+def test_comparison_builder_types(field, rhs1, rhs2, supports_none, op, symbol):
+    cls = getattr(skein.kv, field)
+    rec = cls('foo')
+
+    x1 = op(rec, rhs1)
+    assert skein.kv.is_condition(x1)
+    assert isinstance(x1, skein.kv.comparison)
+    assert repr(x1) == "%s('foo') %s %r" % (field, symbol, rhs1)
+
+    x2 = op(rec, rhs2)
+    assert skein.kv.is_condition(x2)
+    assert isinstance(x2, skein.kv.comparison)
+    assert repr(x2) == "%s('foo') %s %r" % (field, symbol, rhs2)
+
+    assert x1 == copy.deepcopy(x1)
+    assert x1 != x2
+
+    if supports_none and symbol in ('==', '!='):
+        op(rec, None)
+    else:
+        with pytest.raises(TypeError):
+            op(rec, None)
+
+    with pytest.raises(TypeError):
+        op(rec, 123)
+
+    for attr, val in [('key', 'foo'), ('field', field),
+                      ('operator', symbol), ('rhs', rhs1)]:
+        assert getattr(x1, attr) == val
+
+        with pytest.raises(AttributeError):
+            setattr(x1, attr, val)  # immutable
+
+
+@pytest.mark.parametrize('cls', [skein.kv.contains,
+                                 skein.kv.missing])
+def test_contains_and_missing_types(cls):
+    x = cls('foo')
+    assert repr(x) == ("%s('foo')" % cls.__name__)
+    assert x == copy.deepcopy(x)
+    assert x != cls('bar')
+
+    assert skein.kv.is_condition(x)
+    assert skein.kv.is_operation(x)
+
+    with pytest.raises(AttributeError):
+        x.foobar = 1
+
+    with pytest.raises(TypeError):
+        cls(b'foo')
+
+
 @pytest.mark.parametrize('cls', [skein.kv.count, skein.kv.list_keys])
 def test_count_and_list_keys_types(cls):
     x1 = cls()
@@ -56,6 +153,8 @@ def test_count_and_list_keys_types(cls):
         assert x == copy.deepcopy(x)
     assert x1 != x2
 
+    assert skein.kv.is_operation(x1)
+
     with pytest.raises(AttributeError):
         x1.foobar = 1
 
@@ -67,18 +166,19 @@ def test_count_and_list_keys_types(cls):
             cls(**{k: b'bad type'})
 
 
-@pytest.mark.parametrize('cls', [skein.kv.contains, skein.kv.discard])
-def test_contains_and_discard_types(cls):
-    x = cls('foo')
-    assert repr(x) == ("%s('foo')" % cls.__name__)
+def test_discard_type():
+    x = skein.kv.discard('foo')
+    assert repr(x) == "discard('foo')"
     assert x == copy.deepcopy(x)
-    assert x != cls('bar')
+    assert x != skein.kv.discard('bar')
+
+    assert skein.kv.is_operation(x)
 
     with pytest.raises(AttributeError):
         x.foobar = 1
 
     with pytest.raises(TypeError):
-        cls(b'foo')
+        skein.kv.discard(b'foo')
 
 
 @pytest.mark.parametrize('cls', [skein.kv.get, skein.kv.pop])
@@ -91,6 +191,8 @@ def test_get_and_pop_types(cls):
     for x in [x1, x2]:
         assert x == copy.deepcopy(x)
     assert x1 != x2
+
+    assert skein.kv.is_operation(x1)
 
     with pytest.raises(AttributeError):
         x1.foobar = 1
@@ -118,6 +220,8 @@ def test_prefix_types(cls, kw):
         assert x == copy.deepcopy(x)
     assert x1 != x2
 
+    assert skein.kv.is_operation(x1)
+
     with pytest.raises(AttributeError):
         x1.foobar = 1
 
@@ -140,6 +244,8 @@ def test_range_types(cls, kw):
     for x in [x1, x2]:
         assert x == copy.deepcopy(x)
     assert x1 != x2
+
+    assert skein.kv.is_operation(x1)
 
     with pytest.raises(AttributeError):
         x1.foobar = 1
@@ -169,6 +275,8 @@ def test_put_and_swap_types(cls, has_return_owner):
     for x in [x1, x2, x3]:
         assert x == copy.deepcopy(x)
     assert x1 != x2
+
+    assert skein.kv.is_operation(x1)
 
     with pytest.raises(AttributeError):
         x1.foobar = 1
@@ -245,12 +353,14 @@ def test_key_value_list_keys(kv_test_app):
             ['bars', 'bart', 'foo'])
 
 
-def test_key_value_contains(kv_test_app):
+def test_key_value_contains_and_missing(kv_test_app):
     kv_test_app.kv.update(kv_test_data)
     assert 'bar' in kv_test_app.kv
     assert 'missing' not in kv_test_app.kv
     assert kv_test_app.kv.contains('bar')
+    assert not kv_test_app.kv.missing('bar')
     assert not kv_test_app.kv.contains('missing')
+    assert kv_test_app.kv.missing('missing')
 
 
 def test_key_value_discard(kv_test_app):

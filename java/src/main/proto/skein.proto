@@ -263,19 +263,24 @@ message DeleteRangeResponse {
 
 
 message Condition {
-  message Exists {
-    string key = 1;
+  enum Op {
+    EQUAL = 0;
+    NOT_EQUAL = 1;
+    LESS = 2;
+    LESS_EQUAL = 3;
+    GREATER = 4;
+    GREATER_EQUAL = 5;
   }
-
-  message Equals {
-    string key = 1;
-    bytes value = 2;
+  enum Field {
+    VALUE = 0;
+    OWNER = 1;
   }
-
-  bool inverse = 1;
-  oneof op {
-    Exists op_exists = 2;
-    Equals op_equals = 3;
+  string key = 1;
+  Op operator = 2;
+  Field field = 3;
+  oneof rhs {
+    bytes value = 4;
+    ContainerInstance owner = 5;
   }
 }
 
