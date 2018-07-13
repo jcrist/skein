@@ -1,12 +1,38 @@
 from __future__ import print_function, division, absolute_import
 
 import copy
-from collections import MutableMapping
+from collections import MutableMapping, OrderedDict
 
 import pytest
 
 import skein
 from skein.test.conftest import run_application
+
+
+@pytest.fixture(scope="module")
+def kv_test_app_persistent(client):
+    with run_application(client) as app:
+        try:
+            yield app
+        finally:
+            app.shutdown()
+
+
+@pytest.fixture
+def kv_test_app(kv_test_app_persistent):
+    try:
+        yield kv_test_app_persistent
+    finally:
+        kv_test_app_persistent.kv.clear()
+
+
+kv_test_data = {'bar': b'a',
+                'barf': b'b',
+                'bars': b'c',
+                'bart': b'd',
+                'foo': b'e',
+                'food': b'f',
+                'foodie': b'g'}
 
 
 def test_clean_tab_completion_kv_namespace():
@@ -156,42 +182,309 @@ def test_put_and_swap_types(cls, has_return_owner):
         cls('foo')
 
 
-def test_key_value(client):
-    with run_application(client) as app:
-        assert isinstance(app.kv, MutableMapping)
-        assert app.kv is app.kv
+def test_key_value(kv_test_app):
+    assert isinstance(kv_test_app.kv, MutableMapping)
+    assert kv_test_app.kv is kv_test_app.kv
 
-        assert dict(app.kv) == {}
+    assert dict(kv_test_app.kv) == {}
 
-        app.kv['foo'] = b'bar'
-        assert app.kv['foo'] == b'bar'
+    kv_test_app.kv['foo'] = b'bar'
+    assert kv_test_app.kv['foo'] == b'bar'
 
-        assert dict(app.kv) == {'foo': b'bar'}
-        assert len(app.kv) == 1
-        assert 'foo' in app.kv
-        assert 'food' not in app.kv
+    assert dict(kv_test_app.kv) == {'foo': b'bar'}
+    assert len(kv_test_app.kv) == 1
+    assert 'foo' in kv_test_app.kv
+    assert 'food' not in kv_test_app.kv
 
-        del app.kv['foo']
-        assert len(app.kv) == 0
+    del kv_test_app.kv['foo']
+    assert len(kv_test_app.kv) == 0
 
-        app.kv.update({'a': b'one', 'b': b'two'})
-        assert len(app.kv) == 2
-        app.kv.clear()
-        assert len(app.kv) == 0
+    kv_test_app.kv.update({'a': b'one', 'b': b'two'})
+    assert len(kv_test_app.kv) == 2
+    kv_test_app.kv.clear()
+    assert len(kv_test_app.kv) == 0
 
-        with pytest.raises(KeyError):
-            del app.kv['foo']
+    with pytest.raises(KeyError):
+        del kv_test_app.kv['foo']
 
-        with pytest.raises(KeyError):
-            app.kv['fizz']
+    with pytest.raises(KeyError):
+        kv_test_app.kv['fizz']
 
-        with pytest.raises(TypeError):
-            app.kv[1] = 'foo'
+    with pytest.raises(TypeError):
+        kv_test_app.kv[1] = 'foo'
 
-        with pytest.raises(TypeError):
-            app.kv['foo'] = u'bar'
+    with pytest.raises(TypeError):
+        kv_test_app.kv['foo'] = u'bar'
 
-        with pytest.raises(TypeError):
-            app.kv['foo'] = 1
+    with pytest.raises(TypeError):
+        kv_test_app.kv['foo'] = 1
 
-        app.shutdown()
+
+def test_key_value_count(kv_test_app):
+    kv_test_app.kv.update(kv_test_data)
+    assert kv_test_app.kv.count() == 7
+    assert kv_test_app.kv.count(prefix='bar') == 4
+    assert kv_test_app.kv.count(range_start='bars') == 5
+    assert kv_test_app.kv.count(range_end='bars') == 2
+    assert kv_test_app.kv.count(range_start='bars', range_end='food') == 3
+
+
+def test_key_value_list_keys(kv_test_app):
+    kv_test_app.kv.update(kv_test_data)
+    assert kv_test_app.kv.list_keys() == list(sorted(kv_test_data))
+    assert (kv_test_app.kv.list_keys(prefix='bar') ==
+            ['bar', 'barf', 'bars', 'bart'])
+    assert (kv_test_app.kv.list_keys(range_start='bars') ==
+            ['bars', 'bart', 'foo', 'food', 'foodie'])
+    assert kv_test_app.kv.list_keys(range_end='bars') == ['bar', 'barf']
+    assert (kv_test_app.kv.list_keys(range_start='bars', range_end='food') ==
+            ['bars', 'bart', 'foo'])
+
+
+def test_key_value_contains(kv_test_app):
+    kv_test_app.kv.update(kv_test_data)
+    assert 'bar' in kv_test_app.kv
+    assert 'missing' not in kv_test_app.kv
+    assert kv_test_app.kv.contains('bar')
+    assert not kv_test_app.kv.contains('missing')
+
+
+def test_key_value_discard(kv_test_app):
+    kv_test_app.kv.update(kv_test_data)
+    assert kv_test_app.kv.discard('bar')
+    assert 'bar' not in kv_test_app.kv
+    assert not kv_test_app.kv.discard('missing')
+
+
+def test_key_value_discard_prefix(kv_test_app):
+    bars = sorted(k for k in kv_test_data if k.startswith('bar'))
+
+    kv_test_app.kv.update(kv_test_data)
+    assert kv_test_app.kv.discard_prefix('bar') == len(bars)
+    assert kv_test_app.kv.discard_prefix('bar') == 0
+    assert kv_test_app.kv.discard_prefix('missing') == 0
+
+    kv_test_app.kv.update(kv_test_data)
+    assert kv_test_app.kv.discard_prefix('bar', return_keys=True) == bars
+    assert kv_test_app.kv.discard_prefix('bar', return_keys=True) == []
+    assert kv_test_app.kv.discard_prefix('missing', return_keys=True) == []
+
+
+def test_key_value_discard_range(kv_test_app):
+    # start
+    kv_test_app.kv.update(kv_test_data)
+    sol = sorted(k for k in kv_test_data if 'bar' <= k)
+    assert kv_test_app.kv.discard_range(start='bar') == len(sol)
+    assert kv_test_app.kv.discard_range(start='bar') == 0
+    kv_test_app.kv.update(kv_test_data)
+    assert kv_test_app.kv.discard_range(start='bar', return_keys=True) == sol
+    assert kv_test_app.kv.discard_range(start='bar', return_keys=True) == []
+
+    # end
+    kv_test_app.kv.update(kv_test_data)
+    sol = sorted(k for k in kv_test_data if k < 'food')
+    assert kv_test_app.kv.discard_range(end='food') == len(sol)
+    assert kv_test_app.kv.discard_range(end='food') == 0
+    kv_test_app.kv.update(kv_test_data)
+    assert kv_test_app.kv.discard_range(end='food', return_keys=True) == sol
+    assert kv_test_app.kv.discard_range(end='food', return_keys=True) == []
+
+    # both
+    kv_test_app.kv.update(kv_test_data)
+    sol = sorted(k for k in kv_test_data if 'bar' <= k < 'food')
+    assert kv_test_app.kv.discard_range(start='bar', end='food') == len(sol)
+    assert kv_test_app.kv.discard_range(start='bar', end='food') == 0
+    kv_test_app.kv.update(kv_test_data)
+    assert kv_test_app.kv.discard_range(start='bar', end='food',
+                                        return_keys=True) == sol
+    assert kv_test_app.kv.discard_range(start='bar', end='food',
+                                        return_keys=True) == []
+
+    # neither
+    kv_test_app.kv.update(kv_test_data)
+    sol = sorted(kv_test_data)
+    assert kv_test_app.kv.discard_range(return_keys=True) == sol
+    assert kv_test_app.kv.discard_range() == 0
+
+    # empty
+    kv_test_app.kv.update(kv_test_data)
+    assert kv_test_app.kv.discard_range(start='zzzz') == 0
+    assert kv_test_app.kv.discard_range(start='z', end='a') == 0
+
+
+def test_key_value_get(kv_test_app):
+    kv_test_app.kv.update(kv_test_data)
+
+    assert kv_test_app.kv.get('bar') == b'a'
+    assert kv_test_app.kv.get('bar', return_owner=True) == (b'a', None)
+
+    assert kv_test_app.kv.get('missing') is None
+    assert kv_test_app.kv.get('missing', b'default') == b'default'
+    assert kv_test_app.kv.get('missing', return_owner=True) == (None, None)
+    assert (kv_test_app.kv.get('missing', b'default', return_owner=True) ==
+            (b'default', None))
+
+
+def test_key_value_get_prefix(kv_test_app):
+    empty = OrderedDict()
+    kv_test_app.kv.update(kv_test_data)
+
+    sol = OrderedDict(sorted((k, v) for k, v in kv_test_data.items()
+                             if k.startswith('bar')))
+    assert kv_test_app.kv.get_prefix('bar') == sol
+    assert kv_test_app.kv.get_prefix('missing') == empty
+
+    sol = OrderedDict(sorted((k, (v, None)) for k, v in kv_test_data.items()
+                             if k.startswith('bar')))
+    assert kv_test_app.kv.get_prefix('bar', return_owner=True) == sol
+    assert kv_test_app.kv.get_prefix('missing', return_owner=True) == empty
+
+
+def test_key_value_get_range(kv_test_app):
+    kv_test_app.kv.update(kv_test_data)
+
+    # start
+    sol = OrderedDict(sorted((k, v) for k, v in kv_test_data.items()
+                             if 'bar' <= k))
+    assert kv_test_app.kv.get_range(start='bar') == sol
+    sol = OrderedDict(sorted((k, (v, None)) for k, v in kv_test_data.items()
+                             if 'bar' <= k))
+    assert kv_test_app.kv.get_range(start='bar', return_owner=True) == sol
+
+    # end
+    sol = OrderedDict(sorted((k, v) for k, v in kv_test_data.items()
+                             if k < 'food'))
+    assert kv_test_app.kv.get_range(end='food') == sol
+    sol = OrderedDict(sorted((k, (v, None)) for k, v in kv_test_data.items()
+                             if k < 'food'))
+    assert kv_test_app.kv.get_range(end='food', return_owner=True) == sol
+
+    # both
+    sol = OrderedDict(sorted((k, v) for k, v in kv_test_data.items()
+                             if 'bar' <= k < 'food'))
+    assert kv_test_app.kv.get_range(start='bar', end='food') == sol
+    sol = OrderedDict(sorted((k, (v, None)) for k, v in kv_test_data.items()
+                             if 'bar' <= k < 'food'))
+    assert kv_test_app.kv.get_range(start='bar', end='food',
+                                    return_owner=True) == sol
+
+    # neither
+    sol = OrderedDict(sorted(kv_test_data.items()))
+    assert kv_test_app.kv.get_range() == sol
+
+    # empty
+    assert kv_test_app.kv.get_range(start='zzzz') == OrderedDict()
+    assert kv_test_app.kv.get_range(start='z', end='a') == OrderedDict()
+
+
+def test_key_value_pop(kv_test_app):
+    kv_test_app.kv.update(kv_test_data)
+
+    assert kv_test_app.kv.pop('bar') == b'a'
+    assert 'bar' not in kv_test_app.kv
+
+    assert kv_test_app.kv.pop('barf', return_owner=True) == (b'b', None)
+    assert 'barf' not in kv_test_app.kv
+
+    assert kv_test_app.kv.pop('missing') is None
+    assert kv_test_app.kv.pop('missing', b'default') == b'default'
+    assert kv_test_app.kv.pop('missing', return_owner=True) == (None, None)
+    assert (kv_test_app.kv.pop('missing', b'default', return_owner=True) ==
+            (b'default', None))
+
+
+def test_key_value_pop_prefix(kv_test_app):
+    empty = OrderedDict()
+
+    kv_test_app.kv.update(kv_test_data)
+    sol = OrderedDict(sorted((k, v) for k, v in kv_test_data.items()
+                             if k.startswith('bar')))
+    assert kv_test_app.kv.pop_prefix('bar') == sol
+    assert kv_test_app.kv.pop_prefix('bar') == empty
+    assert kv_test_app.kv.pop_prefix('missing') == empty
+
+    kv_test_app.kv.update(kv_test_data)
+    sol = OrderedDict(sorted((k, (v, None)) for k, v in kv_test_data.items()
+                             if k.startswith('bar')))
+    assert kv_test_app.kv.pop_prefix('bar', return_owner=True) == sol
+    assert kv_test_app.kv.pop_prefix('bar', return_owner=True) == empty
+    assert kv_test_app.kv.pop_prefix('missing', return_owner=True) == empty
+
+
+def test_key_value_pop_range(kv_test_app):
+    empty = OrderedDict()
+
+    # start
+    kv_test_app.kv.update(kv_test_data)
+    sol = OrderedDict(sorted((k, v) for k, v in kv_test_data.items()
+                             if 'bar' <= k))
+    assert kv_test_app.kv.pop_range(start='bar') == sol
+    assert kv_test_app.kv.pop_range(start='bar') == empty
+    kv_test_app.kv.update(kv_test_data)
+    sol = OrderedDict(sorted((k, (v, None)) for k, v in kv_test_data.items()
+                             if 'bar' <= k))
+    assert kv_test_app.kv.pop_range(start='bar', return_owner=True) == sol
+    assert kv_test_app.kv.pop_range(start='bar', return_owner=True) == empty
+
+    # end
+    kv_test_app.kv.update(kv_test_data)
+    sol = OrderedDict(sorted((k, v) for k, v in kv_test_data.items()
+                             if k < 'food'))
+    assert kv_test_app.kv.pop_range(end='food') == sol
+    assert kv_test_app.kv.pop_range(end='food') == empty
+    kv_test_app.kv.update(kv_test_data)
+    sol = OrderedDict(sorted((k, (v, None)) for k, v in kv_test_data.items()
+                             if k < 'food'))
+    assert kv_test_app.kv.pop_range(end='food', return_owner=True) == sol
+    assert kv_test_app.kv.pop_range(end='food', return_owner=True) == empty
+
+    # both
+    kv_test_app.kv.update(kv_test_data)
+    sol = OrderedDict(sorted((k, v) for k, v in kv_test_data.items()
+                             if 'bar' <= k < 'food'))
+    assert kv_test_app.kv.pop_range(start='bar', end='food') == sol
+    assert kv_test_app.kv.pop_range(start='bar', end='food') == empty
+    kv_test_app.kv.update(kv_test_data)
+    sol = OrderedDict(sorted((k, (v, None)) for k, v in kv_test_data.items()
+                             if 'bar' <= k < 'food'))
+    assert kv_test_app.kv.pop_range(start='bar', end='food',
+                                    return_owner=True) == sol
+    assert kv_test_app.kv.pop_range(start='bar', end='food',
+                                    return_owner=True) == empty
+
+    # neither
+    kv_test_app.kv.update(kv_test_data)
+    sol = OrderedDict(sorted(kv_test_data.items()))
+    assert kv_test_app.kv.pop_range() == sol
+    assert kv_test_app.kv.pop_range() == empty
+
+    # empty
+    kv_test_app.kv.update(kv_test_data)
+    assert kv_test_app.kv.pop_range(start='zzzz') == empty
+    assert kv_test_app.kv.pop_range(start='z', end='a') == empty
+
+
+def test_key_value_put(kv_test_app):
+    kv_test_app.kv.put('foo', value=b'a')
+    assert kv_test_app.kv.get('foo', return_owner=True) == (b'a', None)
+
+    kv_test_app.kv.put('foo', value=b'b')
+    assert kv_test_app.kv.get('foo', return_owner=True) == (b'b', None)
+
+    with pytest.raises(ValueError) as exc:
+        kv_test_app.kv.put('bar', owner='sleeper_0')
+    assert str(exc.value) == "ignore_value=True & key isn't already set"
+
+
+def test_key_value_swap(kv_test_app):
+    assert kv_test_app.kv.swap('foo', value=b'a') is None
+    assert kv_test_app.kv.swap('foo', value=b'b') == b'a'
+
+    assert (kv_test_app.kv.swap('foo2', value=b'a', return_owner=True) ==
+            (None, None))
+    assert (kv_test_app.kv.swap('foo2', value=b'b', return_owner=True) ==
+            (b'a', None))
+
+    with pytest.raises(ValueError) as exc:
+        kv_test_app.kv.swap('bar', owner='sleeper_0')
+    assert str(exc.value) == "ignore_value=True & key isn't already set"

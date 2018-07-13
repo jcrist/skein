@@ -361,7 +361,7 @@ class pop_prefix(_GetOrPopPrefix):
         is False.
     """
     __slots__ = ('prefix', 'return_owner')
-    _proto = _proto.GetRangeRequest
+    _proto = _proto.DeleteRangeRequest
     _rpc = 'DeleteRange'
 
 
@@ -686,7 +686,7 @@ class swap(_PutOrSwap):
     """
     __slots__ = ('key', 'value', 'return_owner', '_owner', '_owner_proto')
     _params = ('key', 'value', 'owner', 'return_owner')
-    _return_previous = False
+    _return_previous = True
 
     def __init__(self, key, value=_no_change, owner=_no_change,
                  return_owner=False):
@@ -701,6 +701,8 @@ class swap(_PutOrSwap):
                 % (self.key, self.value, self.owner, self.return_owner))
 
     def _build_result(self, result):
-        if self.return_owner:
-            return ValueOwnerPair._from_kv_protobuf(result.previous)
-        return result.previous.value
+        if result.HasField("previous"):
+            if self.return_owner:
+                return ValueOwnerPair._from_kv_protobuf(result.previous)
+            return result.previous.value
+        return ValueOwnerPair(None, None) if self.return_owner else None

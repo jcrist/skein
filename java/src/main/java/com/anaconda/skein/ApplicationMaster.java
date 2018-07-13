@@ -898,7 +898,7 @@ public class ApplicationMaster {
       boolean openLeft = start.isEmpty() || start.equals("\u0000");
       boolean openRight = end.isEmpty();
 
-      SortedMap<String, ByteString> selection;
+      SortedMap<String, ByteString> selection = null;
 
       if (openLeft && openRight) {
         selection = keyValueStore;
@@ -906,33 +906,33 @@ public class ApplicationMaster {
         selection = keyValueStore.tailMap(start);
       } else if (openLeft) {
         selection = keyValueStore.headMap(end);
-      } else {
+      } else if (start.compareTo(end) <= 0) {
         selection = keyValueStore.subMap(start, end);
       }
-
-      int count = selection.size();
 
       Msg.GetRangeResponse.Builder builder =
           Msg.GetRangeResponse
              .newBuilder()
-             .setCount(count)
+             .setCount(selection == null ? 0 : selection.size())
              .setResultType(req.getResultType());
 
-      switch (req.getResultType()) {
-        case ITEMS:
-          for (Map.Entry<String, ByteString> entry : selection.entrySet()) {
-            builder.addResultBuilder()
-                   .setKey(entry.getKey())
-                   .setValue(entry.getValue());
-          }
-          break;
-        case KEYS:
-          for (String key : selection.keySet()) {
-            builder.addResultBuilder().setKey(key);
-          }
-          break;
-        case NONE:
-          break;
+      if (selection != null) {
+        switch (req.getResultType()) {
+          case ITEMS:
+            for (Map.Entry<String, ByteString> entry : selection.entrySet()) {
+              builder.addResultBuilder()
+                    .setKey(entry.getKey())
+                    .setValue(entry.getValue());
+            }
+            break;
+          case KEYS:
+            for (String key : selection.keySet()) {
+              builder.addResultBuilder().setKey(key);
+            }
+            break;
+          case NONE:
+            break;
+        }
       }
 
       resp.onNext(builder.build());
@@ -949,7 +949,7 @@ public class ApplicationMaster {
       boolean openLeft = start.isEmpty() || start.equals("\u0000");
       boolean openRight = end.isEmpty();
 
-      SortedMap<String, ByteString> selection;
+      SortedMap<String, ByteString> selection = null;
 
       if (openLeft && openRight) {
         selection = keyValueStore;
@@ -957,33 +957,35 @@ public class ApplicationMaster {
         selection = keyValueStore.tailMap(start);
       } else if (openLeft) {
         selection = keyValueStore.headMap(end);
-      } else {
+      } else if (start.compareTo(end) <= 0) {
         selection = keyValueStore.subMap(start, end);
       }
 
       Msg.DeleteRangeResponse.Builder builder =
           Msg.DeleteRangeResponse
              .newBuilder()
-             .setCount(selection.size())
+             .setCount(selection == null ? 0 : selection.size())
              .setResultType(req.getResultType());
 
-      switch (req.getResultType()) {
-        case ITEMS:
-          for (Map.Entry<String, ByteString> entry : selection.entrySet()) {
-            builder.addResultBuilder()
-                  .setKey(entry.getKey())
-                  .setValue(entry.getValue());
-          }
-          break;
-        case KEYS:
-          for (String key : selection.keySet()) {
-            builder.addResultBuilder().setKey(key);
-          }
-          break;
-        case NONE:
-          break;
+      if (selection != null) {
+        switch (req.getResultType()) {
+          case ITEMS:
+            for (Map.Entry<String, ByteString> entry : selection.entrySet()) {
+              builder.addResultBuilder()
+                    .setKey(entry.getKey())
+                    .setValue(entry.getValue());
+            }
+            break;
+          case KEYS:
+            for (String key : selection.keySet()) {
+              builder.addResultBuilder().setKey(key);
+            }
+            break;
+          case NONE:
+            break;
+        }
+        selection.clear();
       }
-      selection.clear();
 
       resp.onNext(builder.build());
       resp.onCompleted();
@@ -992,18 +994,37 @@ public class ApplicationMaster {
     @Override
     public synchronized void putKey(Msg.PutKeyRequest req,
         StreamObserver<Msg.PutKeyResponse> resp) {
+
       String key = req.getKey();
+      boolean ignoreValue = req.getIgnoreValue();
+      boolean ignoreOwner = req.getIgnoreOwner();
+      boolean returnPrevious = req.getReturnPrevious();
+
+      if (ignoreValue && ignoreOwner) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("ignore_value & ignore_owner can't both be true")
+            .asRuntimeException());
+        return;
+      }
+
+      if (ignoreValue) {
+        if (!keyValueStore.containsKey(key)) {
+          resp.onError(Status.FAILED_PRECONDITION
+              .withDescription("ignore_value=True & key isn't already set")
+              .asRuntimeException());
+          return;
+        }
+        // TODO: set owner
+      }
+
       ByteString value = req.getValue();
       ByteString prev = keyValueStore.put(key, value);
 
-      Msg.PutKeyResponse.Builder builder = Msg.PutKeyResponse.newBuilder();
+      Msg.PutKeyResponse.Builder builder =
+          Msg.PutKeyResponse.newBuilder().setReturnPrevious(returnPrevious);
 
-      if (req.getReturnPrevious()) {
-        Msg.KeyValue.Builder previousBuilder = builder.getPreviousBuilder();
-        previousBuilder.setKey(key);
-        if (prev != null) {
-          previousBuilder.setValue(prev);
-        }
+      if (returnPrevious && prev != null) {
+        builder.getPreviousBuilder().setKey(key).setValue(prev);
       }
       resp.onNext(builder.build());
       resp.onCompleted();

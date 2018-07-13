@@ -4,7 +4,7 @@ import warnings
 import sys
 from contextlib import contextmanager
 
-from .compatibility import PY2
+from .compatibility import PY2, bind_method
 
 __all__ = ('FileExistsError',    # py2 compat
            'FileNotFoundError',  # py2 compat
@@ -74,9 +74,6 @@ class _Context(object):
     def __init__(self):
         self.is_cli = False
 
-    def info(self, msg):
-        print(msg)
-
     def warn(self, msg):
         if self.is_cli:
             print(msg + "\n", file=sys.stderr)
@@ -98,11 +95,7 @@ class _Context(object):
         def wrap(self, msg):
             return typ2(msg) if self.is_cli else typ(msg)
 
-        if PY2:
-            import types
-            setattr(cls, name, types.MethodType(wrap, None, cls))
-        else:
-            setattr(cls, name, wrap)
+        bind_method(cls, name, wrap)
 
 
 for exc in [ValueError, KeyError, TypeError, FileExistsError,

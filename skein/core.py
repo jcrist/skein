@@ -272,6 +272,7 @@ class _ClientBase(object):
         elif code == grpc.StatusCode.NOT_FOUND:
             raise context.KeyError(exc.details())
         elif code in (grpc.StatusCode.INVALID_ARGUMENT,
+                      grpc.StatusCode.FAILED_PRECONDITION,
                       grpc.StatusCode.ALREADY_EXISTS):
             raise context.ValueError(exc.details())
         else:
