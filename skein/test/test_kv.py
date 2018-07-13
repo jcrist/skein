@@ -465,26 +465,85 @@ def test_key_value_pop_range(kv_test_app):
 
 
 def test_key_value_put(kv_test_app):
+    # New, value only
     kv_test_app.kv.put('foo', value=b'a')
     assert kv_test_app.kv.get('foo', return_owner=True) == (b'a', None)
 
+    # New, owner and value
+    kv_test_app.kv.put('bar', value=b'a', owner='sleeper_0')
+    assert kv_test_app.kv.get('bar', return_owner=True) == (b'a', 'sleeper_0')
+
+    # Overwrite existing key
     kv_test_app.kv.put('foo', value=b'b')
     assert kv_test_app.kv.get('foo', return_owner=True) == (b'b', None)
 
+    # Set owner only, value remains unchanged
+    kv_test_app.kv.put('foo', owner='sleeper_0')
+    assert kv_test_app.kv.get('foo', return_owner=True) == (b'b', 'sleeper_0')
+
+    # Set value only, owner remains unchanged
+    kv_test_app.kv.put('foo', value=b'c')
+    assert kv_test_app.kv.get('foo', return_owner=True) == (b'c', 'sleeper_0')
+
+    # Clear owner, value remains unchanged
+    kv_test_app.kv.put('foo', owner=None)
+    assert kv_test_app.kv.get('foo', return_owner=True) == (b'c', None)
+
+    # Set both value and owner
+    kv_test_app.kv.put('foo', value=b'd', owner='sleeper_0')
+    assert kv_test_app.kv.get('foo', return_owner=True) == (b'd', 'sleeper_0')
+
+    # Set value, clear owner
+    kv_test_app.kv.put('foo', value=b'e', owner=None)
+    assert kv_test_app.kv.get('foo', return_owner=True) == (b'e', None)
+
+    # Can't create new key without setting value as well
     with pytest.raises(ValueError) as exc:
-        kv_test_app.kv.put('bar', owner='sleeper_0')
+        kv_test_app.kv.put('missing', owner='sleeper_0')
     assert str(exc.value) == "ignore_value=True & key isn't already set"
 
 
 def test_key_value_swap(kv_test_app):
-    assert kv_test_app.kv.swap('foo', value=b'a') is None
-    assert kv_test_app.kv.swap('foo', value=b'b') == b'a'
+    # New, return value only
+    assert kv_test_app.kv.swap('bar', value=b'a') is None
 
-    assert (kv_test_app.kv.swap('foo2', value=b'a', return_owner=True) ==
-            (None, None))
-    assert (kv_test_app.kv.swap('foo2', value=b'b', return_owner=True) ==
-            (b'a', None))
+    # Existing, return value only
+    assert kv_test_app.kv.swap('bar', value=b'b') == b'a'
 
+    # Return owner for remaining tests
+    ro = {'return_owner': True}
+
+    # New, value only
+    assert kv_test_app.kv.swap('foo', value=b'a', **ro) == (None, None)
+    assert kv_test_app.kv.get('foo', **ro) == (b'a', None)
+
+    # Overwrite existing key
+    assert kv_test_app.kv.swap('foo', value=b'b', **ro) == (b'a', None)
+    assert kv_test_app.kv.get('foo', **ro) == (b'b', None)
+
+    # Set owner only, value remains unchanged
+    assert kv_test_app.kv.swap('foo', owner='sleeper_0', **ro) == (b'b', None)
+    assert kv_test_app.kv.get('foo', **ro) == (b'b', 'sleeper_0')
+
+    # Set value only, owner remains unchanged
+    assert kv_test_app.kv.swap('foo', value=b'c', **ro) == (b'b', 'sleeper_0')
+    assert kv_test_app.kv.get('foo', **ro) == (b'c', 'sleeper_0')
+
+    # Clear owner, value remains unchanged
+    assert kv_test_app.kv.swap('foo', owner=None, **ro) == (b'c', 'sleeper_0')
+    assert kv_test_app.kv.get('foo', **ro) == (b'c', None)
+
+    # Set both value and owner
+    assert (kv_test_app.kv.swap('foo', value=b'd', owner='sleeper_0', **ro) ==
+            (b'c', None))
+    assert kv_test_app.kv.get('foo', **ro) == (b'd', 'sleeper_0')
+
+    # Set value, clear owner
+    assert (kv_test_app.kv.swap('foo', value=b'e', owner=None, **ro) ==
+            (b'd', 'sleeper_0'))
+    assert kv_test_app.kv.get('foo', return_owner=True) == (b'e', None)
+
+    # Can't create new key without setting value as well
     with pytest.raises(ValueError) as exc:
-        kv_test_app.kv.swap('bar', owner='sleeper_0')
+        kv_test_app.kv.swap('missing', owner='sleeper_0')
     assert str(exc.value) == "ignore_value=True & key isn't already set"

@@ -1,7 +1,5 @@
 package com.anaconda.skein;
 
-import com.google.protobuf.ByteString;
-
 import io.grpc.Server;
 import io.grpc.Status;
 import io.grpc.netty.GrpcSslContexts;
@@ -83,8 +81,8 @@ public class ApplicationMaster {
 
   private ApplicationId appId;
 
-  private final TreeMap<String, ByteString> keyValueStore =
-      new TreeMap<String, ByteString>();
+  private final TreeMap<String, Msg.KeyValue.Builder> keyValueStore =
+      new TreeMap<String, Msg.KeyValue.Builder>();
 
   private final Map<String, ServiceTracker> services =
       new HashMap<String, ServiceTracker>();
@@ -898,7 +896,7 @@ public class ApplicationMaster {
       boolean openLeft = start.isEmpty() || start.equals("\u0000");
       boolean openRight = end.isEmpty();
 
-      SortedMap<String, ByteString> selection = null;
+      SortedMap<String, Msg.KeyValue.Builder> selection = null;
 
       if (openLeft && openRight) {
         selection = keyValueStore;
@@ -919,10 +917,8 @@ public class ApplicationMaster {
       if (selection != null) {
         switch (req.getResultType()) {
           case ITEMS:
-            for (Map.Entry<String, ByteString> entry : selection.entrySet()) {
-              builder.addResultBuilder()
-                    .setKey(entry.getKey())
-                    .setValue(entry.getValue());
+            for (Map.Entry<String, Msg.KeyValue.Builder> entry : selection.entrySet()) {
+              builder.addResult(entry.getValue());
             }
             break;
           case KEYS:
@@ -949,7 +945,7 @@ public class ApplicationMaster {
       boolean openLeft = start.isEmpty() || start.equals("\u0000");
       boolean openRight = end.isEmpty();
 
-      SortedMap<String, ByteString> selection = null;
+      SortedMap<String, Msg.KeyValue.Builder> selection = null;
 
       if (openLeft && openRight) {
         selection = keyValueStore;
@@ -970,10 +966,8 @@ public class ApplicationMaster {
       if (selection != null) {
         switch (req.getResultType()) {
           case ITEMS:
-            for (Map.Entry<String, ByteString> entry : selection.entrySet()) {
-              builder.addResultBuilder()
-                    .setKey(entry.getKey())
-                    .setValue(entry.getValue());
+            for (Map.Entry<String, Msg.KeyValue.Builder> entry : selection.entrySet()) {
+              builder.addResult(entry.getValue());
             }
             break;
           case KEYS:
@@ -1007,24 +1001,40 @@ public class ApplicationMaster {
         return;
       }
 
+      Msg.KeyValue.Builder prev = keyValueStore.get(key);
+      Msg.KeyValue.Builder kvBuilder = Msg.KeyValue.newBuilder().setKey(key);
+
       if (ignoreValue) {
-        if (!keyValueStore.containsKey(key)) {
+        if (prev == null) {
           resp.onError(Status.FAILED_PRECONDITION
               .withDescription("ignore_value=True & key isn't already set")
               .asRuntimeException());
           return;
         }
-        // TODO: set owner
+        kvBuilder.setValue(prev.getValue());
+      } else {
+        kvBuilder.setValue(req.getValue());
       }
 
-      ByteString value = req.getValue();
-      ByteString prev = keyValueStore.put(key, value);
+      if (ignoreOwner && prev != null && prev.hasOwner()) {
+        kvBuilder.setOwner(prev.getOwner());
+      } else if (req.hasOwner()) {
+        // TODO:
+        // - Check owner is valid earlier on
+        // - Set owner on trackers
+        kvBuilder.setOwner(req.getOwner());
+      } else {
+        // TODO:
+        // - Clear owner on trackers
+      }
+
+      keyValueStore.put(key, kvBuilder);
 
       Msg.PutKeyResponse.Builder builder =
           Msg.PutKeyResponse.newBuilder().setReturnPrevious(returnPrevious);
 
       if (returnPrevious && prev != null) {
-        builder.getPreviousBuilder().setKey(key).setValue(prev);
+        builder.setPrevious(prev);
       }
       resp.onNext(builder.build());
       resp.onCompleted();
