@@ -20,24 +20,80 @@ from .objects import (Base as _Base,
 
 __all__ = ('KeyValueStore',
            'ValueOwnerPair',
+           'TransactionResult',
+           'Condition', 'is_condition',
+           'Operation', 'is_operation',
+           'value', 'owner', 'comparison',
            'count', 'list_keys',
            'contains', 'missing',
            'get', 'get_prefix', 'get_range',
            'pop', 'pop_prefix', 'pop_range',
            'discard', 'discard_prefix', 'discard_range',
-           'put', 'swap',
-           'value', 'owner', 'comparison',
-           'is_operation', 'is_condition')
+           'put', 'swap')
+
+
+class Operation(_Base):
+    """Base class for all key-value store operations"""
+    __slots__ = ()
+
+    def _build_operation(self):
+        raise NotImplementedError  # noqa
+
+    def _build_result(self, result):
+        raise NotImplementedError  # noqa
+
+
+class Condition(_Base):
+    """Base class for all key-value store conditional expressions"""
+    __slots__ = ()
+
+    def _build_condition(self):
+        raise NotImplementedError  # noqa
 
 
 def is_operation(obj):
     """Return if ``obj`` is a valid skein key-value store operation"""
-    return hasattr(obj, '_build_operation') and hasattr(obj, '_build_result')
+    return isinstance(obj, Operation)
 
 
 def is_condition(obj):
     """Return if ``x`` is a valid skein key-value store condition"""
-    return hasattr(obj, '_build_condition')
+    return isinstance(obj, Condition)
+
+
+class TransactionResult(_namedtuple('TransactionResult',
+                                    ['succeeded', 'results'])):
+    """A result from a key-value store transaction.
+
+    Parameters
+    ----------
+    succeeded : bool
+        Whether the transaction conditions evaluated to True.
+    results : sequence
+        A sequence of results from applying all operations in the transaction
+        ``on_success`` or ``on_failure`` parameters, depending on whether the
+        conditions evaluated to True or False.
+    """
+    pass
+
+
+class ValueOwnerPair(_namedtuple('ValueOwnerPair', ['value', 'owner'])):
+    """A (value, owner) pair in the key-value store.
+
+    Parameters
+    ----------
+    value : bytes
+        The value.
+    owner : str or None
+        The owner container_id, or None for no owner.
+    """
+    pass
+
+
+def _value_owner_pair(kv):
+    """Build a ValueOwnerPair from a KeyValue object"""
+    return ValueOwnerPair(kv.value, (_container_instance_to_string(kv.owner)
+                                     if kv.HasField("owner") else None))
 
 
 class KeyValueStore(_MutableMapping):
@@ -77,6 +133,60 @@ class KeyValueStore(_MutableMapping):
 
     def clear(self):
         self.discard_range()
+
+    def transaction(self, conditions=None, on_success=None, on_failure=None):
+        """An atomic transaction on the key-value store.
+
+        Parameters
+        ----------
+        conditions : Condition or sequence of Conditions
+            A sequence of conditions to evaluate together. The conditional
+            expression succeeds if all conditions evaluate to True, and fails
+            otherwise.
+        on_success : Operation or sequence of Operation
+            A sequence of operations to apply if all conditions evaluate to
+            True.
+        on_failure : Operation or sequence of Operation
+            A sequence of operations to apply if any condition evaluates to
+            False.
+
+        Returns
+        -------
+        result : TransactionResult
+            A namedtuple of (succeeded, results), where results is a list of
+            results from either the ``on_success`` or ``on_failure``
+            operations, depending on which branch was evaluated.
+        """
+        conditions = conditions or []
+        on_success = on_success or []
+        on_failure = on_failure or []
+        if not all(is_condition(c) for c in conditions):
+            raise TypeError("conditions must be a sequence of Condition")
+        if not all(is_operation(o) for o in on_success):
+            raise TypeError("on_success must be a sequence of Operation")
+        if not all(is_operation(o) for o in on_failure):
+            raise TypeError("on_failure must be a sequence of Operation")
+
+        lk = {'GetRange': 'get_range',
+              'DeleteRange': 'delete_range',
+              'PutKey': 'put_key'}
+
+        def _build_req(op):
+            return _proto.OpRequest(**{lk[op._rpc]: op._build_operation()})
+
+        def _build_result(op, resp):
+            return op._build_result(getattr(resp, lk[op._rpc]))
+
+        req = _proto.TransactionRequest(
+            condition=[c._build_condition() for c in conditions],
+            on_success=[_build_req(o) for o in on_success],
+            on_failure=[_build_req(o) for o in on_failure])
+
+        resp = self._client._call('Transaction', req)
+
+        ops = on_success if resp.succeeded else on_failure
+        results = [_build_result(o, r) for (o, r) in zip(ops, resp.result)]
+        return TransactionResult(resp.succeeded, results)
 
 
 def _next_key(prefix):
@@ -122,7 +232,7 @@ def _register_op(return_type=None):
     return inner
 
 
-class comparison(_Base):
+class comparison(Condition):
     """A comparison of the value or owner for a specified key.
 
     Parameters
@@ -247,26 +357,7 @@ class owner(_ComparisonBuilder):
     pass
 
 
-class ValueOwnerPair(_namedtuple('ValueOwnerPair', ['value', 'owner'])):
-    """A Value and owner pair in the Key-Value store.
-
-    Parameters
-    ----------
-    'value': bytes
-        The value.
-    'owner': str or None
-        The owner container_id, or None for no owner.
-    """
-    @classmethod
-    def _from_kv_protobuf(cls, obj):
-        if obj.HasField("owner"):
-            owner = _container_instance_to_string(obj.owner)
-        else:
-            owner = None
-        return cls(obj.value, owner)
-
-
-class _CountOrKeys(_Base):
+class _CountOrKeys(Operation):
     """Base class for count & keys"""
     __slots__ = ()
     _rpc = 'GetRange'
@@ -354,7 +445,7 @@ class list_keys(_CountOrKeys):
         return [kv.key for kv in result.result]
 
 
-class _GetOrPop(_Base):
+class _GetOrPop(Operation):
     """Base class for get & pop"""
     __slots__ = ()
 
@@ -386,7 +477,7 @@ class _GetOrPop(_Base):
                 return ValueOwnerPair(self.default, None)
             return self.default
         if self.return_owner:
-            return ValueOwnerPair._from_kv_protobuf(result.result[0])
+            return _value_owner_pair(result.result[0])
         return result.result[0].value
 
 
@@ -430,12 +521,12 @@ class pop(_GetOrPop):
 
 def _output_to_ordered_dict(result, return_owner=False):
     if return_owner:
-        return _OrderedDict((kv.key, ValueOwnerPair._from_kv_protobuf(kv))
+        return _OrderedDict((kv.key, _value_owner_pair(kv))
                             for kv in result.result)
     return _OrderedDict((kv.key, kv.value) for kv in result.result)
 
 
-class _GetOrPopPrefix(_Base):
+class _GetOrPopPrefix(Operation):
     """Base class for (get/pop)_prefix"""
     __slots__ = ()
 
@@ -497,7 +588,7 @@ class pop_prefix(_GetOrPopPrefix):
     _rpc = 'DeleteRange'
 
 
-class _GetOrPopRange(_Base):
+class _GetOrPopRange(Operation):
     """Base class for (get/pop)_prefix"""
     __slots__ = ()
 
@@ -569,7 +660,7 @@ class pop_range(_GetOrPopRange):
     _rpc = 'DeleteRange'
 
 
-class _ContainsMissingDiscard(_Base):
+class _ContainsMissingDiscard(Operation):
     """Base class for contains, missing & discard"""
     __slots__ = ()
 
@@ -594,7 +685,7 @@ class _ContainsMissingDiscard(_Base):
 
 
 @_register_op('bool')
-class contains(_ContainsMissingDiscard):
+class contains(_ContainsMissingDiscard, Condition):
     """A request to check if a key is in the key-value store.
 
     Parameters
@@ -615,7 +706,7 @@ class contains(_ContainsMissingDiscard):
 
 
 @_register_op('bool')
-class missing(_ContainsMissingDiscard):
+class missing(_ContainsMissingDiscard, Condition):
     """A request to check if a key is not in the key-value store.
 
     This is the inverse of ``contains``.
@@ -663,7 +754,7 @@ def _build_discard_result(result, return_keys=False):
 
 
 @_register_op('int or list of keys')
-class discard_prefix(_Base):
+class discard_prefix(Operation):
     """A request to discard all key-value pairs whose keys start with ``prefix``.
 
     Returns either the number of keys discarded or a list of those keys,
@@ -705,7 +796,7 @@ class discard_prefix(_Base):
 
 
 @_register_op('int or list of keys')
-class discard_range(_Base):
+class discard_range(Operation):
     """A request to discard a range of keys.
 
     Returns either the number of keys discarded or a list of those keys,
@@ -752,7 +843,7 @@ class discard_range(_Base):
         return _build_discard_result(result, self.return_keys)
 
 
-class _PutOrSwap(_Base):
+class _PutOrSwap(Operation):
     """Shared base class between put and swap"""
     __slots__ = ()
     _rpc = 'PutKey'
@@ -868,6 +959,6 @@ class swap(_PutOrSwap):
     def _build_result(self, result):
         if result.HasField("previous"):
             if self.return_owner:
-                return ValueOwnerPair._from_kv_protobuf(result.previous)
+                return _value_owner_pair(result.previous)
             return result.previous.value
         return ValueOwnerPair(None, None) if self.return_owner else None

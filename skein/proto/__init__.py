@@ -8,5 +8,6 @@ from .skein_pb2 import (Empty, FinalStatus, ApplicationState, Resources, File,
 from .skein_pb2 import (GetRangeRequest, GetRangeResponse,
                         PutKeyRequest, PutKeyResponse,
                         DeleteRangeRequest, DeleteRangeResponse,
-                        KeyValue, Condition)
+                        KeyValue, Condition, OpRequest, OpResponse,
+                        TransactionRequest, TransactionResponse)
 from .skein_pb2_grpc import DaemonStub, MasterStub

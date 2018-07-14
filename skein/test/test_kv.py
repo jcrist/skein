@@ -6,7 +6,7 @@ from collections import MutableMapping, OrderedDict
 
 import pytest
 
-import skein
+from skein import kv
 from skein.test.conftest import run_application
 
 
@@ -41,18 +41,18 @@ kv_test_data = {'bar': b'a',
 
 
 def test_clean_tab_completion_kv_namespace():
-    public = [n for n in dir(skein.kv) if not n.startswith('_')]
-    assert set(public) == set(skein.kv.__all__)
+    public = [n for n in dir(kv) if not n.startswith('_')]
+    assert set(public) == set(kv.__all__)
 
 
 @pytest.mark.parametrize('field', ['value', 'owner'])
 def test_field_accessor_types(field):
-    cls = getattr(skein.kv, field)
+    cls = getattr(kv, field)
     rec = cls('foo')
 
     assert repr(rec) == "%s('foo')" % field
 
-    assert not skein.kv.is_condition(rec)
+    assert not kv.is_condition(rec)
 
     rec2 = copy.deepcopy(rec)
     assert rec2.key == 'foo'
@@ -64,23 +64,23 @@ def test_field_accessor_types(field):
 
 def test_comparison_type():
     # test using `comparison` directly
-    v = skein.kv.comparison('foo', 'value', '==', b'bar')
-    assert v == (skein.kv.value('foo') == b'bar')
+    v = kv.comparison('foo', 'value', '==', b'bar')
+    assert v == (kv.value('foo') == b'bar')
 
-    o = skein.kv.comparison('foo', 'owner', '==', 'bar_1')
-    assert o == (skein.kv.owner('foo') == 'bar_1')
-
-    with pytest.raises(TypeError):
-        skein.kv.comparison(b'foo', 'value', '==', b'bar')
-
-    with pytest.raises(ValueError):
-        skein.kv.comparison('foo', 'unknown', '==', b'bar')
-
-    with pytest.raises(ValueError):
-        skein.kv.comparison('foo', 'value', 'unknown', b'bar')
+    o = kv.comparison('foo', 'owner', '==', 'bar_1')
+    assert o == (kv.owner('foo') == 'bar_1')
 
     with pytest.raises(TypeError):
-        skein.kv.comparison('foo', 'owner', '<=', None)
+        kv.comparison(b'foo', 'value', '==', b'bar')
+
+    with pytest.raises(ValueError):
+        kv.comparison('foo', 'unknown', '==', b'bar')
+
+    with pytest.raises(ValueError):
+        kv.comparison('foo', 'value', 'unknown', b'bar')
+
+    with pytest.raises(TypeError):
+        kv.comparison('foo', 'owner', '<=', None)
 
 
 @pytest.mark.parametrize('field, rhs1, rhs2, supports_none',
@@ -90,17 +90,17 @@ def test_comparison_type():
                                         (operator.lt, '<'), (operator.le, '<='),
                                         (operator.gt, '>'), (operator.ge, '>=')])
 def test_comparison_builder_types(field, rhs1, rhs2, supports_none, op, symbol):
-    cls = getattr(skein.kv, field)
+    cls = getattr(kv, field)
     rec = cls('foo')
 
     x1 = op(rec, rhs1)
-    assert skein.kv.is_condition(x1)
-    assert isinstance(x1, skein.kv.comparison)
+    assert kv.is_condition(x1)
+    assert isinstance(x1, kv.comparison)
     assert repr(x1) == "%s('foo') %s %r" % (field, symbol, rhs1)
 
     x2 = op(rec, rhs2)
-    assert skein.kv.is_condition(x2)
-    assert isinstance(x2, skein.kv.comparison)
+    assert kv.is_condition(x2)
+    assert isinstance(x2, kv.comparison)
     assert repr(x2) == "%s('foo') %s %r" % (field, symbol, rhs2)
 
     assert x1 == copy.deepcopy(x1)
@@ -123,16 +123,16 @@ def test_comparison_builder_types(field, rhs1, rhs2, supports_none, op, symbol):
             setattr(x1, attr, val)  # immutable
 
 
-@pytest.mark.parametrize('cls', [skein.kv.contains,
-                                 skein.kv.missing])
+@pytest.mark.parametrize('cls', [kv.contains,
+                                 kv.missing])
 def test_contains_and_missing_types(cls):
     x = cls('foo')
     assert repr(x) == ("%s('foo')" % cls.__name__)
     assert x == copy.deepcopy(x)
     assert x != cls('bar')
 
-    assert skein.kv.is_condition(x)
-    assert skein.kv.is_operation(x)
+    assert kv.is_condition(x)
+    assert kv.is_operation(x)
 
     with pytest.raises(AttributeError):
         x.foobar = 1
@@ -141,7 +141,7 @@ def test_contains_and_missing_types(cls):
         cls(b'foo')
 
 
-@pytest.mark.parametrize('cls', [skein.kv.count, skein.kv.list_keys])
+@pytest.mark.parametrize('cls', [kv.count, kv.list_keys])
 def test_count_and_list_keys_types(cls):
     x1 = cls()
     assert repr(x1) == ("%s(range_start=None, range_end=None)" % cls.__name__)
@@ -153,7 +153,7 @@ def test_count_and_list_keys_types(cls):
         assert x == copy.deepcopy(x)
     assert x1 != x2
 
-    assert skein.kv.is_operation(x1)
+    assert kv.is_operation(x1)
 
     with pytest.raises(AttributeError):
         x1.foobar = 1
@@ -167,21 +167,21 @@ def test_count_and_list_keys_types(cls):
 
 
 def test_discard_type():
-    x = skein.kv.discard('foo')
+    x = kv.discard('foo')
     assert repr(x) == "discard('foo')"
     assert x == copy.deepcopy(x)
-    assert x != skein.kv.discard('bar')
+    assert x != kv.discard('bar')
 
-    assert skein.kv.is_operation(x)
+    assert kv.is_operation(x)
 
     with pytest.raises(AttributeError):
         x.foobar = 1
 
     with pytest.raises(TypeError):
-        skein.kv.discard(b'foo')
+        kv.discard(b'foo')
 
 
-@pytest.mark.parametrize('cls', [skein.kv.get, skein.kv.pop])
+@pytest.mark.parametrize('cls', [kv.get, kv.pop])
 def test_get_and_pop_types(cls):
     name = cls.__name__
     x1 = cls('key')
@@ -192,7 +192,7 @@ def test_get_and_pop_types(cls):
         assert x == copy.deepcopy(x)
     assert x1 != x2
 
-    assert skein.kv.is_operation(x1)
+    assert kv.is_operation(x1)
 
     with pytest.raises(AttributeError):
         x1.foobar = 1
@@ -207,9 +207,9 @@ def test_get_and_pop_types(cls):
         cls(b'foo')
 
 
-@pytest.mark.parametrize('cls,kw', [(skein.kv.get_prefix, 'return_owner'),
-                                    (skein.kv.pop_prefix, 'return_owner'),
-                                    (skein.kv.discard_prefix, 'return_keys')])
+@pytest.mark.parametrize('cls,kw', [(kv.get_prefix, 'return_owner'),
+                                    (kv.pop_prefix, 'return_owner'),
+                                    (kv.discard_prefix, 'return_keys')])
 def test_prefix_types(cls, kw):
     name = cls.__name__
     x1 = cls('key')
@@ -220,7 +220,7 @@ def test_prefix_types(cls, kw):
         assert x == copy.deepcopy(x)
     assert x1 != x2
 
-    assert skein.kv.is_operation(x1)
+    assert kv.is_operation(x1)
 
     with pytest.raises(AttributeError):
         x1.foobar = 1
@@ -232,9 +232,9 @@ def test_prefix_types(cls, kw):
         cls('foo', **{kw: None})
 
 
-@pytest.mark.parametrize('cls,kw', [(skein.kv.get_range, 'return_owner'),
-                                    (skein.kv.pop_range, 'return_owner'),
-                                    (skein.kv.discard_range, 'return_keys')])
+@pytest.mark.parametrize('cls,kw', [(kv.get_range, 'return_owner'),
+                                    (kv.pop_range, 'return_owner'),
+                                    (kv.discard_range, 'return_keys')])
 def test_range_types(cls, kw):
     name = cls.__name__
     x1 = cls()
@@ -245,7 +245,7 @@ def test_range_types(cls, kw):
         assert x == copy.deepcopy(x)
     assert x1 != x2
 
-    assert skein.kv.is_operation(x1)
+    assert kv.is_operation(x1)
 
     with pytest.raises(AttributeError):
         x1.foobar = 1
@@ -256,7 +256,7 @@ def test_range_types(cls, kw):
 
 
 @pytest.mark.parametrize('cls,has_return_owner',
-                         [(skein.kv.put, False), (skein.kv.swap, True)])
+                         [(kv.put, False), (kv.swap, True)])
 def test_put_and_swap_types(cls, has_return_owner):
     name = cls.__name__
     if has_return_owner:
@@ -276,7 +276,7 @@ def test_put_and_swap_types(cls, has_return_owner):
         assert x == copy.deepcopy(x)
     assert x1 != x2
 
-    assert skein.kv.is_operation(x1)
+    assert kv.is_operation(x1)
 
     with pytest.raises(AttributeError):
         x1.foobar = 1
@@ -720,3 +720,103 @@ def test_key_value_ownership(kv_test_app):
     assert not kv_test_app.kv.contains('c1_1')
     assert kv_test_app.kv.contains('c1_2')
     assert kv_test_app.kv.contains('c1_3')
+
+
+def test_transaction_conditions(kv_test_app):
+    cid = kv_test_app.get_containers()[0].id
+    service, instance = cid.split('_')
+    instance = int(instance)
+    cid_larger = '%s_%d' % (service, instance + 1)
+    cid_smaller = '%s_%d' % (service, instance - 1)
+
+    val = b'bcd'
+    larger = b'bce'
+    smaller = b'bcc'
+
+    kv_test_app.kv.put('owner', val, owner=cid)
+    kv_test_app.kv.put('no_owner', val)
+
+    def run(*conds):
+        return kv_test_app.kv.transaction(conds).succeeded
+
+    # -- value --
+    # contains
+    assert run(kv.contains('owner'))
+    assert not run(kv.contains('missing'))
+    assert run(kv.missing('missing'))
+    assert not run(kv.missing('owner'))
+
+    # ==
+    assert run(kv.value('owner') == val)
+    assert not run(kv.value('owner') == larger)
+    assert not run(kv.value('missing') == val)
+    # !=
+    assert run(kv.value('owner') != larger)
+    assert not run(kv.value('owner') != val)
+    assert run(kv.value('missing') != val)
+    # <
+    assert run(kv.value('owner') < larger)
+    assert not run(kv.value('owner') < val)
+    assert not run(kv.value('owner') < smaller)
+    assert not run(kv.value('missing') < val)
+    # <=
+    assert run(kv.value('owner') <= larger)
+    assert run(kv.value('owner') <= val)
+    assert not run(kv.value('owner') <= smaller)
+    assert not run(kv.value('missing') <= val)
+    # >
+    assert not run(kv.value('owner') > larger)
+    assert not run(kv.value('owner') > val)
+    assert run(kv.value('owner') > smaller)
+    assert not run(kv.value('missing') > val)
+    # >=
+    assert not run(kv.value('owner') >= larger)
+    assert run(kv.value('owner') >= val)
+    assert run(kv.value('owner') >= smaller)
+    assert not run(kv.value('missing') >= val)
+
+    # -- owner --
+    # Owner presence/absence
+    assert run(kv.owner('owner') != None)  # noqa
+    assert not run(kv.owner('owner') == None)  # noqa
+    assert run(kv.owner('no_owner') == None)  # noqa
+    assert not run(kv.owner('no_owner') != None)  # noqa
+    # ==
+    assert run(kv.owner('owner') == cid)
+    assert not run(kv.owner('owner') == cid_larger)
+    assert not run(kv.owner('no_owner') == cid)
+    # !=
+    assert run(kv.owner('owner') != cid_larger)
+    assert not run(kv.owner('owner') != cid)
+    assert run(kv.owner('no_owner') != cid)
+    # <
+    assert run(kv.owner('owner') < cid_larger)
+    assert not run(kv.owner('owner') < cid)
+    assert not run(kv.owner('owner') < cid_smaller)
+    assert not run(kv.owner('no_owner') < cid)
+    # <=
+    assert run(kv.owner('owner') <= cid_larger)
+    assert run(kv.owner('owner') <= cid)
+    assert not run(kv.owner('owner') <= cid_smaller)
+    assert not run(kv.owner('no_owner') <= cid)
+    # >
+    assert not run(kv.owner('owner') > cid_larger)
+    assert not run(kv.owner('owner') > cid)
+    assert run(kv.owner('owner') > cid_smaller)
+    assert not run(kv.owner('no_owner') > cid)
+    # >=
+    assert not run(kv.owner('owner') >= cid_larger)
+    assert run(kv.owner('owner') >= cid)
+    assert run(kv.owner('owner') >= cid_smaller)
+    assert not run(kv.owner('no_owner') >= cid)
+
+    # No conditions
+    assert run()
+
+    # Multiple conditions
+    true1 = kv.contains('owner')
+    true2 = kv.contains('no_owner')
+    false = kv.contains('missing')
+    assert run(true1, true2)
+    assert not run(false, true1)
+    assert not run(true1, false, true2)

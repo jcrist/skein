@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.google.protobuf.ByteString;
+
 import io.grpc.Server;
 import io.grpc.Status;
 import io.grpc.netty.GrpcSslContexts;
@@ -1078,18 +1080,12 @@ public class ApplicationMaster {
           }
           // Only need to update internal state if we're setting a new owner
           if (owner != null) {
-            if (services.get(owner.getServiceName())
-                        .addOwnedKey(owner.getInstance(), key)) {
-              kvBuilder.setOwner(owner);
-            } else {
-              // Race Condition! Between checking if new owner is valid
-              // and actually assigning owner, the container has shutdown.
-              // We need to delete the key.
-              keyValueStore.remove(key);
-            }
+            boolean ok = services.get(owner.getServiceName())
+                                 .addOwnedKey(owner.getInstance(), key);
+            assert ok;  // fail if owner -> completed without locking kv store
+            kvBuilder.setOwner(owner);
           }
         }
-
         keyValueStore.put(key, kvBuilder);
       }
 
@@ -1098,6 +1094,119 @@ public class ApplicationMaster {
 
       if (returnPrevious && prev != null) {
         builder.setPrevious(prev);
+      }
+
+      resp.onNext(builder.build());
+      resp.onCompleted();
+    }
+
+    private int compareOwner(Msg.ContainerInstance lhs,
+                             Msg.ContainerInstance rhs) {
+      int out = lhs.getServiceName().compareTo(rhs.getServiceName());
+      return out != 0 ? out : Integer.compare(lhs.getInstance(), rhs.getInstance());
+    }
+
+    private int compareValue(ByteString lhs, ByteString rhs) {
+      return lhs.asReadOnlyByteBuffer().compareTo(rhs.asReadOnlyByteBuffer());
+    }
+
+    public boolean evaluateCondition(Msg.Condition cond) {
+      synchronized (keyValueStore) {
+        Msg.KeyValue.Builder kv = keyValueStore.get(cond.getKey());
+
+        ByteString rhsValue = null;
+        Msg.ContainerInstance rhsOwner = null;
+
+        ByteString lhsValue = null;
+        Msg.ContainerInstance lhsOwner = null;
+        if (kv != null) {
+          lhsValue = kv.getValue();
+          if (kv.hasOwner()) {
+            lhsOwner = kv.getOwner();
+          }
+        }
+
+        Msg.Condition.Operator op = cond.getOperator();
+
+        switch (cond.getRhsCase()) {
+          case VALUE:
+            rhsValue = cond.getValue();
+            break;
+          case OWNER:
+            rhsOwner = cond.getOwner();
+            break;
+          case RHS_NOT_SET:
+            break;
+        }
+
+        int compare = 0;
+
+        switch (cond.getField()) {
+          case VALUE:
+            if (lhsValue == null || rhsValue == null) {
+              // only check equality if null, all other comparisons are false
+              switch (op) {
+                case EQUAL:
+                  return lhsValue == rhsValue;
+                case NOT_EQUAL:
+                  return lhsValue != rhsValue;
+                default:
+                  return false;
+              }
+            }
+            compare = compareValue(lhsValue, rhsValue);
+            break;
+          case OWNER:
+            if (lhsOwner == null || rhsOwner == null) {
+              // only check equality if null, all other comparisons are false
+              switch (op) {
+                case EQUAL:
+                  return lhsOwner == rhsOwner;
+                case NOT_EQUAL:
+                  return lhsOwner != rhsOwner;
+                default:
+                  return false;
+              }
+            }
+            compare = compareOwner(lhsOwner, rhsOwner);
+            break;
+        }
+
+        switch (op) {
+          case EQUAL:
+            return compare == 0;
+          case NOT_EQUAL:
+            return compare != 0;
+          case LESS:
+            return compare < 0;
+          case LESS_EQUAL:
+            return compare <= 0;
+          case GREATER:
+            return compare > 0;
+          case GREATER_EQUAL:
+            return compare >= 0;
+        }
+        return true;  // appease compiler, all cases are covered above
+      }
+    }
+
+    @Override
+    public void transaction(Msg.TransactionRequest req,
+        StreamObserver<Msg.TransactionResponse> resp) {
+
+      Msg.TransactionResponse.Builder builder =
+          Msg.TransactionResponse.newBuilder();
+
+      synchronized (keyValueStore) {
+        boolean succeeded = true;
+        for (Msg.Condition cond : req.getConditionList()) {
+          if (!evaluateCondition(cond)) {
+            succeeded = false;
+            break;
+          }
+        }
+
+        builder.setSucceeded(succeeded);
       }
 
       resp.onNext(builder.build());

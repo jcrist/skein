@@ -263,7 +263,7 @@ message DeleteRangeResponse {
 
 
 message Condition {
-  enum Op {
+  enum Operator {
     EQUAL = 0;
     NOT_EQUAL = 1;
     LESS = 2;
@@ -276,7 +276,7 @@ message Condition {
     OWNER = 1;
   }
   string key = 1;
-  Op operator = 2;
+  Operator operator = 2;
   Field field = 3;
   oneof rhs {
     bytes value = 4;
@@ -285,34 +285,34 @@ message Condition {
 }
 
 
-message RequestOp {
+message OpRequest {
   oneof request {
-    GetRangeRequest request_get_range = 1;
-    PutKeyRequest request_put = 2;
-    DeleteRangeRequest request_del_range = 3;
+    GetRangeRequest get_range = 1;
+    PutKeyRequest put_key = 2;
+    DeleteRangeRequest del_range = 3;
   }
 }
 
 
-message ResponseOp {
+message OpResponse {
   oneof response {
-    GetRangeResponse response_get = 1;
-    PutKeyResponse response_put = 2;
-    DeleteRangeResponse response_del_range = 3;
+    GetRangeResponse get_range = 1;
+    PutKeyResponse put_key = 2;
+    DeleteRangeResponse del_range = 3;
   }
 }
 
 
 message TransactionRequest {
-  repeated Condition conditions = 1;
-  repeated RequestOp on_true = 2;
-  repeated RequestOp on_false = 3;
+  repeated Condition condition = 1;
+  repeated OpRequest on_success = 2;
+  repeated OpRequest on_failure = 3;
 }
 
 
 message TransactionResponse {
   bool succeeded = 1;
-  repeated ResponseOp responses = 2;
+  repeated OpResponse result = 2;
 }
 
 
