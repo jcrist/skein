@@ -294,42 +294,85 @@ def test_put_and_swap_types(cls, has_return_owner):
         cls('foo')
 
 
-def test_key_value(kv_test_app):
+class MapLike(object):
+    def __init__(self, data):
+        self.data = data
+
+    def keys(self):
+        return self.data.keys()
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+
+def test_key_value_mutablemapping(kv_test_app):
     assert isinstance(kv_test_app.kv, MutableMapping)
+
     assert kv_test_app.kv is kv_test_app.kv
 
+    # Iterators work when empty
+    assert len(kv_test_app.kv) == 0
+    assert list(kv_test_app.kv) == []
     assert dict(kv_test_app.kv) == {}
 
-    kv_test_app.kv['foo'] = b'bar'
-    assert kv_test_app.kv['foo'] == b'bar'
+    # __setitem__
+    kv_test_app.kv['k1'] = b'v1'
+    kv_test_app.kv['k2'] = b'v2'
 
-    assert dict(kv_test_app.kv) == {'foo': b'bar'}
-    assert len(kv_test_app.kv) == 1
-    assert 'foo' in kv_test_app.kv
-    assert 'food' not in kv_test_app.kv
+    with pytest.raises(TypeError):
+        kv_test_app.kv['k3'] = u'v3'
 
-    del kv_test_app.kv['foo']
-    assert len(kv_test_app.kv) == 0
+    # __contains__
+    assert 'k1' in kv_test_app.kv
+    assert 'missing' not in kv_test_app.kv
 
-    kv_test_app.kv.update({'a': b'one', 'b': b'two'})
+    # __len__
     assert len(kv_test_app.kv) == 2
+
+    # __iter__ (note this is sorted)
+    assert list(kv_test_app.kv) == ['k1', 'k2']
+
+    # __getitem__
+    assert kv_test_app.kv['k1'] == b'v1'
+
+    with pytest.raises(KeyError):
+        kv_test_app.kv['missing']
+
+    with pytest.raises(TypeError):
+        kv_test_app.kv[1]
+
+    # __delitem__
+    kv_test_app.kv['key'] = b'temp'
+    assert 'key' in kv_test_app.kv
+    del kv_test_app.kv['key']
+    assert 'key' not in kv_test_app.kv
+
+    with pytest.raises(KeyError):
+        del kv_test_app.kv['missing']
+
+    with pytest.raises(TypeError):
+        del kv_test_app.kv[1]
+
+    # setdefault
+    assert kv_test_app.kv.setdefault('new_key', b'val1') == b'val1'
+    assert kv_test_app.kv.setdefault('new_key', b'val2') == b'val1'
+
+    # clear
+    assert len(kv_test_app.kv) > 0
     kv_test_app.kv.clear()
     assert len(kv_test_app.kv) == 0
 
-    with pytest.raises(KeyError):
-        del kv_test_app.kv['foo']
-
-    with pytest.raises(KeyError):
-        kv_test_app.kv['fizz']
-
-    with pytest.raises(TypeError):
-        kv_test_app.kv[1] = 'foo'
-
-    with pytest.raises(TypeError):
-        kv_test_app.kv['foo'] = u'bar'
+    # update
+    kv_test_app.kv.update({'a': b'0', 'b': b'1'})            # mapping
+    kv_test_app.kv.update([('c', b'2'), ('d', b'3')])        # iterable
+    kv_test_app.kv.update(MapLike({'e': b'4', 'f': b'5'}))   # class with keys
+    kv_test_app.kv.update({'g': b'bad', 'h': b'7'}, g=b'6')  # kwarg overrides
+    kv_test_app.kv.update(i=b'8', j=b'9')                    # kwargs only
+    sol = {k: str(i).encode() for i, k in enumerate('abcdefghij')}
+    assert kv_test_app.kv.get_range() == sol
 
     with pytest.raises(TypeError):
-        kv_test_app.kv['foo'] = 1
+        kv_test_app.kv.update({'a': 1}, {'b': 2})
 
 
 def test_key_value_count(kv_test_app):
@@ -820,3 +863,96 @@ def test_transaction_conditions(kv_test_app):
     assert run(true1, true2)
     assert not run(false, true1)
     assert not run(true1, false, true2)
+
+
+@pytest.mark.parametrize('op, msg', [
+    (kv.put('missing', owner='sleeper_0'), "ignore_value=True & key isn't already set"),
+    (kv.put('a', owner='unknown_0'), "Unknown service 'unknown'"),
+    (kv.put('a', owner='sleeper_99'), "Service 'sleeper' has no container instance 99"),
+    (kv.put('a', owner='sleeper_0'), "Container 'sleeper_0' has already completed")])
+def test_transaction_put_key_errors(kv_test_app, op, msg):
+    cid = kv_test_app.get_containers()[0].id
+    kv_test_app.kv.put('a', b'a', owner=cid)
+
+    for succeeded in [True, False]:
+        if succeeded:
+            kwargs = {'conditions': [kv.contains('a')],
+                      'on_success': [kv.put('b', b'b'), op],
+                      'on_failure': [kv.put('c', b'c')]}
+        else:
+            kwargs = {'conditions': [kv.missing('a')],
+                      'on_success': [kv.put('c', b'c')],
+                      'on_failure': [kv.put('b', b'b'), op]}
+
+        with pytest.raises(ValueError) as exc:
+            kv_test_app.kv.transaction(**kwargs)
+
+        assert str(exc.value) == msg
+        assert not kv_test_app.kv.contains('b')
+        assert not kv_test_app.kv.contains('c')
+
+
+def test_transaction(kv_test_app):
+    cid = kv_test_app.get_containers()[0].id
+
+    kv_test_app.kv.put('a', b'a', owner=cid)
+    kv_test_app.kv.put('aa', b'aa')
+    kv_test_app.kv.put('aaa', b'aaa')
+    kv_test_app.kv.put('b', b'b')
+
+    true1 = kv.contains('a')
+    true2 = kv.contains('b')
+    false = kv.missing('a')
+
+    # Test building results in success and failure
+    for succeeded in [True, False]:
+        if succeeded:
+            cond, do, dont = [true1, true2], 'on_success', 'on_failure'
+        else:
+            cond, do, dont = [true1, false], 'on_failure', 'on_success'
+
+        kwargs = {'conditions': cond,
+                  do: [kv.get_prefix('a'), kv.get('missing')],
+                  dont: [kv.put('dont_put_me', b'bad')]}
+
+        res = kv_test_app.kv.transaction(**kwargs)
+
+        assert res.succeeded == succeeded
+        assert len(res.results) == 2
+        assert res.results[0] == kv_test_app.kv.get_prefix('a')
+        assert res.results[1] == kv_test_app.kv.get('missing')
+        assert not kv_test_app.kv.contains('dont_put_me')
+
+        # Test empty result branch
+        kwargs = {'conditions': cond, dont: [kv.put('dont_put_me', b'bad')]}
+        res = kv_test_app.kv.transaction(**kwargs)
+        assert res == (succeeded, [])
+        assert not kv_test_app.kv.contains('dont_put_me')
+
+    # Test one operation of each type
+    a_prefixes = kv_test_app.kv.get_prefix('a')
+
+    res = kv_test_app.kv.transaction(
+        conditions=[true1, true2],
+        on_success=[kv.get_prefix('a'),
+                    kv.discard_prefix('a', return_keys=True),
+                    kv.put('a', b'later')])
+
+    assert res.succeeded
+    assert len(res.results) == 3
+    assert res.results[0] == a_prefixes
+    assert res.results[1] == list(a_prefixes)
+    assert res.results[2] is None
+
+    # Test no operations
+    assert kv_test_app.kv.transaction() == (True, [])
+
+    # invalid argument types
+    with pytest.raises(TypeError):
+        kv_test_app.kv.transaction(conditions=[kv.get('foo')])
+
+    with pytest.raises(TypeError):
+        kv_test_app.kv.transaction(on_success=[kv.value('foo') == b'bar'])
+
+    with pytest.raises(TypeError):
+        kv_test_app.kv.transaction(on_failure=[kv.value('foo') == b'bar'])

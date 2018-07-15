@@ -289,7 +289,7 @@ message OpRequest {
   oneof request {
     GetRangeRequest get_range = 1;
     PutKeyRequest put_key = 2;
-    DeleteRangeRequest del_range = 3;
+    DeleteRangeRequest delete_range = 3;
   }
 }
 
@@ -298,7 +298,7 @@ message OpResponse {
   oneof response {
     GetRangeResponse get_range = 1;
     PutKeyResponse put_key = 2;
-    DeleteRangeResponse del_range = 3;
+    DeleteRangeResponse delete_range = 3;
   }
 }
 

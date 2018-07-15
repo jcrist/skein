@@ -5,6 +5,7 @@ from __future__ import (absolute_import as _,
 import textwrap as _textwrap
 from collections import (namedtuple as _namedtuple,
                          MutableMapping as _MutableMapping,
+                         Mapping as _Mapping,
                          OrderedDict as _OrderedDict)
 from functools import wraps as _wraps
 
@@ -37,10 +38,10 @@ class Operation(_Base):
     __slots__ = ()
 
     def _build_operation(self):
-        raise NotImplementedError  # noqa
+        raise NotImplementedError  # pragma: no cover
 
     def _build_result(self, result):
-        raise NotImplementedError  # noqa
+        raise NotImplementedError  # pragma: no cover
 
 
 class Condition(_Base):
@@ -48,7 +49,7 @@ class Condition(_Base):
     __slots__ = ()
 
     def _build_condition(self):
-        raise NotImplementedError  # noqa
+        raise NotImplementedError  # pragma: no cover
 
 
 def is_operation(obj):
@@ -134,19 +135,70 @@ class KeyValueStore(_MutableMapping):
     def clear(self):
         self.discard_range()
 
+    def setdefault(self, key, default):
+        """Get the value associated with key, setting it to default if
+        not present.
+
+        This transaction happens atomically on the key-value store.
+
+        Parameters
+        ----------
+        key : str
+            The key
+        default : bytes
+            The default value to set if the key isn't present.
+
+        Returns
+        -------
+        value : bytes
+        """
+        res = self.transaction(conditions=[contains(key)],
+                               on_success=[get(key)],
+                               on_failure=[put(key, default)])
+        return res.results[0] if res.succeeded else default
+
+    def update(self, *args, **kwargs):
+        """Update the key-value store with multiple key-value pairs atomically.
+
+        Parameters
+        ----------
+        arg : mapping or iterable, optional
+            Either a mapping or an iterable of ``(key, value)``.
+        **kwargs
+            Extra key-value pairs to set. Semantically these are applied after
+            any present in ``arg``, and will thus override any intersecting
+            keys between the two.
+        """
+        if len(args) > 1:
+            raise TypeError('update expected at most 1 arguments, got %d' %
+                            len(args))
+        if args:
+            other = args[0]
+            if isinstance(other, _Mapping):
+                ops = [put(k, v) for k, v in other.items()]
+            elif hasattr(other, "keys"):
+                ops = [put(k, other[k]) for k in other.keys()]
+            else:
+                ops = [put(k, v) for k, v in other]
+        else:
+            ops = []
+        ops.extend(put(k, v) for k, v in kwargs.items())
+        self.transaction(on_success=ops)
+
     def transaction(self, conditions=None, on_success=None, on_failure=None):
         """An atomic transaction on the key-value store.
 
         Parameters
         ----------
-        conditions : Condition or sequence of Conditions
+        conditions : Condition or sequence of Conditions, optional
             A sequence of conditions to evaluate together. The conditional
             expression succeeds if all conditions evaluate to True, and fails
-            otherwise.
-        on_success : Operation or sequence of Operation
+            otherwise. If no conditions are provided the conditional expression
+            also succeeds.
+        on_success : Operation or sequence of Operation, optional
             A sequence of operations to apply if all conditions evaluate to
             True.
-        on_failure : Operation or sequence of Operation
+        on_failure : Operation or sequence of Operation, optional
             A sequence of operations to apply if any condition evaluates to
             False.
 
@@ -156,6 +208,34 @@ class KeyValueStore(_MutableMapping):
             A namedtuple of (succeeded, results), where results is a list of
             results from either the ``on_success`` or ``on_failure``
             operations, depending on which branch was evaluated.
+
+        Examples
+        --------
+        This implements an atomic `compare-and-swap
+        <https://en.wikipedia.org/wiki/Compare-and-swap>`_ operation, a useful
+        concurrency primitive. It sets ``key`` to ``new`` only if it currently
+        is ``prev``:
+
+        >>> from skein import kv
+        >>> def compare_and_swap(app, key, new, prev):
+        ...     result = app.kv.transaction(
+        ...         conditions=[kv.value(key) == prev],  # if key == prev
+        ...         on_success=[kv.put(key, new)])       # then set key = new
+        ...     return result.succeeded
+
+        >>> app.kv['key'] = b'value'  # doctest: skip
+
+        Since ``'key'`` currently is ``b'value'``, the conditional expression
+        succeeds and ``'key'`` is set to ``b'new_value'``
+
+        >>> compare_and_swap(app, 'key', b'new_value', b'value')  # doctest: skip
+        True
+
+        Since ``'key'`` currently is ``b'value'`` and not ``b'wrong'``, the
+        conditional expression fails and ``'key'`` remains unchanged.
+
+        >>> compare_and_swap(app, 'key', b'another_value', b'wrong')  # doctest: skip
+        False
         """
         conditions = conditions or []
         on_success = on_success or []

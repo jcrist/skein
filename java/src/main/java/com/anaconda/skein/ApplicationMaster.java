@@ -917,9 +917,7 @@ public class ApplicationMaster {
       resp.onCompleted();
     }
 
-    @Override
-    public void getRange(Msg.GetRangeRequest req,
-        StreamObserver<Msg.GetRangeResponse> resp) {
+    private Msg.GetRangeResponse.Builder evalGetRange(Msg.GetRangeRequest req) {
       String start = req.getRangeStart();
       String end = req.getRangeEnd();
 
@@ -962,14 +960,18 @@ public class ApplicationMaster {
           }
         }
       }
-      resp.onNext(builder.build());
-      resp.onCompleted();
+      return builder;
     }
 
     @Override
-    public void deleteRange(Msg.DeleteRangeRequest req,
-        StreamObserver<Msg.DeleteRangeResponse> resp) {
+    public void getRange(Msg.GetRangeRequest req,
+        StreamObserver<Msg.GetRangeResponse> resp) {
+      resp.onNext(evalGetRange(req).build());
+      resp.onCompleted();
+    }
 
+    private Msg.DeleteRangeResponse.Builder evalDeleteRange(
+        Msg.DeleteRangeRequest req) {
       String start = req.getRangeStart();
       String end = req.getRangeEnd();
 
@@ -1013,14 +1015,52 @@ public class ApplicationMaster {
           selection.clear();
         }
       }
-
-      resp.onNext(builder.build());
-      resp.onCompleted();
+      return builder;
     }
 
     @Override
-    public void putKey(Msg.PutKeyRequest req, StreamObserver<Msg.PutKeyResponse> resp) {
+    public void deleteRange(Msg.DeleteRangeRequest req,
+        StreamObserver<Msg.DeleteRangeResponse> resp) {
+      resp.onNext(evalDeleteRange(req).build());
+      resp.onCompleted();
+    }
 
+    private boolean precheckPutKey(Msg.PutKeyRequest req, StreamObserver<?> resp) {
+      synchronized (keyValueStore) {
+        boolean ignoreValue = req.getIgnoreValue();
+        boolean ignoreOwner = req.getIgnoreOwner();
+
+        if (ignoreValue && ignoreOwner) {
+          // can't ignore both value and owner
+          resp.onError(Status.INVALID_ARGUMENT
+              .withDescription("ignore_value & ignore_owner can't both be true")
+              .asRuntimeException());
+          return false;
+        }
+
+        if (ignoreValue && keyValueStore.get(req.getKey()) == null) {
+          // ignore_value & key doesn't exist
+          resp.onError(Status.FAILED_PRECONDITION
+              .withDescription("ignore_value=True & key isn't already set")
+              .asRuntimeException());
+          return false;
+        }
+
+        Msg.ContainerInstance owner = req.hasOwner() ? req.getOwner() : null;
+
+        if (!ignoreOwner && owner != null) {
+          if (!checkContainerInstance(owner.getServiceName(),
+                                      owner.getInstance(),
+                                      true, resp)) {
+            // Either invalid container id, or container already completed
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    private Msg.PutKeyResponse.Builder evalPutKey(Msg.PutKeyRequest req) {
       String key = req.getKey();
       boolean ignoreValue = req.getIgnoreValue();
       boolean ignoreOwner = req.getIgnoreOwner();
@@ -1029,39 +1069,13 @@ public class ApplicationMaster {
       Msg.KeyValue.Builder prev;
 
       synchronized (keyValueStore) {
-        // -- pre-checks --
-        if (ignoreValue && ignoreOwner) {
-          // can't ignore both value and owner
-          resp.onError(Status.INVALID_ARGUMENT
-              .withDescription("ignore_value & ignore_owner can't both be true")
-              .asRuntimeException());
-          return;
-        }
-
         prev = keyValueStore.get(key);
         Msg.ContainerInstance owner = req.hasOwner() ? req.getOwner() : null;
 
-        if (ignoreValue && prev == null) {
-          // ignore_value & key doesn't exist
-          resp.onError(Status.FAILED_PRECONDITION
-              .withDescription("ignore_value=True & key isn't already set")
-              .asRuntimeException());
-          return;
-        }
-
-        if (!ignoreOwner && owner != null) {
-          if (!checkContainerInstance(owner.getServiceName(), owner.getInstance(),
-                                      true, resp)) {
-            // Either invalid container id, or container already completed
-            return;
-          }
-        }
-
-        // -- Build up new record, and update internal state --
         Msg.KeyValue.Builder kvBuilder = Msg.KeyValue.newBuilder().setKey(key);
 
         if (ignoreValue) {
-          // prev == null was forbidden above
+          // prev == null was forbidden in precheckPutKey
           kvBuilder.setValue(prev.getValue());
         } else {
           kvBuilder.setValue(req.getValue());
@@ -1096,8 +1110,18 @@ public class ApplicationMaster {
         builder.setPrevious(prev);
       }
 
-      resp.onNext(builder.build());
-      resp.onCompleted();
+      return builder;
+    }
+
+    @Override
+    public void putKey(Msg.PutKeyRequest req, StreamObserver<Msg.PutKeyResponse> resp) {
+      synchronized (keyValueStore) {
+        if (!precheckPutKey(req, resp)) {
+          return;
+        }
+        resp.onNext(evalPutKey(req).build());
+        resp.onCompleted();
+      }
     }
 
     private int compareOwner(Msg.ContainerInstance lhs,
@@ -1110,7 +1134,7 @@ public class ApplicationMaster {
       return lhs.asReadOnlyByteBuffer().compareTo(rhs.asReadOnlyByteBuffer());
     }
 
-    public boolean evaluateCondition(Msg.Condition cond) {
+    private boolean evalCondition(Msg.Condition cond) {
       synchronized (keyValueStore) {
         Msg.KeyValue.Builder kv = keyValueStore.get(cond.getKey());
 
@@ -1198,14 +1222,49 @@ public class ApplicationMaster {
           Msg.TransactionResponse.newBuilder();
 
       synchronized (keyValueStore) {
+        // Evaluate all conditions
         boolean succeeded = true;
         for (Msg.Condition cond : req.getConditionList()) {
-          if (!evaluateCondition(cond)) {
+          if (!evalCondition(cond)) {
             succeeded = false;
             break;
           }
         }
 
+        List<Msg.OpRequest> ops = succeeded ? req.getOnSuccessList() : req.getOnFailureList();
+
+        // Validate all operations before committing any of them
+        for (Msg.OpRequest op : ops) {
+          switch (op.getRequestCase()) {
+            case PUT_KEY:
+              if (!precheckPutKey(op.getPutKey(), resp)) {
+                return;
+              }
+              break;
+            default:
+              break;
+          }
+        }
+
+        // Evaluate operations and build response list
+        for (Msg.OpRequest op : ops) {
+          switch (op.getRequestCase()) {
+            case PUT_KEY:
+              builder.addResultBuilder()
+                     .setPutKey(evalPutKey(op.getPutKey()));
+              break;
+            case GET_RANGE:
+              builder.addResultBuilder()
+                     .setGetRange(evalGetRange(op.getGetRange()));
+              break;
+            case DELETE_RANGE:
+              builder.addResultBuilder()
+                     .setDeleteRange(evalDeleteRange(op.getDeleteRange()));
+              break;
+            default:
+              break;
+          }
+        }
         builder.setSucceeded(succeeded);
       }
 

@@ -32,9 +32,9 @@ Key Value Store
 
 .. autoclass:: skein.kv.KeyValueStore
     :members:
+    :inherited-members:
 
 .. autoclass:: skein.kv.ValueOwnerPair
-    :members:
 
 .. autoclass:: skein.kv.count
     :members:
@@ -83,6 +83,21 @@ Key Value Store
 
 .. autoclass:: skein.kv.swap
     :members:
+
+.. autoclass:: skein.kv.TransactionResult
+
+.. autoclass:: skein.kv.value
+    :members:
+
+.. autoclass:: skein.kv.owner
+    :members:
+
+.. autoclass:: skein.kv.comparison
+    :members:
+
+.. autofunction:: skein.kv.is_condition
+
+.. autofunction:: skein.kv.is_operation
 
 
 Application Specification
