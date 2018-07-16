@@ -104,8 +104,9 @@ message Container {
   int32 instance = 2;
   State state = 3;
   string yarn_container_id = 4;
-  int64 start_time = 5;
-  int64 finish_time = 6;
+  string yarn_node_address = 5;
+  int64 start_time = 6;
+  int64 finish_time = 7;
 }
 
 
