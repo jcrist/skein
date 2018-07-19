@@ -184,6 +184,7 @@ public class Model {
     private State state;
     private ContainerId yarnContainerId;
     private NodeId yarnNodeId;
+    private String yarnNodeHttpAddress;
     private long startTime;
     private long finishTime;
     private ContainerRequest req;
@@ -236,6 +237,11 @@ public class Model {
 
     public void setYarnNodeId(NodeId yarnNodeId) { this.yarnNodeId = yarnNodeId; }
     public NodeId getYarnNodeId() { return yarnNodeId; }
+
+    public void setYarnNodeHttpAddress(String yarnNodeHttpAddress) {
+      this.yarnNodeHttpAddress = yarnNodeHttpAddress;
+    }
+    public String getYarnNodeHttpAddress() { return yarnNodeHttpAddress; }
 
     public void setStartTime(long startTime) { this.startTime = startTime; }
     public long getStartTime() { return startTime; }

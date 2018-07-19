@@ -768,6 +768,7 @@ public class ApplicationMaster {
         out.setStartTime(System.currentTimeMillis());
         out.setYarnContainerId(container.getId());
         out.setYarnNodeId(container.getNodeId());
+        out.setYarnNodeHttpAddress(container.getNodeHttpAddress());
 
         ApplicationMaster.this.containers.put(container.getId(), out);
         running.add(instance);
