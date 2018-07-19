@@ -47,6 +47,7 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -97,9 +98,9 @@ public class ApplicationMaster {
       new TreeMap<Priority, ServiceTracker>();
   private int nextPriority = 1;
 
-  private Server server;
+  private Server grpcServer;
+  private WebUI ui;
   private String hostname;
-  private int port = -1;
 
   private AMRMClient<ContainerRequest> rmClient;
   private NMClient nmClient;
@@ -126,7 +127,7 @@ public class ApplicationMaster {
         MAX_GRPC_EXECUTOR_THREADS,
         true);
 
-    server = NettyServerBuilder.forPort(0)
+    grpcServer = NettyServerBuilder.forPort(0)
         .sslContext(sslContext)
         .addService(new MasterImpl())
         .workerEventLoopGroup(eg)
@@ -135,24 +136,43 @@ public class ApplicationMaster {
         .build()
         .start();
 
-    port = server.getPort();
-
-    LOG.info("Server started, listening on " + port);
+    LOG.info("gRPC server started, listening on " + grpcServer.getPort());
 
     Runtime.getRuntime().addShutdownHook(
         new Thread() {
           @Override
           public void run() {
             ApplicationMaster.this.stopServer();
+            ApplicationMaster.this.stopUI();
           }
         });
   }
 
   private void stopServer() {
-    if (server != null) {
+    if (grpcServer != null) {
       LOG.info("Shutting down gRPC server");
-      server.shutdown();
+      grpcServer.shutdown();
       LOG.info("gRPC server shut down");
+    }
+  }
+
+  private void startUI() {
+    try {
+      ui = WebUI.start(appId, Collections.unmodifiableMap(services));
+    } catch (Exception e) {
+      fatal("Failed to start UI server", e);
+    }
+
+    LOG.info("UI server started, listening on " + ui.getURI().getPort());
+  }
+
+  private void stopUI() {
+    try {
+      LOG.info("Stopping UI server");
+      ui.stop();
+      LOG.info("UI server stopped");
+    } catch (Exception e) {
+      LOG.error("Failed to stop UI server", e);
     }
   }
 
@@ -390,8 +410,9 @@ public class ApplicationMaster {
         true);
 
     startServer();
+    startUI();
 
-    rmClient.registerApplicationMaster(hostname, port, "");
+    rmClient.registerApplicationMaster(hostname, grpcServer.getPort(), ui.getURI().toString());
 
     startAllocator();
 
@@ -400,7 +421,7 @@ public class ApplicationMaster {
       tracker.initialize();
     }
 
-    server.awaitTermination();
+    grpcServer.awaitTermination();
   }
 
   private void maybeShutdown() {
@@ -589,7 +610,7 @@ public class ApplicationMaster {
     }
   }
 
-  private final class ServiceTracker {
+  final class ServiceTracker {
     private String name;
     private Model.Service service;
     private boolean initialRunning = false;
@@ -684,6 +705,10 @@ public class ApplicationMaster {
       return null;
     }
 
+    List<Model.Container> getContainers() {
+      return Collections.unmodifiableList(containers);
+    }
+
     public List<Model.Container> scale(int instances) {
       List<Model.Container> out =  new ArrayList<Model.Container>();
 
@@ -775,7 +800,7 @@ public class ApplicationMaster {
 
         // Update container environment variables
         Map<String, String> env = new HashMap<String, String>(service.getEnv());
-        env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
+        env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + grpcServer.getPort());
         env.put("SKEIN_APPLICATION_ID", appId.toString());
         env.put("SKEIN_CONTAINER_ID", out.getId());
         env.put("SKEIN_RESOURCE_VCORES", String.valueOf(resource.getVirtualCores()));
