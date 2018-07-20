@@ -158,7 +158,10 @@ public class ApplicationMaster {
 
   private void startUI() {
     try {
-      ui = WebUI.start(appId, Collections.unmodifiableMap(services));
+      ui = WebUI.start(
+          appId,
+          Collections.unmodifiableMap(keyValueStore),
+          Collections.unmodifiableMap(services));
     } catch (Exception e) {
       fatal("Failed to start UI server", e);
     }
