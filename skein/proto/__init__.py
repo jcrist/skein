@@ -9,5 +9,7 @@ from .skein_pb2 import (GetRangeRequest, GetRangeResponse,
                         PutKeyRequest, PutKeyResponse,
                         DeleteRangeRequest, DeleteRangeResponse,
                         KeyValue, Condition, OpRequest, OpResponse,
-                        TransactionRequest, TransactionResponse)
+                        TransactionRequest, TransactionResponse,
+                        WatchRequest, WatchCreateRequest, WatchCancelRequest,
+                        WatchResponse, Event)
 from .skein_pb2_grpc import DaemonStub, MasterStub

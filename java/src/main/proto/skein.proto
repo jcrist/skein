@@ -186,6 +186,8 @@ service Master {
 
   rpc Transaction (TransactionRequest) returns (TransactionResponse);
 
+  rpc Watch (stream WatchRequest) returns (stream WatchResponse);
+
   rpc getApplicationSpec (Empty) returns (ApplicationSpec);
 
   rpc getContainers (ContainersRequest) returns (ContainersResponse);
@@ -313,6 +315,53 @@ message TransactionRequest {
 message TransactionResponse {
   bool succeeded = 1;
   repeated OpResponse result = 2;
+}
+
+
+message Event {
+  enum Type {
+    PUT = 0;
+    DELETE = 1;
+  }
+  Type type = 1;
+  KeyValue result = 2;
+}
+
+
+message WatchCreateRequest {
+  enum Type {
+    ALL = 0;
+    PUT = 1;
+    DELETE = 2;
+  }
+  string range_start = 1;
+  string range_end = 2;
+  Type event_type = 3;
+}
+
+
+message WatchCancelRequest {
+  int32 watch_id = 1;
+}
+
+
+message WatchRequest {
+  oneof request {
+    WatchCreateRequest create = 1;
+    WatchCancelRequest cancel = 2;
+  }
+}
+
+
+message WatchResponse {
+  enum Type {
+    EVENT = 0;
+    CREATE = 1;
+    CANCEL = 2;
+  }
+  Type type = 1;
+  int32 watch_id = 2;
+  repeated Event event = 3;
 }
 
 

@@ -1271,5 +1271,38 @@ public class ApplicationMaster {
       resp.onNext(builder.build());
       resp.onCompleted();
     }
+
+    @Override
+    public StreamObserver<Msg.WatchRequest> watch(final StreamObserver<Msg.WatchResponse> resp) {
+      return new StreamObserver<Msg.WatchRequest>() {
+        @Override
+        public void onNext(Msg.WatchRequest req) {
+          Msg.WatchResponse.Builder builder = Msg.WatchResponse.newBuilder();
+          switch (req.getRequestCase()) {
+            case CREATE:
+              LOG.info("New watcher request");
+              builder.setWatchId(1);
+              break;
+            case CANCEL:
+              LOG.info("Cancel watcher request");
+              builder.setWatchId(1);
+              break;
+            default:
+              break;
+          }
+          resp.onNext(builder.build());
+        }
+
+        @Override
+        public void onError(Throwable t) {
+          LOG.info("Cancelled watcher");
+        }
+
+        @Override
+        public void onCompleted() {
+          resp.onCompleted();
+        }
+      };
+    }
   }
 }

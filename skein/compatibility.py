@@ -10,6 +10,7 @@ if PY2:
     import os
     import types
     from urlparse import urlparse, urlsplit  # noqa
+    from Queue import Queue  # noqa
     unicode = unicode  # noqa
     string = basestring  # noqa
     integer = (int, long)  # noqa
@@ -41,6 +42,7 @@ if PY2:
 else:
     from urllib.parse import urlparse, urlsplit  # noqa
     from os import makedirs  # noqa
+    from queue import Queue  # noqa
     unicode = str
     string = str
     integer = int

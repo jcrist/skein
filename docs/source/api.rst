@@ -99,6 +99,17 @@ Key Value Store
 
 .. autofunction:: skein.kv.is_operation
 
+.. autoclass:: skein.kv.EventType
+    :members:
+
+.. autoclass:: skein.kv.Event
+
+.. autoclass:: skein.kv.EventFilter
+
+.. autoclass:: skein.kv.EventQueue
+    :members:
+    :inherited-members:
+
 
 Application Specification
 -------------------------

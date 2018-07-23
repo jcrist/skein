@@ -3,6 +3,8 @@ from __future__ import (absolute_import as _,
                         division as _)
 
 import textwrap as _textwrap
+import threading as _threading
+import weakref as _weakref
 from collections import (namedtuple as _namedtuple,
                          MutableMapping as _MutableMapping,
                          Mapping as _Mapping,
@@ -10,12 +12,13 @@ from collections import (namedtuple as _namedtuple,
 from functools import wraps as _wraps
 
 from . import proto as _proto
-from .compatibility import bind_method as _bind_method
+from .compatibility import bind_method as _bind_method, Queue as _Queue
 from .model import (
     container_instance_from_string as _container_instance_from_string,
     container_instance_to_string as _container_instance_to_string)
 
 from .objects import (Base as _Base,
+                      Enum as _Enum,
                       no_change as _no_change)
 
 
@@ -30,7 +33,8 @@ __all__ = ('KeyValueStore',
            'get', 'get_prefix', 'get_range',
            'pop', 'pop_prefix', 'pop_range',
            'discard', 'discard_prefix', 'discard_range',
-           'put', 'swap')
+           'put', 'swap',
+           'EventType', 'Event', 'EventFilter', 'EventQueue')
 
 
 class Operation(_Base):
@@ -60,6 +64,93 @@ def is_operation(obj):
 def is_condition(obj):
     """Return if ``x`` is a valid skein key-value store condition"""
     return isinstance(obj, Condition)
+
+
+class EventType(_Enum):
+    """Event types to listen on.
+
+    Attributes
+    ----------
+    ALL : EventType
+        All events.
+    PUT : EventType
+        Only ``PUT`` events.
+    DELETE : EventType
+        Only ``DELETE`` events.
+    """
+    _values = ('ALL', 'PUT', 'DELETE')
+
+
+class EventFilter(tuple):
+    """An event filter.
+
+    Specifies a subset of events to watch for. May specify one of ``key``,
+    ``prefix``, or ``range_start``/``range_end``. If no parameters are
+    provided, selects all events.
+
+    Parameters
+    ----------
+    key : str, optional
+        If present, only events from this key will be selected.
+    prefix : str, optional
+        If present, only events with this key prefix will be selected.
+    range_start : str, optional
+        If present, specifies the lower bound of the a key range, inclusive.
+    range_end : str, optional
+        If present, specifies the upper bound of the a key range, exclusive.
+    event_type : EventType, optional.
+        The type of event. Default is ``'ALL'``
+    """
+    def __new__(cls, key=None, prefix=None, range_start=None,
+                range_end=None, event_type=None):
+        has_key = key is not None
+        has_prefix = prefix is not None
+        has_range = range_start is not None or range_end is not None
+        if (has_key + has_prefix + has_range) > 1:
+            raise ValueError("Must specify at most one of `key`, `prefix`, or "
+                             "`range_start`/`range_end`")
+        if has_key:
+            range_start = key
+            range_end = key + '\x00'
+        elif has_prefix:
+            range_start = prefix
+            range_end = _next_key(prefix)
+
+        event_type = (EventType.ALL if event_type is None
+                      else EventType(event_type))
+
+        return tuple.__new__(cls, (range_start, range_end, event_type))
+
+    range_start = property(lambda s: s[0])
+    range_end = property(lambda s: s[1])
+    event_type = property(lambda s: s[2])
+
+    def __repr__(self):
+        return 'EventFilter(range_start=%r, range_end=%r, event_type=%r)' % self
+
+    def __reduce__(self):
+        return (EventFilter, (None, None,) + tuple(self))
+
+
+class Event(_namedtuple('Event',
+                        ['key', 'value', 'owner',
+                         'event_type', 'event_filter'])):
+    """An event in the key-value store.
+
+    Parameters
+    ----------
+    key : str
+        The key affected.
+    value : bytes or None
+        The value for the key - None if a ``'DELETE'`` event.
+    owner : str or None
+        The owner for the key - None if a ``'DELETE'`` event.
+    event_type : EventType
+        The type of event.
+    event_filter : EventFilter
+        The event filter that generated the event.
+    """
+    pass
 
 
 class TransactionResult(_namedtuple('TransactionResult',
@@ -97,13 +188,315 @@ def _value_owner_pair(kv):
                                      if kv.HasField("owner") else None))
 
 
+class EventQueue(_Queue):
+    """A queue of events on the key-value store.
+
+    Besides the normal ``Queue`` interface, also supports iteration.
+
+    >>> for event in app.kv.events(prefix='bar'):
+    ...     print(event)
+
+    If an event falls into multiple selected filters, it will be placed in the
+    event queue once for each filter. For example, ``prefix='bar'`` and
+    ``key='bart'`` would both recieve events on ``key='bart'``. If a queue was
+    subscribed to both events, changes to this key would be placed in the queue
+    twice, once for each filter.
+
+    All events are unsubscribed when this object is collected. Can also be used
+    as a contextmanager to unsubscribe-all on ``__exit__``, or explicitly call
+    ``unsubscribe_all``.
+    """
+    def __init__(self, kv):
+        self._kv = kv
+        self.filters = set()
+
+    def __repr__(self):
+        return 'EventQueue<%d filters>' % len(self.filters)
+
+    def __iter__(self):
+        while True:
+            yield self.get()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.unsubscribe_all()
+
+    def __del__(self):
+        self.unsubscribe_all()
+
+    def _build_event_filter(self, event_filter=None, **kwargs):
+        if event_filter is not None:
+            if kwargs:
+                raise ValueError("Cannot provide ``event_filter`` and "
+                                 "other arguments")
+            if not isinstance(event_filter, EventFilter):
+                raise TypeError("event_filter must be an EventFilter")
+        else:
+            event_filter = EventFilter(**kwargs)
+        return event_filter
+
+    def subscribe(self, event_filter=None, key=None, prefix=None,
+                  range_start=None, range_end=None, event_type=None):
+        """Subscribe to an event filter.
+
+        May provide either an explicit event filter, or provide arguments to
+        create a new one and add it to the queue. In either case, the event
+        filter is returned.
+
+        If no arguments are provided, subscribes to all events.
+
+        Parameters
+        ----------
+        event_filter : EventFilter
+            An explicit EventFilter. If provided, no other keyword arguments
+            may be provided.
+        key : str, optional
+            If present, only events from this key will be selected.
+        prefix : str, optional
+            If present, only events with this key prefix will be selected.
+        range_start : str, optional
+            If present, specifies the lower bound of the a key range, inclusive.
+        range_end : str, optional
+            If present, specifies the upper bound of the a key range, exclusive.
+        event_type : EventType, optional.
+            The type of event. Default is ``'ALL'``.
+
+        Returns
+        -------
+        EventFilter
+        """
+        event_filter = self._build_event_filter(event_filter=event_filter,
+                                                key=key,
+                                                prefix=prefix,
+                                                range_start=range_start,
+                                                range_end=range_end,
+                                                event_type=event_type)
+        self._kv._add_subscription(self, event_filter)
+        return event_filter
+
+    def unsubscribe(self, event_filter=None, key=None, prefix=None,
+                    range_start=None, range_end=None, event_type=None):
+        """Unsubscribe from an event filter.
+
+        May provide either an explicit event filter, or provide arguments to
+        create a new one and add it to the queue.
+
+        If no arguments are provided, unsubscribes from a filter of all events.
+
+        A ``ValueError`` is raised if the specified filter isn't currently
+        subscribed to.
+
+        Parameters
+        ----------
+        event_filter : EventFilter
+            An explicit EventFilter. If provided, no other keyword arguments
+            may be provided.
+        key : str, optional
+            If present, only events from this key will be selected.
+        prefix : str, optional
+            If present, only events with this key prefix will be selected.
+        range_start : str, optional
+            If present, specifies the lower bound of the a key range, inclusive.
+        range_end : str, optional
+            If present, specifies the upper bound of the a key range, exclusive.
+        event_type : EventType, optional.
+            The type of event. Default is ``'ALL'``.
+        """
+        event_filter = self._build_event_filter(event_filter=event_filter,
+                                                key=key,
+                                                prefix=prefix,
+                                                range_start=range_start,
+                                                range_end=range_end,
+                                                event_type=event_type)
+        if event_filter not in self.filters:
+            raise ValueError("not currently subscribed to %r" % event_filter)
+
+        self._kv._remove_subscription(self, event_filter)
+
+    def unsubscribe_all(self):
+        """Unsubscribe from all event filters"""
+        # make a copy while iterating
+        for filter in list(self.filters):
+            self.unsubscribe(filter)
+
+
 class KeyValueStore(_MutableMapping):
     """The Skein Key-Value store.
 
     Used by applications to coordinate configuration and global state.
     """
     def __init__(self, client):
+        # The application client
         self._client = client
+
+        # A lock to secure internal state
+        self._lock = _threading.RLock()
+
+        # Event listener thread is None initially
+        self._event_listener_started = False
+
+    def _ensure_event_listener(self):
+        with self._lock:
+            if not self._event_listener_started:
+                # A queue of input requests, used by the input iterator
+                self._input_queue = _Queue()
+
+                # A queue of event filters waiting to be paired with an watch_id
+                self._create_queue = _Queue()
+
+                # Mapping of watch_id to EventFilter
+                self._id_to_filter = {}
+
+                # Mapping of EventFilter to watch_id
+                self._filter_to_id = {}
+
+                # Mapping of EventFilter to a set of EventQueue weakrefs
+                self._filter_to_queues = {}
+
+                # The output from the watch stream, processed by the handler loop
+                self._output_iter = self._client._call('Watch', self._input_iter())
+
+                # A thread for managing outputs from the watch stream
+                self._event_listener = _threading.Thread(run=self._handler_loop)
+                self._event_listener.start()
+
+                self._event_listener_started = True
+
+    def _handler_loop(self):
+        # Runs in a single thread, no need for locks
+        for resp in self._output_iter:
+            watch_id = resp.watch_id
+            event_filter = self._id_to_filter[watch_id]
+            if resp.type == 'EVENT':
+                for e in resp.events:
+                    event = Event(key=e.key,
+                                  value=e.value,
+                                  owner=e.owner,
+                                  event_filter=event_filter,
+                                  event_type=e.type)
+                    for eq_ref in self._filter_to_queues[watch_id]:
+                        eq = eq_ref()
+                        if eq is not None:
+                            eq.put(event)
+
+            elif resp.type == 'CREATE':
+                event_filter = self._create_queue.pop()
+                self._id_to_filter[watch_id] = event_filter
+
+            else:  # CANCEL
+                assert watch_id not in self._id_to_filter
+
+    def _input_iter(self):
+        while True:
+            req, event_filter = self._input_queue.get()
+            if req is None:
+                break  # canceled
+            elif event_filter is not None:
+                # Create request, enque the event filter for later
+                self._create_queue.put(event_filter)
+            yield req
+
+    def _add_subscription(self, event_queue, event_filter):
+        with self._lock:
+            eq_ref = _weakref.ref(event_queue)
+            if event_filter in self._filter_to_queues:
+                self._filter_to_queues[event_filter].add(eq_ref)
+            else:
+                self._filter_to_queues[event_filter] = {eq_ref}
+                req = _proto.WatchCreateRequest(range_start=event_filter.range_start,
+                                                range_end=event_filter.range_end,
+                                                event_type=event_filter.event_type)
+                self._input_queue.put((req, event_filter))
+
+    def _remove_subscription(self, event_queue, event_filter):
+        with self._lock:
+            event_queue.filters.remove(event_filter)
+            eq_ref = _weakref.ref(event_queue)
+            self._filter_to_queues[event_filter].remove(eq_ref)
+            if not self._filter_to_queues[event_filter]:
+                # Last queue registered for this filter - issue cancel
+                watch_id = self._filter_to_id[event_filter]
+                req = _proto.WatchCancelRequest(watch_id)
+                self._input_queue.put((req, None))
+                # Cleanup state
+                del self._id_to_filter[watch_id]
+                del self._filter_to_id[event_filter]
+                del self._filter_to_queues[event_filter]
+
+    def event_queue(self):
+        """Create a new EventQueue subscribed to no events.
+
+        Examples
+        --------
+        Subscribe to events starting with ``'foo'`` or ``'bar'``.
+
+        >>> foo = skein.kv.EventFilter(prefix='foo')
+        >>> bar = skein.kv.EventFilter(prefix='bar')
+        >>> queue = app.kv.event_queue()              # doctest: skip
+        >>> queue.subscribe(foo)                      # doctest: skip
+        >>> queue.subscribe(bar)                      # doctest: skip
+        >>> for event in queue:                       # doctest: skip
+        ...     if event.filter == foo:
+        ...         print("foo event")
+        ...     else:
+        ...         print("bar event")
+        """
+        self._ensure_event_listener()
+        return EventQueue(self)
+
+    def events(self, event_filter=None, key=None, prefix=None,
+               range_start=None, range_end=None, event_type=None):
+        """Shorthand for creating an EventQueue and adding a single filter.
+
+        May provide either an explicit event filter, or provide arguments to
+        create a new one and add it to the queue.
+
+        If no arguments are provided, creates a queue subscribed to all events.
+
+        Parameters
+        ----------
+        event_filter : EventFilter
+            An explicit EventFilter. If provided, no other keyword arguments
+            may be provided.
+        key : str, optional
+            If present, only events from this key will be selected.
+        prefix : str, optional
+            If present, only events with this key prefix will be selected.
+        range_start : str, optional
+            If present, specifies the lower bound of the a key range, inclusive.
+        range_end : str, optional
+            If present, specifies the upper bound of the a key range, exclusive.
+        event_type : EventType, optional.
+            The type of event. Default is ``'ALL'``.
+
+        Returns
+        -------
+        EventFilter
+
+        Examples
+        --------
+        Subscribe to all events with prefix ``'foo'``:
+
+        >>> for event in app.kv.events(prefix='foo'):  # doctest: skip
+        ...     if event.type == 'PUT':
+        ...         print("PUT<key=%r, value=%r>" % (event.key, event.value))
+        ...     else:  # DELETE
+        ...         print("DELETE<key=%r>" % event.key)
+        PUT<key='foo', value=b'bar'>
+        PUT<key='food', value=b'biz'>
+        DELETE<key='food'>
+        PUT<key='foo', value=b'changed'>
+        """
+        queue = self.event_queue()
+        queue.subscribe(event_filter=event_filter,
+                        key=key,
+                        prefix=prefix,
+                        range_start=range_start,
+                        range_end=range_end,
+                        event_type=event_type)
+        return queue
 
     def _apply_op(self, op, timeout=None):
         req = op._build_operation()
