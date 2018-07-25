@@ -27,7 +27,7 @@ public class WebUI {
                             Map<String, String> keyValueStore,
                             Map<String, List<Model.Container>> services)
       throws Exception {
-    Server server = new Server(8080);
+    Server server = new Server(0);
     server.setHandler(new HandlerList(
         new WebApiHandler(appId, keyValueStore, services),
         new ResourceHandler() {
