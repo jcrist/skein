@@ -1,10 +1,7 @@
 package com.anaconda.skein;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 
-import com.anaconda.skein.ApplicationMaster.ServiceTracker;
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -19,6 +16,8 @@ import org.eclipse.jetty.server.handler.ResourceHandler;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -26,7 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 public class WebUI {
   public static WebUI start(ApplicationId appId,
                             Map<String, String> keyValueStore,
-                            Map<String, ServiceTracker> services)
+                            Map<String, List<Model.Container>> services)
       throws Exception {
     Server server = new Server(8080);
     server.setHandler(new HandlerList(
@@ -60,11 +59,11 @@ public class WebUI {
     private static class Context {
       private final ApplicationId appId;
       private final Map<String, String> keyValueStore;
-      private final Map<String, ServiceTracker> services;
+      private final Map<String, List<Model.Container>> services;
 
       public Context(ApplicationId appId,
                      Map<String, String> keyValueStore,
-                     Map<String, ServiceTracker> services) {
+                     Map<String, List<Model.Container>> services) {
         this.appId = appId;
         this.keyValueStore = keyValueStore;
         this.services = services;
@@ -74,14 +73,16 @@ public class WebUI {
 
       public String appId() { return appId.toString(); }
 
-      public Iterable<Map.Entry<String, Iterable<Model.Container>>> services() {
-        return Maps.transformValues(
-            services,
-            new Function<ServiceTracker, Iterable<Model.Container>>() {
-              public Iterable<Model.Container> apply(ServiceTracker serviceTracker) {
-                return serviceTracker.getContainers();
-              }
-            }).entrySet();
+      public List<Map.Entry<String, List<Model.Container>>> services() {
+        List<Map.Entry<String, List<Model.Container>>> entries = Lists.newArrayList(
+            services.entrySet());
+        Collections.sort(entries, new Comparator<Map.Entry<String, List<Model.Container>>>() {
+          public int compare(Map.Entry<String, List<Model.Container>> e1,
+                             Map.Entry<String, List<Model.Container>> e2) {
+            return e1.getKey().compareTo(e2.getKey());
+          }
+        });
+        return entries;
       }
     }
 
@@ -91,7 +92,7 @@ public class WebUI {
 
     public WebApiHandler(ApplicationId appId,
                          Map<String, String> keyValueStore,
-                         Map<String, ServiceTracker> services) {
+                         Map<String, List<Model.Container>> services) {
       this.context = new Context(appId, keyValueStore, services);
     }
 
@@ -110,12 +111,5 @@ public class WebUI {
         indexMustache.execute(response.getWriter(), context);
       }
     }
-  }
-
-  public static void main(String[] args) throws Exception {
-    WebUI.start(
-        ApplicationId.newInstance(42, 42),
-        ImmutableMap.of("foo", "bar"),
-        Collections.<String, ServiceTracker>emptyMap());
   }
 }

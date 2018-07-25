@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 
 import io.grpc.Server;
@@ -30,8 +32,8 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -161,7 +163,14 @@ public class ApplicationMaster {
       ui = WebUI.start(
           appId,
           Collections.unmodifiableMap(keyValueStore),
-          Collections.unmodifiableMap(services));
+          Collections.unmodifiableMap(
+              Maps.transformValues(
+                  services,
+                  new Function<ServiceTracker, List<Model.Container>>() {
+                    public List<Model.Container> apply(ServiceTracker serviceTracker) {
+                      return serviceTracker.getContainers();
+                    }
+                  })));
     } catch (Exception e) {
       fatal("Failed to start UI server", e);
     }
