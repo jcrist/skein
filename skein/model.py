@@ -871,6 +871,16 @@ class Container(ProtobufMessage):
         """The total runtime of the application."""
         return runtime(self.start_time, self.finish_time)
 
+    @property
+    def yarn_container_logs(self):
+        return "/".join([
+            self.yarn_node_http_address,
+            "node",
+            "containerlogs",
+            self.yarn_container_id,
+            os.environ["USER"]
+        ])
+
     @classmethod
     @implements(ProtobufMessage.from_protobuf)
     def from_protobuf(cls, obj):
