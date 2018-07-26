@@ -799,8 +799,13 @@ public class ApplicationMaster {
 
     private synchronized void requestContainer(Model.Container container) {
       Priority priority = newPriority(this);
-      ContainerRequest req = new ContainerRequest(service.getResources(),
-                                                  null, null, priority);
+      ContainerRequest req = new ContainerRequest(
+          service.getResources(),
+          null,
+          null,
+          priority,
+          true,
+          service.getNodeLabel().isEmpty() ? null : service.getNodeLabel());
       container.setContainerRequest(req);
       rmClient.addContainerRequest(req);
       requested.put(priority, container);

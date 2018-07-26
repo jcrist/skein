@@ -292,6 +292,7 @@ public class Daemon {
     appContext.setPriority(Priority.newInstance(0));
     appContext.setQueue(spec.getQueue());
     appContext.setMaxAppAttempts(spec.getMaxAttempts());
+    appContext.setNodeLabelExpression(spec.getNodeLabel().isEmpty() ? null : spec.getNodeLabel());
     appContext.setApplicationTags(spec.getTags());
 
     LOG.info("Submitting application...");

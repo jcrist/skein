@@ -366,6 +366,8 @@ class Service(Specification):
         Describes the resources needed to run the service.
     instances : int, optional
         The number of instances to create on startup. Default is 1.
+    node_label : str, optional
+        The node label expression to use when requesting containers.
     max_restarts : int, optional
         The maximum number of restarts to allow for this service. Containers
         are only restarted on failure, and the cap is set for all containers in
@@ -382,15 +384,17 @@ class Service(Specification):
         A set of service names that this service depends on. The service will
         only be started after all its dependencies have been started.
     """
-    __slots__ = ('commands', 'resources', 'instances', 'max_restarts', 'files',
-                 'env', 'depends')
+    __slots__ = ('commands', 'resources', 'instances', 'node_label',
+                 'max_restarts', 'files', 'env', 'depends')
     _protobuf_cls = _proto.Service
 
     def __init__(self, commands=required, resources=required, instances=1,
-                 max_restarts=0, files=None, env=None, depends=None):
+                 node_label="", max_restarts=0, files=None, env=None,
+                 depends=None):
         self._assign_required('commands', commands)
         self._assign_required('resources', resources)
         self.instances = instances
+        self.node_label = node_label
         self.max_restarts = max_restarts
         if files is not None:
             files = {k: v if isinstance(v, File) else File(v)
@@ -407,6 +411,7 @@ class Service(Specification):
 
     def _validate(self):
         self._check_is_bounded_int('instances', min=0)
+        self._check_is_type('node_label', string)
         self._check_is_bounded_int('max_restarts', min=-1)
 
         self._check_is_type('resources', Resources)
@@ -451,6 +456,7 @@ class Service(Specification):
         resources = Resources.from_protobuf(obj.resources)
         files = {k: File.from_protobuf(v) for k, v in obj.files.items()}
         kwargs = {'instances': obj.instances,
+                  'node_label': obj.node_label,
                   'max_restarts': obj.max_restarts,
                   'resources': resources,
                   'files': files,
@@ -471,6 +477,8 @@ class ApplicationSpec(Specification):
         The name of the application, defaults to 'skein'.
     queue : string, optional
         The queue to submit to. Defaults to the default queue.
+    node_label : string, optional
+        The node label expression to use for requesting containers.
     tags : set, optional
         A set of strings to use as tags for this application.
     file_systems : list, optional
@@ -481,15 +489,16 @@ class ApplicationSpec(Specification):
         application as failed. Note that this only considers failures of the
         application master during startup. Default is 1.
     """
-    __slots__ = ('services', 'name', 'queue', 'tags', 'file_systems',
-                 'max_attempts')
+    __slots__ = ('services', 'name', 'queue', 'node_label', 'tags',
+                 'file_systems', 'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
     def __init__(self, services=required, name='skein', queue='default',
-                 tags=None, file_systems=None, max_attempts=1):
+                 node_label="", tags=None, file_systems=None, max_attempts=1):
         self._assign_required('services', services)
         self.name = name
         self.queue = queue
+        self.node_label = node_label
         self.tags = set() if tags is None else set(tags)
         self.file_systems = [] if file_systems is None else file_systems
         self.max_attempts = max_attempts
@@ -502,6 +511,7 @@ class ApplicationSpec(Specification):
     def _validate(self):
         self._check_is_type('name', string)
         self._check_is_type('queue', string)
+        self._check_is_type('node_label', string)
         self._check_is_set_of('tags', string)
         self._check_is_list_of('file_systems', string)
         self._check_is_bounded_int('max_attempts', min=1)
@@ -542,6 +552,7 @@ class ApplicationSpec(Specification):
                     for k, v in obj.services.items()}
         return cls(name=obj.name,
                    queue=obj.queue,
+                   node_label=obj.node_label,
                    tags=set(obj.tags),
                    file_systems=list(obj.file_systems),
                    max_attempts=min(1, obj.max_attempts),

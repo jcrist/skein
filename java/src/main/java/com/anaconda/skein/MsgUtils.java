@@ -270,6 +270,7 @@ public class MsgUtils {
   public static Msg.Service writeService(Model.Service service) {
     Msg.Service.Builder builder = Msg.Service.newBuilder()
         .setInstances(service.getInstances())
+        .setNodeLabel(service.getNodeLabel())
         .setMaxRestarts(service.getMaxRestarts())
         .setResources(writeResources(service.getResources()))
         .putAllEnv(service.getEnv())
@@ -289,6 +290,7 @@ public class MsgUtils {
     }
     return new Model.Service(
         service.getInstances(),
+        service.getNodeLabel(),
         service.getMaxRestarts(),
         readResources(service.getResources()),
         localResources,
@@ -301,6 +303,7 @@ public class MsgUtils {
     Msg.ApplicationSpec.Builder builder = Msg.ApplicationSpec.newBuilder()
         .setName(spec.getName())
         .setQueue(spec.getQueue())
+        .setNodeLabel(spec.getNodeLabel())
         .setMaxAttempts(spec.getMaxAttempts())
         .addAllTags(spec.getTags())
         .addAllFileSystems(Lists.transform(spec.getFileSystems(), Functions.toStringFunction()));
@@ -323,6 +326,7 @@ public class MsgUtils {
     }
     return new Model.ApplicationSpec(spec.getName(),
                                      spec.getQueue(),
+                                     spec.getNodeLabel(),
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
                                      fileSystems,
