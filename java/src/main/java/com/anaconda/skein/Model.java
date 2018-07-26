@@ -246,10 +246,14 @@ public class Model {
     public String getYarnNodeHttpAddress() { return yarnNodeHttpAddress; }
 
     public String getYarnContainerLogs() {
+      if (yarnNodeHttpAddress == null || yarnContainerId == null) {
+        return "";  // Not able to construct a URL yet.
+      }
+
       return Joiner.on('/').join(
-          getYarnNodeHttpAddress(),
+          yarnNodeHttpAddress,
           "node", "containerlogs",
-          getYarnContainerId(),
+          yarnContainerId,
           System.getProperty("user.name"));
     }
 

@@ -873,6 +873,9 @@ class Container(ProtobufMessage):
 
     @property
     def yarn_container_logs(self):
+        if not self.yarn_node_http_address or not self.yarn_container_id:
+            return ""
+
         return "/".join([
             self.yarn_node_http_address,
             "node",
