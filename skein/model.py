@@ -255,6 +255,9 @@ class Base(object):
                 all(getattr(self, k) == getattr(other, k)
                     for k in self._get_params()))
 
+    def __ne__(self, other):
+        return not (self == other)
+
     @classmethod
     def _get_params(cls):
         return getattr(cls, '_params', cls.__slots__)
