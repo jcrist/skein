@@ -16,6 +16,8 @@ import grpc as _grpc
 
 from . import proto as _proto
 from .compatibility import bind_method as _bind_method, Queue as _Queue
+from .exceptions import (ApplicationError as _ApplicationError,
+                         ConnectionError as _ConnectionError)
 from .model import (
     container_instance_from_string as _container_instance_from_string,
     container_instance_to_string as _container_instance_to_string)
@@ -188,7 +190,7 @@ def _value_owner_pair(kv):
                                      if kv.HasField("owner") else None))
 
 
-class EventQueue(_Queue):
+class EventQueue(object):
     """A queue of events on the key-value store.
 
     Besides the normal ``Queue`` interface, also supports iteration.
@@ -209,7 +211,8 @@ class EventQueue(_Queue):
     def __init__(self, kv):
         self._kv = kv
         self.filters = set()
-        super(EventQueue, self).__init__()
+        self._queue = _Queue()
+        self._exception = None
 
     def __repr__(self):
         return 'EventQueue<%d filters>' % len(self.filters)
@@ -237,6 +240,29 @@ class EventQueue(_Queue):
         else:
             event_filter = EventFilter(**kwargs)
         return event_filter
+
+    def get(self, block=True, timeout=None):
+        if self._exception is not None:
+            raise self._exception
+        out = self._queue.get(block=block, timeout=timeout)
+        if isinstance(out, Exception):
+            self._exception = out
+            raise out
+        return out
+
+    def get_nowait(self):
+        return self.get(block=False)
+
+    def qsize(self):
+        return self._queue.qsize()
+
+    def put(self, item, block=True, timeout=None):
+        if self._exception is not None:
+            raise self._exception
+        self._queue.put(item, block=block, timeout=timeout)
+
+    def put_nowait(self, item):
+        self.put(item, block=False)
 
     def subscribe(self, event_filter=None, key=None, prefix=None,
                   range_start=None, range_end=None, event_type=None):
@@ -336,7 +362,7 @@ class KeyValueStore(_MutableMapping):
         self._client = client
 
         # A lock to secure internal state
-        self._lock = _threading.RLock()
+        self._lock = _threading.Lock()
 
         # Event listener thread is None initially
         self._event_listener_started = False
@@ -347,7 +373,7 @@ class KeyValueStore(_MutableMapping):
                 # A queue of input requests, used by the input iterator
                 self._input_queue = _Queue()
 
-                # A deque of event filters waiting to be paired with an watch_id
+                # A deque of event filters waiting to be paired with a watch_id
                 self._create_deque = _deque()
 
                 # Mapping of watch_id to EventFilter
@@ -358,6 +384,9 @@ class KeyValueStore(_MutableMapping):
 
                 # Mapping of EventFilter to a set of EventQueue weakrefs
                 self._filter_to_queues = {}
+
+                # Mapping of EventFilter to threading.Event/True
+                self._filter_subscribed = {}
 
                 # The output from the watch stream, processed by the handler loop
                 self._output_iter = self._client._call('Watch', self._input_iter())
@@ -370,47 +399,62 @@ class KeyValueStore(_MutableMapping):
                 self._event_listener_started = True
 
     def _handler_loop(self):
-        # Runs in a single thread, no need for locks
         while True:
             try:
                 resp = next(self._output_iter)
-            except _grpc.RpcError as exc:
+            except _grpc.RpcError as _exc:
+                exc = _exc
+            else:
+                exc = None
+
+            if exc is not None:
                 # Stream errored (all exceptions are unexpected)
-                # Shutdown stream state, but only raise if it's not a Canceled
-                # TODO: close down output queues? Or restart handler thread?
+                # Shutdown stream state and notify all event queues
+                exc = (_ConnectionError("Unable to connect to application")
+                       if exc.code() == _grpc.StatusCode.UNAVAILABLE
+                       else _ApplicationError(exc.details()))
                 self._input_queue.put((None, None))
-                if exc.code() != _grpc.StatusCode.CANCELLED:
-                    raise
-                break
+                with self._lock:
+                    all_qs = set(q for qs in self._filter_to_queues.values()
+                                 for q in qs)
+                    for eq_ref in all_qs:
+                        eq = eq_ref()
+                        if eq is not None:
+                            eq.put(exc)
+                    break
+
             watch_id = resp.watch_id
 
             if resp.type == _proto.WatchResponse.CREATE:
                 event_filter = self._create_deque.popleft()
-                self._id_to_filter[watch_id] = event_filter
-                self._filter_to_id[event_filter] = watch_id
-
-            elif resp.type == _proto.WatchResponse.CANCEL:
-                assert watch_id not in self._id_to_filter
-            else:
+                with self._lock:
+                    self._id_to_filter[watch_id] = event_filter
+                    self._filter_to_id[event_filter] = watch_id
+                    self._filter_subscribed[event_filter].set()
+                    self._filter_subscribed[event_filter] = True
+            elif resp.type != _proto.WatchResponse.CANCEL:
                 event_type = EventType(_proto.WatchResponse.Type.Name(resp.type))
-                event_filter = self._id_to_filter[watch_id]
-                for kv in resp.event:
-                    event = Event(key=kv.key,
-                                  result=(_value_owner_pair(kv)
-                                          if event_type == EventType.PUT
-                                          else None),
-                                  event_filter=event_filter,
-                                  event_type=event_type)
-                    for eq_ref in self._filter_to_queues[event_filter]:
-                        eq = eq_ref()
-                        if eq is not None:
-                            eq.put(event)
+                with self._lock:
+                    event_filter = self._id_to_filter.get(watch_id)
+                    if event_filter is None:
+                        continue
+                    for kv in resp.event:
+                        event = Event(key=kv.key,
+                                      result=(_value_owner_pair(kv)
+                                              if event_type == EventType.PUT
+                                              else None),
+                                      event_filter=event_filter,
+                                      event_type=event_type)
+                        for eq_ref in self._filter_to_queues[event_filter]:
+                            eq = eq_ref()
+                            if eq is not None:
+                                eq.put(event)
 
     def _input_iter(self):
         while True:
             req, event_filter = self._input_queue.get()
             if req is None:
-                break  # canceled
+                break  # shutdown flag
             elif event_filter is not None:
                 # Create request, enque the event filter for later
                 self._create_deque.append(event_filter)
@@ -421,26 +465,34 @@ class KeyValueStore(_MutableMapping):
             eq_ref = _weakref.ref(event_queue)
             if event_filter in self._filter_to_queues:
                 self._filter_to_queues[event_filter].add(eq_ref)
+                subscribed = self._filter_subscribed[event_filter]
+                if subscribed is True:
+                    return
             else:
                 self._filter_to_queues[event_filter] = {eq_ref}
+                subscribed = self._filter_subscribed[event_filter] = _threading.Event()
                 req = _proto.WatchCreateRequest(range_start=event_filter.range_start,
                                                 range_end=event_filter.range_end,
                                                 event_type=str(event_filter.event_type))
                 self._input_queue.put((_proto.WatchRequest(create=req), event_filter))
+        # Wait for subscription to occur
+        subscribed.wait()
 
     def _remove_subscription(self, event_queue, event_filter):
         with self._lock:
             eq_ref = _weakref.ref(event_queue)
-            self._filter_to_queues[event_filter].remove(eq_ref)
-            if not self._filter_to_queues[event_filter]:
-                # Last queue registered for this filter - issue cancel
-                watch_id = self._filter_to_id[event_filter]
-                req = _proto.WatchCancelRequest(watch_id=watch_id)
-                self._input_queue.put((_proto.WatchRequest(cancel=req), None))
-                # Cleanup state
-                del self._id_to_filter[watch_id]
-                del self._filter_to_id[event_filter]
-                del self._filter_to_queues[event_filter]
+            if event_filter in self._filter_to_queues:
+                self._filter_to_queues[event_filter].discard(eq_ref)
+                if not self._filter_to_queues[event_filter]:
+                    # Last queue registered for this filter - issue cancel
+                    watch_id = self._filter_to_id[event_filter]
+                    req = _proto.WatchCancelRequest(watch_id=watch_id)
+                    self._input_queue.put((_proto.WatchRequest(cancel=req), None))
+                    # Cleanup state
+                    del self._id_to_filter[watch_id]
+                    del self._filter_to_id[event_filter]
+                    del self._filter_to_queues[event_filter]
+                    del self._filter_subscribed[event_filter]
 
     def event_queue(self):
         """Create a new EventQueue subscribed to no events.

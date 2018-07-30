@@ -488,8 +488,11 @@ public class ApplicationMaster {
 
     private void removeAllWatches() {
       synchronized (keyValueStore) {
-        for (Iterator<Integer> i = registered.iterator(); i.hasNext();) {
-          removeWatch(i.next());
+        for (Iterator<Integer> it = registered.iterator(); it.hasNext();) {
+          int watchId = it.next();
+          intervalTree.remove(watchId);
+          LOG.info("Removed Watcher " + watchId);
+          it.remove();
         }
       }
     }
@@ -509,8 +512,9 @@ public class ApplicationMaster {
           synchronized (keyValueStore) {
             watchId = intervalTree.add(start, end, new Watcher(resp, this, type));
           }
-          LOG.info("Created Watcher " + watchId
-                   + " - start=" + start
+          LOG.info("Created Watcher."
+                   + " id=" + watchId
+                   + ", start=" + start
                    + ", end=" + end
                    + ", type=" + type);
           registered.add(watchId);
@@ -520,7 +524,6 @@ public class ApplicationMaster {
         case CANCEL:
           watchId = req.getCancel().getWatchId();
           removeWatch(watchId);
-          LOG.info("Canceled Watcher " + watchId);
           builder.setWatchId(watchId);
           builder.setType(Msg.WatchResponse.Type.CANCEL);
           break;
@@ -530,13 +533,13 @@ public class ApplicationMaster {
 
     @Override
     public void onError(Throwable t) {
-      LOG.info("onError called");
+      LOG.info("Watch Stream Canceled");
       removeAllWatches();
     }
 
     @Override
     public void onCompleted() {
-      LOG.info("onCompleted called");
+      LOG.info("Watch Stream Completed");
       removeAllWatches();
       resp.onCompleted();
     }
@@ -1166,7 +1169,7 @@ public class ApplicationMaster {
               SortedMap<String, Msg.KeyValue.Builder> iSelection =
                   selectRange(selection, iStart, iEnd,
                               iStart.compareTo(firstKey) <= 0,
-                              iEnd.compareTo(lastKey) >= 0);
+                              iEnd == null || iEnd.compareTo(lastKey) >= 0);
 
               for (String key : iSelection.keySet()) {
                 wrBuilder.addEventBuilder().setKey(key);
