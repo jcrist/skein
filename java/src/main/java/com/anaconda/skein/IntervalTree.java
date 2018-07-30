@@ -49,9 +49,11 @@ public class IntervalTree<T> {
     private String end;
 
     Interval(String begin, String end) {
+      // For both begin and end, "" and null are equivalent.
+      // For begin, we store "", for end we store null
+      // This simplifies comparisons later on.
       this.begin = begin == null ? "" : begin;
-      // end can be null, meaning max range
-      this.end = end;
+      this.end = (end != null && end.isEmpty()) ? null : end;
     }
 
     String getBegin() { return begin; }
@@ -99,6 +101,8 @@ public class IntervalTree<T> {
     public Interval getInterval() { return interval; }
     public int getId() { return id; }
     public V getValue() { return value; }
+    public String getIntervalBegin() { return interval.getBegin(); }
+    public String getIntervalEnd() { return interval.getEnd(); }
   }
 
   private static class TreeNode<V> {
@@ -147,7 +151,7 @@ public class IntervalTree<T> {
     }
 
     private List<Item<V>> query(Interval target, List<Item<V>> out) {
-      boolean eRightOfB = nullStringCompare(interval.begin, target.end) < 0;
+      boolean eRightOfB = nullStringCompare(interval.begin, target.end) <= 0;
 
       if (eRightOfB && nullStringCompare(interval.end, target.begin) > 0) {
         out.addAll(items);
@@ -163,6 +167,25 @@ public class IntervalTree<T> {
 
       return out;
     }
+
+    private List<Item<V>> query(String target, List<Item<V>> out) {
+      boolean rightOfB = nullStringCompare(interval.begin, target) <= 0;
+
+      if (rightOfB && nullStringCompare(interval.end, target) > 0) {
+        out.addAll(items);
+      }
+
+      if (left != null && nullStringCompare(left.max, target) > 0) {
+        left.query(target, out);
+      }
+
+      if (right != null && rightOfB) {
+        right.query(target, out);
+      }
+
+      return out;
+    }
+
   }
 
   public static int nullStringCompare(String a, String b) {
@@ -183,6 +206,15 @@ public class IntervalTree<T> {
     return (n == null) ? Color.BLACK : n.color;
   }
 
+  // Find all intervals containing the target
+  public List<Item<T>> query(String target) {
+    if (root == null) {
+      return Collections.emptyList();
+    }
+    return root.query(target, new ArrayList<Item<T>>(Math.round(size() * 0.5f)));
+  }
+
+  // Find all intervals intersecting with [begin, end] (note inclusive end).
   public List<Item<T>> query(String begin, String end) {
     if (root == null) {
       return Collections.emptyList();
@@ -365,7 +397,7 @@ public class IntervalTree<T> {
     }
   }
 
-  public boolean discard(int id) {
+  public boolean remove(int id) {
     Item<T> item = lookup.remove(id);
 
     if (item == null) {

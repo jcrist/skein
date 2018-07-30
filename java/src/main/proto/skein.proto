@@ -318,16 +318,6 @@ message TransactionResponse {
 }
 
 
-message Event {
-  enum Type {
-    PUT = 0;
-    DELETE = 1;
-  }
-  Type type = 1;
-  KeyValue result = 2;
-}
-
-
 message WatchCreateRequest {
   enum Type {
     ALL = 0;
@@ -355,13 +345,14 @@ message WatchRequest {
 
 message WatchResponse {
   enum Type {
-    EVENT = 0;
-    CREATE = 1;
-    CANCEL = 2;
+    CREATE = 0;
+    CANCEL = 1;
+    PUT = 2;
+    DELETE = 3;
   }
   Type type = 1;
   int32 watch_id = 2;
-  repeated Event event = 3;
+  repeated KeyValue event = 3;
 }
 
 

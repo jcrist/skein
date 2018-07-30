@@ -4,6 +4,7 @@ import com.google.protobuf.ByteString;
 
 import io.grpc.Server;
 import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
@@ -85,6 +86,7 @@ public class ApplicationMaster {
 
   private final TreeMap<String, Msg.KeyValue.Builder> keyValueStore =
       new TreeMap<String, Msg.KeyValue.Builder>();
+  private final IntervalTree<Watcher> intervalTree = new IntervalTree<Watcher>();
 
   private final Map<String, ServiceTracker> services =
       new HashMap<String, ServiceTracker>();
@@ -466,6 +468,124 @@ public class ApplicationMaster {
     }
   }
 
+  private final class WatchRequestStream implements StreamObserver<Msg.WatchRequest> {
+    private StreamObserver<Msg.WatchResponse> resp;
+    private final Set<Integer> registered = new HashSet<Integer>();
+
+    WatchRequestStream(StreamObserver<Msg.WatchResponse> resp) {
+      super();
+      this.resp = resp;
+    }
+
+    private void removeWatch(int watchId) {
+      if (registered.remove(watchId)) {
+        synchronized (keyValueStore) {
+          intervalTree.remove(watchId);
+        }
+        LOG.info("Removed Watcher " + watchId);
+      }
+    }
+
+    private void removeAllWatches() {
+      synchronized (keyValueStore) {
+        for (Iterator<Integer> i = registered.iterator(); i.hasNext();) {
+          removeWatch(i.next());
+        }
+      }
+    }
+
+    private boolean isActive() { return registered.size() > 0; }
+
+    @Override
+    public void onNext(Msg.WatchRequest req) {
+      Msg.WatchResponse.Builder builder = Msg.WatchResponse.newBuilder();
+      int watchId;
+      switch (req.getRequestCase()) {
+        case CREATE:
+          Msg.WatchCreateRequest create = req.getCreate();
+          String start = create.getRangeStart();
+          String end = create.getRangeEnd();
+          Msg.WatchCreateRequest.Type type = create.getEventType();
+          synchronized (keyValueStore) {
+            watchId = intervalTree.add(start, end, new Watcher(resp, this, type));
+          }
+          LOG.info("Created Watcher " + watchId
+                   + " - start=" + start
+                   + ", end=" + end
+                   + ", type=" + type);
+          registered.add(watchId);
+          builder.setWatchId(watchId);
+          builder.setType(Msg.WatchResponse.Type.CREATE);
+          break;
+        case CANCEL:
+          watchId = req.getCancel().getWatchId();
+          removeWatch(watchId);
+          LOG.info("Canceled Watcher " + watchId);
+          builder.setWatchId(watchId);
+          builder.setType(Msg.WatchResponse.Type.CANCEL);
+          break;
+      }
+      resp.onNext(builder.build());
+    }
+
+    @Override
+    public void onError(Throwable t) {
+      LOG.info("onError called");
+      removeAllWatches();
+    }
+
+    @Override
+    public void onCompleted() {
+      LOG.info("onCompleted called");
+      removeAllWatches();
+      resp.onCompleted();
+    }
+  }
+
+  private final class Watcher {
+    private StreamObserver<Msg.WatchResponse> resp;
+    private WatchRequestStream req;
+    private boolean put;
+    private boolean delete;
+
+    Watcher(StreamObserver<Msg.WatchResponse> resp,
+            WatchRequestStream req,
+            Msg.WatchCreateRequest.Type type) {
+      this.resp = resp;
+      this.req = req;
+      switch (type) {
+        case PUT:
+          put = true;
+          delete = false;
+          break;
+        case DELETE:
+          put = false;
+          delete = true;
+          break;
+        case ALL:
+          put = true;
+          delete = true;
+          break;
+      }
+    }
+
+    public boolean isPutType() { return put; }
+    public boolean isDeleteType() { return delete; }
+
+    public void sendMsg(int watchId, Msg.WatchResponse msg) {
+      if (req.isActive()) {
+        try {
+          resp.onNext(msg);
+        } catch (StatusRuntimeException exc) {
+          if (exc.getStatus().getCode() != Status.Code.CANCELLED) {
+            LOG.info("Watcher " + watchId + " failed to send, got status: " + exc.getStatus());
+          }
+          req.removeAllWatches();
+        }
+      }
+    }
+  }
+
   private final class ServiceTracker {
     private String name;
     private Model.Service service;
@@ -745,9 +865,24 @@ public class ApplicationMaster {
           container.setState(state);
 
           // Remove any owned keys from the key-value store
-          // NOTE: deleteRange may have already removed these
           for (String key : container.getOwnedKeys()) {
-            keyValueStore.remove(key);
+            Msg.KeyValue.Builder prevKv = keyValueStore.remove(key);
+            // if not removed already, notify watchers
+            if (prevKv != null) {
+              // Message a single delete event with only the key set
+              Msg.WatchResponse.Builder wrBuilder =
+                  Msg.WatchResponse
+                     .newBuilder()
+                     .setType(Msg.WatchResponse.Type.DELETE)
+                     .addEvent(prevKv.clearValue().clearOwner());
+              for (IntervalTree.Item<Watcher> item : intervalTree.query(key)) {
+                if (item.getValue().isDeleteType()) {
+                  int watchId = item.getId();
+                  item.getValue()
+                      .sendMsg(watchId, wrBuilder.setWatchId(watchId).build());
+                }
+              }
+            }
           }
           container.clearOwnedKeys();
 
@@ -917,26 +1052,34 @@ public class ApplicationMaster {
       resp.onCompleted();
     }
 
+    private SortedMap<String, Msg.KeyValue.Builder> selectRange(
+          SortedMap<String, Msg.KeyValue.Builder> map,
+          String start, String end,
+          boolean openStart, boolean openEnd) {
+      if (openStart && openEnd) {
+        return map;
+      } else if (openEnd) {
+        return map.tailMap(start);
+      } else if (openStart) {
+        return map.headMap(end);
+      } else if (start.compareTo(end) <= 0) {
+        return map.subMap(start, end);
+      }
+      return null;
+    }
+
     private Msg.GetRangeResponse.Builder evalGetRange(Msg.GetRangeRequest req) {
       String start = req.getRangeStart();
       String end = req.getRangeEnd();
 
-      boolean openLeft = start.isEmpty() || start.equals("\u0000");
-      boolean openRight = end.isEmpty();
 
       Msg.GetRangeResponse.Builder builder;
 
       synchronized (keyValueStore) {
-        SortedMap<String, Msg.KeyValue.Builder> selection = null;
-        if (openLeft && openRight) {
-          selection = keyValueStore;
-        } else if (openRight ) {
-          selection = keyValueStore.tailMap(start);
-        } else if (openLeft) {
-          selection = keyValueStore.headMap(end);
-        } else if (start.compareTo(end) <= 0) {
-          selection = keyValueStore.subMap(start, end);
-        }
+        SortedMap<String, Msg.KeyValue.Builder> selection =
+            selectRange(keyValueStore, start, end,
+                        start.isEmpty() || start.equals("\u0000"),
+                        end.isEmpty());
 
         builder = Msg.GetRangeResponse
                      .newBuilder()
@@ -975,29 +1118,20 @@ public class ApplicationMaster {
       String start = req.getRangeStart();
       String end = req.getRangeEnd();
 
-      boolean openLeft = start.isEmpty() || start.equals("\u0000");
-      boolean openRight = end.isEmpty();
-
       Msg.DeleteRangeResponse.Builder builder;
 
       synchronized (keyValueStore) {
-        SortedMap<String, Msg.KeyValue.Builder> selection = null;
-        if (openLeft && openRight) {
-          selection = keyValueStore;
-        } else if (openRight ) {
-          selection = keyValueStore.tailMap(start);
-        } else if (openLeft) {
-          selection = keyValueStore.headMap(end);
-        } else if (start.compareTo(end) <= 0) {
-          selection = keyValueStore.subMap(start, end);
-        }
+        SortedMap<String, Msg.KeyValue.Builder> selection =
+            selectRange(keyValueStore, start, end,
+                        start.isEmpty() || start.equals("\u0000"),
+                        end.isEmpty());
 
         builder = Msg.DeleteRangeResponse
                      .newBuilder()
                      .setCount(selection == null ? 0 : selection.size())
                      .setResultType(req.getResultType());
 
-        if (selection != null) {
+        if (selection != null && selection.size() > 0) {
           switch (req.getResultType()) {
             case ITEMS:
               for (Map.Entry<String, Msg.KeyValue.Builder> entry : selection.entrySet()) {
@@ -1012,6 +1146,36 @@ public class ApplicationMaster {
             case NONE:
               break;
           }
+
+          // Notify watchers, if any
+          String firstKey = selection.firstKey();
+          String lastKey = selection.lastKey();
+          for (IntervalTree.Item<Watcher> item : intervalTree.query(firstKey, lastKey)) {
+            if (item.getValue().isDeleteType()) {
+              int watchId = item.getId();
+              Msg.WatchResponse.Builder wrBuilder =
+                  Msg.WatchResponse
+                     .newBuilder()
+                     .setWatchId(watchId)
+                     .setType(Msg.WatchResponse.Type.DELETE);
+              // Subselect the deleted keys based on the overlapping interval.
+              // We need to floor/ceil the bounds since `subMap` rejects keys
+              // out of the already subselected range
+              String iStart = item.getIntervalBegin();
+              String iEnd = item.getIntervalEnd();
+              SortedMap<String, Msg.KeyValue.Builder> iSelection =
+                  selectRange(selection, iStart, iEnd,
+                              iStart.compareTo(firstKey) <= 0,
+                              iEnd.compareTo(lastKey) >= 0);
+
+              for (String key : iSelection.keySet()) {
+                wrBuilder.addEventBuilder().setKey(key);
+              }
+              item.getValue().sendMsg(watchId, wrBuilder.build());
+            }
+          }
+
+          // Do deletion
           selection.clear();
         }
       }
@@ -1101,6 +1265,20 @@ public class ApplicationMaster {
           }
         }
         keyValueStore.put(key, kvBuilder);
+
+        // Notify watchers
+        Msg.WatchResponse.Builder wrBuilder =
+            Msg.WatchResponse
+               .newBuilder()
+               .setType(Msg.WatchResponse.Type.PUT)
+               .addEvent(kvBuilder);
+
+        for (IntervalTree.Item<Watcher> item : intervalTree.query(key)) {
+          if (item.getValue().isPutType()) {
+            int watchId = item.getId();
+            item.getValue().sendMsg(watchId, wrBuilder.setWatchId(watchId).build());
+          }
+        }
       }
 
       Msg.PutKeyResponse.Builder builder =
@@ -1274,35 +1452,8 @@ public class ApplicationMaster {
 
     @Override
     public StreamObserver<Msg.WatchRequest> watch(final StreamObserver<Msg.WatchResponse> resp) {
-      return new StreamObserver<Msg.WatchRequest>() {
-        @Override
-        public void onNext(Msg.WatchRequest req) {
-          Msg.WatchResponse.Builder builder = Msg.WatchResponse.newBuilder();
-          switch (req.getRequestCase()) {
-            case CREATE:
-              LOG.info("New watcher request");
-              builder.setWatchId(1);
-              break;
-            case CANCEL:
-              LOG.info("Cancel watcher request");
-              builder.setWatchId(1);
-              break;
-            default:
-              break;
-          }
-          resp.onNext(builder.build());
-        }
-
-        @Override
-        public void onError(Throwable t) {
-          LOG.info("Cancelled watcher");
-        }
-
-        @Override
-        public void onCompleted() {
-          resp.onCompleted();
-        }
-      };
+      LOG.info("watch called");
+      return new WatchRequestStream(resp);
     }
   }
 }

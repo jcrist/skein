@@ -6,10 +6,13 @@ import textwrap as _textwrap
 import threading as _threading
 import weakref as _weakref
 from collections import (namedtuple as _namedtuple,
+                         deque as _deque,
                          MutableMapping as _MutableMapping,
                          Mapping as _Mapping,
                          OrderedDict as _OrderedDict)
 from functools import wraps as _wraps
+
+import grpc as _grpc
 
 from . import proto as _proto
 from .compatibility import bind_method as _bind_method, Queue as _Queue
@@ -133,18 +136,15 @@ class EventFilter(tuple):
 
 
 class Event(_namedtuple('Event',
-                        ['key', 'value', 'owner',
-                         'event_type', 'event_filter'])):
+                        ['key', 'result', 'event_type', 'event_filter'])):
     """An event in the key-value store.
 
     Parameters
     ----------
     key : str
         The key affected.
-    value : bytes or None
-        The value for the key - None if a ``'DELETE'`` event.
-    owner : str or None
-        The owner for the key - None if a ``'DELETE'`` event.
+    result : ValueOwnerPair or None
+        The value and owner for the key.  None if a ``'DELETE'`` event.
     event_type : EventType
         The type of event.
     event_filter : EventFilter
@@ -209,6 +209,7 @@ class EventQueue(_Queue):
     def __init__(self, kv):
         self._kv = kv
         self.filters = set()
+        super(EventQueue, self).__init__()
 
     def __repr__(self):
         return 'EventQueue<%d filters>' % len(self.filters)
@@ -228,7 +229,7 @@ class EventQueue(_Queue):
 
     def _build_event_filter(self, event_filter=None, **kwargs):
         if event_filter is not None:
-            if kwargs:
+            if any(v is not None for v in kwargs.values()):
                 raise ValueError("Cannot provide ``event_filter`` and "
                                  "other arguments")
             if not isinstance(event_filter, EventFilter):
@@ -273,7 +274,10 @@ class EventQueue(_Queue):
                                                 range_start=range_start,
                                                 range_end=range_end,
                                                 event_type=event_type)
+        if event_filter in self.filters:
+            return event_filter
         self._kv._add_subscription(self, event_filter)
+        self.filters.add(event_filter)
         return event_filter
 
     def unsubscribe(self, event_filter=None, key=None, prefix=None,
@@ -311,9 +315,9 @@ class EventQueue(_Queue):
                                                 range_end=range_end,
                                                 event_type=event_type)
         if event_filter not in self.filters:
-            raise ValueError("not currently subscribed to %r" % event_filter)
-
+            raise ValueError("not currently subscribed to %r" % (event_filter,))
         self._kv._remove_subscription(self, event_filter)
+        self.filters.remove(event_filter)
 
     def unsubscribe_all(self):
         """Unsubscribe from all event filters"""
@@ -343,8 +347,8 @@ class KeyValueStore(_MutableMapping):
                 # A queue of input requests, used by the input iterator
                 self._input_queue = _Queue()
 
-                # A queue of event filters waiting to be paired with an watch_id
-                self._create_queue = _Queue()
+                # A deque of event filters waiting to be paired with an watch_id
+                self._create_deque = _deque()
 
                 # Mapping of watch_id to EventFilter
                 self._id_to_filter = {}
@@ -359,34 +363,48 @@ class KeyValueStore(_MutableMapping):
                 self._output_iter = self._client._call('Watch', self._input_iter())
 
                 # A thread for managing outputs from the watch stream
-                self._event_listener = _threading.Thread(run=self._handler_loop)
+                self._event_listener = _threading.Thread(target=self._handler_loop)
+                self._event_listener.daemon = True
                 self._event_listener.start()
 
                 self._event_listener_started = True
 
     def _handler_loop(self):
         # Runs in a single thread, no need for locks
-        for resp in self._output_iter:
+        while True:
+            try:
+                resp = next(self._output_iter)
+            except _grpc.RpcError as exc:
+                # Stream errored (all exceptions are unexpected)
+                # Shutdown stream state, but only raise if it's not a Canceled
+                # TODO: close down output queues? Or restart handler thread?
+                self._input_queue.put((None, None))
+                if exc.code() != _grpc.StatusCode.CANCELLED:
+                    raise
+                break
             watch_id = resp.watch_id
-            event_filter = self._id_to_filter[watch_id]
-            if resp.type == 'EVENT':
-                for e in resp.events:
-                    event = Event(key=e.key,
-                                  value=e.value,
-                                  owner=e.owner,
+
+            if resp.type == _proto.WatchResponse.CREATE:
+                event_filter = self._create_deque.popleft()
+                self._id_to_filter[watch_id] = event_filter
+                self._filter_to_id[event_filter] = watch_id
+
+            elif resp.type == _proto.WatchResponse.CANCEL:
+                assert watch_id not in self._id_to_filter
+            else:
+                event_type = EventType(_proto.WatchResponse.Type.Name(resp.type))
+                event_filter = self._id_to_filter[watch_id]
+                for kv in resp.event:
+                    event = Event(key=kv.key,
+                                  result=(_value_owner_pair(kv)
+                                          if event_type == EventType.PUT
+                                          else None),
                                   event_filter=event_filter,
-                                  event_type=e.type)
-                    for eq_ref in self._filter_to_queues[watch_id]:
+                                  event_type=event_type)
+                    for eq_ref in self._filter_to_queues[event_filter]:
                         eq = eq_ref()
                         if eq is not None:
                             eq.put(event)
-
-            elif resp.type == 'CREATE':
-                event_filter = self._create_queue.pop()
-                self._id_to_filter[watch_id] = event_filter
-
-            else:  # CANCEL
-                assert watch_id not in self._id_to_filter
 
     def _input_iter(self):
         while True:
@@ -395,7 +413,7 @@ class KeyValueStore(_MutableMapping):
                 break  # canceled
             elif event_filter is not None:
                 # Create request, enque the event filter for later
-                self._create_queue.put(event_filter)
+                self._create_deque.append(event_filter)
             yield req
 
     def _add_subscription(self, event_queue, event_filter):
@@ -407,19 +425,18 @@ class KeyValueStore(_MutableMapping):
                 self._filter_to_queues[event_filter] = {eq_ref}
                 req = _proto.WatchCreateRequest(range_start=event_filter.range_start,
                                                 range_end=event_filter.range_end,
-                                                event_type=event_filter.event_type)
-                self._input_queue.put((req, event_filter))
+                                                event_type=str(event_filter.event_type))
+                self._input_queue.put((_proto.WatchRequest(create=req), event_filter))
 
     def _remove_subscription(self, event_queue, event_filter):
         with self._lock:
-            event_queue.filters.remove(event_filter)
             eq_ref = _weakref.ref(event_queue)
             self._filter_to_queues[event_filter].remove(eq_ref)
             if not self._filter_to_queues[event_filter]:
                 # Last queue registered for this filter - issue cancel
                 watch_id = self._filter_to_id[event_filter]
-                req = _proto.WatchCancelRequest(watch_id)
-                self._input_queue.put((req, None))
+                req = _proto.WatchCancelRequest(watch_id=watch_id)
+                self._input_queue.put((_proto.WatchRequest(cancel=req), None))
                 # Cleanup state
                 del self._id_to_filter[watch_id]
                 del self._filter_to_id[event_filter]

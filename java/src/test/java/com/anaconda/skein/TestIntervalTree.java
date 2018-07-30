@@ -11,7 +11,7 @@ import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({TestIntervalTree.TestQuery.class,
-                     TestIntervalTree.TestDiscard.class,
+                     TestIntervalTree.TestRemove.class,
                      TestIntervalTree.TestMisc.class})
 public class TestIntervalTree {
   public static class TestQuery {
@@ -51,6 +51,7 @@ public class TestIntervalTree {
       assertEquals(it.size(), 0);
 
       assertEquals(0, it.query(null, null).size());
+      assertEquals(0, it.query("a").size());
     }
 
     @Test
@@ -82,25 +83,36 @@ public class TestIntervalTree {
     public void testQueryBoundsRight() {
       assertEquals(numItems, it.size());
 
-      assertEquals(4, it.query("aa", "b").size());
-      assertEquals(4, it.query("cc", "d").size());
-      assertEquals(1, it.query("gg", "h").size());
+      assertEquals(6, it.query("aa", "b").size());
+      assertEquals(6, it.query("cc", "d").size());
+      assertEquals(2, it.query("gg", "h").size());
       assertEquals(1, it.query("ii", null).size());
+    }
+
+    @Test
+    public void testQuerySingleTarget() {
+      assertEquals(numItems, it.size());
+
+      assertEquals(4, it.query("a").size());
+      assertEquals(4, it.query("aa").size());
+      assertEquals(6, it.query("b").size());
+      assertEquals(2, it.query("f").size());
+      assertEquals(1, it.query("g").size());
     }
   }
 
-  public static class TestDiscard {
+  public static class TestRemove {
     @Test
-    public void testDiscardNonExistant() {
+    public void testRemoveNonExistant() {
       IntervalTree<Integer> it = new IntervalTree<Integer>();
 
       assertEquals(it.size(), 0);
-      assertFalse(it.discard(100));
+      assertFalse(it.remove(100));
       assertEquals(it.size(), 0);
     }
 
     @Test
-    public void testDiscard() {
+    public void testRemove() {
       IntervalTree<Integer> it = new IntervalTree<Integer>();
 
       assertEquals(0, it.size());
@@ -114,12 +126,12 @@ public class TestIntervalTree {
       assertEquals(3, it.query(null, "b").size());
 
       // Delete a node, check that size and queries change
-      assertTrue(it.discard(ad));
+      assertTrue(it.remove(ad));
       assertEquals(3, it.size());
       assertEquals(2, it.query(null, "b").size());
 
       // Delete the node again, no-op
-      assertFalse(it.discard(ad));
+      assertFalse(it.remove(ad));
       assertEquals(3, it.size());
 
       // Re-add an equivalent node. Check new id, and queries work
@@ -129,15 +141,15 @@ public class TestIntervalTree {
       assertEquals(3, it.query(null, "b").size());
 
       // Remove items from node with multiple values
-      assertTrue(it.discard(ac1));
+      assertTrue(it.remove(ac1));
       assertEquals(3, it.size());
       assertEquals(2, it.query(null, "b").size());
-      assertFalse(it.discard(ac1));
+      assertFalse(it.remove(ac1));
 
-      assertTrue(it.discard(ac2));
+      assertTrue(it.remove(ac2));
       assertEquals(2, it.size());
       assertEquals(1, it.query(null, "b").size());
-      assertFalse(it.discard(ac2));
+      assertFalse(it.remove(ac2));
     }
   }
 

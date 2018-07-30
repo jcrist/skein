@@ -11,5 +11,5 @@ from .skein_pb2 import (GetRangeRequest, GetRangeResponse,
                         KeyValue, Condition, OpRequest, OpResponse,
                         TransactionRequest, TransactionResponse,
                         WatchRequest, WatchCreateRequest, WatchCancelRequest,
-                        WatchResponse, Event)
+                        WatchResponse)
 from .skein_pb2_grpc import DaemonStub, MasterStub
