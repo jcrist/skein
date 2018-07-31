@@ -52,6 +52,7 @@ services:
 def check_basic_methods(obj, obspec2):
     # equality
     assert obj == copy.deepcopy(obj)
+    assert not (obj != copy.deepcopy(obj))
     assert obj != obspec2
     assert obj != 'incorrect_type'
 
