@@ -2,11 +2,15 @@ from __future__ import print_function, division, absolute_import
 
 import copy
 import operator
+import sys
+import weakref
 from collections import MutableMapping, OrderedDict
 
 import pytest
 
 from skein import kv
+from skein.compatibility import Empty
+from skein.exceptions import ConnectionError
 from skein.test.conftest import run_application
 
 
@@ -956,3 +960,354 @@ def test_transaction(kv_test_app):
 
     with pytest.raises(TypeError):
         kv_test_app.kv.transaction(on_failure=[kv.value('foo') == b'bar'])
+
+
+def test_event_filter_type():
+    x = kv.EventFilter()
+    assert x.range_start is None
+    assert x.range_end is None
+    assert x.event_type == kv.EventType.ALL
+
+    assert copy.copy(x) == x
+    assert hash(x) == hash(x)
+
+    # smoketest
+    repr(x)
+
+    x2 = kv.EventFilter(prefix='foo')
+    assert x2.range_start == 'foo'
+    assert x2.range_end == 'fop'
+    assert kv.EventFilter(prefix='foo') == x2
+    assert kv.EventFilter(prefix='bar') != x2
+
+    x3 = kv.EventFilter(key='foo')
+    assert x3.range_start == 'foo'
+    assert x3.range_end == 'foo\x00'
+    assert kv.EventFilter(key='foo') == x3
+    assert kv.EventFilter(key='bar') != x3
+
+    assert kv.EventFilter(event_type='delete').event_type == 'DELETE'
+
+    for k in ['key', 'prefix', 'range_start', 'range_end', 'event_type']:
+        with pytest.raises(TypeError):
+            kv.EventFilter(**{k: b'foo'})
+
+    with pytest.raises(ValueError):
+        kv.EventFilter(key='foo', prefix='bar')
+
+    with pytest.raises(ValueError):
+        kv.EventFilter(event_type='foo')
+
+
+def test_event_queue(kv_test_app):
+    q = kv_test_app.kv.events(prefix='foo')
+    assert len(q.filters) == 1
+    e_foo = next(iter(q.filters))
+
+    # smoketest
+    repr(q)
+
+    # Already subscribed
+    assert q.subscribe(prefix='foo') == e_foo
+    assert len(q.filters) == 1
+
+    # subscribe/unsubscribe with keywords
+    e_bar = q.subscribe(key='bar')
+    assert len(q.filters) == 2
+    assert e_bar in q.filters
+    q.unsubscribe(key='bar')
+    assert len(q.filters) == 1
+    assert e_bar not in q.filters
+
+    # subscribe/unsubscribe with explicit filter
+    e_baz = kv.EventFilter(key='baz')
+    assert q.subscribe(e_baz) == e_baz
+    assert e_baz in q.filters
+    assert q.unsubscribe(e_baz) == e_baz
+    assert e_baz not in q.filters
+
+    with pytest.raises(ValueError):
+        q.unsubscribe(key='missing')
+
+    with pytest.raises(ValueError):
+        q.unsubscribe(event_filter=e_foo, prefix='bar')
+
+    with pytest.raises(TypeError):
+        q.unsubscribe(event_filter='incorrect type')
+
+    # Context manager
+    with q:
+        q.subscribe(prefix='more')
+        assert len(q.filters) == 2
+    assert len(q.filters) == 0
+
+    # Test queue methods
+    q.put(1)
+    assert q.get() == 1
+
+    # Queue is iterable
+    q.put(1)
+    q.put(2)
+    iq = iter(q)
+    next(iq) == 1
+    next(iq) == 2
+
+    # Test queue methods with errors
+    q.put(ValueError("foobar"))
+    for _ in range(2):
+        with pytest.raises(ValueError) as exc:
+            q.get()
+        assert str(exc.value) == 'foobar'
+
+
+def test_event_queue_cleanup(kv_test_app):
+    q = kv_test_app.kv.events(prefix='foo')
+
+    # Put a few events in the queue
+    kv_test_app.kv['foo'] = b'1'
+    del kv_test_app.kv['foo']
+
+    # Clear queue
+    q.get(block=False)
+    q.get(block=False)
+
+    # No extra references
+    assert sys.getrefcount(q) == 2
+
+    # del causes queue to be collected
+    ref = weakref.ref(q)
+    del q
+    assert ref() is None
+
+    # Cleanup on __del__
+    assert len(kv_test_app.kv._filter_to_queues) == 0
+
+
+def read_all(q):
+    out = []
+    while True:
+        try:
+            out.append(q.get(block=False))
+        except Empty:
+            break
+    return out
+
+
+def put_event(k, v, o, filter):
+    return kv.Event(k, kv.ValueOwnerPair(v, o), kv.EventType.PUT, filter)
+
+
+def del_event(k, filter):
+    return kv.Event(k, None, kv.EventType.DELETE, filter)
+
+
+def test_event_ranges(kv_test_app):
+    before_d = kv_test_app.kv.events(range_end='d')
+    after_c = kv_test_app.kv.events(range_start='c')
+    b_to_e = kv_test_app.kv.events(range_start='b', range_end='e')
+    everything = kv_test_app.kv.events()
+
+    kv_test_app.kv.put('a', b'1')
+    kv_test_app.kv.put('b', b'2')
+    kv_test_app.kv.put('c', b'3')
+    kv_test_app.kv.put('d', b'4')
+    kv_test_app.kv.put('e', b'5')
+    kv_test_app.kv.put('f', b'6')
+    kv_test_app.kv.discard_range(start='b', end='d')
+    kv_test_app.kv.discard_range(end='d')
+    kv_test_app.kv.discard_range(start='e')
+    kv_test_app.kv.discard('d')
+    assert len(kv_test_app.kv) == 0
+
+    # Open start
+    filt = next(iter(before_d.filters))
+    res = read_all(before_d)
+    sol = [put_event('a', b'1', None, filt),
+           put_event('b', b'2', None, filt),
+           put_event('c', b'3', None, filt),
+           del_event('b', filt),
+           del_event('c', filt),
+           del_event('a', filt)]
+    assert res == sol
+
+    # Open end
+    filt = next(iter(after_c.filters))
+    res = read_all(after_c)
+    sol = [put_event('c', b'3', None, filt),
+           put_event('d', b'4', None, filt),
+           put_event('e', b'5', None, filt),
+           put_event('f', b'6', None, filt),
+           del_event('c', filt),
+           del_event('e', filt),
+           del_event('f', filt),
+           del_event('d', filt)]
+    assert res == sol
+
+    # Closed start and end
+    filt = next(iter(b_to_e.filters))
+    res = read_all(b_to_e)
+    sol = [put_event('b', b'2', None, filt),
+           put_event('c', b'3', None, filt),
+           put_event('d', b'4', None, filt),
+           del_event('b', filt),
+           del_event('c', filt),
+           del_event('d', filt)]
+    assert res == sol
+
+    # Open start and end
+    filt = next(iter(everything.filters))
+    res = read_all(everything)
+    sol = [put_event('a', b'1', None, filt),
+           put_event('b', b'2', None, filt),
+           put_event('c', b'3', None, filt),
+           put_event('d', b'4', None, filt),
+           put_event('e', b'5', None, filt),
+           put_event('f', b'6', None, filt),
+           del_event('b', filt),
+           del_event('c', filt),
+           del_event('a', filt),
+           del_event('e', filt),
+           del_event('f', filt),
+           del_event('d', filt)]
+    assert res == sol
+
+
+def test_event_types(kv_test_app):
+    put_b_to_e = kv_test_app.kv.events(range_start='b',
+                                       range_end='e',
+                                       event_type='put')
+    del_b_to_e = kv_test_app.kv.events(range_start='b',
+                                       range_end='e',
+                                       event_type='delete')
+
+    kv_test_app.kv.put('a', b'1')
+    kv_test_app.kv.put('b', b'2')
+    kv_test_app.kv.put('c', b'3')
+    kv_test_app.kv.put('d', b'4')
+    kv_test_app.kv.put('e', b'5')
+    kv_test_app.kv.discard_range(start='b', end='d')
+    kv_test_app.kv.discard_range(end='d')
+    kv_test_app.kv.discard_range(start='e')
+    kv_test_app.kv.clear()
+
+    # put
+    filt = next(iter(put_b_to_e.filters))
+    res = read_all(put_b_to_e)
+    sol = [put_event('b', b'2', None, filt),
+           put_event('c', b'3', None, filt),
+           put_event('d', b'4', None, filt)]
+    assert res == sol
+
+    # del
+    filt = next(iter(del_b_to_e.filters))
+    res = read_all(del_b_to_e)
+    sol = [del_event('b', filt),
+           del_event('c', filt),
+           del_event('d', filt)]
+    assert res == sol
+
+
+def test_event_multiple_subscriptions(kv_test_app):
+    q1 = kv_test_app.kv.event_queue()
+    before_b = q1.subscribe(range_end='b')
+    after_c = q1.subscribe(range_start='c')
+
+    q2 = kv_test_app.kv.event_queue()
+    assert q2.subscribe(range_end='b') == before_b
+    after_c_del = q2.subscribe(range_start='c', event_type='delete')
+
+    kv_test_app.kv.put('a', b'1')
+    kv_test_app.kv.put('b', b'2')
+    kv_test_app.kv.put('c', b'3')
+    kv_test_app.kv.put('d', b'4')
+    kv_test_app.kv.discard_range(start='b', end='d')
+    kv_test_app.kv.discard_range(end='d')
+    kv_test_app.kv.discard_range(start='e')
+    kv_test_app.kv.clear()
+
+    res = read_all(q1)
+    sol = [put_event('a', b'1', None, before_b),
+           put_event('c', b'3', None, after_c),
+           put_event('d', b'4', None, after_c),
+           del_event('c', after_c),
+           del_event('a', before_b),
+           del_event('d', after_c)]
+    assert res == sol
+
+    res = read_all(q2)
+    sol = [put_event('a', b'1', None, before_b),
+           del_event('c', after_c_del),
+           del_event('a', before_b),
+           del_event('d', after_c_del)]
+    assert res == sol
+
+
+def test_events_and_ownership(kv_test_app):
+    kv_test_app.scale('sleeper', 2)
+    c1, c2 = (c.id for c in kv_test_app.get_containers())
+
+    q1 = kv_test_app.kv.events(prefix='a')
+    q2 = kv_test_app.kv.events(prefix='a', event_type='put')
+
+    # Create some owned keys
+    kv_test_app.kv.put('a1', value=b'1', owner=c1)
+    kv_test_app.kv.put('a2', value=b'2', owner=c1)
+    kv_test_app.kv.put('a3', value=b'3', owner=c2)
+    kv_test_app.kv.put('a4', value=b'4', owner=c2)
+
+    # Change owner of some
+    kv_test_app.kv.put('a3', owner=c1)
+    kv_test_app.kv.put('a4', owner=None)
+
+    # Delete an owned key
+    del kv_test_app.kv['a1']
+
+    # Kill c1
+    kv_test_app.kill_container(c1)
+
+    # Delete all remaining keys
+    kv_test_app.kv.clear()
+
+    filt = next(iter(q1.filters))
+    res = read_all(q1)
+    sols = [[put_event('a1', b'1', c1, filt),
+             put_event('a2', b'2', c1, filt),
+             put_event('a3', b'3', c2, filt),
+             put_event('a4', b'4', c2, filt),
+             put_event('a3', b'3', c1, filt),
+             put_event('a4', b'4', None, filt)] +
+            [del_event('a1', filt),
+             del_event(x, filt),
+             del_event(y, filt),
+             del_event('a4', filt)]
+            for x, y in [('a2', 'a3'), ('a3', 'a2')]]
+    assert res in sols
+
+    filt = next(iter(q2.filters))
+    res = read_all(q2)
+    sol = [put_event('a1', b'1', c1, filt),
+           put_event('a2', b'2', c1, filt),
+           put_event('a3', b'3', c2, filt),
+           put_event('a4', b'4', c2, filt),
+           put_event('a3', b'3', c1, filt),
+           put_event('a4', b'4', None, filt)]
+    assert res == sol
+
+
+def test_events_application_shutdown(client):
+    with run_application(client) as app:
+        q = app.kv.events(prefix='a')
+        app.kv.put('a1', b'1')
+        app.kv.put('a2', b'2')
+        app.kv.put('a3', b'3')
+        app.shutdown()
+
+    filt = next(iter(q.filters))
+    assert q.get() == put_event('a1', b'1', None, filt)
+    assert q.get() == put_event('a2', b'2', None, filt)
+    assert q.get() == put_event('a3', b'3', None, filt)
+
+    # All further requests error with connection error
+    for _ in range(2):
+        with pytest.raises(ConnectionError):
+            q.get()

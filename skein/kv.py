@@ -15,7 +15,9 @@ from functools import wraps as _wraps
 import grpc as _grpc
 
 from . import proto as _proto
-from .compatibility import bind_method as _bind_method, Queue as _Queue
+from .compatibility import (bind_method as _bind_method,
+                            Queue as _Queue,
+                            string as _string)
 from .exceptions import (ApplicationError as _ApplicationError,
                          ConnectionError as _ConnectionError)
 from .model import (
@@ -86,7 +88,7 @@ class EventType(_Enum):
     _values = ('ALL', 'PUT', 'DELETE')
 
 
-class EventFilter(tuple):
+class EventFilter(object):
     """An event filter.
 
     Specifies a subset of events to watch for. May specify one of ``key``,
@@ -106,8 +108,10 @@ class EventFilter(tuple):
     event_type : EventType, optional.
         The type of event. Default is ``'ALL'``
     """
-    def __new__(cls, key=None, prefix=None, range_start=None,
-                range_end=None, event_type=None):
+    __slots__ = ('_range_start', '_range_end', '_event_type')
+
+    def __init__(self, key=None, prefix=None, range_start=None,
+                 range_end=None, event_type=None):
         has_key = key is not None
         has_prefix = prefix is not None
         has_range = range_start is not None or range_end is not None
@@ -115,26 +119,48 @@ class EventFilter(tuple):
             raise ValueError("Must specify at most one of `key`, `prefix`, or "
                              "`range_start`/`range_end`")
         if has_key:
+            if not isinstance(key, _string):
+                raise TypeError("key must be a string")
             range_start = key
             range_end = key + '\x00'
         elif has_prefix:
+            if not isinstance(prefix, _string):
+                raise TypeError("prefix must be a string")
             range_start = prefix
             range_end = _next_key(prefix)
+        else:
+            if not (range_start is None or isinstance(range_start, _string)):
+                raise TypeError("range_start must be a string or None")
+            if not (range_end is None or isinstance(range_end, _string)):
+                raise TypeError("range_end must be a string or None")
 
         event_type = (EventType.ALL if event_type is None
                       else EventType(event_type))
 
-        return tuple.__new__(cls, (range_start, range_end, event_type))
+        self._range_start = range_start
+        self._range_end = range_end
+        self._event_type = event_type
 
-    range_start = property(lambda s: s[0])
-    range_end = property(lambda s: s[1])
-    event_type = property(lambda s: s[2])
+    range_start = property(lambda s: s._range_start)
+    range_end = property(lambda s: s._range_end)
+    event_type = property(lambda s: s._event_type)
 
     def __repr__(self):
-        return 'EventFilter(range_start=%r, range_end=%r, event_type=%r)' % self
+        return ('EventFilter(range_start=%r, range_end=%r, event_type=%r)'
+                % (self._range_start, self._range_end, self._event_type))
 
     def __reduce__(self):
-        return (EventFilter, (None, None,) + tuple(self))
+        return (EventFilter, (None, None, self.range_start,
+                              self.range_end, self.event_type))
+
+    def __eq__(self, other):
+        return (type(self) is type(other) and
+                self.range_start == other.range_start and
+                self.range_end == other.range_end and
+                self.event_type == other.event_type)
+
+    def __hash__(self):
+        return hash((self.range_start, self._range_end, self.event_type))
 
 
 class Event(_namedtuple('Event',
@@ -241,6 +267,7 @@ class EventQueue(object):
             event_filter = EventFilter(**kwargs)
         return event_filter
 
+    @_wraps(_Queue.get)
     def get(self, block=True, timeout=None):
         if self._exception is not None:
             raise self._exception
@@ -250,19 +277,9 @@ class EventQueue(object):
             raise out
         return out
 
-    def get_nowait(self):
-        return self.get(block=False)
-
-    def qsize(self):
-        return self._queue.qsize()
-
+    @_wraps(_Queue.put)
     def put(self, item, block=True, timeout=None):
-        if self._exception is not None:
-            raise self._exception
         self._queue.put(item, block=block, timeout=timeout)
-
-    def put_nowait(self, item):
-        self.put(item, block=False)
 
     def subscribe(self, event_filter=None, key=None, prefix=None,
                   range_start=None, range_end=None, event_type=None):
@@ -333,6 +350,10 @@ class EventQueue(object):
             If present, specifies the upper bound of the a key range, exclusive.
         event_type : EventType, optional.
             The type of event. Default is ``'ALL'``.
+
+        Returns
+        -------
+        EventFilter
         """
         event_filter = self._build_event_filter(event_filter=event_filter,
                                                 key=key,
@@ -343,7 +364,8 @@ class EventQueue(object):
         if event_filter not in self.filters:
             raise ValueError("not currently subscribed to %r" % (event_filter,))
         self._kv._remove_subscription(self, event_filter)
-        self.filters.remove(event_filter)
+        self.filters.discard(event_filter)
+        return event_filter
 
     def unsubscribe_all(self):
         """Unsubscribe from all event filters"""
@@ -418,9 +440,12 @@ class KeyValueStore(_MutableMapping):
                     all_qs = set(q for qs in self._filter_to_queues.values()
                                  for q in qs)
                     for eq_ref in all_qs:
-                        eq = eq_ref()
-                        if eq is not None:
-                            eq.put(exc)
+                        try:
+                            eq_ref().put(exc)
+                        except AttributeError:  # pragma: nocover
+                            # reference dropped, but __del__ not yet run
+                            # this is hard to test, so no covererage
+                            pass
                     break
 
             watch_id = resp.watch_id
@@ -436,19 +461,21 @@ class KeyValueStore(_MutableMapping):
                 event_type = EventType(_proto.WatchResponse.Type.Name(resp.type))
                 with self._lock:
                     event_filter = self._id_to_filter.get(watch_id)
-                    if event_filter is None:
-                        continue
-                    for kv in resp.event:
-                        event = Event(key=kv.key,
-                                      result=(_value_owner_pair(kv)
-                                              if event_type == EventType.PUT
-                                              else None),
-                                      event_filter=event_filter,
-                                      event_type=event_type)
-                        for eq_ref in self._filter_to_queues[event_filter]:
-                            eq = eq_ref()
-                            if eq is not None:
-                                eq.put(event)
+                    if event_filter is not None:
+                        for kv in resp.event:
+                            event = Event(key=kv.key,
+                                          result=(_value_owner_pair(kv)
+                                                  if event_type == EventType.PUT
+                                                  else None),
+                                          event_filter=event_filter,
+                                          event_type=event_type)
+                            for eq_ref in self._filter_to_queues[event_filter]:
+                                try:
+                                    eq_ref().put(event)
+                                except AttributeError:  # pragma: nocover
+                                    # reference dropped, but __del__ not yet run
+                                    # this is hard to test, so no covererage
+                                    pass
 
     def _input_iter(self):
         while True:
