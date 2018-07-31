@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.0.4+6.g0c70322 documentation</title>
+    <title>API Docs &#8212; Skein 0.0.4+7.g2f8d2d7 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -474,11 +474,12 @@ Default is <code class="docutils literal notranslate"><span class="pre">['WAITIN
 <dd><p>The Skein Key-Value store.</p>
 <p>Used by applications to coordinate configuration and global state.</p>
 <p>This implements the standard MutableMapping interface, along with the
-ability to “wait” for keys to be set.</p>
+ability to “wait” for keys to be set. Keys are strings, with values as
+bytes.</p>
 <p class="rubric">Examples</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app_client</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;bar&#39;</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app_client</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;bar&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">app_client</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">]</span>
-<span class="go">&#39;bar&#39;</span>
+<span class="go">b&#39;bar&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">del</span> <span class="n">app_client</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;foo&#39;</span> <span class="ow">in</span> <span class="n">app_client</span><span class="o">.</span><span class="n">kv</span>
 <span class="go">False</span>
@@ -550,22 +551,1491 @@ order of state (<cite>WAITING</cite>, <cite>REQUESTED</cite>, <cite>RUNNING</cit
 <div class="section" id="key-value-store">
 <h2>Key Value Store<a class="headerlink" href="#key-value-store" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
-<dt id="skein.core.KeyValueStore">
-<em class="property">class </em><code class="descclassname">skein.core.</code><code class="descname">KeyValueStore</code><span class="sig-paren">(</span><em>client</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.core.KeyValueStore" title="Permalink to this definition">¶</a></dt>
+<dt id="skein.kv.KeyValueStore">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">KeyValueStore</code><span class="sig-paren">(</span><em>client</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore" title="Permalink to this definition">¶</a></dt>
 <dd><p>The Skein Key-Value store.</p>
 <p>Used by applications to coordinate configuration and global state.</p>
-<p>This implements the standard MutableMapping interface, along with the
-ability to “wait” for keys to be set.</p>
 <dl class="method">
-<dt id="skein.core.KeyValueStore.to_dict">
-<code class="descname">to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.core.KeyValueStore.to_dict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the whole key-value store as a dictionary</p>
+<dt id="skein.kv.KeyValueStore.clear">
+<code class="descname">clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None.  Remove all items from D.<a class="headerlink" href="#skein.kv.KeyValueStore.clear" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.count">
+<code class="descname">count</code><span class="sig-paren">(</span><em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Count keys in the key-value store.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The lower bound of the key range, inclusive. If not provided no
+lower bound will be used.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The upper bound of the key range, exclusive. If not provided, no
+upper bound will be used.</p>
+</dd>
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If provided, will count the number keys matching this prefix.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>int</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
-<dt id="skein.core.KeyValueStore.wait">
-<code class="descname">wait</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.core.KeyValueStore.wait" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get a key from the key-value store, blocking until the key is set.</p>
+<dt id="skein.kv.KeyValueStore.discard">
+<code class="descname">discard</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard" title="Permalink to this definition">¶</a></dt>
+<dd><p>Discard a single key.</p>
+<p>Returns true if the key was present, false otherwise.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to discard.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>bool</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.discard_prefix">
+<code class="descname">discard_prefix</code><span class="sig-paren">(</span><em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard_prefix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Discard all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</p>
+<p>Returns either the number of keys discarded or a list of those keys,
+depending on the value of <code class="docutils literal notranslate"><span class="pre">return_keys</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key prefix.</p>
+</dd>
+<dt><strong>return_keys</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the discarded keys will be returned instead of their count.
+Default is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>int or list of keys</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.discard_range">
+<code class="descname">discard_range</code><span class="sig-paren">(</span><em>end=None</em>, <em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>Discard a range of keys.</p>
+<p>Returns either the number of keys discarded or a list of those keys,
+depending on the value of <code class="docutils literal notranslate"><span class="pre">return_keys</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The lower bound of the key range, inclusive. If not provided no lower
+bound will be used.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The upper bound of the key range, exclusive. If not provided, no upper
+bound will be used.</p>
+</dd>
+<dt><strong>return_keys</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the discarded keys will be returned instead of their count.
+Default is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>int or list of keys</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.event_queue">
+<code class="descname">event_queue</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.event_queue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new EventQueue subscribed to no events.</p>
+<p class="rubric">Examples</p>
+<p>Subscribe to events starting with <code class="docutils literal notranslate"><span class="pre">'foo'</span></code> or <code class="docutils literal notranslate"><span class="pre">'bar'</span></code>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">EventFilter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bar</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">EventFilter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">event_queue</span><span class="p">()</span>              
+<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">foo</span><span class="p">)</span>                      
+<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">bar</span><span class="p">)</span>                      
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">queue</span><span class="p">:</span>                       
+<span class="gp">... </span>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">filter</span> <span class="o">==</span> <span class="n">foo</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;foo event&quot;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="k">else</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;bar event&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.events">
+<code class="descname">events</code><span class="sig-paren">(</span><em>event_filter=None</em>, <em>key=None</em>, <em>prefix=None</em>, <em>start=None</em>, <em>end=None</em>, <em>event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.events" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shorthand for creating an EventQueue and adding a single filter.</p>
+<p>May provide either an explicit event filter, or provide arguments to
+create a new one and add it to the queue.</p>
+<p>If no arguments are provided, creates a queue subscribed to all events.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>event_filter</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventFilter</span></dt>
+<dd><p class="first last">An explicit EventFilter. If provided, no other keyword arguments
+may be provided.</p>
+</dd>
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, only events from this key will be selected.</p>
+</dd>
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, only events with this key prefix will be selected.</p>
+</dd>
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, specifies the lower bound of the key range, inclusive.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, specifies the upper bound of the key range, exclusive.</p>
+</dd>
+<dt><strong>event_type</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventType, optional.</span></dt>
+<dd><p class="first last">The type of event. Default is <code class="docutils literal notranslate"><span class="pre">'ALL'</span></code>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>EventQueue</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>Subscribe to all events with prefix <code class="docutils literal notranslate"><span class="pre">'foo'</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">):</span>  
+<span class="gp">... </span>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;PUT&#39;</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PUT&lt;key=</span><span class="si">%r</span><span class="s2">, value=</span><span class="si">%r</span><span class="s2">&gt;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">value</span><span class="p">))</span>
+<span class="gp">... </span>    <span class="k">else</span><span class="p">:</span>  <span class="c1"># DELETE</span>
+<span class="gp">... </span>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DELETE&lt;key=</span><span class="si">%r</span><span class="s2">&gt;&quot;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+<span class="go">PUT&lt;key=&#39;foo&#39;, value=b&#39;bar&#39;&gt;</span>
+<span class="go">PUT&lt;key=&#39;food&#39;, value=b&#39;biz&#39;&gt;</span>
+<span class="go">DELETE&lt;key=&#39;food&#39;&gt;</span>
+<span class="go">PUT&lt;key=&#39;foo&#39;, value=b&#39;changed&#39;&gt;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.exists">
+<code class="descname">exists</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a key exists in the key-value store.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to check the presence of.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>bool</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the value associated with a single key.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to get.</p>
+</dd>
+<dt><strong>default</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes or None, optional</span></dt>
+<dd><p class="first last">Default value to return if the key is not present.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>bytes or ValueOwnerPair</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.get_prefix">
+<code class="descname">get_prefix</code><span class="sig-paren">(</span><em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get_prefix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key prefix.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>OrderedDict</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.get_range">
+<code class="descname">get_range</code><span class="sig-paren">(</span><em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a range of keys.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The lower bound of the key range, inclusive. If not provided no lower
+bound will be used.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The upper bound of the key range, exclusive. If not provided, no upper
+bound will be used.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>OrderedDict</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.items">
+<code class="descname">items</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; a set-like object providing a view on D's items<a class="headerlink" href="#skein.kv.KeyValueStore.items" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.keys">
+<code class="descname">keys</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; a set-like object providing a view on D's keys<a class="headerlink" href="#skein.kv.KeyValueStore.keys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.list_keys">
+<code class="descname">list_keys</code><span class="sig-paren">(</span><em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.list_keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of keys in the key-value store.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The lower bound of the key range, inclusive. If not provided no
+lower bound will be used.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The upper bound of the key range, exclusive. If not provided, no
+upper bound will be used.</p>
+</dd>
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If provided, will return all keys matching this prefix.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of keys</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.missing">
+<code class="descname">missing</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.missing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a key is not in the key-value store.</p>
+<p>This is the inverse of <code class="docutils literal notranslate"><span class="pre">exists</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to check the absence of.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>bool</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.pop">
+<code class="descname">pop</code><span class="sig-paren">(</span><em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a single key and return its corresponding value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to pop.</p>
+</dd>
+<dt><strong>default</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes or None, optional</span></dt>
+<dd><p class="first last">Default value to return if the key is not present.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>bytes or ValueOwnerPair</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.pop_prefix">
+<code class="descname">pop_prefix</code><span class="sig-paren">(</span><em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop_prefix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>, and return
+their corresponding values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key prefix.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>OrderedDict</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.pop_range">
+<code class="descname">pop_range</code><span class="sig-paren">(</span><em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a range of keys and return their corresponding values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The lower bound of the key range, inclusive. If not provided no lower
+bound will be used.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The upper bound of the key range, exclusive. If not provided, no upper
+bound will be used.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>OrderedDict</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.popitem">
+<code class="descname">popitem</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; (k, v), remove and return some (key, value) pair<a class="headerlink" href="#skein.kv.KeyValueStore.popitem" title="Permalink to this definition">¶</a></dt>
+<dd><p>as a 2-tuple; but raise KeyError if D is empty.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.put">
+<code class="descname">put</code><span class="sig-paren">(</span><em>value=no_change</em>, <em>owner=no_change</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.put" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign a value and/or owner for a single key.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to put.</p>
+</dd>
+<dt><strong>value</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes, optional</span></dt>
+<dd><p class="first last">The value to put. Default is to leave value unchanged;
+an error will be raised if the key doesn’t exist.</p>
+</dd>
+<dt><strong>owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str or None, optional</span></dt>
+<dd><p class="first last">The container id to claim ownership. Provide <code class="docutils literal notranslate"><span class="pre">None</span></code> to set to
+no owner. Default is to leave value unchanged.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.setdefault">
+<code class="descname">setdefault</code><span class="sig-paren">(</span><em>key</em>, <em>default</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.setdefault" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the value associated with key, setting it to default if
+not present.</p>
+<p>This transaction happens atomically on the key-value store.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key</p>
+</dd>
+<dt><strong>default</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes</span></dt>
+<dd><p class="first last">The default value to set if the key isn’t present.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>value</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes</span></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.swap">
+<code class="descname">swap</code><span class="sig-paren">(</span><em>value=no_change</em>, <em>owner=no_change</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.swap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign a new value and/or owner for a single key, and return the
+previous value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to put.</p>
+</dd>
+<dt><strong>value</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes, optional</span></dt>
+<dd><p class="first last">The value to put. Default is to leave value unchanged;
+an error will be raised if the key doesn’t exist.</p>
+</dd>
+<dt><strong>owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str or None, optional</span></dt>
+<dd><p class="first last">The container id to claim ownership. Provide <code class="docutils literal notranslate"><span class="pre">None</span></code> to set to
+no owner. Default is to leave value unchanged.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>bytes or ValueOwnerPair</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.transaction">
+<code class="descname">transaction</code><span class="sig-paren">(</span><em>conditions=None</em>, <em>on_success=None</em>, <em>on_failure=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.transaction" title="Permalink to this definition">¶</a></dt>
+<dd><p>An atomic transaction on the key-value store.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>conditions</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Condition or sequence of Conditions, optional</span></dt>
+<dd><p class="first last">A sequence of conditions to evaluate together. The conditional
+expression succeeds if all conditions evaluate to True, and fails
+otherwise. If no conditions are provided the conditional expression
+also succeeds.</p>
+</dd>
+<dt><strong>on_success</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Operation or sequence of Operation, optional</span></dt>
+<dd><p class="first last">A sequence of operations to apply if all conditions evaluate to
+True.</p>
+</dd>
+<dt><strong>on_failure</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Operation or sequence of Operation, optional</span></dt>
+<dd><p class="first last">A sequence of operations to apply if any condition evaluates to
+False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>result</strong> <span class="classifier-delimiter">:</span> <span class="classifier">TransactionResult</span></dt>
+<dd><p class="first last">A namedtuple of (succeeded, results), where results is a list of
+results from either the <code class="docutils literal notranslate"><span class="pre">on_success</span></code> or <code class="docutils literal notranslate"><span class="pre">on_failure</span></code>
+operations, depending on which branch was evaluated.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>This implements an atomic <a class="reference external" href="https://en.wikipedia.org/wiki/Compare-and-swap">compare-and-swap</a> operation, a useful
+concurrency primitive. It sets <code class="docutils literal notranslate"><span class="pre">key</span></code> to <code class="docutils literal notranslate"><span class="pre">new</span></code> only if it currently
+is <code class="docutils literal notranslate"><span class="pre">prev</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">skein</span> <span class="k">import</span> <span class="n">kv</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">new</span><span class="p">,</span> <span class="n">prev</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">result</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">transaction</span><span class="p">(</span>
+<span class="gp">... </span>        <span class="n">conditions</span><span class="o">=</span><span class="p">[</span><span class="n">kv</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">==</span> <span class="n">prev</span><span class="p">],</span>  <span class="c1"># if key == prev</span>
+<span class="gp">... </span>        <span class="n">on_success</span><span class="o">=</span><span class="p">[</span><span class="n">kv</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">new</span><span class="p">)])</span>       <span class="c1"># then set key = new</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">succeeded</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span>  
+</pre></div>
+</div>
+<p>Since <code class="docutils literal notranslate"><span class="pre">'key'</span></code> currently is <code class="docutils literal notranslate"><span class="pre">b'value'</span></code>, the conditional expression
+succeeds and <code class="docutils literal notranslate"><span class="pre">'key'</span></code> is set to <code class="docutils literal notranslate"><span class="pre">b'new_value'</span></code></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;new_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>  
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>Since <code class="docutils literal notranslate"><span class="pre">'key'</span></code> currently is <code class="docutils literal notranslate"><span class="pre">b'value'</span></code> and not <code class="docutils literal notranslate"><span class="pre">b'wrong'</span></code>, the
+conditional expression fails and <code class="docutils literal notranslate"><span class="pre">'key'</span></code> remains unchanged.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;another_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;wrong&#39;</span><span class="p">)</span>  
+<span class="go">False</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the key-value store with multiple key-value pairs atomically.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>arg</strong> <span class="classifier-delimiter">:</span> <span class="classifier">mapping or iterable, optional</span></dt>
+<dd><p class="first last">Either a mapping or an iterable of <code class="docutils literal notranslate"><span class="pre">(key,</span> <span class="pre">value)</span></code>.</p>
+</dd>
+<dt><strong>**kwargs</strong></dt>
+<dd><p class="first last">Extra key-value pairs to set. Semantically these are applied after
+any present in <code class="docutils literal notranslate"><span class="pre">arg</span></code>, and will thus override any intersecting
+keys between the two.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.values">
+<code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; an object providing a view on D's values<a class="headerlink" href="#skein.kv.KeyValueStore.values" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.KeyValueStore.wait">
+<code class="descname">wait</code><span class="sig-paren">(</span><em>key</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.wait" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the value associated with a single key, blocking until the key
+exists if not present.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to get.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>bytes or ValueOwnerPair</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.ValueOwnerPair">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">ValueOwnerPair</code><a class="headerlink" href="#skein.kv.ValueOwnerPair" title="Permalink to this definition">¶</a></dt>
+<dd><p>A (value, owner) pair in the key-value store.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>value</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes</span></dt>
+<dd><p class="first last">The value.</p>
+</dd>
+<dt><strong>owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str or None</span></dt>
+<dd><p class="first last">The owner container_id, or None for no owner.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.count">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">count</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.count" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to count keys in the key-value store.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The lower bound of the key range, inclusive. If not provided no
+lower bound will be used.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The upper bound of the key range, exclusive. If not provided, no
+upper bound will be used.</p>
+</dd>
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If provided, will count the number keys matching this prefix.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">count</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span></dt>
+<dd><p>A request to count keys in the key-value store.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The lower bound of the key range, inclusive. If not provided no
+lower bound will be used.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The upper bound of the key range, exclusive. If not provided, no
+upper bound will be used.</p>
+</dd>
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If provided, will count the number keys matching this prefix.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.list_keys">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">list_keys</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.list_keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to get a list of keys in the key-value store.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The lower bound of the key range, inclusive. If not provided no
+lower bound will be used.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The upper bound of the key range, exclusive. If not provided, no
+upper bound will be used.</p>
+</dd>
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If provided, will return all keys matching this prefix.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.exists">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">exists</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to check if a key exists in the key-value store.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to check the presence of.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.missing">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">missing</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.missing" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to check if a key is not in the key-value store.</p>
+<p>This is the inverse of <code class="docutils literal notranslate"><span class="pre">exists</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to check the absence of.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.get">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">get</code><span class="sig-paren">(</span><em>key</em>, <em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to get the value associated with a single key.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to get.</p>
+</dd>
+<dt><strong>default</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes or None, optional</span></dt>
+<dd><p class="first last">Default value to return if the key is not present.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.get_prefix">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">get_prefix</code><span class="sig-paren">(</span><em>prefix</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.get_prefix" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to get all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key prefix.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.get_range">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">get_range</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.get_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to get a range of keys.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The lower bound of the key range, inclusive. If not provided no lower
+bound will be used.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The upper bound of the key range, exclusive. If not provided, no upper
+bound will be used.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.pop">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">pop</code><span class="sig-paren">(</span><em>key</em>, <em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.pop" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to remove a single key and return its corresponding value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to pop.</p>
+</dd>
+<dt><strong>default</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes or None, optional</span></dt>
+<dd><p class="first last">Default value to return if the key is not present.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.pop_prefix">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">pop_prefix</code><span class="sig-paren">(</span><em>prefix</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.pop_prefix" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to remove all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>,
+and return their corresponding values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key prefix.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.pop_range">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">pop_range</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.pop_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to remove a range of keys and return their corresponding values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The lower bound of the key range, inclusive. If not provided no lower
+bound will be used.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The upper bound of the key range, exclusive. If not provided, no upper
+bound will be used.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.discard">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">discard</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.discard" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to discard a single key.</p>
+<p>Returns true if the key was present, false otherwise.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to discard.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.discard_prefix">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">discard_prefix</code><span class="sig-paren">(</span><em>prefix</em>, <em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.discard_prefix" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to discard all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</p>
+<p>Returns either the number of keys discarded or a list of those keys,
+depending on the value of <code class="docutils literal notranslate"><span class="pre">return_keys</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key prefix.</p>
+</dd>
+<dt><strong>return_keys</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the discarded keys will be returned instead of their count.
+Default is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.discard_range">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">discard_range</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.discard_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to discard a range of keys.</p>
+<p>Returns either the number of keys discarded or a list of those keys,
+depending on the value of <code class="docutils literal notranslate"><span class="pre">return_keys</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The lower bound of the key range, inclusive. If not provided no lower
+bound will be used.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The upper bound of the key range, exclusive. If not provided, no upper
+bound will be used.</p>
+</dd>
+<dt><strong>return_keys</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the discarded keys will be returned instead of their count.
+Default is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.put">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">put</code><span class="sig-paren">(</span><em>key</em>, <em>value=no_change</em>, <em>owner=no_change</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.put" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to assign a value and/or owner for a single key.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to put.</p>
+</dd>
+<dt><strong>value</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes, optional</span></dt>
+<dd><p class="first last">The value to put. Default is to leave value unchanged;
+an error will be raised if the key doesn’t exist.</p>
+</dd>
+<dt><strong>owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str or None, optional</span></dt>
+<dd><p class="first last">The container id to claim ownership. Provide <code class="docutils literal notranslate"><span class="pre">None</span></code> to set to
+no owner. Default is to leave value unchanged.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.swap">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">swap</code><span class="sig-paren">(</span><em>key</em>, <em>value=no_change</em>, <em>owner=no_change</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.swap" title="Permalink to this definition">¶</a></dt>
+<dd><p>A request to assign a new value and/or owner for a single key, and
+return the previous value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to put.</p>
+</dd>
+<dt><strong>value</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes, optional</span></dt>
+<dd><p class="first last">The value to put. Default is to leave value unchanged;
+an error will be raised if the key doesn’t exist.</p>
+</dd>
+<dt><strong>owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str or None, optional</span></dt>
+<dd><p class="first last">The container id to claim ownership. Provide <code class="docutils literal notranslate"><span class="pre">None</span></code> to set to
+no owner. Default is to leave value unchanged.</p>
+</dd>
+<dt><strong>return_owner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the owner will also be returned along with the value. Default
+is False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.TransactionResult">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">TransactionResult</code><a class="headerlink" href="#skein.kv.TransactionResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>A result from a key-value store transaction.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>succeeded</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">Whether the transaction conditions evaluated to True.</p>
+</dd>
+<dt><strong>results</strong> <span class="classifier-delimiter">:</span> <span class="classifier">sequence</span></dt>
+<dd><p class="first last">A sequence of results from applying all operations in the transaction
+<code class="docutils literal notranslate"><span class="pre">on_success</span></code> or <code class="docutils literal notranslate"><span class="pre">on_failure</span></code> parameters, depending on whether the
+conditions evaluated to True or False.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.value">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">value</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents the value for a key, for use in transaction conditions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to lookup</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.owner">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">owner</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.owner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents the owner for a key, for use in transaction conditions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key to lookup</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.comparison">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">comparison</code><span class="sig-paren">(</span><em>key</em>, <em>field</em>, <em>operator</em>, <em>rhs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.comparison" title="Permalink to this definition">¶</a></dt>
+<dd><p>A comparison of the value or owner for a specified key.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The corresponding key.</p>
+</dd>
+<dt><strong>field</strong> <span class="classifier-delimiter">:</span> <span class="classifier">{‘value’, ‘owner’}</span></dt>
+<dd><p class="first last">The field to compare on.</p>
+</dd>
+<dt><strong>operator</strong> <span class="classifier-delimiter">:</span> <span class="classifier">{‘==’, ‘!=’, ‘&gt;’, ‘&gt;=’, ‘&lt;’, ‘&lt;=’}</span></dt>
+<dd><p class="first last">The comparison operator to use.</p>
+</dd>
+<dt><strong>rhs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes, str or None</span></dt>
+<dd><p class="first last">The right-hand-side of the condition expression.
+Must be a <code class="docutils literal notranslate"><span class="pre">bytes</span></code> if  <code class="docutils literal notranslate"><span class="pre">field='value'</span></code>, or <code class="docutils literal notranslate"><span class="pre">str</span></code> or <code class="docutils literal notranslate"><span class="pre">None</span></code> if
+<code class="docutils literal notranslate"><span class="pre">field='owner'</span></code>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="skein.kv.is_condition">
+<code class="descclassname">skein.kv.</code><code class="descname">is_condition</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.is_condition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return if <code class="docutils literal notranslate"><span class="pre">x</span></code> is a valid skein key-value store condition</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="skein.kv.is_operation">
+<code class="descclassname">skein.kv.</code><code class="descname">is_operation</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.is_operation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return if <code class="docutils literal notranslate"><span class="pre">obj</span></code> is a valid skein key-value store operation</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.EventType">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">EventType</code><a class="headerlink" href="#skein.kv.EventType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Event types to listen on.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Attributes:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>ALL</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventType</span></dt>
+<dd><p class="first last">All events.</p>
+</dd>
+<dt><strong>PUT</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventType</span></dt>
+<dd><p class="first last">Only <code class="docutils literal notranslate"><span class="pre">PUT</span></code> events.</p>
+</dd>
+<dt><strong>DELETE</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventType</span></dt>
+<dd><p class="first last">Only <code class="docutils literal notranslate"><span class="pre">DELETE</span></code> events.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.Event">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">Event</code><a class="headerlink" href="#skein.kv.Event" title="Permalink to this definition">¶</a></dt>
+<dd><p>An event in the key-value store.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The key affected.</p>
+</dd>
+<dt><strong>result</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ValueOwnerPair or None</span></dt>
+<dd><p class="first last">The value and owner for the key.  None if a <code class="docutils literal notranslate"><span class="pre">'DELETE'</span></code> event.</p>
+</dd>
+<dt><strong>event_type</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventType</span></dt>
+<dd><p class="first last">The type of event.</p>
+</dd>
+<dt><strong>event_filter</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventFilter</span></dt>
+<dd><p class="first last">The event filter that generated the event.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.EventFilter">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">EventFilter</code><span class="sig-paren">(</span><em>key=None</em>, <em>prefix=None</em>, <em>start=None</em>, <em>end=None</em>, <em>event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>An event filter.</p>
+<p>Specifies a subset of events to watch for. May specify one of <code class="docutils literal notranslate"><span class="pre">key</span></code>,
+<code class="docutils literal notranslate"><span class="pre">prefix</span></code>, or <code class="docutils literal notranslate"><span class="pre">start</span></code>/<code class="docutils literal notranslate"><span class="pre">end</span></code>. If no parameters are
+provided, selects all events.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, only events from this key will be selected.</p>
+</dd>
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, only events with this key prefix will be selected.</p>
+</dd>
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, specifies the lower bound of the key range, inclusive.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, specifies the upper bound of the key range, exclusive.</p>
+</dd>
+<dt><strong>event_type</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventType, optional.</span></dt>
+<dd><p class="first last">The type of event. Default is <code class="docutils literal notranslate"><span class="pre">'ALL'</span></code></p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.kv.EventQueue">
+<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">EventQueue</code><span class="sig-paren">(</span><em>kv</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue" title="Permalink to this definition">¶</a></dt>
+<dd><p>A queue of events on the key-value store.</p>
+<p>Besides the normal <code class="docutils literal notranslate"><span class="pre">Queue</span></code> interface, also supports iteration.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If an event falls into multiple selected filters, it will be placed in the
+event queue once for each filter. For example, <code class="docutils literal notranslate"><span class="pre">prefix='bar'</span></code> and
+<code class="docutils literal notranslate"><span class="pre">key='bart'</span></code> would both recieve events on <code class="docutils literal notranslate"><span class="pre">key='bart'</span></code>. If a queue was
+subscribed to both events, changes to this key would be placed in the queue
+twice, once for each filter.</p>
+<p>All events are unsubscribed when this object is collected. Can also be used
+as a contextmanager to unsubscribe-all on <code class="docutils literal notranslate"><span class="pre">__exit__</span></code>, or explicitly call
+<code class="docutils literal notranslate"><span class="pre">unsubscribe_all</span></code>.</p>
+<dl class="method">
+<dt id="skein.kv.EventQueue.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>block=True</em>, <em>timeout=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove and return an item from the queue.</p>
+<p>If optional args ‘block’ is true and ‘timeout’ is None (the default),
+block if necessary until an item is available. If ‘timeout’ is
+a non-negative number, it blocks at most ‘timeout’ seconds and raises
+the Empty exception if no item was available within that time.
+Otherwise (‘block’ is false), return an item if one is immediately
+available, else raise the Empty exception (‘timeout’ is ignored
+in that case).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.EventQueue.put">
+<code class="descname">put</code><span class="sig-paren">(</span><em>item</em>, <em>block=True</em>, <em>timeout=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.put" title="Permalink to this definition">¶</a></dt>
+<dd><p>Put an item into the queue.</p>
+<p>If optional args ‘block’ is true and ‘timeout’ is None (the default),
+block if necessary until a free slot is available. If ‘timeout’ is
+a non-negative number, it blocks at most ‘timeout’ seconds and raises
+the Full exception if no free slot was available within that time.
+Otherwise (‘block’ is false), put an item on the queue if a free slot
+is immediately available, else raise the Full exception (‘timeout’
+is ignored in that case).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.EventQueue.subscribe">
+<code class="descname">subscribe</code><span class="sig-paren">(</span><em>event_filter=None</em>, <em>key=None</em>, <em>prefix=None</em>, <em>start=None</em>, <em>end=None</em>, <em>event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.subscribe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Subscribe to an event filter.</p>
+<p>May provide either an explicit event filter, or provide arguments to
+create a new one and add it to the queue. In either case, the event
+filter is returned.</p>
+<p>If no arguments are provided, subscribes to all events.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>event_filter</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventFilter</span></dt>
+<dd><p class="first last">An explicit EventFilter. If provided, no other keyword arguments
+may be provided.</p>
+</dd>
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, only events from this key will be selected.</p>
+</dd>
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, only events with this key prefix will be selected.</p>
+</dd>
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, specifies the lower bound of the key range, inclusive.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, specifies the upper bound of the key range, exclusive.</p>
+</dd>
+<dt><strong>event_type</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventType, optional.</span></dt>
+<dd><p class="first last">The type of event. Default is <code class="docutils literal notranslate"><span class="pre">'ALL'</span></code>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>EventFilter</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.EventQueue.unsubscribe">
+<code class="descname">unsubscribe</code><span class="sig-paren">(</span><em>event_filter=None</em>, <em>key=None</em>, <em>prefix=None</em>, <em>start=None</em>, <em>end=None</em>, <em>event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.unsubscribe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unsubscribe from an event filter.</p>
+<p>May provide either an explicit event filter, or provide arguments to
+create a new one and add it to the queue.</p>
+<p>If no arguments are provided, unsubscribes from a filter of all events.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> is raised if the specified filter isn’t currently
+subscribed to.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>event_filter</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventFilter</span></dt>
+<dd><p class="first last">An explicit EventFilter. If provided, no other keyword arguments
+may be provided.</p>
+</dd>
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, only events from this key will be selected.</p>
+</dd>
+<dt><strong>prefix</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, only events with this key prefix will be selected.</p>
+</dd>
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, specifies the lower bound of the key range, inclusive.</p>
+</dd>
+<dt><strong>end</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">If present, specifies the upper bound of the key range, exclusive.</p>
+</dd>
+<dt><strong>event_type</strong> <span class="classifier-delimiter">:</span> <span class="classifier">EventType, optional.</span></dt>
+<dd><p class="first last">The type of event. Default is <code class="docutils literal notranslate"><span class="pre">'ALL'</span></code>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>EventFilter</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.kv.EventQueue.unsubscribe_all">
+<code class="descname">unsubscribe_all</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.unsubscribe_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unsubscribe from all event filters</p>
 </dd></dl>
 
 </dd></dl>
@@ -1170,29 +2640,9 @@ error on application submission.</p>
 </tbody>
 </table>
 <dl class="classmethod">
-<dt id="skein.model.ApplicationReport.from_dict">
-<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.from_dict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create an instance from a dict.</p>
-<p>Keys in the dict should match parameter names</p>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="skein.model.ApplicationReport.from_json">
-<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.from_json" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create an instance from a json string.</p>
-<p>Keys in the json object should match parameter names</p>
-</dd></dl>
-
-<dl class="classmethod">
 <dt id="skein.model.ApplicationReport.from_protobuf">
 <em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="skein.model.ApplicationReport.from_yaml">
-<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.from_yaml" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create an instance from a yaml string.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -1202,27 +2652,9 @@ error on application submission.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="skein.model.ApplicationReport.to_dict">
-<code class="descname">to_dict</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.to_dict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert object to a dict</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="skein.model.ApplicationReport.to_json">
-<code class="descname">to_json</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.to_json" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert object to a json string</p>
-</dd></dl>
-
-<dl class="method">
 <dt id="skein.model.ApplicationReport.to_protobuf">
 <code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="skein.model.ApplicationReport.to_yaml">
-<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.to_yaml" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert object to a yaml string</p>
 </dd></dl>
 
 </dd></dl>
@@ -1262,53 +2694,15 @@ number of seconds the application has been running.</p>
 </tbody>
 </table>
 <dl class="classmethod">
-<dt id="skein.model.ResourceUsageReport.from_dict">
-<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.from_dict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create an instance from a dict.</p>
-<p>Keys in the dict should match parameter names</p>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="skein.model.ResourceUsageReport.from_json">
-<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.from_json" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create an instance from a json string.</p>
-<p>Keys in the json object should match parameter names</p>
-</dd></dl>
-
-<dl class="classmethod">
 <dt id="skein.model.ResourceUsageReport.from_protobuf">
 <em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="skein.model.ResourceUsageReport.from_yaml">
-<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.from_yaml" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create an instance from a yaml string.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="skein.model.ResourceUsageReport.to_dict">
-<code class="descname">to_dict</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.to_dict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert object to a dict</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="skein.model.ResourceUsageReport.to_json">
-<code class="descname">to_json</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.to_json" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert object to a json string</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.model.ResourceUsageReport.to_protobuf">
 <code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="skein.model.ResourceUsageReport.to_yaml">
-<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.to_yaml" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert object to a yaml string</p>
 </dd></dl>
 
 </dd></dl>

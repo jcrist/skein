@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Index &#8212; Skein 0.0.4+6.g0c70322 documentation</title>
+    <title>Index &#8212; Skein 0.0.4+7.g2f8d2d7 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -40,12 +40,19 @@
  | <a href="#A"><strong>A</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
+ | <a href="#I"><strong>I</strong></a>
  | <a href="#K"><strong>K</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#O"><strong>O</strong></a>
+ | <a href="#P"><strong>P</strong></a>
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
  | <a href="#W"><strong>W</strong></a>
  
@@ -117,7 +124,9 @@
 </li>
         <li><a href="cli.html#cmdoption-skein-kv-get-help">skein-kv-get command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-skein-kv-set-help">skein-kv-set command line option</a>
+        <li><a href="cli.html#cmdoption-skein-kv-ls-help">skein-kv-ls command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-kv-put-help">skein-kv-put command line option</a>
 </li>
       </ul></li>
   </ul></td>
@@ -137,7 +146,7 @@
 </li>
         <li><a href="cli.html#cmdoption-skein-kv-get-key">skein-kv-get command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-skein-kv-set-key">skein-kv-set command line option</a>
+        <li><a href="cli.html#cmdoption-skein-kv-put-key">skein-kv-put command line option</a>
 </li>
       </ul></li>
       <li>
@@ -195,7 +204,7 @@
     --value &lt;value&gt;
 
       <ul>
-        <li><a href="cli.html#cmdoption-skein-kv-set-value">skein-kv-set command line option</a>
+        <li><a href="cli.html#cmdoption-skein-kv-put-value">skein-kv-put command line option</a>
 </li>
       </ul></li>
       <li>
@@ -240,7 +249,9 @@
 </li>
         <li><a href="cli.html#cmdoption-skein-kv-get-arg-app-id">skein-kv-get command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-skein-kv-set-arg-app-id">skein-kv-set command line option</a>
+        <li><a href="cli.html#cmdoption-skein-kv-ls-arg-app-id">skein-kv-ls command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-kv-put-arg-app-id">skein-kv-put command line option</a>
 </li>
       </ul></li>
   </ul></td>
@@ -265,15 +276,23 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.KeyValueStore.clear">clear() (skein.kv.KeyValueStore method)</a>
+</li>
       <li><a href="api.html#skein.Client">Client (class in skein)</a>
 </li>
       <li><a href="api.html#skein.Client.close">close() (skein.Client method)</a>
+</li>
+      <li><a href="api.html#skein.kv.comparison">comparison (class in skein.kv)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#skein.Client.connect">connect() (skein.Client method)</a>
 </li>
       <li><a href="api.html#skein.ConnectionError">ConnectionError</a>
+</li>
+      <li><a href="api.html#skein.kv.count">count (class in skein.kv)</a>, <a href="api.html#skein.kv.count">[1]</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.count">count() (skein.kv.KeyValueStore method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -283,9 +302,45 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#skein.DaemonError">DaemonError</a>
 </li>
+      <li><a href="api.html#skein.DaemonNotRunningError">DaemonNotRunningError</a>
+</li>
+      <li><a href="api.html#skein.kv.discard">discard (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.discard">discard() (skein.kv.KeyValueStore method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#skein.DaemonNotRunningError">DaemonNotRunningError</a>
+      <li><a href="api.html#skein.kv.discard_prefix">discard_prefix (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.discard_prefix">discard_prefix() (skein.kv.KeyValueStore method)</a>
+</li>
+      <li><a href="api.html#skein.kv.discard_range">discard_range (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.discard_range">discard_range() (skein.kv.KeyValueStore method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.Event">Event (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.event_queue">event_queue() (skein.kv.KeyValueStore method)</a>
+</li>
+      <li><a href="api.html#skein.kv.EventFilter">EventFilter (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.EventQueue">EventQueue (class in skein.kv)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.KeyValueStore.events">events() (skein.kv.KeyValueStore method)</a>
+</li>
+      <li><a href="api.html#skein.kv.EventType">EventType (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.exists">exists (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.exists">exists() (skein.kv.KeyValueStore method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -314,10 +369,6 @@
 </li>
         <li><a href="api.html#skein.Service.from_dict">(skein.Service class method)</a>
 </li>
-        <li><a href="api.html#skein.model.ApplicationReport.from_dict">(skein.model.ApplicationReport class method)</a>
-</li>
-        <li><a href="api.html#skein.model.ResourceUsageReport.from_dict">(skein.model.ResourceUsageReport class method)</a>
-</li>
       </ul></li>
       <li><a href="api.html#skein.Security.from_directory">from_directory() (skein.Security class method)</a>
 </li>
@@ -333,10 +384,6 @@
         <li><a href="api.html#skein.Resources.from_json">(skein.Resources class method)</a>
 </li>
         <li><a href="api.html#skein.Service.from_json">(skein.Service class method)</a>
-</li>
-        <li><a href="api.html#skein.model.ApplicationReport.from_json">(skein.model.ApplicationReport class method)</a>
-</li>
-        <li><a href="api.html#skein.model.ResourceUsageReport.from_json">(skein.model.ResourceUsageReport class method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -366,10 +413,6 @@
 </li>
         <li><a href="api.html#skein.Service.from_yaml">(skein.Service class method)</a>
 </li>
-        <li><a href="api.html#skein.model.ApplicationReport.from_yaml">(skein.model.ApplicationReport class method)</a>
-</li>
-        <li><a href="api.html#skein.model.ResourceUsageReport.from_yaml">(skein.model.ResourceUsageReport class method)</a>
-</li>
       </ul></li>
   </ul></td>
 </tr></table>
@@ -377,13 +420,43 @@
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.get">get (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.EventQueue.get">get() (skein.kv.EventQueue method)</a>
+
+      <ul>
+        <li><a href="api.html#skein.kv.KeyValueStore.get">(skein.kv.KeyValueStore method)</a>
+</li>
+      </ul></li>
       <li><a href="api.html#skein.Client.get_applications">get_applications() (skein.Client method)</a>
+</li>
+      <li><a href="api.html#skein.ApplicationClient.get_containers">get_containers() (skein.ApplicationClient method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#skein.ApplicationClient.get_containers">get_containers() (skein.ApplicationClient method)</a>
+      <li><a href="api.html#skein.kv.get_prefix">get_prefix (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.get_prefix">get_prefix() (skein.kv.KeyValueStore method)</a>
+</li>
+      <li><a href="api.html#skein.kv.get_range">get_range (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.get_range">get_range() (skein.kv.KeyValueStore method)</a>
 </li>
       <li><a href="api.html#skein.ApplicationClient.get_specification">get_specification() (skein.ApplicationClient method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.is_condition">is_condition() (in module skein.kv)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.is_operation">is_operation() (in module skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.items">items() (skein.kv.KeyValueStore method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -391,16 +464,80 @@
 <h2 id="K">K</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#skein.core.KeyValueStore">KeyValueStore (class in skein.core)</a>
+      <li><a href="api.html#skein.kv.KeyValueStore.keys">keys() (skein.kv.KeyValueStore method)</a>
 </li>
-      <li><a href="api.html#skein.Client.kill_application">kill_application() (skein.Client method)</a>
+      <li><a href="api.html#skein.kv.KeyValueStore">KeyValueStore (class in skein.kv)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.Client.kill_application">kill_application() (skein.Client method)</a>
+</li>
       <li><a href="api.html#skein.ApplicationClient.kill_container">kill_container() (skein.ApplicationClient method)</a>
 </li>
       <li><a href="api.html#skein.ApplicationClient.kv">kv (skein.ApplicationClient attribute)</a>
 </li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.list_keys">list_keys (class in skein.kv)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.KeyValueStore.list_keys">list_keys() (skein.kv.KeyValueStore method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.missing">missing (class in skein.kv)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.KeyValueStore.missing">missing() (skein.kv.KeyValueStore method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.owner">owner (class in skein.kv)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.pop">pop (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.pop">pop() (skein.kv.KeyValueStore method)</a>
+</li>
+      <li><a href="api.html#skein.kv.pop_prefix">pop_prefix (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.pop_prefix">pop_prefix() (skein.kv.KeyValueStore method)</a>
+</li>
+      <li><a href="api.html#skein.kv.pop_range">pop_range (class in skein.kv)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.KeyValueStore.pop_range">pop_range() (skein.kv.KeyValueStore method)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.popitem">popitem() (skein.kv.KeyValueStore method)</a>
+</li>
+      <li><a href="api.html#skein.kv.put">put (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.EventQueue.put">put() (skein.kv.EventQueue method)</a>
+
+      <ul>
+        <li><a href="api.html#skein.kv.KeyValueStore.put">(skein.kv.KeyValueStore method)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -426,6 +563,8 @@
       <li><a href="api.html#skein.Security">Security (class in skein)</a>
 </li>
       <li><a href="api.html#skein.Service">Service (class in skein)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.setdefault">setdefault() (skein.kv.KeyValueStore method)</a>
 </li>
       <li><a href="api.html#skein.ApplicationClient.shutdown">shutdown() (skein.ApplicationClient method)</a>
 </li>
@@ -638,16 +777,25 @@
 </li>
       </ul></li>
       <li>
-    skein-kv-set command line option
+    skein-kv-ls command line option
 
       <ul>
-        <li><a href="cli.html#cmdoption-skein-kv-set-help">--help, -h</a>
+        <li><a href="cli.html#cmdoption-skein-kv-ls-help">--help, -h</a>
 </li>
-        <li><a href="cli.html#cmdoption-skein-kv-set-key">--key &lt;key&gt;</a>
+        <li><a href="cli.html#cmdoption-skein-kv-ls-arg-app-id">app_id</a>
 </li>
-        <li><a href="cli.html#cmdoption-skein-kv-set-value">--value &lt;value&gt;</a>
+      </ul></li>
+      <li>
+    skein-kv-put command line option
+
+      <ul>
+        <li><a href="cli.html#cmdoption-skein-kv-put-help">--help, -h</a>
 </li>
-        <li><a href="cli.html#cmdoption-skein-kv-set-arg-app-id">app_id</a>
+        <li><a href="cli.html#cmdoption-skein-kv-put-key">--key &lt;key&gt;</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-kv-put-value">--value &lt;value&gt;</a>
+</li>
+        <li><a href="cli.html#cmdoption-skein-kv-put-arg-app-id">app_id</a>
 </li>
       </ul></li>
       <li><a href="api.html#skein.SkeinConfigurationError">SkeinConfigurationError</a>
@@ -669,6 +817,12 @@
 </li>
       <li><a href="api.html#skein.Client.submit_and_connect">submit_and_connect() (skein.Client method)</a>
 </li>
+      <li><a href="api.html#skein.kv.EventQueue.subscribe">subscribe() (skein.kv.EventQueue method)</a>
+</li>
+      <li><a href="api.html#skein.kv.swap">swap (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.swap">swap() (skein.kv.KeyValueStore method)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -684,12 +838,6 @@
 </li>
         <li><a href="api.html#skein.Service.to_dict">(skein.Service method)</a>
 </li>
-        <li><a href="api.html#skein.core.KeyValueStore.to_dict">(skein.core.KeyValueStore method)</a>
-</li>
-        <li><a href="api.html#skein.model.ApplicationReport.to_dict">(skein.model.ApplicationReport method)</a>
-</li>
-        <li><a href="api.html#skein.model.ResourceUsageReport.to_dict">(skein.model.ResourceUsageReport method)</a>
-</li>
       </ul></li>
       <li><a href="api.html#skein.ApplicationSpec.to_file">to_file() (skein.ApplicationSpec method)</a>
 </li>
@@ -702,13 +850,7 @@
 </li>
         <li><a href="api.html#skein.Service.to_json">(skein.Service method)</a>
 </li>
-        <li><a href="api.html#skein.model.ApplicationReport.to_json">(skein.model.ApplicationReport method)</a>
-</li>
-        <li><a href="api.html#skein.model.ResourceUsageReport.to_json">(skein.model.ResourceUsageReport method)</a>
-</li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#skein.ApplicationSpec.to_protobuf">to_protobuf() (skein.ApplicationSpec method)</a>
 
       <ul>
@@ -723,6 +865,8 @@
         <li><a href="api.html#skein.model.ResourceUsageReport.to_protobuf">(skein.model.ResourceUsageReport method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#skein.ApplicationSpec.to_yaml">to_yaml() (skein.ApplicationSpec method)</a>
 
       <ul>
@@ -732,21 +876,41 @@
 </li>
         <li><a href="api.html#skein.Service.to_yaml">(skein.Service method)</a>
 </li>
-        <li><a href="api.html#skein.model.ApplicationReport.to_yaml">(skein.model.ApplicationReport method)</a>
-</li>
-        <li><a href="api.html#skein.model.ResourceUsageReport.to_yaml">(skein.model.ResourceUsageReport method)</a>
-</li>
       </ul></li>
+      <li><a href="api.html#skein.kv.KeyValueStore.transaction">transaction() (skein.kv.KeyValueStore method)</a>
+</li>
+      <li><a href="api.html#skein.kv.TransactionResult">TransactionResult (class in skein.kv)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.EventQueue.unsubscribe">unsubscribe() (skein.kv.EventQueue method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.EventQueue.unsubscribe_all">unsubscribe_all() (skein.kv.EventQueue method)</a>
+</li>
+      <li><a href="api.html#skein.kv.KeyValueStore.update">update() (skein.kv.KeyValueStore method)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="V">V</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.kv.value">value (class in skein.kv)</a>
+</li>
+      <li><a href="api.html#skein.kv.ValueOwnerPair">ValueOwnerPair (class in skein.kv)</a>
+</li>
       <li><a href="api.html#skein.FileType.values">values() (skein.FileType class method)</a>
 
       <ul>
         <li><a href="api.html#skein.FileVisibility.values">(skein.FileVisibility class method)</a>
+</li>
+        <li><a href="api.html#skein.kv.KeyValueStore.values">(skein.kv.KeyValueStore method)</a>
 </li>
         <li><a href="api.html#skein.model.ApplicationState.values">(skein.model.ApplicationState class method)</a>
 </li>
@@ -759,7 +923,7 @@
 <h2 id="W">W</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#skein.core.KeyValueStore.wait">wait() (skein.core.KeyValueStore method)</a>
+      <li><a href="api.html#skein.kv.KeyValueStore.wait">wait() (skein.kv.KeyValueStore method)</a>
 </li>
   </ul></td>
 </tr></table>

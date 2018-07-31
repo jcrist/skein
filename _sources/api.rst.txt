@@ -30,7 +30,83 @@ Application Client
 Key Value Store
 ---------------
 
-.. autoclass:: skein.core.KeyValueStore
+.. autoclass:: skein.kv.KeyValueStore
+    :members:
+    :inherited-members:
+
+.. autoclass:: skein.kv.ValueOwnerPair
+
+.. autoclass:: skein.kv.count
+    :members:
+
+.. autoclass:: skein.kv.count
+    :members:
+
+.. autoclass:: skein.kv.list_keys
+    :members:
+
+.. autoclass:: skein.kv.exists
+    :members:
+
+.. autoclass:: skein.kv.missing
+    :members:
+
+.. autoclass:: skein.kv.get
+    :members:
+
+.. autoclass:: skein.kv.get_prefix
+    :members:
+
+.. autoclass:: skein.kv.get_range
+    :members:
+
+.. autoclass:: skein.kv.pop
+    :members:
+
+.. autoclass:: skein.kv.pop_prefix
+    :members:
+
+.. autoclass:: skein.kv.pop_range
+    :members:
+
+.. autoclass:: skein.kv.discard
+    :members:
+
+.. autoclass:: skein.kv.discard_prefix
+    :members:
+
+.. autoclass:: skein.kv.discard_range
+    :members:
+
+.. autoclass:: skein.kv.put
+    :members:
+
+.. autoclass:: skein.kv.swap
+    :members:
+
+.. autoclass:: skein.kv.TransactionResult
+
+.. autoclass:: skein.kv.value
+    :members:
+
+.. autoclass:: skein.kv.owner
+    :members:
+
+.. autoclass:: skein.kv.comparison
+    :members:
+
+.. autofunction:: skein.kv.is_condition
+
+.. autofunction:: skein.kv.is_operation
+
+.. autoclass:: skein.kv.EventType
+    :members:
+
+.. autoclass:: skein.kv.Event
+
+.. autoclass:: skein.kv.EventFilter
+
+.. autoclass:: skein.kv.EventQueue
     :members:
 
 
