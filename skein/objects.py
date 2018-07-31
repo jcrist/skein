@@ -61,17 +61,11 @@ class EnumMeta(type):
 
 class Enum(with_metaclass(EnumMeta)):
     _values = ()
-    _extra_mappings = None
     __slots__ = ('_value',)
 
     def __new__(cls, x):
         if isinstance(x, cls):
             return x
-        if cls._extra_mappings is not None:
-            try:
-                x = cls._extra_mappings[x]
-            except (TypeError, KeyError):
-                pass
         if not isinstance(x, string):
             raise TypeError("Expected 'str' or %r" % cls.__name__)
         x = ensure_unicode(x).upper()

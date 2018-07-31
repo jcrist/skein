@@ -330,7 +330,8 @@ def test_cli_kv(global_client, capfdbinary):
         run_command('kv get %s --key fizz' % app.id, error=True)
         out, err = capfdbinary.readouterr()
         assert not out
-        assert b"Error: Key 'fizz' is not set\n" == err
+        assert ((b"Error: Key %s is not set\n"
+                 % (b"u'fizz'" if PY2 else b"'fizz'")) == err)
 
         # Kill application
         run_command('application kill %s' % app.id)

@@ -36,7 +36,7 @@ __all__ = ('KeyValueStore',
            'Operation', 'is_operation',
            'value', 'owner', 'comparison',
            'count', 'list_keys',
-           'contains', 'missing',
+           'exists', 'missing',
            'get', 'get_prefix', 'get_range',
            'pop', 'pop_prefix', 'pop_range',
            'discard', 'discard_prefix', 'discard_range',
@@ -92,7 +92,7 @@ class EventFilter(object):
     """An event filter.
 
     Specifies a subset of events to watch for. May specify one of ``key``,
-    ``prefix``, or ``range_start``/``range_end``. If no parameters are
+    ``prefix``, or ``start``/``end``. If no parameters are
     provided, selects all events.
 
     Parameters
@@ -101,66 +101,69 @@ class EventFilter(object):
         If present, only events from this key will be selected.
     prefix : str, optional
         If present, only events with this key prefix will be selected.
-    range_start : str, optional
-        If present, specifies the lower bound of the a key range, inclusive.
-    range_end : str, optional
-        If present, specifies the upper bound of the a key range, exclusive.
+    start : str, optional
+        If present, specifies the lower bound of the key range, inclusive.
+    end : str, optional
+        If present, specifies the upper bound of the key range, exclusive.
     event_type : EventType, optional.
         The type of event. Default is ``'ALL'``
     """
-    __slots__ = ('_range_start', '_range_end', '_event_type')
+    __slots__ = ('_start', '_end', '_event_type')
 
-    def __init__(self, key=None, prefix=None, range_start=None,
-                 range_end=None, event_type=None):
+    def __init__(self, key=None, prefix=None, start=None,
+                 end=None, event_type=None):
         has_key = key is not None
         has_prefix = prefix is not None
-        has_range = range_start is not None or range_end is not None
+        has_range = start is not None or end is not None
         if (has_key + has_prefix + has_range) > 1:
             raise ValueError("Must specify at most one of `key`, `prefix`, or "
-                             "`range_start`/`range_end`")
+                             "`start`/`end`")
         if has_key:
             if not isinstance(key, _string):
                 raise TypeError("key must be a string")
-            range_start = key
-            range_end = key + '\x00'
+            start = key
+            end = key + '\x00'
         elif has_prefix:
             if not isinstance(prefix, _string):
                 raise TypeError("prefix must be a string")
-            range_start = prefix
-            range_end = _next_key(prefix)
+            start = prefix
+            end = _next_key(prefix)
         else:
-            if not (range_start is None or isinstance(range_start, _string)):
-                raise TypeError("range_start must be a string or None")
-            if not (range_end is None or isinstance(range_end, _string)):
-                raise TypeError("range_end must be a string or None")
+            if not (start is None or isinstance(start, _string)):
+                raise TypeError("start must be a string or None")
+            if not (end is None or isinstance(end, _string)):
+                raise TypeError("end must be a string or None")
 
         event_type = (EventType.ALL if event_type is None
                       else EventType(event_type))
 
-        self._range_start = range_start
-        self._range_end = range_end
+        self._start = start
+        self._end = end
         self._event_type = event_type
 
-    range_start = property(lambda s: s._range_start)
-    range_end = property(lambda s: s._range_end)
+    start = property(lambda s: s._start)
+    end = property(lambda s: s._end)
     event_type = property(lambda s: s._event_type)
 
     def __repr__(self):
-        return ('EventFilter(range_start=%r, range_end=%r, event_type=%r)'
-                % (self._range_start, self._range_end, self._event_type))
+        return ('EventFilter(start=%r, end=%r, event_type=%r)'
+                % (self._start, self._end, self._event_type))
 
     def __reduce__(self):
-        return (EventFilter, (None, None, self.range_start,
-                              self.range_end, self.event_type))
+        return (EventFilter, (None, None, self.start,
+                              self.end, self.event_type))
 
     def __eq__(self, other):
         return (type(self) is type(other) and
-                self.range_start == other.range_start and
-                self.range_end == other.range_end and
+                self.start == other.start and
+                self.end == other.end and
                 self.event_type == other.event_type)
 
+    def __ne__(self, other):
+        return not (self == other)
+
     def __hash__(self):
-        return hash((self.range_start, self._range_end, self.event_type))
+        return hash((self.start, self._end, self.event_type))
 
 
 class Event(_namedtuple('Event',
@@ -239,6 +242,7 @@ class EventQueue(object):
         self.filters = set()
         self._queue = _Queue()
         self._exception = None
+        self._ref = _weakref.ref(self)
 
     def __repr__(self):
         return 'EventQueue<%d filters>' % len(self.filters)
@@ -282,7 +286,7 @@ class EventQueue(object):
         self._queue.put(item, block=block, timeout=timeout)
 
     def subscribe(self, event_filter=None, key=None, prefix=None,
-                  range_start=None, range_end=None, event_type=None):
+                  start=None, end=None, event_type=None):
         """Subscribe to an event filter.
 
         May provide either an explicit event filter, or provide arguments to
@@ -300,10 +304,10 @@ class EventQueue(object):
             If present, only events from this key will be selected.
         prefix : str, optional
             If present, only events with this key prefix will be selected.
-        range_start : str, optional
-            If present, specifies the lower bound of the a key range, inclusive.
-        range_end : str, optional
-            If present, specifies the upper bound of the a key range, exclusive.
+        start : str, optional
+            If present, specifies the lower bound of the key range, inclusive.
+        end : str, optional
+            If present, specifies the upper bound of the key range, exclusive.
         event_type : EventType, optional.
             The type of event. Default is ``'ALL'``.
 
@@ -314,8 +318,8 @@ class EventQueue(object):
         event_filter = self._build_event_filter(event_filter=event_filter,
                                                 key=key,
                                                 prefix=prefix,
-                                                range_start=range_start,
-                                                range_end=range_end,
+                                                start=start,
+                                                end=end,
                                                 event_type=event_type)
         if event_filter in self.filters:
             return event_filter
@@ -324,7 +328,7 @@ class EventQueue(object):
         return event_filter
 
     def unsubscribe(self, event_filter=None, key=None, prefix=None,
-                    range_start=None, range_end=None, event_type=None):
+                    start=None, end=None, event_type=None):
         """Unsubscribe from an event filter.
 
         May provide either an explicit event filter, or provide arguments to
@@ -344,10 +348,10 @@ class EventQueue(object):
             If present, only events from this key will be selected.
         prefix : str, optional
             If present, only events with this key prefix will be selected.
-        range_start : str, optional
-            If present, specifies the lower bound of the a key range, inclusive.
-        range_end : str, optional
-            If present, specifies the upper bound of the a key range, exclusive.
+        start : str, optional
+            If present, specifies the lower bound of the key range, inclusive.
+        end : str, optional
+            If present, specifies the upper bound of the key range, exclusive.
         event_type : EventType, optional.
             The type of event. Default is ``'ALL'``.
 
@@ -358,8 +362,8 @@ class EventQueue(object):
         event_filter = self._build_event_filter(event_filter=event_filter,
                                                 key=key,
                                                 prefix=prefix,
-                                                range_start=range_start,
-                                                range_end=range_end,
+                                                start=start,
+                                                end=end,
                                                 event_type=event_type)
         if event_filter not in self.filters:
             raise ValueError("not currently subscribed to %r" % (event_filter,))
@@ -489,7 +493,7 @@ class KeyValueStore(_MutableMapping):
 
     def _add_subscription(self, event_queue, event_filter):
         with self._lock:
-            eq_ref = _weakref.ref(event_queue)
+            eq_ref = event_queue._ref
             if event_filter in self._filter_to_queues:
                 self._filter_to_queues[event_filter].add(eq_ref)
                 subscribed = self._filter_subscribed[event_filter]
@@ -498,8 +502,8 @@ class KeyValueStore(_MutableMapping):
             else:
                 self._filter_to_queues[event_filter] = {eq_ref}
                 subscribed = self._filter_subscribed[event_filter] = _threading.Event()
-                req = _proto.WatchCreateRequest(range_start=event_filter.range_start,
-                                                range_end=event_filter.range_end,
+                req = _proto.WatchCreateRequest(start=event_filter.start,
+                                                end=event_filter.end,
                                                 event_type=str(event_filter.event_type))
                 self._input_queue.put((_proto.WatchRequest(create=req), event_filter))
         # Wait for subscription to occur
@@ -507,7 +511,7 @@ class KeyValueStore(_MutableMapping):
 
     def _remove_subscription(self, event_queue, event_filter):
         with self._lock:
-            eq_ref = _weakref.ref(event_queue)
+            eq_ref = event_queue._ref
             if event_filter in self._filter_to_queues:
                 self._filter_to_queues[event_filter].discard(eq_ref)
                 if not self._filter_to_queues[event_filter]:
@@ -543,7 +547,7 @@ class KeyValueStore(_MutableMapping):
         return EventQueue(self)
 
     def events(self, event_filter=None, key=None, prefix=None,
-               range_start=None, range_end=None, event_type=None):
+               start=None, end=None, event_type=None):
         """Shorthand for creating an EventQueue and adding a single filter.
 
         May provide either an explicit event filter, or provide arguments to
@@ -560,16 +564,16 @@ class KeyValueStore(_MutableMapping):
             If present, only events from this key will be selected.
         prefix : str, optional
             If present, only events with this key prefix will be selected.
-        range_start : str, optional
-            If present, specifies the lower bound of the a key range, inclusive.
-        range_end : str, optional
-            If present, specifies the upper bound of the a key range, exclusive.
+        start : str, optional
+            If present, specifies the lower bound of the key range, inclusive.
+        end : str, optional
+            If present, specifies the upper bound of the key range, exclusive.
         event_type : EventType, optional.
             The type of event. Default is ``'ALL'``.
 
         Returns
         -------
-        EventFilter
+        EventQueue
 
         Examples
         --------
@@ -589,8 +593,8 @@ class KeyValueStore(_MutableMapping):
         queue.subscribe(event_filter=event_filter,
                         key=key,
                         prefix=prefix,
-                        range_start=range_start,
-                        range_end=range_end,
+                        start=start,
+                        end=end,
                         event_type=event_type)
         return queue
 
@@ -619,7 +623,38 @@ class KeyValueStore(_MutableMapping):
             raise KeyError(key)
 
     def __contains__(self, key):
-        return self.contains(key)
+        return self.exists(key)
+
+    def wait(self, key, return_owner=False):
+        """Get the value associated with a single key, blocking until the key
+        exists if not present.
+
+        Parameters
+        ----------
+        key : str
+            The key to get.
+        return_owner : bool, optional
+            If True, the owner will also be returned along with the value. Default
+            is False.
+
+        Returns
+        -------
+        bytes or ValueOwnerPair
+        """
+        with self.events(key=key, event_type='put') as event_queue:
+            # We `get` after creating an event queue to avoid the following
+            # race condition:
+            # - get fails to find key
+            # - key is created by different client
+            # - event queue is created, waiting for PUT events
+            res = self.get(key=key, return_owner=return_owner)
+            if ((return_owner and res.value is not None) or
+                    (not return_owner and res is not None)):
+                return res
+
+            event = event_queue.get()
+
+        return event.result if return_owner else event.result.value
 
     def clear(self):
         self.discard_range()
@@ -641,7 +676,7 @@ class KeyValueStore(_MutableMapping):
         -------
         value : bytes
         """
-        res = self.transaction(conditions=[contains(key)],
+        res = self.transaction(conditions=[exists(key)],
                                on_success=[get(key)],
                                on_failure=[put(key, default)])
         return res.results[0] if res.succeeded else default
@@ -824,8 +859,8 @@ class comparison(Condition):
                     '>': 'GREATER', '>=': 'GREATER_EQUAL'}
 
     def __init__(self, key, field, operator, rhs):
-        if not isinstance(key, str):
-            raise TypeError("key must be a str")
+        if not isinstance(key, _string):
+            raise TypeError("key must be a string")
         self._key = key
 
         if field not in {'value', 'owner'}:
@@ -843,7 +878,7 @@ class comparison(Condition):
                     raise TypeError("Comparison (owner(%r) %s None) is "
                                     "unsupported" % (key, operator))
                 self._rhs_proto = self._rhs = None
-            elif isinstance(rhs, str):
+            elif isinstance(rhs, _string):
                 self._rhs_proto = _container_instance_from_string(rhs)
                 self._rhs = rhs
             else:
@@ -875,8 +910,8 @@ class _ComparisonBuilder(_Base):
     _params = ('key',)
 
     def __init__(self, key):
-        if not isinstance(key, str):
-            raise TypeError("key must be a str")
+        if not isinstance(key, _string):
+            raise TypeError("key must be a string")
         self._key = key
 
     key = property(lambda self: self._key)
@@ -931,9 +966,9 @@ class _CountOrKeys(Operation):
     __slots__ = ()
     _rpc = 'GetRange'
 
-    def __init__(self, range_start=None, range_end=None, prefix=None):
-        self.range_start = range_start
-        self.range_end = range_end
+    def __init__(self, start=None, end=None, prefix=None):
+        self.start = start
+        self.end = end
         self.prefix = prefix
         self._validate()
 
@@ -943,30 +978,30 @@ class _CountOrKeys(Operation):
 
     @property
     def _is_range(self):
-        return self.range_start is not None or self.range_end is not None
+        return self.start is not None or self.end is not None
 
     def _validate(self):
-        self._check_is_type('range_start', str, nullable=True)
-        self._check_is_type('range_end', str, nullable=True)
-        self._check_is_type('prefix', str, nullable=True)
+        self._check_is_type('start', _string, nullable=True)
+        self._check_is_type('end', _string, nullable=True)
+        self._check_is_type('prefix', _string, nullable=True)
         if self._is_prefix and self._is_range:
-            raise ValueError("Cannot specify `prefix` and `range_start`/`range_end`")
+            raise ValueError("Cannot specify `prefix` and `start`/`end`")
 
     def __repr__(self):
         typ = type(self).__name__
         if self._is_prefix:
             return '%s(prefix=%r)' % (typ, self.prefix)
-        return ('%s(range_start=%r, range_end=%r)'
-                % (typ, self.range_start, self.range_end))
+        return ('%s(start=%r, end=%r)'
+                % (typ, self.start, self.end))
 
     def _build_operation(self):
         self._validate()
         if self._is_prefix:
-            return _proto.GetRangeRequest(range_start=self.prefix,
-                                          range_end=_next_key(self.prefix),
+            return _proto.GetRangeRequest(start=self.prefix,
+                                          end=_next_key(self.prefix),
                                           result_type=self._result_type)
-        return _proto.GetRangeRequest(range_start=self.range_start,
-                                      range_end=self.range_end,
+        return _proto.GetRangeRequest(start=self.start,
+                                      end=self.end,
                                       result_type=self._result_type)
 
 
@@ -976,16 +1011,16 @@ class count(_CountOrKeys):
 
     Parameters
     ----------
-    range_start : str, optional
-        The lower bound of the a key range, inclusive. If not provided no
+    start : str, optional
+        The lower bound of the key range, inclusive. If not provided no
         lower bound will be used.
-    range_end : str, optional
-        The upper bound of the a key range, exclusive. If not provided, no
+    end : str, optional
+        The upper bound of the key range, exclusive. If not provided, no
         upper bound will be used.
     prefix : str, optional
         If provided, will count the number keys matching this prefix.
     """
-    __slots__ = ('range_start', 'range_end', 'prefix')
+    __slots__ = ('start', 'end', 'prefix')
     _result_type = 'NONE'
 
     def _build_result(self, result):
@@ -998,16 +1033,16 @@ class list_keys(_CountOrKeys):
 
     Parameters
     ----------
-    range_start : str, optional
-        The lower bound of the a key range, inclusive. If not provided no
+    start : str, optional
+        The lower bound of the key range, inclusive. If not provided no
         lower bound will be used.
-    range_end : str, optional
-        The upper bound of the a key range, exclusive. If not provided, no
+    end : str, optional
+        The upper bound of the key range, exclusive. If not provided, no
         upper bound will be used.
     prefix : str, optional
         If provided, will return all keys matching this prefix.
     """
-    __slots__ = ('range_start', 'range_end', 'prefix')
+    __slots__ = ('start', 'end', 'prefix')
     _result_type = 'KEYS'
 
     def _build_result(self, result):
@@ -1025,7 +1060,7 @@ class _GetOrPop(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('key', str)
+        self._check_is_type('key', _string)
         self._check_is_type('default', bytes, nullable=True)
         self._check_is_type('return_owner', bool)
 
@@ -1036,8 +1071,8 @@ class _GetOrPop(Operation):
 
     def _build_operation(self):
         self._validate()
-        return self._proto(range_start=self.key,
-                           range_end=self.key + '\x00',
+        return self._proto(start=self.key,
+                           end=self.key + '\x00',
                            result_type='ITEMS')
 
     def _build_result(self, result):
@@ -1105,7 +1140,7 @@ class _GetOrPopPrefix(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('prefix', str)
+        self._check_is_type('prefix', _string)
         self._check_is_type('return_owner', bool)
 
     def __repr__(self):
@@ -1114,8 +1149,8 @@ class _GetOrPopPrefix(Operation):
 
     def _build_operation(self):
         self._validate()
-        return self._proto(range_start=self.prefix,
-                           range_end=_next_key(self.prefix),
+        return self._proto(start=self.prefix,
+                           end=_next_key(self.prefix),
                            result_type='ITEMS')
 
     def _build_result(self, result):
@@ -1168,8 +1203,8 @@ class _GetOrPopRange(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('start', str, nullable=True)
-        self._check_is_type('end', str, nullable=True)
+        self._check_is_type('start', _string, nullable=True)
+        self._check_is_type('end', _string, nullable=True)
         self._check_is_type('return_owner', bool)
 
     def __repr__(self):
@@ -1179,8 +1214,8 @@ class _GetOrPopRange(Operation):
 
     def _build_operation(self):
         self._validate()
-        return self._proto(range_start=self.start,
-                           range_end=self.end,
+        return self._proto(start=self.start,
+                           end=self.end,
                            result_type='ITEMS')
 
     def _build_result(self, result):
@@ -1229,8 +1264,8 @@ class pop_range(_GetOrPopRange):
     _rpc = 'DeleteRange'
 
 
-class _ContainsMissingDiscard(Operation):
-    """Base class for contains, missing & discard"""
+class _ExistsMissingDiscard(Operation):
+    """Base class for exists, missing & discard"""
     __slots__ = ()
 
     def __init__(self, key):
@@ -1238,15 +1273,15 @@ class _ContainsMissingDiscard(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('key', str)
+        self._check_is_type('key', _string)
 
     def __repr__(self):
         return '%s(%r)' % (type(self).__name__, self.key)
 
     def _build_operation(self):
         self._validate()
-        return self._proto(range_start=self.key,
-                           range_end=self.key + '\x00',
+        return self._proto(start=self.key,
+                           end=self.key + '\x00',
                            result_type='NONE')
 
     def _build_result(self, result):
@@ -1254,8 +1289,8 @@ class _ContainsMissingDiscard(Operation):
 
 
 @_register_op('bool')
-class contains(_ContainsMissingDiscard, Condition):
-    """A request to check if a key is in the key-value store.
+class exists(_ExistsMissingDiscard, Condition):
+    """A request to check if a key exists in the key-value store.
 
     Parameters
     ----------
@@ -1275,10 +1310,10 @@ class contains(_ContainsMissingDiscard, Condition):
 
 
 @_register_op('bool')
-class missing(_ContainsMissingDiscard, Condition):
+class missing(_ExistsMissingDiscard, Condition):
     """A request to check if a key is not in the key-value store.
 
-    This is the inverse of ``contains``.
+    This is the inverse of ``exists``.
 
     Parameters
     ----------
@@ -1301,7 +1336,7 @@ class missing(_ContainsMissingDiscard, Condition):
 
 
 @_register_op('bool')
-class discard(_ContainsMissingDiscard):
+class discard(_ExistsMissingDiscard):
     """A request to discard a single key.
 
     Returns true if the key was present, false otherwise.
@@ -1346,7 +1381,7 @@ class discard_prefix(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('prefix', str)
+        self._check_is_type('prefix', _string)
         self._check_is_type('return_keys', bool)
 
     def __repr__(self):
@@ -1356,8 +1391,8 @@ class discard_prefix(Operation):
     def _build_operation(self):
         self._validate()
         result_type = 'KEYS' if self.return_keys else 'NONE'
-        return _proto.DeleteRangeRequest(range_start=self.prefix,
-                                         range_end=_next_key(self.prefix),
+        return _proto.DeleteRangeRequest(start=self.prefix,
+                                         end=_next_key(self.prefix),
                                          result_type=result_type)
 
     def _build_result(self, result):
@@ -1393,8 +1428,8 @@ class discard_range(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('start', str, nullable=True)
-        self._check_is_type('end', str, nullable=True)
+        self._check_is_type('start', _string, nullable=True)
+        self._check_is_type('end', _string, nullable=True)
         self._check_is_type('return_keys', bool)
 
     def __repr__(self):
@@ -1404,8 +1439,8 @@ class discard_range(Operation):
     def _build_operation(self):
         self._validate()
         result_type = 'KEYS' if self.return_keys else 'NONE'
-        return _proto.DeleteRangeRequest(range_start=self.start,
-                                         range_end=self.end,
+        return _proto.DeleteRangeRequest(start=self.start,
+                                         end=self.end,
                                          result_type=result_type)
 
     def _build_result(self, result):
@@ -1428,7 +1463,7 @@ class _PutOrSwap(Operation):
             self._owner = _no_change
         elif owner is None:
             self._owner_proto = self._owner = None
-        elif isinstance(owner, str):
+        elif isinstance(owner, _string):
             # do this before setting owner to nice python owner,
             # ensures validity check is performed beforehand
             self._owner_proto = _container_instance_from_string(owner)
@@ -1437,7 +1472,7 @@ class _PutOrSwap(Operation):
             raise TypeError("owner must be a string or None")
 
     def _validate(self):
-        self._check_is_type('key', str)
+        self._check_is_type('key', _string)
         if self.value is _no_change and self.owner is _no_change:
             raise ValueError("Must specify 'value', 'owner', or both")
         if self.value is not _no_change:

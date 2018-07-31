@@ -506,8 +506,8 @@ public class ApplicationMaster {
       switch (req.getRequestCase()) {
         case CREATE:
           Msg.WatchCreateRequest create = req.getCreate();
-          String start = create.getRangeStart();
-          String end = create.getRangeEnd();
+          String start = create.getStart();
+          String end = create.getEnd();
           Msg.WatchCreateRequest.Type type = create.getEventType();
           synchronized (keyValueStore) {
             watchId = intervalTree.add(start, end, new Watcher(resp, this, type));
@@ -1072,9 +1072,8 @@ public class ApplicationMaster {
     }
 
     private Msg.GetRangeResponse.Builder evalGetRange(Msg.GetRangeRequest req) {
-      String start = req.getRangeStart();
-      String end = req.getRangeEnd();
-
+      String start = req.getStart();
+      String end = req.getEnd();
 
       Msg.GetRangeResponse.Builder builder;
 
@@ -1118,8 +1117,8 @@ public class ApplicationMaster {
 
     private Msg.DeleteRangeResponse.Builder evalDeleteRange(
         Msg.DeleteRangeRequest req) {
-      String start = req.getRangeStart();
-      String end = req.getRangeEnd();
+      String start = req.getStart();
+      String end = req.getEnd();
 
       Msg.DeleteRangeResponse.Builder builder;
 

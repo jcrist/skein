@@ -3,6 +3,8 @@ from __future__ import print_function, division, absolute_import
 import copy
 import operator
 import sys
+import threading
+import time
 import weakref
 from collections import MutableMapping, OrderedDict
 
@@ -63,7 +65,7 @@ def test_field_accessor_types(field):
     assert isinstance(rec2, cls)
 
     with pytest.raises(TypeError):
-        cls(b'foo')
+        cls(1)
 
 
 def test_comparison_type():
@@ -75,7 +77,7 @@ def test_comparison_type():
     assert o == (kv.owner('foo') == 'bar_1')
 
     with pytest.raises(TypeError):
-        kv.comparison(b'foo', 'value', '==', b'bar')
+        kv.comparison(1, 'value', '==', b'bar')
 
     with pytest.raises(ValueError):
         kv.comparison('foo', 'unknown', '==', b'bar')
@@ -127,9 +129,9 @@ def test_comparison_builder_types(field, rhs1, rhs2, supports_none, op, symbol):
             setattr(x1, attr, val)  # immutable
 
 
-@pytest.mark.parametrize('cls', [kv.contains,
+@pytest.mark.parametrize('cls', [kv.exists,
                                  kv.missing])
-def test_contains_and_missing_types(cls):
+def test_exists_and_missing_types(cls):
     x = cls('foo')
     assert repr(x) == ("%s('foo')" % cls.__name__)
     assert x == copy.deepcopy(x)
@@ -142,17 +144,17 @@ def test_contains_and_missing_types(cls):
         x.foobar = 1
 
     with pytest.raises(TypeError):
-        cls(b'foo')
+        cls(1)
 
 
 @pytest.mark.parametrize('cls', [kv.count, kv.list_keys])
 def test_count_and_list_keys_types(cls):
     x1 = cls()
-    assert repr(x1) == ("%s(range_start=None, range_end=None)" % cls.__name__)
+    assert repr(x1) == ("%s(start=None, end=None)" % cls.__name__)
     x2 = cls(prefix='foo')
     assert repr(x2) == ("%s(prefix='foo')" % cls.__name__)
-    x3 = cls(range_start='foo')
-    assert repr(x3) == ("%s(range_start='foo', range_end=None)" % cls.__name__)
+    x3 = cls(start='foo')
+    assert repr(x3) == ("%s(start='foo', end=None)" % cls.__name__)
     for x in [x1, x2, x3]:
         assert x == copy.deepcopy(x)
     assert x1 != x2
@@ -163,11 +165,11 @@ def test_count_and_list_keys_types(cls):
         x1.foobar = 1
 
     with pytest.raises(ValueError):
-        cls(prefix='foo', range_start='bar')
+        cls(prefix='foo', start='bar')
 
-    for k in ['prefix', 'range_start', 'range_end']:
+    for k in ['prefix', 'start', 'end']:
         with pytest.raises(TypeError):
-            cls(**{k: b'bad type'})
+            cls(**{k: 1})
 
 
 def test_discard_type():
@@ -182,7 +184,7 @@ def test_discard_type():
         x.foobar = 1
 
     with pytest.raises(TypeError):
-        kv.discard(b'foo')
+        kv.discard(1)
 
 
 @pytest.mark.parametrize('cls', [kv.get, kv.pop])
@@ -191,7 +193,7 @@ def test_get_and_pop_types(cls):
     x1 = cls('key')
     assert repr(x1) == ("%s('key', default=None, return_owner=False)" % name)
     x2 = cls('key', default=b'bar', return_owner=True)
-    assert repr(x2) == ("%s('key', default=b'bar', return_owner=True)" % name)
+    assert repr(x2) == ("%s('key', default=%s, return_owner=True)" % (name, repr(b'bar')))
     for x in [x1, x2]:
         assert x == copy.deepcopy(x)
     assert x1 != x2
@@ -202,13 +204,13 @@ def test_get_and_pop_types(cls):
         x1.foobar = 1
 
     with pytest.raises(TypeError):
-        cls('foo', default='bar')
+        cls('foo', default=1)
 
     with pytest.raises(TypeError):
         cls('foo', return_owner=None)
 
     with pytest.raises(TypeError):
-        cls(b'foo')
+        cls(1)
 
 
 @pytest.mark.parametrize('cls,kw', [(kv.get_prefix, 'return_owner'),
@@ -230,7 +232,7 @@ def test_prefix_types(cls, kw):
         x1.foobar = 1
 
     with pytest.raises(TypeError):
-        cls(b'foo')
+        cls(1)
 
     with pytest.raises(TypeError):
         cls('foo', **{kw: None})
@@ -256,7 +258,7 @@ def test_range_types(cls, kw):
 
     for k in ['start', 'end', kw]:
         with pytest.raises(TypeError):
-            cls(**{k: b'bad type'})
+            cls(**{k: 1})
 
 
 @pytest.mark.parametrize('cls,has_return_owner',
@@ -268,8 +270,8 @@ def test_put_and_swap_types(cls, has_return_owner):
     else:
         extra = ''
     x1 = cls('foo', value=b'bar')
-    assert repr(x1) == ("%s('foo', value=b'bar', owner=no_change%s)"
-                        % (name, extra))
+    assert repr(x1) == ("%s('foo', value=%s, owner=no_change%s)"
+                        % (name, repr(b'bar'), extra))
     x2 = cls('foo', owner='container_1')
     assert repr(x2) == ("%s('foo', value=no_change, owner='container_1'%s)"
                         % (name, extra))
@@ -289,10 +291,10 @@ def test_put_and_swap_types(cls, has_return_owner):
         cls('foo', owner='invalid')
 
     with pytest.raises(TypeError):
-        cls(b'wrong_type', value=b'bar')
+        cls(1, value=b'bar')
 
     with pytest.raises(TypeError):
-        cls('foo', owner=b'wrong_type')
+        cls('foo', owner=1)
 
     with pytest.raises(ValueError):
         cls('foo')
@@ -383,9 +385,9 @@ def test_key_value_count(kv_test_app):
     kv_test_app.kv.update(kv_test_data)
     assert kv_test_app.kv.count() == 7
     assert kv_test_app.kv.count(prefix='bar') == 4
-    assert kv_test_app.kv.count(range_start='bars') == 5
-    assert kv_test_app.kv.count(range_end='bars') == 2
-    assert kv_test_app.kv.count(range_start='bars', range_end='food') == 3
+    assert kv_test_app.kv.count(start='bars') == 5
+    assert kv_test_app.kv.count(end='bars') == 2
+    assert kv_test_app.kv.count(start='bars', end='food') == 3
 
 
 def test_key_value_list_keys(kv_test_app):
@@ -393,20 +395,20 @@ def test_key_value_list_keys(kv_test_app):
     assert kv_test_app.kv.list_keys() == list(sorted(kv_test_data))
     assert (kv_test_app.kv.list_keys(prefix='bar') ==
             ['bar', 'barf', 'bars', 'bart'])
-    assert (kv_test_app.kv.list_keys(range_start='bars') ==
+    assert (kv_test_app.kv.list_keys(start='bars') ==
             ['bars', 'bart', 'foo', 'food', 'foodie'])
-    assert kv_test_app.kv.list_keys(range_end='bars') == ['bar', 'barf']
-    assert (kv_test_app.kv.list_keys(range_start='bars', range_end='food') ==
+    assert kv_test_app.kv.list_keys(end='bars') == ['bar', 'barf']
+    assert (kv_test_app.kv.list_keys(start='bars', end='food') ==
             ['bars', 'bart', 'foo'])
 
 
-def test_key_value_contains_and_missing(kv_test_app):
+def test_key_value_exists_and_missing(kv_test_app):
     kv_test_app.kv.update(kv_test_data)
     assert 'bar' in kv_test_app.kv
     assert 'missing' not in kv_test_app.kv
-    assert kv_test_app.kv.contains('bar')
+    assert kv_test_app.kv.exists('bar')
     assert not kv_test_app.kv.missing('bar')
-    assert not kv_test_app.kv.contains('missing')
+    assert not kv_test_app.kv.exists('missing')
     assert kv_test_app.kv.missing('missing')
 
 
@@ -764,9 +766,9 @@ def test_key_value_ownership(kv_test_app):
     kv_test_app.kill_container(c1)
 
     # c1_1 should be deleted, the others should remain
-    assert not kv_test_app.kv.contains('c1_1')
-    assert kv_test_app.kv.contains('c1_2')
-    assert kv_test_app.kv.contains('c1_3')
+    assert not kv_test_app.kv.exists('c1_1')
+    assert kv_test_app.kv.exists('c1_2')
+    assert kv_test_app.kv.exists('c1_3')
 
 
 def test_transaction_conditions(kv_test_app):
@@ -787,9 +789,9 @@ def test_transaction_conditions(kv_test_app):
         return kv_test_app.kv.transaction(conds).succeeded
 
     # -- value --
-    # contains
-    assert run(kv.contains('owner'))
-    assert not run(kv.contains('missing'))
+    # exists
+    assert run(kv.exists('owner'))
+    assert not run(kv.exists('missing'))
     assert run(kv.missing('missing'))
     assert not run(kv.missing('owner'))
 
@@ -861,9 +863,9 @@ def test_transaction_conditions(kv_test_app):
     assert run()
 
     # Multiple conditions
-    true1 = kv.contains('owner')
-    true2 = kv.contains('no_owner')
-    false = kv.contains('missing')
+    true1 = kv.exists('owner')
+    true2 = kv.exists('no_owner')
+    false = kv.exists('missing')
     assert run(true1, true2)
     assert not run(false, true1)
     assert not run(true1, false, true2)
@@ -880,7 +882,7 @@ def test_transaction_put_key_errors(kv_test_app, op, msg):
 
     for succeeded in [True, False]:
         if succeeded:
-            kwargs = {'conditions': [kv.contains('a')],
+            kwargs = {'conditions': [kv.exists('a')],
                       'on_success': [kv.put('b', b'b'), op],
                       'on_failure': [kv.put('c', b'c')]}
         else:
@@ -892,8 +894,8 @@ def test_transaction_put_key_errors(kv_test_app, op, msg):
             kv_test_app.kv.transaction(**kwargs)
 
         assert str(exc.value) == msg
-        assert not kv_test_app.kv.contains('b')
-        assert not kv_test_app.kv.contains('c')
+        assert not kv_test_app.kv.exists('b')
+        assert not kv_test_app.kv.exists('c')
 
 
 def test_transaction(kv_test_app):
@@ -904,8 +906,8 @@ def test_transaction(kv_test_app):
     kv_test_app.kv.put('aaa', b'aaa')
     kv_test_app.kv.put('b', b'b')
 
-    true1 = kv.contains('a')
-    true2 = kv.contains('b')
+    true1 = kv.exists('a')
+    true2 = kv.exists('b')
     false = kv.missing('a')
 
     # Test building results in success and failure
@@ -925,13 +927,13 @@ def test_transaction(kv_test_app):
         assert len(res.results) == 2
         assert res.results[0] == kv_test_app.kv.get_prefix('a')
         assert res.results[1] == kv_test_app.kv.get('missing')
-        assert not kv_test_app.kv.contains('dont_put_me')
+        assert not kv_test_app.kv.exists('dont_put_me')
 
         # Test empty result branch
         kwargs = {'conditions': cond, dont: [kv.put('dont_put_me', b'bad')]}
         res = kv_test_app.kv.transaction(**kwargs)
         assert res == (succeeded, [])
-        assert not kv_test_app.kv.contains('dont_put_me')
+        assert not kv_test_app.kv.exists('dont_put_me')
 
     # Test one operation of each type
     a_prefixes = kv_test_app.kv.get_prefix('a')
@@ -964,8 +966,8 @@ def test_transaction(kv_test_app):
 
 def test_event_filter_type():
     x = kv.EventFilter()
-    assert x.range_start is None
-    assert x.range_end is None
+    assert x.start is None
+    assert x.end is None
     assert x.event_type == kv.EventType.ALL
 
     assert copy.copy(x) == x
@@ -975,22 +977,22 @@ def test_event_filter_type():
     repr(x)
 
     x2 = kv.EventFilter(prefix='foo')
-    assert x2.range_start == 'foo'
-    assert x2.range_end == 'fop'
+    assert x2.start == 'foo'
+    assert x2.end == 'fop'
     assert kv.EventFilter(prefix='foo') == x2
     assert kv.EventFilter(prefix='bar') != x2
 
     x3 = kv.EventFilter(key='foo')
-    assert x3.range_start == 'foo'
-    assert x3.range_end == 'foo\x00'
+    assert x3.start == 'foo'
+    assert x3.end == 'foo\x00'
     assert kv.EventFilter(key='foo') == x3
     assert kv.EventFilter(key='bar') != x3
 
     assert kv.EventFilter(event_type='delete').event_type == 'DELETE'
 
-    for k in ['key', 'prefix', 'range_start', 'range_end', 'event_type']:
+    for k in ['key', 'prefix', 'start', 'end', 'event_type']:
         with pytest.raises(TypeError):
-            kv.EventFilter(**{k: b'foo'})
+            kv.EventFilter(**{k: 1})
 
     with pytest.raises(ValueError):
         kv.EventFilter(key='foo', prefix='bar')
@@ -1075,11 +1077,10 @@ def test_event_queue_cleanup(kv_test_app):
     assert sys.getrefcount(q) == 2
 
     # del causes queue to be collected
+    assert len(kv_test_app.kv._filter_to_queues) == 1
     ref = weakref.ref(q)
     del q
     assert ref() is None
-
-    # Cleanup on __del__
     assert len(kv_test_app.kv._filter_to_queues) == 0
 
 
@@ -1102,9 +1103,9 @@ def del_event(k, filter):
 
 
 def test_event_ranges(kv_test_app):
-    before_d = kv_test_app.kv.events(range_end='d')
-    after_c = kv_test_app.kv.events(range_start='c')
-    b_to_e = kv_test_app.kv.events(range_start='b', range_end='e')
+    before_d = kv_test_app.kv.events(end='d')
+    after_c = kv_test_app.kv.events(start='c')
+    b_to_e = kv_test_app.kv.events(start='b', end='e')
     everything = kv_test_app.kv.events()
 
     kv_test_app.kv.put('a', b'1')
@@ -1173,11 +1174,11 @@ def test_event_ranges(kv_test_app):
 
 
 def test_event_types(kv_test_app):
-    put_b_to_e = kv_test_app.kv.events(range_start='b',
-                                       range_end='e',
+    put_b_to_e = kv_test_app.kv.events(start='b',
+                                       end='e',
                                        event_type='put')
-    del_b_to_e = kv_test_app.kv.events(range_start='b',
-                                       range_end='e',
+    del_b_to_e = kv_test_app.kv.events(start='b',
+                                       end='e',
                                        event_type='delete')
 
     kv_test_app.kv.put('a', b'1')
@@ -1209,12 +1210,12 @@ def test_event_types(kv_test_app):
 
 def test_event_multiple_subscriptions(kv_test_app):
     q1 = kv_test_app.kv.event_queue()
-    before_b = q1.subscribe(range_end='b')
-    after_c = q1.subscribe(range_start='c')
+    before_b = q1.subscribe(end='b')
+    after_c = q1.subscribe(start='c')
 
     q2 = kv_test_app.kv.event_queue()
-    assert q2.subscribe(range_end='b') == before_b
-    after_c_del = q2.subscribe(range_start='c', event_type='delete')
+    assert q2.subscribe(end='b') == before_b
+    after_c_del = q2.subscribe(start='c', event_type='delete')
 
     kv_test_app.kv.put('a', b'1')
     kv_test_app.kv.put('b', b'2')
@@ -1292,6 +1293,28 @@ def test_events_and_ownership(kv_test_app):
            put_event('a3', b'3', c1, filt),
            put_event('a4', b'4', None, filt)]
     assert res == sol
+
+
+def test_key_value_wait(kv_test_app):
+    def set_foo():
+        time.sleep(0.5)
+        kv_test_app.kv['foo'] = b'1'
+
+    for return_owner in [True, False]:
+        kv_test_app.kv.clear()
+
+        sol = (b'1', None) if return_owner else b'1'
+
+        setter = threading.Thread(target=set_foo)
+        setter.daemon = True
+        setter.start()
+
+        val = kv_test_app.kv.wait('foo', return_owner=return_owner)
+        assert val == sol
+
+        # Get immediately for set keys
+        val = kv_test_app.kv.wait('foo', return_owner=return_owner)
+        assert val == sol
 
 
 def test_events_application_shutdown(client):

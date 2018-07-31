@@ -45,7 +45,7 @@ Key Value Store
 .. autoclass:: skein.kv.list_keys
     :members:
 
-.. autoclass:: skein.kv.contains
+.. autoclass:: skein.kv.exists
     :members:
 
 .. autoclass:: skein.kv.missing
@@ -108,7 +108,6 @@ Key Value Store
 
 .. autoclass:: skein.kv.EventQueue
     :members:
-    :inherited-members:
 
 
 Application Specification
