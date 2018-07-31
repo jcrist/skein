@@ -178,13 +178,15 @@ message ApplicationsResponse {
 service Master {
   rpc shutdown (ShutdownRequest) returns (Empty);
 
-  rpc keyvalueGetKey (GetKeyRequest) returns (GetKeyResponse);
+  rpc GetRange (GetRangeRequest) returns (GetRangeResponse);
 
-  rpc keyvalueSetKey (SetKeyRequest) returns (Empty);
+  rpc PutKey (PutKeyRequest) returns (PutKeyResponse);
 
-  rpc keyvalueDelKey (DelKeyRequest) returns (Empty);
+  rpc DeleteRange (DeleteRangeRequest) returns (DeleteRangeResponse);
 
-  rpc keyvalueGetAll (Empty) returns (KeyValueResponse);
+  rpc Transaction (TransactionRequest) returns (TransactionResponse);
+
+  rpc Watch (stream WatchRequest) returns (stream WatchResponse);
 
   rpc getApplicationSpec (Empty) returns (ApplicationSpec);
 
@@ -201,28 +203,156 @@ message ShutdownRequest {
 }
 
 
-message GetKeyRequest {
+message KeyValue {
   string key = 1;
-  bool wait = 2;
+  bytes value = 2;
+  ContainerInstance owner = 3;
 }
 
 
-message GetKeyResponse {
-  string val = 1;
+message GetRangeRequest {
+  enum ResultType {
+    ITEMS = 0;
+    KEYS = 1;
+    NONE = 2;
+  }
+  string start = 1;
+  string end = 2;
+  ResultType result_type = 3;
 }
 
 
-message SetKeyRequest {
+message GetRangeResponse {
+  int32 count = 1;
+  GetRangeRequest.ResultType result_type = 2;
+  repeated KeyValue result = 3;
+}
+
+
+message PutKeyRequest {
   string key = 1;
-  string val = 2;
+  bytes value = 2;
+  ContainerInstance owner = 3;
+  bool ignore_value = 4;
+  bool ignore_owner = 5;
+  bool return_previous = 6;
 }
 
-message DelKeyRequest {
+
+message PutKeyResponse {
+  bool return_previous = 1;
+  KeyValue previous = 2;
+}
+
+
+message DeleteRangeRequest {
+  enum ResultType {
+    NONE = 0;
+    ITEMS = 1;
+    KEYS = 2;
+  }
+  string start = 1;
+  string end = 2;
+  ResultType result_type = 3;
+}
+
+
+message DeleteRangeResponse {
+  int32 count = 1;
+  DeleteRangeRequest.ResultType result_type = 2;
+  repeated KeyValue result = 3;
+}
+
+
+message Condition {
+  enum Operator {
+    EQUAL = 0;
+    NOT_EQUAL = 1;
+    LESS = 2;
+    LESS_EQUAL = 3;
+    GREATER = 4;
+    GREATER_EQUAL = 5;
+  }
+  enum Field {
+    VALUE = 0;
+    OWNER = 1;
+  }
   string key = 1;
+  Operator operator = 2;
+  Field field = 3;
+  oneof rhs {
+    bytes value = 4;
+    ContainerInstance owner = 5;
+  }
 }
 
-message KeyValueResponse {
-  map<string, string> items = 1;
+
+message OpRequest {
+  oneof request {
+    GetRangeRequest get_range = 1;
+    PutKeyRequest put_key = 2;
+    DeleteRangeRequest delete_range = 3;
+  }
+}
+
+
+message OpResponse {
+  oneof response {
+    GetRangeResponse get_range = 1;
+    PutKeyResponse put_key = 2;
+    DeleteRangeResponse delete_range = 3;
+  }
+}
+
+
+message TransactionRequest {
+  repeated Condition condition = 1;
+  repeated OpRequest on_success = 2;
+  repeated OpRequest on_failure = 3;
+}
+
+
+message TransactionResponse {
+  bool succeeded = 1;
+  repeated OpResponse result = 2;
+}
+
+
+message WatchCreateRequest {
+  enum Type {
+    ALL = 0;
+    PUT = 1;
+    DELETE = 2;
+  }
+  string start = 1;
+  string end = 2;
+  Type event_type = 3;
+}
+
+
+message WatchCancelRequest {
+  int32 watch_id = 1;
+}
+
+
+message WatchRequest {
+  oneof request {
+    WatchCreateRequest create = 1;
+    WatchCancelRequest cancel = 2;
+  }
+}
+
+
+message WatchResponse {
+  enum Type {
+    CREATE = 0;
+    CANCEL = 1;
+    PUT = 2;
+    DELETE = 3;
+  }
+  Type type = 1;
+  int32 watch_id = 2;
+  repeated KeyValue event = 3;
 }
 
 

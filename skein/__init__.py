@@ -1,3 +1,4 @@
+from . import kv
 from .core import Client, ApplicationClient, Security
 from .exceptions import (SkeinError, SkeinConfigurationError, ConnectionError,
                          DaemonNotRunningError, ApplicationNotRunningError,

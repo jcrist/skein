@@ -1,6 +1,8 @@
 from __future__ import print_function, division, absolute_import
 
-from .compatibility import unicode
+from datetime import datetime, timedelta
+
+from .compatibility import unicode, UTC
 
 
 def ensure_unicode(x):
@@ -13,6 +15,19 @@ def format_list(x):
     return "\n".join("- %s" % s for s in sorted(x))
 
 
+def format_comma_separated_list(x, conjunction='or'):
+    n = len(x)
+    if n == 0:
+        return ''
+    if n == 1:
+        return str(x[0])
+    if n == 2:
+        left, right = x
+        return '%s %s %s' % (left, conjunction, right)
+    left, right = ', '.join(map(str, x[:-1])), x[-1]
+    return '%s, %s %s' % (left, conjunction, right)
+
+
 def humanize_timedelta(td):
     """Pretty-print a timedelta in a human readable format."""
     secs = int(td.total_seconds())
@@ -23,6 +38,27 @@ def humanize_timedelta(td):
     if mins:
         return '%dm' % mins
     return '%ds' % secs
+
+
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+
+
+def datetime_from_millis(x):
+    if x is None or x == 0:
+        return None
+    return _EPOCH + timedelta(milliseconds=x)
+
+
+def datetime_to_millis(x):
+    return int((x - _EPOCH).total_seconds() * 1000)
+
+
+def runtime(start_time, finish_time):
+    if start_time is None:
+        return timedelta(0)
+    if finish_time is None:
+        return datetime.now(UTC) - start_time
+    return finish_time - start_time
 
 
 def format_table(columns, rows):

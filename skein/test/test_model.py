@@ -49,33 +49,39 @@ services:
 %s""" % indent(service_spec, 8)
 
 
-def check_basic_methods(obj, obspec2):
+def check_base_methods(obj, obj2):
     # equality
     assert obj == copy.deepcopy(obj)
     assert not (obj != copy.deepcopy(obj))
-    assert obj != obspec2
+    assert obj2 == copy.deepcopy(obj2)
+    assert obj != obj2
     assert obj != 'incorrect_type'
 
     # smoketest repr
     repr(obj)
+
+    cls = type(obj)
+    proto = obj.to_protobuf()
+    obj2 = cls.from_protobuf(proto)
+    assert obj == obj2
+
+
+def check_specification_methods(obj, obj2):
+    check_base_methods(obj, obj2)
 
     # conversions
     cls = type(obj)
     for skip in [True, False]:
         for method in ['json', 'yaml', 'dict']:
             msg = getattr(obj, 'to_' + method)(skip_nulls=skip)
-            obspec2 = getattr(cls, 'from_' + method)(msg)
-            assert obj == obspec2
-
-    proto = obj.to_protobuf()
-    obspec2 = cls.from_protobuf(proto)
-    assert obj == obspec2
+            obj2 = getattr(cls, 'from_' + method)(msg)
+            assert obj == obj2
 
 
 def test_resources():
     r = Resources(memory=1024, vcores=1)
     r2 = Resources(memory=1024, vcores=2)
-    check_basic_methods(r, r2)
+    check_specification_methods(r, r2)
 
 
 def test_resources_invariants():
@@ -95,7 +101,7 @@ def test_resources_invariants():
 def test_file():
     fil = File(source='/test/path')
     fil2 = File(source='/test/path', size=1024)
-    check_basic_methods(fil, fil2)
+    check_specification_methods(fil, fil2)
 
 
 def test_file_invariants():
@@ -150,7 +156,7 @@ def test_service():
                  files={'file': File(source='/test/path')})
     s2 = Service(resources=r, commands=c,
                  files={'file': File(source='/test/path', size=1024)})
-    check_basic_methods(s1, s2)
+    check_specification_methods(s1, s2)
 
 
 def test_service_invariants():
@@ -202,7 +208,7 @@ def test_application_spec():
                  files={'file': File(source='/test/path', size=1024)})
     spec1 = ApplicationSpec(services={'service': s1})
     spec2 = ApplicationSpec(services={'service': s2})
-    check_basic_methods(spec1, spec2)
+    check_specification_methods(spec1, spec2)
 
 
 def test_application_spec_invariants():
@@ -365,7 +371,7 @@ def test_container():
                    finish_time=None,
                    **kwargs)
 
-    check_basic_methods(c, c2)
+    check_base_methods(c, c2)
 
     assert c.id == "foo_0"
 
@@ -387,7 +393,7 @@ def test_resource_usage_report():
     a = ResourceUsageReport(10, 20, 2, r1, r2, r3)
     b = ResourceUsageReport(11, 20, 2, r1, r2, r3)
 
-    check_basic_methods(a, b)
+    check_base_methods(a, b)
 
 
 def test_application_report():
@@ -424,7 +430,7 @@ def test_application_report():
                           finish_time=finish,
                           **kwargs)
 
-    check_basic_methods(a, b)
+    check_base_methods(a, b)
 
     assert b.runtime == b.finish_time - b.start_time
     before = datetime.datetime.now(UTC)

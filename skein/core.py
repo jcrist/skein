@@ -8,7 +8,7 @@ import signal
 import socket
 import struct
 import subprocess
-from collections import namedtuple, MutableMapping
+from collections import namedtuple
 from contextlib import closing
 
 import grpc
@@ -16,10 +16,12 @@ import grpc
 from . import proto
 from .compatibility import PY2, makedirs
 from .exceptions import (context, FileNotFoundError, ConnectionError,
-                         ApplicationNotRunningError, ApplicationError,
-                         DaemonNotRunningError, DaemonError)
+                         TimeoutError, ApplicationNotRunningError,
+                         ApplicationError, DaemonNotRunningError, DaemonError)
+from .kv import KeyValueStore
 from .model import (ApplicationSpec, ApplicationReport, ApplicationState,
-                    ContainerState, Container, FinalStatus)
+                    ContainerState, Container, FinalStatus,
+                    container_instance_from_string)
 from .utils import cached_property
 
 
@@ -256,18 +258,21 @@ def _start_daemon(security=None, set_global=False, log=None):
 class _ClientBase(object):
     __slots__ = ('__weakref__',)
 
-    def _call(self, method, req):
+    def _call(self, method, req, timeout=None):
         try:
-            return getattr(self._stub, method)(req)
+            return getattr(self._stub, method)(req, timeout=timeout)
         except grpc.RpcError as _exc:
             exc = _exc
 
         code = exc.code()
         if code == grpc.StatusCode.UNAVAILABLE:
             raise ConnectionError("Unable to connect to %s" % self._server_name)
+        if code == grpc.StatusCode.DEADLINE_EXCEEDED:
+            raise TimeoutError("Unable to connect to %s" % self._server_name)
         elif code == grpc.StatusCode.NOT_FOUND:
             raise context.KeyError(exc.details())
         elif code in (grpc.StatusCode.INVALID_ARGUMENT,
+                      grpc.StatusCode.FAILED_PRECONDITION,
                       grpc.StatusCode.ALREADY_EXISTS):
             raise context.ValueError(exc.details())
         else:
@@ -551,47 +556,6 @@ class Client(_ClientBase):
         self._call('kill', proto.Application(id=app_id))
 
 
-class KeyValueStore(MutableMapping):
-    """The Skein Key-Value store.
-
-    Used by applications to coordinate configuration and global state.
-
-    This implements the standard MutableMapping interface, along with the
-    ability to "wait" for keys to be set.
-    """
-    def __init__(self, client):
-        self._client = client
-
-    def to_dict(self):
-        """Return the whole key-value store as a dictionary"""
-        return dict(self._client._call('keyvalueGetAll', proto.Empty()).items)
-
-    def _get(self, key=None, wait=False):
-        req = proto.GetKeyRequest(key=key, wait=wait)
-        resp = self._client._call('keyvalueGetKey', req)
-        return resp.val
-
-    def wait(self, key):
-        """Get a key from the key-value store, blocking until the key is set."""
-        return self._get(key=key, wait=True)
-
-    def __getitem__(self, key):
-        return self._get(key)
-
-    def __setitem__(self, key, value):
-        self._client._call('keyvalueSetKey',
-                           proto.SetKeyRequest(key=key, val=value))
-
-    def __delitem__(self, key):
-        self._client._call('keyvalueDelKey', proto.DelKeyRequest(key=key))
-
-    def __iter__(self):
-        return iter(self.to_dict())
-
-    def __len__(self):
-        return len(self.to_dict())
-
-
 class ApplicationClient(_ClientBase):
     """A client for the application master.
 
@@ -640,13 +604,14 @@ class ApplicationClient(_ClientBase):
         Used by applications to coordinate configuration and global state.
 
         This implements the standard MutableMapping interface, along with the
-        ability to "wait" for keys to be set.
+        ability to "wait" for keys to be set. Keys are strings, with values as
+        bytes.
 
         Examples
         --------
-        >>> app_client.kv['foo'] = 'bar'
+        >>> app_client.kv['foo'] = b'bar'
         >>> app_client.kv['foo']
-        'bar'
+        b'bar'
         >>> del app_client.kv['foo']
         >>> 'foo' in app_client.kv
         False
@@ -749,10 +714,4 @@ class ApplicationClient(_ClientBase):
         id : str
             The id of the container to kill.
         """
-        try:
-            service, instance = id.rsplit('_', 1)
-            instance = int(instance)
-        except (TypeError, ValueError):
-            raise context.ValueError("Invalid container id %r" % id)
-        req = proto.ContainerInstance(service_name=service, instance=instance)
-        self._call('killContainer', req)
+        self._call('killContainer', container_instance_from_string(id))

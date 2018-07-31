@@ -4,13 +4,14 @@ import warnings
 import sys
 from contextlib import contextmanager
 
-from .compatibility import PY2
+from .compatibility import PY2, bind_method
 
 __all__ = ('FileExistsError',    # py2 compat
            'FileNotFoundError',  # py2 compat
            'SkeinError',
            'SkeinConfigurationError',
            'ConnectionError',
+           'TimeoutError',
            'DaemonNotRunningError',
            'ApplicationNotRunningError',
            'DaemonError',
@@ -21,6 +22,9 @@ if PY2:
     class _ConnectionError(OSError):
         pass
 
+    class _TimeoutError(OSError):
+        pass
+
     class FileExistsError(OSError):
         pass
 
@@ -29,6 +33,7 @@ if PY2:
 
 else:
     _ConnectionError = ConnectionError  # noqa
+    _TimeoutError = TimeoutError  # noqa
     FileExistsError = FileExistsError
     FileNotFoundError = FileNotFoundError
 
@@ -43,6 +48,10 @@ class SkeinConfigurationError(SkeinError, FileNotFoundError):
 
 class ConnectionError(SkeinError, _ConnectionError):
     """Failed to connect to the daemon or application master"""
+
+
+class TimeoutError(SkeinError, _TimeoutError):
+    """Request to daemon or application master timed out"""
 
 
 class DaemonNotRunningError(ConnectionError):
@@ -65,9 +74,6 @@ class _Context(object):
     def __init__(self):
         self.is_cli = False
 
-    def info(self, msg):
-        print(msg)
-
     def warn(self, msg):
         if self.is_cli:
             print(msg + "\n", file=sys.stderr)
@@ -89,11 +95,7 @@ class _Context(object):
         def wrap(self, msg):
             return typ2(msg) if self.is_cli else typ(msg)
 
-        if PY2:
-            import types
-            setattr(cls, name, types.MethodType(wrap, None, cls))
-        else:
-            setattr(cls, name, wrap)
+        bind_method(cls, name, wrap)
 
 
 for exc in [ValueError, KeyError, TypeError, FileExistsError,

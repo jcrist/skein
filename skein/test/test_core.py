@@ -1,10 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import os
-import time
 import weakref
-from collections import MutableMapping
-from threading import Thread
 
 import pytest
 
@@ -137,51 +134,6 @@ def test_simple_app(client):
 
     finished_apps = client.get_applications(states=['finished'])
     assert app.id in {a.id for a in finished_apps}
-
-
-def test_key_value(client):
-    with run_application(client) as app:
-        assert isinstance(app.kv, MutableMapping)
-        assert app.kv is app.kv
-
-        assert dict(app.kv) == {}
-
-        app.kv['foo'] = 'bar'
-        assert app.kv['foo'] == 'bar'
-
-        assert dict(app.kv) == {'foo': 'bar'}
-        assert app.kv.to_dict() == {'foo': 'bar'}
-        assert len(app.kv) == 1
-
-        del app.kv['foo']
-        assert app.kv.to_dict() == {}
-        assert len(app.kv) == 0
-
-        with pytest.raises(KeyError):
-            app.kv['fizz']
-
-        with pytest.raises(TypeError):
-            app.kv[1] = 'foo'
-
-        with pytest.raises(TypeError):
-            app.kv['foo'] = 1
-
-        def set_foo():
-            time.sleep(0.5)
-            app.kv['foo'] = 'baz'
-
-        setter = Thread(target=set_foo)
-        setter.daemon = True
-        setter.start()
-
-        val = app.kv.wait('foo')
-        assert val == 'baz'
-
-        # Get immediately for set keys
-        val2 = app.kv.wait('foo')
-        assert val2 == 'baz'
-
-        app.shutdown()
 
 
 def test_dynamic_containers(client):

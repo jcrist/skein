@@ -7,6 +7,7 @@ import traceback
 
 from . import __version__
 from .core import Client, ApplicationClient, Security
+from .compatibility import read_stdin_bytes, write_stdout_bytes
 from .exceptions import context, SkeinError, DaemonNotRunningError
 from .model import ApplicationSpec, ContainerState, ApplicationState
 from .utils import format_table, humanize_timedelta
@@ -164,28 +165,34 @@ kv = node(entry_subs, 'kv', 'Manage the skein key-value store')
 @subcommand(kv.subs,
             'get', 'Get a value from the key-value store',
             app_id_or_current,
-            arg('--key', help='The key to get. Omit to get the whole '
-                              'key-value store.'),
-            arg('--wait', action='store_true',
+            arg('--key',
+                required=True,
+                help='The key to get'),
+            arg('--wait',
+                action='store_true',
                 help='If true, will block until the key is set'))
-def kv_get(app_id, key=None, wait=False):
+def kv_get(app_id, key, wait=False):
     app = application_client_from_app_id(app_id)
-
-    if key is None:
-        result = app.kv.to_dict()
-        if result:
-            print('\n'.join('%s: %s' % i for i in sorted(result.items())))
-    else:
-        result = app.kv.wait(key) if wait else app.kv[key]
-        print(result)
+    result = app.kv.wait(key) if wait else app.kv[key]
+    write_stdout_bytes(result + b'\n')
 
 
 @subcommand(kv.subs,
-            'set', 'Set a value in the key-value store',
+            'put', 'Put a value in the key-value store',
             app_id_or_current,
-            arg('--key', required=True, help='The key to set'),
-            arg('--value', required=True, help='The value to set'))
-def kv_set(app_id, key, value):
+            arg('--key',
+                required=True,
+                help='The key to put'),
+            arg('--value',
+                required=False,
+                type=lambda x: x,
+                default=None,
+                help='The value to put. If not provided, will be read from stdin.'))
+def kv_put(app_id, key, value=None):
+    if value is None:
+        value = read_stdin_bytes()
+    else:
+        value = value.encode()
     app = application_client_from_app_id(app_id)
     app.kv[key] = value
 
@@ -197,6 +204,16 @@ def kv_set(app_id, key, value):
 def kv_del(app_id, key):
     app = application_client_from_app_id(app_id)
     del app.kv[key]
+
+
+@subcommand(kv.subs,
+            'ls', 'List all keys in the key-value store',
+            app_id_or_current)
+def kv_ls(app_id):
+    app = application_client_from_app_id(app_id)
+    keys = sorted(app.kv)
+    if keys:
+        print('\n'.join(keys))
 
 
 ########################

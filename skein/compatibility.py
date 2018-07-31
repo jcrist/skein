@@ -8,7 +8,9 @@ PY3 = not PY2
 
 if PY2:
     import os
+    import types
     from urlparse import urlparse, urlsplit  # noqa
+    from Queue import Queue  # noqa
     unicode = unicode  # noqa
     string = basestring  # noqa
     integer = (int, long)  # noqa
@@ -27,14 +29,34 @@ if PY2:
         except OSError:
             if not exist_ok or not os.path.isdir(name):
                 raise
+
+    def read_stdin_bytes():
+        return sys.stdin.read()
+
+    def write_stdout_bytes(b):
+        sys.stdout.write(b)
+
+    def bind_method(cls, name, func):
+        setattr(cls, name, types.MethodType(func, None, cls))
+
 else:
     from urllib.parse import urlparse, urlsplit  # noqa
     from os import makedirs  # noqa
+    from queue import Queue  # noqa
     unicode = str
     string = str
     integer = int
 
     UTC = datetime.timezone.utc
+
+    def read_stdin_bytes():
+        return sys.stdin.buffer.read()
+
+    def write_stdout_bytes(b):
+        sys.stdout.buffer.write(b)
+
+    def bind_method(cls, name, func):
+        setattr(cls, name, func)
 
 
 def with_metaclass(meta):

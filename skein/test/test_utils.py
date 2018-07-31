@@ -2,7 +2,8 @@ from __future__ import absolute_import, print_function, division
 
 from datetime import timedelta
 
-from skein.utils import humanize_timedelta, format_table
+from skein.utils import (humanize_timedelta, format_table,
+                         format_comma_separated_list)
 
 
 def test_humanize_timedelta():
@@ -24,3 +25,10 @@ def test_format_table():
            'pear      green')
     assert res == sol
     assert format_table(['fruit', 'color'], []) == 'FRUIT    COLOR'
+
+
+def test_format_comma_separated_list():
+    assert format_comma_separated_list([]) == ''
+    assert format_comma_separated_list([None]) == 'None'
+    assert format_comma_separated_list([None, False]) == 'None or False'
+    assert format_comma_separated_list([None, False, True]) == 'None, False, or True'
