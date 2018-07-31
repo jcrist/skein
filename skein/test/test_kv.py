@@ -11,7 +11,6 @@ from collections import MutableMapping, OrderedDict
 import pytest
 
 from skein import kv
-from skein.compatibility import Empty
 from skein.exceptions import ConnectionError
 from skein.test.conftest import run_application
 
@@ -1069,10 +1068,6 @@ def test_event_queue_cleanup(kv_test_app):
     kv_test_app.kv['foo'] = b'1'
     del kv_test_app.kv['foo']
 
-    # Clear queue
-    q.get(block=False)
-    q.get(block=False)
-
     # No extra references
     assert sys.getrefcount(q) == 2
 
@@ -1084,14 +1079,8 @@ def test_event_queue_cleanup(kv_test_app):
     assert len(kv_test_app.kv._filter_to_queues) == 0
 
 
-def read_all(q):
-    out = []
-    while True:
-        try:
-            out.append(q.get(block=False))
-        except Empty:
-            break
-    return out
+def get_n(q, n):
+    return [q.get(timeout=2) for _ in range(n)]
 
 
 def put_event(k, v, o, filter):
@@ -1122,18 +1111,17 @@ def test_event_ranges(kv_test_app):
 
     # Open start
     filt = next(iter(before_d.filters))
-    res = read_all(before_d)
     sol = [put_event('a', b'1', None, filt),
            put_event('b', b'2', None, filt),
            put_event('c', b'3', None, filt),
            del_event('b', filt),
            del_event('c', filt),
            del_event('a', filt)]
+    res = get_n(before_d, len(sol))
     assert res == sol
 
     # Open end
     filt = next(iter(after_c.filters))
-    res = read_all(after_c)
     sol = [put_event('c', b'3', None, filt),
            put_event('d', b'4', None, filt),
            put_event('e', b'5', None, filt),
@@ -1142,22 +1130,22 @@ def test_event_ranges(kv_test_app):
            del_event('e', filt),
            del_event('f', filt),
            del_event('d', filt)]
+    res = get_n(after_c, len(sol))
     assert res == sol
 
     # Closed start and end
     filt = next(iter(b_to_e.filters))
-    res = read_all(b_to_e)
     sol = [put_event('b', b'2', None, filt),
            put_event('c', b'3', None, filt),
            put_event('d', b'4', None, filt),
            del_event('b', filt),
            del_event('c', filt),
            del_event('d', filt)]
+    res = get_n(b_to_e, len(sol))
     assert res == sol
 
     # Open start and end
     filt = next(iter(everything.filters))
-    res = read_all(everything)
     sol = [put_event('a', b'1', None, filt),
            put_event('b', b'2', None, filt),
            put_event('c', b'3', None, filt),
@@ -1170,6 +1158,7 @@ def test_event_ranges(kv_test_app):
            del_event('e', filt),
            del_event('f', filt),
            del_event('d', filt)]
+    res = get_n(everything, len(sol))
     assert res == sol
 
 
@@ -1193,18 +1182,18 @@ def test_event_types(kv_test_app):
 
     # put
     filt = next(iter(put_b_to_e.filters))
-    res = read_all(put_b_to_e)
     sol = [put_event('b', b'2', None, filt),
            put_event('c', b'3', None, filt),
            put_event('d', b'4', None, filt)]
+    res = get_n(put_b_to_e, len(sol))
     assert res == sol
 
     # del
     filt = next(iter(del_b_to_e.filters))
-    res = read_all(del_b_to_e)
     sol = [del_event('b', filt),
            del_event('c', filt),
            del_event('d', filt)]
+    res = get_n(del_b_to_e, len(sol))
     assert res == sol
 
 
@@ -1226,20 +1215,20 @@ def test_event_multiple_subscriptions(kv_test_app):
     kv_test_app.kv.discard_range(start='e')
     kv_test_app.kv.clear()
 
-    res = read_all(q1)
     sol = [put_event('a', b'1', None, before_b),
            put_event('c', b'3', None, after_c),
            put_event('d', b'4', None, after_c),
            del_event('c', after_c),
            del_event('a', before_b),
            del_event('d', after_c)]
+    res = get_n(q1, len(sol))
     assert res == sol
 
-    res = read_all(q2)
     sol = [put_event('a', b'1', None, before_b),
            del_event('c', after_c_del),
            del_event('a', before_b),
            del_event('d', after_c_del)]
+    res = get_n(q2, len(sol))
     assert res == sol
 
 
@@ -1270,7 +1259,6 @@ def test_events_and_ownership(kv_test_app):
     kv_test_app.kv.clear()
 
     filt = next(iter(q1.filters))
-    res = read_all(q1)
     sols = [[put_event('a1', b'1', c1, filt),
              put_event('a2', b'2', c1, filt),
              put_event('a3', b'3', c2, filt),
@@ -1282,16 +1270,17 @@ def test_events_and_ownership(kv_test_app):
              del_event(y, filt),
              del_event('a4', filt)]
             for x, y in [('a2', 'a3'), ('a3', 'a2')]]
+    res = get_n(q1, len(sols[0]))
     assert res in sols
 
     filt = next(iter(q2.filters))
-    res = read_all(q2)
     sol = [put_event('a1', b'1', c1, filt),
            put_event('a2', b'2', c1, filt),
            put_event('a3', b'3', c2, filt),
            put_event('a4', b'4', c2, filt),
            put_event('a3', b'3', c1, filt),
            put_event('a4', b'4', None, filt)]
+    res = get_n(q2, len(sol))
     assert res == sol
 
 
