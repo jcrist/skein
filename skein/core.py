@@ -59,8 +59,8 @@ class Properties(Mapping):
     def __init__(self):
         config_dir = os.environ.get('SKEIN_CONFIG',
                                     os.path.join(os.path.expanduser('~'), '.skein'))
-        application_id = os.environ.get('SKEIN_APPMASTER_ADDRESS')
-        appmaster_address = os.environ.get('SKEIN_APPLICATION_ID')
+        application_id = os.environ.get('SKEIN_APPLICATION_ID')
+        appmaster_address = os.environ.get('SKEIN_APPMASTER_ADDRESS')
         container_id = os.environ.get('SKEIN_CONTAINER_ID')
         yarn_container_id = os.environ.get('CONTAINER_ID')
         try:
