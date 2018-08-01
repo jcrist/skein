@@ -1,8 +1,8 @@
 from . import kv
 from .core import Client, ApplicationClient, Security, properties
-from .exceptions import (SkeinError, SkeinConfigurationError, ConnectionError,
-                         DaemonNotRunningError, ApplicationNotRunningError,
-                         DaemonError, ApplicationError)
+from .exceptions import (SkeinError, ConnectionError, DaemonNotRunningError,
+                         ApplicationNotRunningError, DaemonError,
+                         ApplicationError)
 from .model import (ApplicationSpec, Service, File, Resources, FileType,
                     FileVisibility)
 
