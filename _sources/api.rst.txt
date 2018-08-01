@@ -27,6 +27,12 @@ Application Client
     :inherited-members:
 
 
+Runtime Properties
+------------------
+
+.. autodata:: properties
+
+
 Key Value Store
 ---------------
 
@@ -162,9 +168,6 @@ Exceptions
 ----------
 
 .. autoexception:: SkeinError
-    :show-inheritance:
-
-.. autoexception:: SkeinConfigurationError
     :show-inheritance:
 
 .. autoexception:: ConnectionError
