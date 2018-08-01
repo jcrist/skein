@@ -1,6 +1,8 @@
 package com.anaconda.skein;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
@@ -15,6 +17,7 @@ import org.eclipse.jetty.server.handler.ResourceHandler;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -24,7 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 
 public class WebUI {
   public static WebUI start(ApplicationId appId,
-                            Map<String, String> keyValueStore,
+                            Map<String, Msg.KeyValue> keyValueStore,
                             Map<String, List<Model.Container>> services)
       throws Exception {
     Server server = new Server(0);
@@ -58,18 +61,24 @@ public class WebUI {
   private static class WebApiHandler extends AbstractHandler {
     private static class Context {
       private final ApplicationId appId;
-      private final Map<String, String> keyValueStore;
+      private final Map<String, Msg.KeyValue> keyValueStore;
       private final Map<String, List<Model.Container>> services;
 
       public Context(ApplicationId appId,
-                     Map<String, String> keyValueStore,
+                     Map<String, Msg.KeyValue> keyValueStore,
                      Map<String, List<Model.Container>> services) {
         this.appId = appId;
         this.keyValueStore = keyValueStore;
         this.services = services;
       }
 
-      public Iterable<Map.Entry<String, String>> kv() { return keyValueStore.entrySet(); }
+      public Iterable<Map.Entry<String, String>> kv() {
+        return Maps.transformValues(keyValueStore, new Function<Msg.KeyValue, String>() {
+          public String apply(Msg.KeyValue kv) {
+            return kv.getValue().toString(StandardCharsets.US_ASCII);
+          }
+        }).entrySet();
+      }
 
       public String appId() { return appId.toString(); }
 
@@ -91,7 +100,7 @@ public class WebUI {
     private final Context context;
 
     public WebApiHandler(ApplicationId appId,
-                         Map<String, String> keyValueStore,
+                         Map<String, Msg.KeyValue> keyValueStore,
                          Map<String, List<Model.Container>> services) {
       this.context = new Context(appId, keyValueStore, services);
     }

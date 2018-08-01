@@ -162,7 +162,14 @@ public class ApplicationMaster {
     try {
       ui = WebUI.start(
           appId,
-          Collections.unmodifiableMap(keyValueStore),
+          Collections.unmodifiableMap(
+              Maps.transformValues(
+                  keyValueStore,
+                  new Function<Msg.KeyValue.Builder, Msg.KeyValue>() {
+                    public Msg.KeyValue apply(Msg.KeyValue.Builder b) {
+                      return b.build();
+                    }
+                  })),
           Collections.unmodifiableMap(
               Maps.transformValues(
                   services,

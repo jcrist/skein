@@ -95,6 +95,8 @@
           <compilerArgs>
             <arg>-Xlint:all</arg>
           </compilerArgs>
+          <source>7</source>
+          <target>7</target>
         </configuration>
       </plugin>
 
