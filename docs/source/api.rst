@@ -27,6 +27,12 @@ Application Client
     :inherited-members:
 
 
+Runtime Properties
+------------------
+
+.. autodata:: properties
+
+
 Key Value Store
 ---------------
 

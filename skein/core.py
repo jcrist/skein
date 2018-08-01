@@ -8,39 +8,105 @@ import signal
 import socket
 import struct
 import subprocess
-from collections import namedtuple
+from collections import namedtuple, Mapping
 from contextlib import closing
 
 import grpc
 
 from . import proto
-from .compatibility import PY2, makedirs
+from .compatibility import PY2, makedirs, isidentifier
 from .exceptions import (context, FileNotFoundError, ConnectionError,
                          TimeoutError, ApplicationNotRunningError,
                          ApplicationError, DaemonNotRunningError, DaemonError)
 from .kv import KeyValueStore
 from .model import (ApplicationSpec, ApplicationReport, ApplicationState,
-                    ContainerState, Container, FinalStatus,
+                    ContainerState, Container, FinalStatus, Resources,
                     container_instance_from_string)
 from .utils import cached_property
 
 
-__all__ = ('Client', 'ApplicationClient', 'Security')
+__all__ = ('Client', 'ApplicationClient', 'Security', 'properties')
 
 
-ADDRESS_ENV_VAR = 'SKEIN_APPMASTER_ADDRESS'
-APPID_ENV_VAR = 'SKEIN_APPLICATION_ID'
-CONFIG_DIR = os.environ.get('SKEIN_CONFIG',
-                            os.path.join(os.path.expanduser('~'), '.skein'))
 _SKEIN_DIR = os.path.abspath(os.path.dirname(os.path.relpath(__file__)))
-SKEIN_JAR = os.path.join(_SKEIN_DIR, 'java', 'skein.jar')
+_SKEIN_JAR = os.path.join(_SKEIN_DIR, 'java', 'skein.jar')
 
 
-def _get_env_var(name):
-    res = os.environ.get(name)
-    if res is None:
-        raise context.ValueError("Environment variable %r not found" % name)
-    return res
+class Properties(Mapping):
+    """Skein runtime properties.
+
+    This class implements an immutable mapping type, exposing properties
+    determined at import time.
+
+    Attributes
+    ----------
+    application_id : str or None
+        The current application id. None if not running in a container.
+    appmaster_address : str or None
+        The address of the current application's appmaster. None if not running
+        in a container.
+    config_dir : str
+        The path to the configuration directory.
+    container_id : str or None
+        The current skein container id (of the form
+        ``'{service}_{instance}'``). None if not running in a container.
+    container_resources : Resources or None
+        The resources allocated to the current container. None if not in a
+        container.
+    yarn_container_id : str or None
+        The current YARN container id. None if not running in a container.
+    """
+    def __init__(self):
+        config_dir = os.environ.get('SKEIN_CONFIG',
+                                    os.path.join(os.path.expanduser('~'), '.skein'))
+        application_id = os.environ.get('SKEIN_APPMASTER_ADDRESS')
+        appmaster_address = os.environ.get('SKEIN_APPLICATION_ID')
+        container_id = os.environ.get('SKEIN_CONTAINER_ID')
+        yarn_container_id = os.environ.get('CONTAINER_ID')
+        try:
+            container_resources = Resources(
+                int(os.environ.get('SKEIN_RESOURCE_MEMORY')),
+                int(os.environ.get('SKEIN_RESOURCE_VCORES')))
+        except (ValueError, TypeError):
+            container_resources = None
+
+        mapping = dict(application_id=application_id,
+                       appmaster_address=appmaster_address,
+                       config_dir=config_dir,
+                       container_id=container_id,
+                       container_resources=container_resources,
+                       yarn_container_id=yarn_container_id)
+
+        object.__setattr__(self, '_mapping', mapping)
+
+    def __getitem__(self, key):
+        return self._mapping[key]
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError("%r object has no attribute %r"
+                                 % (type(self).__name__, key))
+
+    def __setattr__(self, key, val):
+        raise AttributeError("%r object has no attribute %r"
+                             % (type(self).__name__, key))
+
+    def __dir__(self):
+        o = set(dir(type(self)))
+        o.update(self.__dict__)
+        o.update(c for c in self._mapping if isidentifier(c))
+        return list(o)
+
+    def __iter__(self):
+        return iter(self._mapping)
+
+    def __len__(self):
+        return len(self._mapping)
+
+
+properties = Properties()
 
 
 class Security(namedtuple('Security', ['cert_path', 'key_path'])):
@@ -64,12 +130,12 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
     def from_default(cls):
         """The default security configuration."""
         try:
-            return cls.from_directory(CONFIG_DIR)
+            return cls.from_directory(properties.config_dir)
         except FileNotFoundError:
             pass
         context.warn("Skein global security credentials not found, writing now "
-                     "to %r." % CONFIG_DIR)
-        return cls.from_new_directory(directory=CONFIG_DIR)
+                     "to %r." % properties.config_dir)
+        return cls.from_new_directory(directory=properties.config_dir)
 
     @classmethod
     def from_directory(cls, directory):
@@ -106,7 +172,7 @@ class Security(namedtuple('Security', ['cert_path', 'key_path'])):
         from cryptography.hazmat.primitives.asymmetric import rsa
         from cryptography.x509.oid import NameOID
 
-        directory = directory or CONFIG_DIR
+        directory = directory or properties.config_dir
 
         # Create directory if it doesn't exist
         makedirs(directory, exist_ok=True)
@@ -170,7 +236,7 @@ def secure_channel(address, security=None):
 
 def _read_daemon():
     try:
-        with open(os.path.join(CONFIG_DIR, 'daemon'), 'r') as fil:
+        with open(os.path.join(properties.config_dir, 'daemon'), 'r') as fil:
             data = json.load(fil)
             address = data['address']
             pid = data['pid']
@@ -181,19 +247,19 @@ def _read_daemon():
 
 def _write_daemon(address, pid):
     # Ensure the config dir exists
-    makedirs(CONFIG_DIR, exist_ok=True)
+    makedirs(properties.config_dir, exist_ok=True)
     # Write to the daemon file
-    with open(os.path.join(CONFIG_DIR, 'daemon'), 'w') as fil:
+    with open(os.path.join(properties.config_dir, 'daemon'), 'w') as fil:
         json.dump({'address': address, 'pid': pid}, fil)
 
 
 def _start_daemon(security=None, set_global=False, log=None):
     security = security or Security.from_default()
 
-    if not os.path.exists(SKEIN_JAR):
+    if not os.path.exists(_SKEIN_JAR):
         raise context.FileNotFoundError("Failed to find the skein jar file")
 
-    command = ["yarn", "jar", SKEIN_JAR, SKEIN_JAR,
+    command = ["yarn", "jar", _SKEIN_JAR, _SKEIN_JAR,
                security.cert_path, security.key_path]
     if set_global:
         command.append("--daemon")
@@ -384,7 +450,7 @@ class Client(_ClientBase):
             os.kill(pid, signal.SIGTERM)
 
         try:
-            os.remove(os.path.join(CONFIG_DIR, 'daemon'))
+            os.remove(os.path.join(properties.config_dir, 'daemon'))
         except OSError:
             pass
 
@@ -666,12 +732,17 @@ class ApplicationClient(_ClientBase):
         Useful for connecting to the application master from a running
         container in a application.
         """
-        address = _get_env_var(ADDRESS_ENV_VAR)
-        app_id = _get_env_var(APPID_ENV_VAR)
+        address = properties.appmaster_address
+        app_id = properties.application_id
+        yarn_container_id = properties.yarn_container_id
+        local_dirs = os.environ.get('LOCAL_DIRS')
 
-        container_id = _get_env_var('CONTAINER_ID')
-        for local_dir in _get_env_var('LOCAL_DIRS').split(','):
-            container_dir = os.path.join(local_dir, container_id)
+        if any(p is None for p in [address, app_id, yarn_container_id,
+                                   local_dirs]):
+            raise context.ValueError("Not running inside a container")
+
+        for local_dir in local_dirs.split(','):
+            container_dir = os.path.join(local_dir, yarn_container_id)
             crt_path = os.path.join(container_dir, '.skein.crt')
             pem_path = os.path.join(container_dir, '.skein.pem')
             if os.path.exists(crt_path) and os.path.exists(pem_path):

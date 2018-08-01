@@ -8,6 +8,7 @@ PY3 = not PY2
 
 if PY2:
     import os
+    import re
     import types
     from urlparse import urlparse, urlsplit  # noqa
     from Queue import Queue  # noqa
@@ -39,6 +40,11 @@ if PY2:
     def bind_method(cls, name, func):
         setattr(cls, name, types.MethodType(func, None, cls))
 
+    _name_re = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*$")
+
+    def isidentifier(s):
+        return bool(_name_re.match(s))
+
 else:
     from urllib.parse import urlparse, urlsplit  # noqa
     from os import makedirs  # noqa
@@ -57,6 +63,9 @@ else:
 
     def bind_method(cls, name, func):
         setattr(cls, name, func)
+
+    def isidentifier(s):
+        return s.isidentifier()
 
 
 def with_metaclass(meta):
