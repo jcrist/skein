@@ -28,16 +28,12 @@ class SkeinNotebookApp(NotebookApp):
     Launch the application:
 
     >>> client = Client()
-    >>> app = client.submit(spec)
-
-    Wait until application has started:
-
-    >>> app_client = app.connect()
+    >>> app = client.submit_and_connect(spec)
 
     Get the connection information:
 
     >>> import json
-    >>> info = json.loads(app_client.kv.wait('notebook.info'))
+    >>> info = json.loads(app.kv.wait('notebook.info'))
 
     Use the connection info as you see fit for your application. Information
     provided includes:
@@ -64,7 +60,7 @@ class SkeinNotebookApp(NotebookApp):
                 'base_url': self.base_url,
                 'token': self.token}
 
-        self.skein_app_client.kv['notebook.info'] = json.dumps(data)
+        self.skein_app_client.kv['notebook.info'] = json.dumps(data).encode()
 
 
 def start_notebook_application(argv=None):

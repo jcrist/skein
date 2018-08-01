@@ -28,16 +28,12 @@ class SkeinIPKernelApp(IPKernelApp):
     Launch the application:
 
     >>> client = Client()
-    >>> app = client.submit(spec)
-
-    Wait until application has started:
-
-    >>> app_client = app.connect()
+    >>> app = client.submit_and_connect(spec)
 
     Get the connection information:
 
     >>> import json
-    >>> info = json.loads(app_client.kv.wait('ipykernel.info'))
+    >>> info = json.loads(app.kv.wait('ipykernel.info'))
 
     Use the connection info as you see fit for your application. When written
     to a file, this can be used with ``jupyter console --existing file.json``
@@ -58,7 +54,7 @@ class SkeinIPKernelApp(IPKernelApp):
         if data['ip'] in ('', '0.0.0.0'):
             data['ip'] = socket.gethostbyname(socket.gethostname())
 
-        self.skein_app_client.kv['ipykernel.info'] = json.dumps(data)
+        self.skein_app_client.kv['ipykernel.info'] = json.dumps(data).encode()
 
 
 def start_ipython_kernel(argv=None):
