@@ -1,6 +1,7 @@
 package com.anaconda.skein;
 
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
@@ -246,8 +247,15 @@ public class ApplicationMaster {
 
     // Setup service trackers
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
+      Model.Service service = entry.getValue();
+      if (service.getNodeLabel().isEmpty()) {
+        // If the service does not have a node label expression, use
+        // the one configured on the application level.
+        service.setNodeLabel(spec.getNodeLabel());
+      }
+
       services.put(entry.getKey(),
-          new ServiceTracker(entry.getKey(), entry.getValue()));
+          new ServiceTracker(entry.getKey(), service));
     }
 
     // Setup dependents
@@ -805,7 +813,7 @@ public class ApplicationMaster {
           null,
           priority,
           true,
-          service.getNodeLabel().isEmpty() ? null : service.getNodeLabel());
+          Strings.emptyToNull(service.getNodeLabel()));
       container.setContainerRequest(req);
       rmClient.addContainerRequest(req);
       requested.put(priority, container);
