@@ -13,12 +13,12 @@ import skein
 @contextmanager
 def set_skein_config(tmpdir):
     tmpdir = str(tmpdir)
-    old = skein.core.CONFIG_DIR
+    old = skein.properties.config_dir
     try:
-        skein.core.CONFIG_DIR = tmpdir
+        skein.properties._mapping['config_dir'] = tmpdir
         yield tmpdir
     finally:
-        skein.core.CONFIG_DIR = old
+        skein.properties._mapping['config_dir'] = old
 
 
 @pytest.fixture

@@ -11,6 +11,25 @@ from skein.test.conftest import (run_application, wait_for_containers,
                                  wait_for_success, get_logs)
 
 
+def test_properties():
+    assert len(skein.properties) == len(dict(skein.properties))
+    assert skein.properties.config_dir == skein.properties['config_dir']
+    assert 'config_dir' in dir(skein.properties)
+    assert 'missing' not in skein.properties
+
+    with pytest.raises(AttributeError):
+        skein.properties.missing
+
+    with pytest.raises(AttributeError):
+        skein.properties.missing = 1
+
+    with pytest.raises(KeyError):
+        skein.properties['missing']
+
+    with pytest.raises(TypeError):
+        skein.properties['missing'] = 1
+
+
 def test_security(tmpdir):
     path = str(tmpdir)
     s1 = skein.Security.from_new_directory(path)
@@ -104,6 +123,12 @@ def test_client_closed_when_reference_dropped(security, kinit):
     del client
     assert ref() is None
     assert not pid_exists(pid)
+
+
+def test_application_client_from_current_errors():
+    with pytest.raises(ValueError) as exc:
+        skein.ApplicationClient.from_current()
+    assert str(exc.value) == "Not running inside a container"
 
 
 def test_simple_app(client):
