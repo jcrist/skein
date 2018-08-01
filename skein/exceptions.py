@@ -9,7 +9,6 @@ from .compatibility import PY2, bind_method
 __all__ = ('FileExistsError',    # py2 compat
            'FileNotFoundError',  # py2 compat
            'SkeinError',
-           'SkeinConfigurationError',
            'ConnectionError',
            'TimeoutError',
            'DaemonNotRunningError',
@@ -40,10 +39,6 @@ else:
 
 class SkeinError(Exception):
     """Base class for Skein specific exceptions"""
-
-
-class SkeinConfigurationError(SkeinError, FileNotFoundError):
-    """Skein configuration was not found"""
 
 
 class ConnectionError(SkeinError, _ConnectionError):

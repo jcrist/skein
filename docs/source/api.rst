@@ -170,9 +170,6 @@ Exceptions
 .. autoexception:: SkeinError
     :show-inheritance:
 
-.. autoexception:: SkeinConfigurationError
-    :show-inheritance:
-
 .. autoexception:: ConnectionError
     :show-inheritance:
 
