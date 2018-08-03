@@ -58,5 +58,6 @@ User Documentation
 
     quickstart.rst
     specification.rst
+    key-value-store.rst
     api.rst
     cli.rst
