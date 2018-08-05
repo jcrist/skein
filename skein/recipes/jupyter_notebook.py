@@ -3,10 +3,18 @@ from __future__ import absolute_import, print_function, division
 import os
 import json
 import socket
+from copy import copy
 
-from notebook.notebookapp import NotebookApp
+from notebook.notebookapp import NotebookApp, aliases
+from traitlets import Unicode, Dict
 
 from ..core import ApplicationClient
+
+
+skein_notebook_aliases = dict(aliases)
+skein_notebook_aliases.update({
+    'notebook-info-key': 'SkeinNotebookApp.notebook_info_key'
+})
 
 
 class SkeinNotebookApp(NotebookApp):
@@ -33,7 +41,7 @@ class SkeinNotebookApp(NotebookApp):
     Get the connection information:
 
     >>> import json
-    >>> info = json.loads(app.kv.wait('notebook.info'))
+    >>> info = json.loads(app.kv.wait('jupyter.notebook.info'))
 
     Use the connection info as you see fit for your application. Information
     provided includes:
@@ -44,12 +52,20 @@ class SkeinNotebookApp(NotebookApp):
     - base_url
     - token
     """
-    ip = '0.0.0.0'
-    open_browser = False
+    name = 'python -m skein.recipes.jupyter_notebook'
 
-    def initialize(self, argv=None):
-        super(SkeinNotebookApp, self).initialize(argv=argv)
-        self.skein_app_client = ApplicationClient.from_current()
+    aliases = Dict(skein_notebook_aliases)
+
+    ip = copy(NotebookApp.ip)
+    ip.default_value = '0.0.0.0'
+
+    open_browser = copy(NotebookApp.open_browser)
+    open_browser.default_value = False
+
+    notebook_info_key = Unicode("jupyter.notebook.info",
+                                config=True,
+                                help=("Skein key in which to store the "
+                                      "server information"))
 
     def write_server_info_file(self):
         super(SkeinNotebookApp, self).write_server_info_file()
@@ -60,7 +76,8 @@ class SkeinNotebookApp(NotebookApp):
                 'base_url': self.base_url,
                 'token': self.token}
 
-        self.skein_app_client.kv['notebook.info'] = json.dumps(data).encode()
+        app = ApplicationClient.from_current()
+        app.kv[self.notebook_info_key] = json.dumps(data).encode()
 
 
 def start_notebook_application(argv=None):

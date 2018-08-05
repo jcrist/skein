@@ -3,10 +3,18 @@ from __future__ import absolute_import, print_function, division
 import os
 import json
 import socket
+from copy import copy
 
-from ipykernel.kernelapp import IPKernelApp
+from ipykernel.kernelapp import IPKernelApp, kernel_aliases
+from traitlets import Unicode, Dict
 
 from ..core import ApplicationClient
+
+
+skein_kernel_aliases = dict(kernel_aliases)
+skein_kernel_aliases.update({
+    'kernel-info-key': 'SkeinIPKernelApp.kernel_info_key'
+})
 
 
 class SkeinIPKernelApp(IPKernelApp):
@@ -33,17 +41,23 @@ class SkeinIPKernelApp(IPKernelApp):
     Get the connection information:
 
     >>> import json
-    >>> info = json.loads(app.kv.wait('ipykernel.info'))
+    >>> info = json.loads(app.kv.wait('ipython.kernel.info'))
 
     Use the connection info as you see fit for your application. When written
     to a file, this can be used with ``jupyter console --existing file.json``
     to connect to the remote kernel.
     """
-    ip = '0.0.0.0'
+    name = 'python -m skein.recipes.ipython_kernel'
 
-    def initialize(self, argv=None):
-        self.skein_app_client = ApplicationClient.from_current()
-        super(SkeinIPKernelApp, self).initialize(argv=argv)
+    aliases = Dict(skein_kernel_aliases)
+
+    ip = copy(IPKernelApp.ip)
+    ip.default_value = '0.0.0.0'
+
+    kernel_info_key = Unicode("ipython.kernel.info",
+                              config=True,
+                              help=("Skein key in which to store the "
+                                    "connection information"))
 
     def write_connection_file(self):
         super(SkeinIPKernelApp, self).write_connection_file()
@@ -54,7 +68,8 @@ class SkeinIPKernelApp(IPKernelApp):
         if data['ip'] in ('', '0.0.0.0'):
             data['ip'] = socket.gethostbyname(socket.gethostname())
 
-        self.skein_app_client.kv['ipykernel.info'] = json.dumps(data).encode()
+        app = ApplicationClient.from_current()
+        app.kv[self.kernel_info_key] = json.dumps(data).encode()
 
 
 def start_ipython_kernel(argv=None):

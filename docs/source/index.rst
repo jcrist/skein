@@ -59,5 +59,6 @@ User Documentation
     quickstart.rst
     specification.rst
     key-value-store.rst
+    recipes.rst
     api.rst
     cli.rst

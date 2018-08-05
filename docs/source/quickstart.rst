@@ -9,6 +9,8 @@ using the commandline -- for more information please see the `API <api.html>`__
 or `CLI <cli.html>`__ documentation.
 
 
+.. _quickstart-kinit:
+
 Kinit (optional)
 ----------------
 
@@ -18,6 +20,9 @@ make sure you have an active ticket-granting-ticket before continuing:
 .. code::
 
     $ kinit
+
+
+.. _quickstart-skein-daemon:
 
 
 Start the Skein Daemon (optional)
