@@ -1,0 +1,316 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Jupyter Notebook Server &#8212; Skein 0.1.0+3.ga11972a documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Docs" href="api.html" />
+    <link rel="prev" title="Remote IPython Kernel" href="recipes-ipython-kernel.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="jupyter-notebook-server">
+<h1>Jupyter Notebook Server<a class="headerlink" href="#jupyter-notebook-server" title="Permalink to this headline">¶</a></h1>
+<p>The <code class="xref py py-mod docutils literal notranslate"><span class="pre">skein.recipes.jupyter_notebook</span></code> module provides a commandline recipe
+for starting a Jupyter notebook server on a YARN container. The intended use is
+to execute the module in a service, using the command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python -m skein.recipes.jupyter_notebook
+</pre></div>
+</div>
+<p>The executing Python environment must contain the following dependencies to
+work properly:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">skein</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">notebook</span></code></li>
+</ul>
+<p>After launching the service, the notebook server connection information will be
+stored in the <a class="reference external" href="key-value-store.html">key-value store</a> under the key
+<code class="docutils literal notranslate"><span class="pre">'jupyter.notebook.info'</span></code>. This key name is configurable with the
+command-line flag <code class="docutils literal notranslate"><span class="pre">--notebook-info-key</span></code>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This recipe is <em>not</em> production ready, and is mostly provided for
+educational reasons. Port forwarding the running notebook server off a
+container may be forbidden by your cluster admins, and in general is not a
+nice workflow. For a better way of running Jupyter on a YARN cluster see
+<a class="reference external" href="http://jupyter-enterprise-gateway.readthedocs.io/en/latest/">Jupyter Enterprise Gateway</a>.</p>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>Here we provide a complete walkthrough of launching and connecting to a Jupyter
+notebook server. This example assumes you’re logged into and running on an edge
+node.</p>
+<div class="section" id="kinit-optional">
+<h3>Kinit (optional)<a class="headerlink" href="#kinit-optional" title="Permalink to this headline">¶</a></h3>
+<p>See <a class="reference internal" href="quickstart.html#quickstart-kinit"><span class="std std-ref">Kinit (optional)</span></a>.</p>
+</div>
+<div class="section" id="start-the-skein-daemon-optional">
+<h3>Start the Skein Daemon (optional)<a class="headerlink" href="#start-the-skein-daemon-optional" title="Permalink to this headline">¶</a></h3>
+<p>See <a class="reference internal" href="quickstart.html#quickstart-skein-daemon"><span class="std std-ref">Start the Skein Daemon (optional)</span></a>.</p>
+</div>
+<div class="section" id="package-the-python-environment">
+<h3>Package the Python Environment<a class="headerlink" href="#package-the-python-environment" title="Permalink to this headline">¶</a></h3>
+<p>To distribute Python environments we’ll make use of <a class="reference external" href="https://conda.github.io/conda-pack/">conda-pack</a>, a tool for packaging and distributing
+conda environments. As mentioned above, we need to make sure we have the
+following packages installed in the remote environment:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">skein</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">notebook</span></code></li>
+</ul>
+<p>we’ll also install <code class="docutils literal notranslate"><span class="pre">numpy</span></code> to have an example library for doing some
+computation.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">#</span> Create a new demo environment <span class="o">(</span>output trimmed <span class="k">for</span> brevity<span class="o">)</span>
+<span class="gp">$</span> conda create -n jupyter-demo
+<span class="go">...</span>
+
+<span class="gp">#</span> Activate the environment
+<span class="gp">$</span> conda activate jupyter-demo
+
+<span class="gp">#</span> Install the needed packages <span class="o">(</span>output trimmed <span class="k">for</span> brevity<span class="o">)</span>
+<span class="gp">$</span> conda install conda-pack skein notebook numpy -c conda-forge
+<span class="go">...</span>
+
+<span class="gp">#</span> Package the environment into environment.tar
+<span class="gp">$</span> conda pack -o environment.tar
+<span class="go">Collecting packages...</span>
+<span class="go">Packing environment at &#39;/home/jcrist/miniconda/envs/jupyter-demo&#39; to &#39;environment.tar&#39;</span>
+<span class="go">[########################################] | 100% Completed | 16.1s</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="fix-the-packagd-kernelspec">
+<h3>Fix the Packagd Kernelspec<a class="headerlink" href="#fix-the-packagd-kernelspec" title="Permalink to this headline">¶</a></h3>
+<p>When <code class="docutils literal notranslate"><span class="pre">conda-pack</span></code> packages an environment, it trys to fix as many absolute
+paths found in the environment to be as relocatable as possible. Those that
+can’t be fixed before packaging can be fixed after unarchiving using the
+<code class="docutils literal notranslate"><span class="pre">conda-unpack</span></code> command. However, this mutates the files in place, which is not
+allowed on YARN (the application cache directory is read-only).</p>
+<p>To get around this, for now we need to manually patch the packaged <a class="reference external" href="http://jupyter-client.readthedocs.io/en/stable/kernels.html#kernelspecs">kernelspec
+file</a> to
+remove the absolute path.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">#</span> The patched kernel.json file
+<span class="gp">$</span> cat kernel.json
+<span class="go">{</span>
+<span class="go"> &quot;display_name&quot;: &quot;Python 3&quot;,</span>
+<span class="go"> &quot;language&quot;: &quot;python&quot;,</span>
+<span class="go">  &quot;argv&quot;: [</span>
+<span class="go">  &quot;python&quot;,</span>
+<span class="go">  &quot;-m&quot;,</span>
+<span class="go">  &quot;ipykernel_launcher&quot;,</span>
+<span class="go">  &quot;-f&quot;,</span>
+<span class="go">  &quot;{connection_file}&quot;</span>
+<span class="go"> ]</span>
+<span class="go">}</span>
+
+<span class="gp">#</span> Append the patch to the environment.tar file
+<span class="gp">$</span> tar --append <span class="se">\</span>
+      --file<span class="o">=</span>environment.tar <span class="se">\</span>
+      --transform <span class="s1">&#39;s,^,share/jupyter/kernels/python3/,S&#39;</span> <span class="se">\</span>
+      kernel.json
+
+<span class="gp">#</span> gzip the environment.tar file
+<span class="gp">$</span> gzip -c6 environment.tar &gt; environment.tar.gz
+</pre></div>
+</div>
+</div>
+<div class="section" id="write-the-application-specification">
+<h3>Write the Application Specification<a class="headerlink" href="#write-the-application-specification" title="Permalink to this headline">¶</a></h3>
+<p>Next we need to write the application specification. For more information see
+the <a class="reference external" href="specification.html">specification docs</a>.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># stored in jupyter-demo.yaml</span>
+
+<span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">jupyter-demo</span>
+
+<span class="l l-Scalar l-Scalar-Plain">services</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">jupyter</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">resources</span><span class="p p-Indicator">:</span>
+      <span class="l l-Scalar l-Scalar-Plain">memory</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">1024</span>
+      <span class="l l-Scalar l-Scalar-Plain">vcores</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+    <span class="l l-Scalar l-Scalar-Plain">files</span><span class="p p-Indicator">:</span>
+      <span class="c1"># Distribute the bundled environment as part of the application.</span>
+      <span class="c1"># This will be automatically extracted by YARN to the directory</span>
+      <span class="c1"># ``environment`` during resource localization.</span>
+      <span class="l l-Scalar l-Scalar-Plain">environment</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">environment.tar.gz</span>
+    <span class="l l-Scalar l-Scalar-Plain">commands</span><span class="p p-Indicator">:</span>
+      <span class="c1"># Activate our environment</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">source environment/bin/activate</span>
+      <span class="c1"># Start the jupyter notebook server</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">python -m skein.recipes.jupyter_notebook</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="start-the-jupyter-notebook-server">
+<h3>Start the Jupyter Notebook Server<a class="headerlink" href="#start-the-jupyter-notebook-server" title="Permalink to this headline">¶</a></h3>
+<p>Now we have everything needed to start the Jupyter notebook server. The
+following bash command starts the application and stores the application id in
+the environment variable <code class="docutils literal notranslate"><span class="pre">APPID</span></code>.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> <span class="nv">APPID</span><span class="o">=</span><span class="sb">`</span>skein application submit jupyter-demo.yaml<span class="sb">`</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="retrieve-the-notebook-server-information">
+<h3>Retrieve the Notebook Server Information<a class="headerlink" href="#retrieve-the-notebook-server-information" title="Permalink to this headline">¶</a></h3>
+<p>To connect to a notebook server we need the address. If not specified
+explicitly in the startup command, this address (and other connection info)
+will be stored in the key <code class="docutils literal notranslate"><span class="pre">'jupyter.notebook.info'</span></code>. We can retrieve this
+information and store it in a file using the following bash command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> skein kv get <span class="nv">$APPID</span> --key jupyter.notebook.info --wait &gt; notebook.json
+<span class="gp">$</span> cat notebook.json
+<span class="go">{&quot;protocol&quot;: &quot;http&quot;, &quot;host&quot;: &quot;worker.example.com&quot;, &quot;port&quot;: 8888, &quot;base_url&quot;: &quot;/&quot;, &quot;token&quot;: &quot;fafa55f112e6ca7a73717933c3d4a03859df799f48f54c92&quot;}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="connect-to-the-notebook-server">
+<h3>Connect to the Notebook Server<a class="headerlink" href="#connect-to-the-notebook-server" title="Permalink to this headline">¶</a></h3>
+<p>Since the notebook server is running on a container, you’ll (probably) need to
+use an SSH tunnel to access the server. This can be done by ssh-ing into the
+edge node again, and forwarding the host and port from the <code class="docutils literal notranslate"><span class="pre">notebook.json</span></code>
+information above out.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">#</span> Start an SSH tunnel to forward out the host:port of the notebook server,
+<span class="gp">#</span> as found above
+<span class="gp">$</span> ssh jcrist@edge.example.com -L <span class="m">8888</span>:worker.example.com:8888
+</pre></div>
+</div>
+<p>At this point you can login to the notebook server at <code class="docutils literal notranslate"><span class="pre">localhost:8888</span></code> on
+your browser. On first login you’ll need to provide the security <code class="docutils literal notranslate"><span class="pre">token</span></code>
+(also in the <code class="docutils literal notranslate"><span class="pre">notebook.json</span></code> information above).</p>
+<p>Once logged in, you can create new notebooks and interact with Jupyter as you
+normally would. All notebooks run inside the remote container, and have access
+to the distributed Python environment.</p>
+<a class="reference internal image-reference" href="_images/jupyter_demo.png"><img alt="_images/jupyter_demo.png" class="align-center" src="_images/jupyter_demo.png" style="width: 90%;" /></a>
+</div>
+<div class="section" id="shutdown-the-application">
+<h3>Shutdown the Application<a class="headerlink" href="#shutdown-the-application" title="Permalink to this headline">¶</a></h3>
+<p>Once you’re done, you can shutdown the application in one of two ways.</p>
+<ul>
+<li><p class="first">Hit the <code class="docutils literal notranslate"><span class="pre">Quit</span></code> button on the Jupyter Web UI at <code class="docutils literal notranslate"><span class="pre">localhost:8888/tree</span></code>.
+This will shutdown the notebook server, causing the container to exit.</p>
+</li>
+<li><p class="first">Manually shutdown the application using the Skein CLI</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> skein application shutdown <span class="nv">$APPID</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+<div class="section" id="confirm-that-the-application-completed">
+<h3>Confirm that the Application Completed<a class="headerlink" href="#confirm-that-the-application-completed" title="Permalink to this headline">¶</a></h3>
+<p>We can check that application shutdown properly using <code class="docutils literal notranslate"><span class="pre">skein</span> <span class="pre">application</span> <span class="pre">status</span></code></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> skein application status <span class="nv">$APPID</span>
+<span class="go">APPLICATION_ID                    NAME            STATE       STATUS       CONTAINERS    VCORES    MEMORY    RUNTIME</span>
+<span class="go">application_1533143063639_0021    jupyter-demo    FINISHED    SUCCEEDED    0             0         0         10m</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Skein</a></h1>
+
+
+
+<p class="blurb">Simple tool for deploying applications on Apache YARN</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=jcrist&repo=skein&type=watch&count=False&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a href="https://travis-ci.org/jcrist/skein">
+    <img
+        alt="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+        src="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="specification.html">Specification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-value-store.html">Key-Value Store</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="recipes.html">Recipes</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="recipes-ipython-kernel.html">Remote IPython Kernel</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Jupyter Notebook Server</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
+</ul>
+
+<h3>Need help?</h3>
+
+<p>
+  Open an issue in the <a href="https://github.com/jcrist/skein/issues">issue tracker</a>.
+</p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Jim Crist.
+      
+      |
+      <a href="_sources/recipes-jupyter-notebook.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

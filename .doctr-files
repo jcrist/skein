@@ -1,9 +1,13 @@
+./_images/jupyter_demo.png
 ./_images/yarn.jpg
 ./_sources/api.rst.txt
 ./_sources/cli.rst.txt
 ./_sources/index.rst.txt
 ./_sources/key-value-store.rst.txt
 ./_sources/quickstart.rst.txt
+./_sources/recipes-ipython-kernel.rst.txt
+./_sources/recipes-jupyter-notebook.rst.txt
+./_sources/recipes.rst.txt
 ./_sources/specification.rst.txt
 ./_static/ajax-loader.gif
 ./_static/alabaster.css
@@ -35,6 +39,9 @@
 ./key-value-store.html
 ./objects.inv
 ./quickstart.html
+./recipes-ipython-kernel.html
+./recipes-jupyter-notebook.html
+./recipes.html
 ./search.html
 ./searchindex.js
 ./specification.html
