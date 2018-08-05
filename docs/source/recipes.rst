@@ -9,3 +9,4 @@ deploy real services.
     :maxdepth: 1
 
     recipes-ipython-kernel.rst
+    recipes-jupyter-notebook.rst
