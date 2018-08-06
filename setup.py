@@ -126,7 +126,7 @@ class develop(_develop):
 
     def initialize_options(self):
         self.no_java = False
-        super(develop, self).initialize_options()
+        _develop.initialize_options(self)
 
     def run(self):
         if not self.uninstall:
