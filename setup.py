@@ -93,7 +93,7 @@ class build_java(Command):
 
 
 def _ensure_java(command):
-    if not os.path.exists(SKEIN_JAR):
+    if not getattr(command, 'no_java', False) and not os.path.exists(SKEIN_JAR):
         command.run_command('build_java')
 
 
@@ -121,6 +121,13 @@ class install(_install):
 
 
 class develop(_develop):
+    user_options = list(_develop.user_options)
+    user_options.append(('no-java', None, "Don't build the java source"))
+
+    def initialize_options(self):
+        self.no_java = False
+        _develop.initialize_options(self)
+
     def run(self):
         if not self.uninstall:
             _ensure_java(self)

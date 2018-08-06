@@ -191,6 +191,25 @@ Then build the documentation with ``make``
 
 The resulting HTML files end up in the ``build/html`` directory.
 
+Submitting a Documentation-Only Pull Request
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If your pull-request only contains documentation changes, you can tell
+Travis-CI to skip running the tests (and speed-up our CI process) by including
+the string ``"skip-tests"`` somewhere in your commit message. For example:
+
+.. code-block:: text
+
+    Note how to skip tests on travis-ci [skip-tests]
+
+    Add a note to the develop.rst docs on how to skip running the tests in
+    travis.
+    # Please enter the commit message for your changes. Lines starting
+    # with '#' will be ignored, and an empty message aborts the commit.
+    # On branch conditional-docs-build
+    # Changes to be committed:
+    #    modified:   docs/source/develop.rst
+
 
 .. _Conda: https://conda.io/docs/
 .. _Maven: http://maven.apache.org/
