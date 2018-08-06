@@ -1,0 +1,268 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Development &#8212; Skein 0.1.0+4.g0627552 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="CLI Docs" href="cli.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="development">
+<h1>Development<a class="headerlink" href="#development" title="Permalink to this headline">¶</a></h1>
+<p>This page provides information on how to build, test, and develop <code class="docutils literal notranslate"><span class="pre">Skein</span></code>.</p>
+<div class="section" id="building-skein">
+<h2>Building Skein<a class="headerlink" href="#building-skein" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="clone-repository">
+<h3>Clone Repository<a class="headerlink" href="#clone-repository" title="Permalink to this headline">¶</a></h3>
+<p>Clone the skein git repository:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone https://github.com/jcrist/skein.git
+</pre></div>
+</div>
+</div>
+<div class="section" id="install-dependencies-conda">
+<h3>Install Dependencies (Conda)<a class="headerlink" href="#install-dependencies-conda" title="Permalink to this headline">¶</a></h3>
+<p>We recommend using the <a class="reference external" href="https://conda.io/docs/">Conda</a> package manager to setup your development
+environment. Here we setup a conda environment to contain the build
+dependencies.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">#</span> Create a new conda environment
+<span class="gp">$</span> conda create -n skein
+
+<span class="gp">#</span> Activate environment
+<span class="gp">$</span> conda activate skein
+
+<span class="gp">#</span> Install dependencies
+<span class="gp">$</span> conda install -c conda-forge grpcio protobuf cryptography pyyaml
+
+<span class="gp">#</span> Install grpcio-tools <span class="o">(</span>not on conda-forge currently<span class="o">)</span>
+<span class="gp">$</span> pip install grpcio-tools
+</pre></div>
+</div>
+<p>Besides the above dependencies, you’ll also need <a class="reference external" href="http://maven.apache.org/">Maven</a>. You can install Maven
+using your system package manager, the maven website, or use Conda:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> conda install -c conda-forge maven
+</pre></div>
+</div>
+</div>
+<div class="section" id="install-dependencies-pip">
+<h3>Install Dependencies (Pip)<a class="headerlink" href="#install-dependencies-pip" title="Permalink to this headline">¶</a></h3>
+<p>You can also setup the development environment using <code class="docutils literal notranslate"><span class="pre">pip</span></code>.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> pip install grpcio protobuf cryptography pyyaml grpcio-tools
+</pre></div>
+</div>
+<p>Besides the above dependencies, you’ll also need <a class="reference external" href="http://maven.apache.org/">Maven</a>. You can install Maven
+using your system package manager or via the maven website.</p>
+</div>
+<div class="section" id="build-and-install-skein">
+<h3>Build and Install Skein<a class="headerlink" href="#build-and-install-skein" title="Permalink to this headline">¶</a></h3>
+<p>You can build and install Skein as an editable package or a regular install.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">#</span> Build and install skein as an editable package
+<span class="gp">$</span> python setup.py develop
+
+<span class="gp">#</span> or, build and install as a regular package
+<span class="gp">$</span> python setup.py install
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="running-the-tests">
+<h2>Running the Tests<a class="headerlink" href="#running-the-tests" title="Permalink to this headline">¶</a></h2>
+<p>The test suite is designed to run in a specific hadoop setup, provided by the
+<a class="reference external" href="https://github.com/jcrist/hadoop-test-cluster">hadoop-test-cluster</a> package. This is a CLI tool for setting up a Hadoop
+cluster using <a class="reference external" href="https://docs.docker.com/compose/">docker compose</a>. This requires <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span></code> be installed,
+and the docker daemon already be running. Please follow the install
+instructions for your system <a class="reference external" href="https://docs.docker.com/compose/install/">here</a>.</p>
+<div class="section" id="install-hadoop-test-cluster">
+<h3>Install <cite>hadoop-test-cluster</cite><a class="headerlink" href="#install-hadoop-test-cluster" title="Permalink to this headline">¶</a></h3>
+<p>You can install <code class="docutils literal notranslate"><span class="pre">hadoop-test-cluster</span></code> using <code class="docutils literal notranslate"><span class="pre">pip</span></code>. This assumes you already
+have <code class="docutils literal notranslate"><span class="pre">docker</span></code> and <code class="docutils literal notranslate"><span class="pre">docker-compose</span></code> already installed.</p>
+<p>The <a class="reference external" href="https://github.com/jcrist/hadoop-test-cluster">hadoop-test-cluster</a> repository readme has documentation on usage - below
+we provide a few commands needed for using the cluster to run the tests.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> pip install hadoop-test-cluster
+</pre></div>
+</div>
+</div>
+<div class="section" id="startup-the-test-cluster">
+<h3>Startup the Test Cluster<a class="headerlink" href="#startup-the-test-cluster" title="Permalink to this headline">¶</a></h3>
+<p>This command starts up a tiny Hadoop cluster with <code class="docutils literal notranslate"><span class="pre">simple</span></code> security, and
+mounts the current directory as <code class="docutils literal notranslate"><span class="pre">~/skein</span></code> on every node. To create a cluster
+with <code class="docutils literal notranslate"><span class="pre">kerberos</span></code> security enabled, use <code class="docutils literal notranslate"><span class="pre">--image</span> <span class="pre">kerberos</span></code> instead.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> htcluster startup --image base --mount .:skein
+</pre></div>
+</div>
+</div>
+<div class="section" id="login-to-the-edge-node">
+<h3>Login to the Edge Node<a class="headerlink" href="#login-to-the-edge-node" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> htcluster login
+</pre></div>
+</div>
+</div>
+<div class="section" id="setup-the-development-environment">
+<h3>Setup the Development Environment<a class="headerlink" href="#setup-the-development-environment" title="Permalink to this headline">¶</a></h3>
+<p>The docker image already has <a class="reference external" href="https://conda.io/docs/">Conda</a> installed. After startup, you only need to
+install the runtime and test dependencies (see <a class="reference internal" href="#install-dependencies-conda">Install Dependencies (Conda)</a>).
+Alternatively, <a class="reference external" href="http://maven.apache.org/">Maven</a> is also already installed on the docker image, so you can
+skip the instructions for building Skein locally above and do everything on the
+docker image.</p>
+<p>You also need <code class="docutils literal notranslate"><span class="pre">pytest</span></code> to run the tests, and <code class="docutils literal notranslate"><span class="pre">flake8</span></code> to run the lint
+checks.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> conda install -c conda-forge pytest flake8
+</pre></div>
+</div>
+</div>
+<div class="section" id="id1">
+<h3>Build and Install Skein<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python setup.py develop
+</pre></div>
+</div>
+</div>
+<div class="section" id="run-the-tests">
+<h3>Run the Tests<a class="headerlink" href="#run-the-tests" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> pytest skein
+</pre></div>
+</div>
+</div>
+<div class="section" id="run-the-linter">
+<h3>Run the Linter<a class="headerlink" href="#run-the-linter" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> flake8 skein
+</pre></div>
+</div>
+</div>
+<div class="section" id="shutdown-the-cluster">
+<h3>Shutdown the Cluster<a class="headerlink" href="#shutdown-the-cluster" title="Permalink to this headline">¶</a></h3>
+<p>When you are done developing, you can shutdown the cluster using the following</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> htcluster shutdown
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="building-the-documentation">
+<h2>Building the Documentation<a class="headerlink" href="#building-the-documentation" title="Permalink to this headline">¶</a></h2>
+<p>Skein uses <a class="reference external" href="http://www.sphinx-doc.org/">Sphinx</a> for documentation. The source files are located in
+<code class="docutils literal notranslate"><span class="pre">skein/docs/source</span></code>. To build the documentation locally, first install the
+documentation build requirements</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> pip install sphinx numpydoc sphinxcontrib.autoprogram
+</pre></div>
+</div>
+<p>Then build the documentation with <code class="docutils literal notranslate"><span class="pre">make</span></code></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">#</span> Running from the skein/docs folder
+<span class="gp">$</span> make html
+</pre></div>
+</div>
+<p>The resulting HTML files end up in the <code class="docutils literal notranslate"><span class="pre">build/html</span></code> directory.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Skein</a></h1>
+
+
+
+<p class="blurb">Simple tool for deploying applications on Apache YARN</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=jcrist&repo=skein&type=watch&count=False&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a href="https://travis-ci.org/jcrist/skein">
+    <img
+        alt="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+        src="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="specification.html">Specification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-value-store.html">Key-Value Store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="recipes.html">Recipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Development</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#building-skein">Building Skein</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-the-tests">Running the Tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-the-documentation">Building the Documentation</a></li>
+</ul>
+</li>
+</ul>
+
+<h3>Need help?</h3>
+
+<p>
+  Open an issue in the <a href="https://github.com/jcrist/skein/issues">issue tracker</a>.
+</p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Jim Crist.
+      
+      |
+      <a href="_sources/develop.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

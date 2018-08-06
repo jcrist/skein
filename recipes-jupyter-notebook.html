@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Jupyter Notebook Server &#8212; Skein 0.1.0+3.ga11972a documentation</title>
+    <title>Jupyter Notebook Server &#8212; Skein 0.1.0+4.g0627552 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -35,7 +35,7 @@
             
   <div class="section" id="jupyter-notebook-server">
 <h1>Jupyter Notebook Server<a class="headerlink" href="#jupyter-notebook-server" title="Permalink to this headline">¶</a></h1>
-<p>The <code class="xref py py-mod docutils literal notranslate"><span class="pre">skein.recipes.jupyter_notebook</span></code> module provides a commandline recipe
+<p>The <code class="xref py py-mod docutils literal notranslate"><span class="pre">skein.recipes.jupyter_notebook</span></code> module provides a command-line recipe
 for starting a Jupyter notebook server on a YARN container. The intended use is
 to execute the module in a service, using the command:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python -m skein.recipes.jupyter_notebook
@@ -102,8 +102,8 @@ computation.</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="fix-the-packagd-kernelspec">
-<h3>Fix the Packagd Kernelspec<a class="headerlink" href="#fix-the-packagd-kernelspec" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="fix-the-packaged-kernelspec">
+<h3>Fix the Packaged Kernelspec<a class="headerlink" href="#fix-the-packaged-kernelspec" title="Permalink to this headline">¶</a></h3>
 <p>When <code class="docutils literal notranslate"><span class="pre">conda-pack</span></code> packages an environment, it trys to fix as many absolute
 paths found in the environment to be as relocatable as possible. Those that
 can’t be fixed before packaging can be fixed after unarchiving using the
@@ -278,6 +278,9 @@ This will shutdown the notebook server, causing the container to exit.</p>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Docs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="develop.html">Development</a></li>
 </ul>
 
 <h3>Need help?</h3>

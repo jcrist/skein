@@ -1,7 +1,7 @@
 Remote IPython Kernel
 =====================
 
-The :mod:`skein.recipes.ipython_kernel` module provides a commandline recipe
+The :mod:`skein.recipes.ipython_kernel` module provides a command-line recipe
 for starting a remote IPython kernel on a YARN container. The intended use is
 to execute the module in a service, using the command:
 

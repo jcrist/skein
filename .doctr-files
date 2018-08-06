@@ -2,6 +2,7 @@
 ./_images/yarn.jpg
 ./_sources/api.rst.txt
 ./_sources/cli.rst.txt
+./_sources/develop.rst.txt
 ./_sources/index.rst.txt
 ./_sources/key-value-store.rst.txt
 ./_sources/quickstart.rst.txt
@@ -34,6 +35,7 @@
 ./_static/websupport.js
 ./api.html
 ./cli.html
+./develop.html
 ./genindex.html
 ./index.html
 ./key-value-store.html
