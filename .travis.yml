@@ -68,7 +68,7 @@ install:
       fi
 
 script:
-    - set -x
+    - set -e
     - |
       if [[ "$DOCS" != "true" ]]; then
         if [[ "$PYTHON" == "2.7" ]]; then
@@ -86,7 +86,7 @@ script:
         htcluster exec -- $CONDA_ENV/bin/flake8 skein/
       else
         # Build docs
-        pushd ~/skein/docs
+        pushd docs
         make html
         popd
         # Maybe deploy documentation
