@@ -4,7 +4,7 @@ set -xe
 packages="grpcio pyyaml cryptography pytest flake8"
 
 if [[ $1 == "2.7" ]]; then
-    conda create -n py27 python=2.7 backports.weakref $packages
+    conda create -n py27 python=2.7 $packages
     source activate py27
 else
     conda install $packages

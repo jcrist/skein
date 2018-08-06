@@ -19,58 +19,84 @@ env:
     global:
         - secure: "o4isEDi/jgj741PYg2GJDAVtLcr+rgnNUFyAKpTjD8C0zfYH7XK9Sf8M2+ymk2BsmVF47KxSI4L2Zzl86rUeSaGSz5UGPbI9MLlv+pge53Z7uPZAv015xxDCjzn44UfXYzG2G0nu0RZ8spX7wpf8fw6jYaBmKogwxxL2t2ys4PMgHZV/0z9AebUj9Byi125VmoE/nvvLeDogXiLkDrod/vRtltA/IrKaZiirXNSakeuY21mGM7KvU8crKC08xae2HBEUBzrYuW2lpULnxrDm/sOFOfumErcRalnCQVYjntvCKFneGgfsXXqp/JoLoxKaM19ACnW0jIfXJ/3BBo/AHtFeuLj+TE2kWtLVd1aNtmyMmElmmxiALLdTvclQ3UcPnkj0HavDnoppo3BXp7eQp4KFpxfIRETOpR6ZP/0gN+pQSEkMH6Ac8DHbDbqiXUN0quEMN0pbbl/78+sROfIaokHDxp6iqiTCpFKJBRnBBiz1C+36j+WKsVIT7YFYMt/keG3YqUmWj+pfXCL6Ghj4sUTHAgpSp2hSn6Ys6f4iwCpi8LC9O4pxsMJE7xGhPZqyP88XcLGt+R8D8HYrDuViCpSViLrIG66vwCmV92+2DwLWJOPQPXoJVtyZQz4qnfyAuig2rTqofIMMM0KtAWL6/0G+jUoZxds15Ymg5YbIRmE="
 
+
+stages:
+    - name: test
+      if: commit_message !~ skip-tests
+    - docs
+
 jobs:
     fast_finish: true
 
     include:
-        - env:
-            - DOCS=true
+        - stage: test
+          env:
             - CLUSTER_TYPE=base
             - PYTHON=3.6
-        - env:
+        - stage: test
+          env:
             - CLUSTER_TYPE=kerberos
             - PYTHON=3.6
-        - env:
+        - stage: test
+          env:
             - CLUSTER_TYPE=base
             - PYTHON=2.7
+        - stage: docs
+          sudo: false
+          env:
+            - DOCS=true
+
 
 before_install:
-    # Upgrade docker-compose
-    - sudo rm /usr/local/bin/docker-compose
-    - curl -L https://github.com/docker/compose/releases/download/1.19.0/docker-compose-`uname -s`-`uname -m` > docker-compose
-    - chmod +x docker-compose
-    - sudo mv docker-compose /usr/local/bin
-    # Install the test cluster
-    - pip install git+https://github.com/jcrist/hadoop-test-cluster.git
-    # Start the test cluster
-    - htcluster startup --image $CLUSTER_TYPE:latest --mount .:skein
+    - |
+      if [[ "$DOCS" != "true" ]]; then
+        # Upgrade docker-compose
+        sudo rm /usr/local/bin/docker-compose
+        curl -L https://github.com/docker/compose/releases/download/1.19.0/docker-compose-`uname -s`-`uname -m` > docker-compose
+        chmod +x docker-compose
+        sudo mv docker-compose /usr/local/bin
+        # Install the test cluster
+        pip install git+https://github.com/jcrist/hadoop-test-cluster.git
+        # Start the test cluster
+        htcluster startup --image $CLUSTER_TYPE:latest --mount .:skein
+      fi
 
 install:
-    - htcluster exec -- ./skein/continuous_integration/travis/docker_install.sh $PYTHON
+    - |
+      if [[ "$DOCS" != "true" ]]; then
+        # Install runtime and test dependencies on the docker container
+        htcluster exec -- ./skein/continuous_integration/travis/docker_install.sh $PYTHON
+      else
+        # Install runtime and documentation dependencies
+        pip install grpcio grpcio-tools pyyaml cryptography sphinx numpydoc sphinxcontrib.autoprogram doctr
+        # Build only the python library so that docs can be built
+        python setup.py develop --no-java
+      fi
 
 script:
-    - set -e
+    - set -x
     - |
-      if [[ "$PYTHON" == "2.7" ]]; then
-        export CONDA_ENV="/home/testuser/miniconda/envs/py27"
+      if [[ "$DOCS" != "true" ]]; then
+        if [[ "$PYTHON" == "2.7" ]]; then
+            export CONDA_ENV="/home/testuser/miniconda/envs/py27"
+        else
+            export CONDA_ENV="/home/testuser/miniconda/"
+        fi
+        # kinit if needed
+        if [[ "$CLUSTER_TYPE" == "kerberos" ]]; then
+            htcluster exec -- kinit testuser -kt testuser.keytab
+        fi
+        # Run py.test inside docker
+        htcluster exec -- $CONDA_ENV/bin/py.test skein/ -vv
+        # linting
+        htcluster exec -- $CONDA_ENV/bin/flake8 skein/
       else
-        export CONDA_ENV="/home/testuser/miniconda/"
-      fi
-    # kinit if needed
-    - |
-      if [[ "$CLUSTER_TYPE" == "kerberos" ]]; then
-        htcluster exec -- kinit testuser -kt testuser.keytab
-      fi
-    # Run py.test inside docker
-    - htcluster exec -- $CONDA_ENV/bin/py.test skein/ -vv
-    # linting
-    - htcluster exec -- $CONDA_ENV/bin/flake8 skein/
-    # If everything passes, build (and deploy) the docs
-    - |
-      if [[ "$DOCS" == "true" ]]; then
-        htcluster exec -- ./skein/continuous_integration/travis/build_docs.sh
+        # Build docs
+        pushd ~/skein/docs
+        make html
+        popd
+        # Maybe deploy documentation
         if [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_EVENT_TYPE" == "push" ]]; then
-            pip install doctr
             doctr deploy . --built-docs docs/build/html/
         fi
       fi
