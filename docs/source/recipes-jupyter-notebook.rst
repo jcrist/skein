@@ -1,7 +1,7 @@
 Jupyter Notebook Server
 =======================
 
-The :mod:`skein.recipes.jupyter_notebook` module provides a commandline recipe
+The :mod:`skein.recipes.jupyter_notebook` module provides a command-line recipe
 for starting a Jupyter notebook server on a YARN container. The intended use is
 to execute the module in a service, using the command:
 
@@ -85,8 +85,8 @@ computation.
     [########################################] | 100% Completed | 16.1s
 
 
-Fix the Packagd Kernelspec
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Fix the Packaged Kernelspec
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When ``conda-pack`` packages an environment, it trys to fix as many absolute
 paths found in the environment to be as relocatable as possible. Those that

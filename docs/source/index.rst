@@ -62,3 +62,11 @@ User Documentation
     recipes.rst
     api.rst
     cli.rst
+
+Developer Documentation
+-----------------------
+
+.. toctree::
+    :maxdepth: 2
+
+    develop.rst
