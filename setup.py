@@ -121,7 +121,7 @@ class install(_install):
 
 
 class develop(_develop):
-    user_options = _develop.user_options.copy()
+    user_options = list(_develop.user_options)
     user_options.append(('no-java', None, "Don't build the java source"))
 
     def initialize_options(self):

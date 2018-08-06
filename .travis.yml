@@ -42,58 +42,14 @@ jobs:
 
 
 before_install:
-    - |
-      if [[ "$DOCS" != "true" ]]; then
-        # Upgrade docker-compose
-        sudo rm /usr/local/bin/docker-compose
-        curl -L https://github.com/docker/compose/releases/download/1.19.0/docker-compose-`uname -s`-`uname -m` > docker-compose
-        chmod +x docker-compose
-        sudo mv docker-compose /usr/local/bin
-        # Install the test cluster
-        pip install git+https://github.com/jcrist/hadoop-test-cluster.git
-        # Start the test cluster
-        htcluster startup --image $CLUSTER_TYPE:latest --mount .:skein
-      fi
+    - source continuous_integration/travis/before_install.sh
 
 install:
-    - |
-      if [[ "$DOCS" != "true" ]]; then
-        # Install runtime and test dependencies on the docker container
-        htcluster exec -- ./skein/continuous_integration/travis/docker_install.sh $PYTHON
-      else
-        # Install runtime and documentation dependencies
-        pip install grpcio grpcio-tools pyyaml cryptography sphinx numpydoc sphinxcontrib.autoprogram doctr
-        # Build only the python library so that docs can be built
-        python setup.py develop --no-java
-      fi
+    - source continuous_integration/travis/install.sh
 
 script:
-    - set -e
-    - |
-      if [[ "$DOCS" != "true" ]]; then
-        if [[ "$PYTHON" == "2.7" ]]; then
-            export CONDA_ENV="/home/testuser/miniconda/envs/py27"
-        else
-            export CONDA_ENV="/home/testuser/miniconda/"
-        fi
-        # kinit if needed
-        if [[ "$CLUSTER_TYPE" == "kerberos" ]]; then
-            htcluster exec -- kinit testuser -kt testuser.keytab
-        fi
-        # Run py.test inside docker
-        htcluster exec -- $CONDA_ENV/bin/py.test skein/ -vv
-        # linting
-        htcluster exec -- $CONDA_ENV/bin/flake8 skein/
-      else
-        # Build docs
-        pushd docs
-        make html
-        popd
-        # Maybe deploy documentation
-        if [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_EVENT_TYPE" == "push" ]]; then
-            doctr deploy . --built-docs docs/build/html/
-        fi
-      fi
+    - source continuous_integration/travis/script.sh
+
 
 notifications:
   email: false
