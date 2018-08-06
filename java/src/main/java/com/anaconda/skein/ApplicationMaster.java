@@ -885,6 +885,10 @@ public class ApplicationMaster {
                       .sendMsg(watchId, wrBuilder.setWatchId(watchId).build());
                 }
               }
+            } else {
+              LOG.warn("Key '" + key
+                       + "' already deleted, but wasn't removed from "
+                       + "owned-keys set of service " + name);
             }
           }
           container.clearOwnedKeys();
@@ -1178,6 +1182,15 @@ public class ApplicationMaster {
           }
 
           // Do deletion
+          // Clear owners first before deleting
+          for (Map.Entry<String, Msg.KeyValue.Builder> entry : selection.entrySet()) {
+            Msg.KeyValue.Builder value = entry.getValue();
+            if (value.hasOwner()) {
+              services.get(value.getOwner().getServiceName())
+                      .removeOwnedKey(value.getOwner().getInstance(),
+                                      entry.getKey());
+            }
+          }
           selection.clear();
         }
       }

@@ -770,6 +770,35 @@ def test_key_value_ownership(kv_test_app):
     assert kv_test_app.kv.exists('c1_3')
 
 
+def test_key_value_keys_fully_removed_from_previous_owners(kv_test_app):
+    # Tests changing an owner, removing an owner, and deletion all fully remove
+    # a key from being owned by a container.
+    kv_test_app.scale('sleeper', 2)
+    c1, c2 = (c.id for c in kv_test_app.get_containers())
+
+    # Create some owned keys
+    kv_test_app.kv.put('c1_1', value=b'a', owner=c1)
+    kv_test_app.kv.put('c1_2', value=b'b', owner=c1)
+    kv_test_app.kv.put('c1_3', value=b'c', owner=c1)
+
+    # Change the owners for two of them
+    kv_test_app.kv.put('c1_2', owner=c2)
+    kv_test_app.kv.put('c1_3', owner=None)
+
+    # Delete all keys
+    kv_test_app.kv.clear()
+
+    # Recreate the keys with no owners
+    kv_test_app.kv.update({'c1_1': b'a', 'c1_2': b'b', 'c1_3': b'c'})
+
+    # Kill the original owning container
+    kv_test_app.kill_container(c1)
+
+    # Check that the keys still exist
+    for k in ['c1_1', 'c1_2', 'c1_3']:
+        assert k in kv_test_app.kv
+
+
 def test_transaction_conditions(kv_test_app):
     cid = kv_test_app.get_containers()[0].id
     service, instance = cid.split('_')
