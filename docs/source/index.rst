@@ -61,6 +61,7 @@ User Documentation
     distributing-files.rst
     key-value-store.rst
     recipes.rst
+    debugging.rst
     api.rst
     cli.rst
 
