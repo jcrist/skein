@@ -1,0 +1,170 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Debugging &#8212; Skein 0.1.1+2.g1fee548 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Docs" href="api.html" />
+    <link rel="prev" title="Jupyter Notebook Server" href="recipes-jupyter-notebook.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="debugging">
+<h1>Debugging<a class="headerlink" href="#debugging" title="Permalink to this headline">¶</a></h1>
+<p>Debugging YARN applications can be tricky, as you often don’t have access to
+the remote nodes to debug failures. This page provides several tips for what to
+do when you encounter failures.</p>
+<div class="section" id="accessing-the-application-logs">
+<h2>Accessing the Application Logs<a class="headerlink" href="#accessing-the-application-logs" title="Permalink to this headline">¶</a></h2>
+<p>When an application finishes, its logs are (usually) aggregated and made
+available. They can be accessed using the <code class="docutils literal notranslate"><span class="pre">yarn</span> <span class="pre">logs</span></code> cli command.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> yarn logs -applicationId &lt;Application ID&gt;
+</pre></div>
+</div>
+<p>The logs contain the <code class="docutils literal notranslate"><span class="pre">stdout</span></code> and <code class="docutils literal notranslate"><span class="pre">stderr</span></code> for each service, as well as the
+application master. This is a good first place to look when encountering an
+unexpected failure or bug.</p>
+</div>
+<div class="section" id="useful-things-to-log">
+<h2>Useful Things to Log<a class="headerlink" href="#useful-things-to-log" title="Permalink to this headline">¶</a></h2>
+<p>Since you often don’t have access to the worker nodes, it can be useful to log
+the full container environment before executing any application specific
+commands. This includes all localized paths, and all environment variables.
+Since <code class="docutils literal notranslate"><span class="pre">skein</span></code> accepts multiple commands for each service, this is easy to do.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">services:</span>
+<span class="go">  my_service:</span>
+<span class="go">    commands:</span>
+<span class="gp">      #</span> List all <span class="nb">local</span> files, including file types
+<span class="go">      - ls -l</span>
+<span class="gp">      #</span> List all environment variables and their values
+<span class="go">      - env</span>
+<span class="gp">      #</span> Application specific commands...
+</pre></div>
+</div>
+<p>It’s also useful to log application logic as your application progresses. This
+could as simple as periodic <code class="docutils literal notranslate"><span class="pre">print</span></code> statements, or using the standard
+library’s <a class="reference external" href="https://docs.python.org/3/library/logging.html">logging module</a>.</p>
+</div>
+<div class="section" id="start-a-remote-ipython-kernel-on-the-container">
+<h2>Start a Remote IPython Kernel on the Container<a class="headerlink" href="#start-a-remote-ipython-kernel-on-the-container" title="Permalink to this headline">¶</a></h2>
+<p>As a last resort, it can be useful to Skein’s remote <a class="reference external" href="https://ipython.org/">IPython</a> kernel recipe to start an IPython kernel on the
+failing container, and connect to the kernel to debug locally. Refer to the
+<a class="reference internal" href="recipes-ipython-kernel.html"><span class="doc">recipe documentation</span></a> for more information.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Skein</a></h1>
+
+
+
+<p class="blurb">Simple tool for deploying applications on Apache YARN</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=jcrist&repo=skein&type=watch&count=False&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a href="https://travis-ci.org/jcrist/skein">
+    <img
+        alt="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+        src="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="specification.html">Specification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributing-files.html">Distributing Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-value-store.html">Key-Value Store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="recipes.html">Recipes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Debugging</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#accessing-the-application-logs">Accessing the Application Logs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#useful-things-to-log">Useful Things to Log</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#start-a-remote-ipython-kernel-on-the-container">Start a Remote IPython Kernel on the Container</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="develop.html">Development</a></li>
+</ul>
+
+<h3>Need help?</h3>
+
+<p>
+  Open an issue in the <a href="https://github.com/jcrist/skein/issues">issue tracker</a>.
+</p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Jim Crist.
+      
+      |
+      <a href="_sources/debugging.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -2,6 +2,7 @@
 ./_images/yarn.jpg
 ./_sources/api.rst.txt
 ./_sources/cli.rst.txt
+./_sources/debugging.rst.txt
 ./_sources/develop.rst.txt
 ./_sources/distributing-files.rst.txt
 ./_sources/index.rst.txt
@@ -36,6 +37,7 @@
 ./_static/websupport.js
 ./api.html
 ./cli.html
+./debugging.html
 ./develop.html
 ./distributing-files.html
 ./genindex.html
