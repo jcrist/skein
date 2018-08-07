@@ -58,6 +58,7 @@ User Documentation
 
     quickstart.rst
     specification.rst
+    distributing-files.rst
     key-value-store.rst
     recipes.rst
     api.rst

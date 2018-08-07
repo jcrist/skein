@@ -3,6 +3,7 @@
 ./_sources/api.rst.txt
 ./_sources/cli.rst.txt
 ./_sources/develop.rst.txt
+./_sources/distributing-files.rst.txt
 ./_sources/index.rst.txt
 ./_sources/key-value-store.rst.txt
 ./_sources/quickstart.rst.txt
@@ -36,6 +37,7 @@
 ./api.html
 ./cli.html
 ./develop.html
+./distributing-files.html
 ./genindex.html
 ./index.html
 ./key-value-store.html
