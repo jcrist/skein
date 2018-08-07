@@ -132,6 +132,9 @@ following fields:
         memory: 2048  # 2 GB
         vcores: 2
 
+
+.. _specification-files:
+
 ``files``
 ~~~~~~~~~
 
@@ -177,6 +180,8 @@ Each :class:`File` object takes the following fields:
 
 As a shorthand, values may be the source path instead of a :class:`File`
 object.
+
+For more information see :doc:`distributing-files`.
 
 **Example**
 
