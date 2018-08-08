@@ -2,16 +2,17 @@ Distributing Files
 ==================
 
 Most applications require some number of files (executables, configuration,
-scripts, etc...) to run. When deploying these applications on YARN you have a
-few options:
+scripts, etc...) to run. When deploying these applications on YARN you have
+two options depending on the kind of access you want to assume:
 
-1. Install the files on every node in the cluster. This usually requires a
-   cluster administrator, and is often only done for things like commonly used
-   libraries. For example, you might install Python and common libraries on
-   every node, but not your application code.
+1. **IT Permissions**: Install the files on every node in the cluster. This
+   usually requires a cluster administrator, and is often only done for things
+   like commonly used libraries. For example, you might install Python and
+   common libraries on every node, but not your application code.
 
-2. Distribute the files to the executing containers as part of the application.
-   This is the common approach, and does not require administrator privileges.
+2. **User Permissions**: Distribute the files to the executing containers as
+   part of the application.  This is the common approach, and does not require
+   administrator privileges.
 
 Both options have their place, and can be mixed in a single application. Below
 we discuss the second option in detail.
@@ -93,7 +94,7 @@ The File Distribution Process
 When an application launches, the following process occurs:
 
 1. An application staging directory is created in the user's home directory on
-   default filesystem (typically HDFS). The path for this is the format
+   the default filesystem (typically HDFS). The path for this is the format
    ``~/.skein/{application id}``.
 
 2. The missing fields for each file in the application specification are
@@ -114,16 +115,17 @@ When an application launches, the following process occurs:
 5. When the application completes, the staging directory is deleted.
 
 
-Using Conda-Pack to Distribute Python Environments
---------------------------------------------------
+Distribute Python Environments With Conda-Pack
+----------------------------------------------
 
 When deploying Python applications, one needs to figure out how to distribute
-any library dependencies. If Python and the required libraries are already
-installed on every node (option 1 above), you can use the local Python and
-avoid this problem completely. If they aren't, then one way to distribute them
-is to use the `conda package manager <https://conda.io/docs/>`__ to create a
-Python environment, and `conda-pack <https://conda.github.io/conda-pack/>`__ to
-package that environment for distribution.
+any library dependencies. If Python and all required libraries are already
+installed on every node (option 1 above), then you can use the local Python and
+avoid this problem completely. Otherwise, one way that users can distribute
+libraries themselves is to use the `conda package manager
+<https://conda.io/docs/>`__ to create a Python environment, and `conda-pack
+<https://conda.github.io/conda-pack/>`__ to package that environment for
+distribution with YARN (or other services).
 
 ``conda-pack`` is a tool for taking a conda environment and creating an archive
 of it in a way that (most) absolute paths in any libraries or scripts are
