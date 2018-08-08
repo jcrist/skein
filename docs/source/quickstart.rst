@@ -85,17 +85,46 @@ Where the contents of ``payload.txt`` is:
 
 Walking through this specification:
 
-- The application name is specified as ``hello_world``, and the will be
-  deployed in the YARN queue ``default``.
+- The application name is specified as ``hello_world``, and will be deployed in
+  the YARN queue ``default``.
+
+  .. code-block:: yaml
+
+     name: hello_world
+     queue: default
 
 - The application starts a single service ``my_service`` on a container using 1
   virtual core and 128 MB of memory.
 
+  .. code-block:: yaml
+
+     services:
+       my_service:
+         resources:
+           vcores: 1
+           memory: 128
+
+
 - The file ``payload.txt`` is distributed with the application, and is named
   ``payload.txt`` both locally and on the running container.
 
+  .. code-block:: yaml
+
+     ...
+         files:
+           payload.txt: payload.txt
+
 - The service runs a few Shell commands. These will be run in order, stopping
   on the first failure, and all outputs logged in the container logs.
+
+  .. code-block:: yaml
+
+     ...
+         commands:
+           - echo "Sleeping for 60 seconds"
+           - sleep 60
+           - cat payload.txt
+           - echo "Stopping service"
 
 
 Submit the Application
