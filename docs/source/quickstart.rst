@@ -110,19 +110,21 @@ Walking through this specification:
 
   .. code-block:: yaml
 
-     files:
-       payload.txt: payload.txt
+     ...
+         files:
+           payload.txt: payload.txt
 
 - The service runs a few Shell commands. These will be run in order, stopping
   on the first failure, and all outputs logged in the container logs.
 
   .. code-block:: yaml
 
-     commands:
-       - echo "Sleeping for 60 seconds"
-       - sleep 60
-       - cat payload.txt
-       - echo "Stopping service"
+     ...
+         commands:
+           - echo "Sleeping for 60 seconds"
+           - sleep 60
+           - cat payload.txt
+           - echo "Stopping service"
 
 
 Submit the Application

@@ -121,11 +121,11 @@ Distribute Python Environments With Conda-Pack
 When deploying Python applications, one needs to figure out how to distribute
 any library dependencies. If Python and all required libraries are already
 installed on every node (option 1 above), then you can use the local Python and
-avoid this problem completely. However if these libraries aren't installed by
-IT, then one way that users can distributed libraries themselves is to use the
-`conda package manager <https://conda.io/docs/>`__ to create a Python
-environment, and `conda-pack <https://conda.github.io/conda-pack/>`__ to
-package that environment for distribution with YARN (or other services).
+avoid this problem completely. Otherwise, one way that users can distribute
+libraries themselves is to use the `conda package manager
+<https://conda.io/docs/>`__ to create a Python environment, and `conda-pack
+<https://conda.github.io/conda-pack/>`__ to package that environment for
+distribution with YARN (or other services).
 
 ``conda-pack`` is a tool for taking a conda environment and creating an archive
 of it in a way that (most) absolute paths in any libraries or scripts are
