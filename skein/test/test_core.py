@@ -336,3 +336,35 @@ def test_kill_application_removes_appdir(client):
 
     fs = hdfs.connect()
     assert not fs.exists("/user/testuser/.skein/%s" % app.id)
+
+
+def test_application_node_label(client, worker_as_gpu):
+    service = skein.Service(
+        resources=skein.Resources(memory=128, vcores=1),
+        commands=["env"])
+    spec = skein.ApplicationSpec(
+        name="test_application_node_label",
+        services={"service": service},
+        node_label="gpu")
+
+    with run_application(client, spec=spec) as app:
+        wait_for_success(client, app.id)
+
+    logs = get_logs(app.id)
+    assert "NM_HOST=" + worker_as_gpu in logs
+
+
+def test_service_node_label(client, worker_as_gpu):
+    service = skein.Service(
+        resources=skein.Resources(memory=128, vcores=1),
+        commands=["env"],
+        node_label="gpu")
+    spec = skein.ApplicationSpec(
+        name="test_service_node_label",
+        services={"service": service})
+
+    with run_application(client, spec=spec) as app:
+        wait_for_success(client, app.id)
+
+    logs = get_logs(app.id)
+    assert "NM_HOST=" + worker_as_gpu in logs
