@@ -83,7 +83,7 @@ object.
 
           # Files on remote filesystems can be used by specifying the scheme.
           # If the specified filesystem matches the default filesystem
-          # (typically HDFS), uploading will avoiding, allowing for faster
+          # (typically HDFS), uploading will is avoided, allowing for faster
           # application startup.
           script2_path.py: hdfs:///remote/path/to/script2.py
 

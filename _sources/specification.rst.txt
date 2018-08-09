@@ -6,6 +6,9 @@ specificed as a YAML or JSON document, or via the `Python API
 <api.html#application-specification>`__.  Here we describe the pieces of an
 application specification in detail.
 
+.. contents:: :local:
+
+
 .. currentmodule:: skein
 
 
