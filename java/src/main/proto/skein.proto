@@ -87,7 +87,8 @@ message ApplicationSpec {
   string queue = 2;
   int32 max_attempts = 3;
   repeated string tags = 4;
-  map<string, Service> services = 5;
+  repeated string name_nodes = 5;
+  map<string, Service> services = 6;
 }
 
 

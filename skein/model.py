@@ -472,20 +472,24 @@ class ApplicationSpec(Specification):
         The queue to submit to. Defaults to the default queue.
     tags : set, optional
         A set of strings to use as tags for this application.
+    name_nodes : list, optional
+        A list of namenode URIs to acquire delegation tokens for.
     max_attempts : int, optional
         The maximum number of submission attempts before marking the
         application as failed. Note that this only considers failures of the
         application master during startup. Default is 1.
     """
-    __slots__ = ('services', 'name', 'queue', 'tags', 'max_attempts')
+    __slots__ = ('services', 'name', 'queue', 'tags', 'name_nodes',
+                 'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
-    def __init__(self, services=required, name='skein', queue='default', tags=None,
-                 max_attempts=1):
+    def __init__(self, services=required, name='skein', queue='default',
+                 tags=None, name_nodes=None, max_attempts=1):
         self._assign_required('services', services)
         self.name = name
         self.queue = queue
         self.tags = set() if tags is None else set(tags)
+        self.name_nodes = [] if name_nodes is None else name_nodes
         self.max_attempts = max_attempts
         self._validate()
 
@@ -497,6 +501,7 @@ class ApplicationSpec(Specification):
         self._check_is_type('name', string)
         self._check_is_type('queue', string)
         self._check_is_set_of('tags', string)
+        self._check_is_list_of('name_nodes', string)
         self._check_is_bounded_int('max_attempts', min=1)
         self._check_is_dict_of('services', string, Service)
         if not self.services:
@@ -536,6 +541,7 @@ class ApplicationSpec(Specification):
         return cls(name=obj.name,
                    queue=obj.queue,
                    tags=set(obj.tags),
+                   name_nodes=list(obj.name_nodes),
                    max_attempts=min(1, obj.max_attempts),
                    services=services)
 

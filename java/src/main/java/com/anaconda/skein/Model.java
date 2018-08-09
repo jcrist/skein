@@ -1,5 +1,6 @@
 package com.anaconda.skein;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -106,16 +107,19 @@ public class Model {
     private String queue;
     private int maxAttempts;
     private Set<String> tags;
+    private List<Path> nameNodes;
     private Map<String, Service> services;
 
     public ApplicationSpec() {}
 
     public ApplicationSpec(String name, String queue, int maxAttempts,
-                           Set<String> tags, Map<String, Service> services) {
+                           Set<String> tags, List<Path> nameNodes,
+                           Map<String, Service> services) {
       this.name = name;
       this.queue = queue;
       this.maxAttempts = maxAttempts;
       this.tags = tags;
+      this.nameNodes = nameNodes;
       this.services = services;
     }
 
@@ -139,6 +143,9 @@ public class Model {
 
     public void setTags(Set<String> tags) { this.tags = tags; }
     public Set<String> getTags() { return this.tags; }
+
+    public void setNameNodes(List<Path> nameNodes) { this.nameNodes = nameNodes; }
+    public List<Path> getNameNodes() { return this.nameNodes; }
 
     public void setServices(Map<String, Service> services) { this.services = services; }
     public Map<String, Service> getServices() { return services; }

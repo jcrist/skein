@@ -1,5 +1,10 @@
 package com.anaconda.skein;
 
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.collect.Lists;
+
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -299,7 +304,8 @@ public class MsgUtils {
         .setName(spec.getName())
         .setQueue(spec.getQueue())
         .setMaxAttempts(spec.getMaxAttempts())
-        .addAllTags(spec.getTags());
+        .addAllTags(spec.getTags())
+        .addAllNameNodes(Lists.transform(spec.getNameNodes(), Functions.toStringFunction()));
 
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
       builder.putServices(entry.getKey(), writeService(entry.getValue()));
@@ -312,10 +318,16 @@ public class MsgUtils {
     for (Map.Entry<String, Msg.Service> entry : spec.getServicesMap().entrySet()) {
       services.put(entry.getKey(), readService(entry.getValue()));
     }
+    final List<Path> nameNodes = Lists.transform(
+        spec.getNameNodesList(),
+        new Function<String, Path>() {
+          public Path apply(String uri) { return new Path(uri); }
+        });
     return new Model.ApplicationSpec(spec.getName(),
                                      spec.getQueue(),
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
+                                     nameNodes,
                                      services);
   }
 
