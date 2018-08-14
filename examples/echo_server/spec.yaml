@@ -1,0 +1,19 @@
+name: echoserver
+
+services:
+    server:
+        resources:
+            vcores: 1
+            memory: 256
+        files:
+            # A packaged conda environment to be distributed with the
+            # application. During YARN resource localization this will be
+            # automatically unpacked into the directory ``environment``.
+            environment: environment.tar.gz
+            # The server implementation.
+            server.py: server.py
+        commands:
+            # Activate the conda environment
+            - source environment/bin/activate
+            # Start the server
+            - python server.py
