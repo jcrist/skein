@@ -75,7 +75,9 @@ public class WebUI {
       public Iterable<Map.Entry<String, String>> kv() {
         return Maps.transformValues(keyValueStore, new Function<Msg.KeyValue, String>() {
           public String apply(Msg.KeyValue kv) {
-            return kv.getValue().toString(StandardCharsets.US_ASCII);
+            return kv.getValue().isValidUtf8()
+                ? kv.getValue().toStringUtf8()
+                : "<non-UTF-8>";
           }
         }).entrySet();
       }
