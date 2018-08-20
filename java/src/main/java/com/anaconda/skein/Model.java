@@ -107,19 +107,19 @@ public class Model {
     private String queue;
     private int maxAttempts;
     private Set<String> tags;
-    private List<Path> nameNodes;
+    private List<Path> fileSystems;
     private Map<String, Service> services;
 
     public ApplicationSpec() {}
 
     public ApplicationSpec(String name, String queue, int maxAttempts,
-                           Set<String> tags, List<Path> nameNodes,
+                           Set<String> tags, List<Path> fileSystems,
                            Map<String, Service> services) {
       this.name = name;
       this.queue = queue;
       this.maxAttempts = maxAttempts;
       this.tags = tags;
-      this.nameNodes = nameNodes;
+      this.fileSystems = fileSystems;
       this.services = services;
     }
 
@@ -129,6 +129,7 @@ public class Model {
               + "queue: " + queue + ", "
               + "maxAttempts: " + maxAttempts + ", "
               + "tags: " + tags + ", "
+              + "fileSystems" + fileSystems + ", "
               + "services: " + services + ">");
     }
 
@@ -144,8 +145,10 @@ public class Model {
     public void setTags(Set<String> tags) { this.tags = tags; }
     public Set<String> getTags() { return this.tags; }
 
-    public void setNameNodes(List<Path> nameNodes) { this.nameNodes = nameNodes; }
-    public List<Path> getNameNodes() { return this.nameNodes; }
+    public void setFileSystems(List<Path> fileSystems) {
+      this.fileSystems = fileSystems;
+    }
+    public List<Path> getFileSystems() { return this.fileSystems; }
 
     public void setServices(Map<String, Service> services) { this.services = services; }
     public Map<String, Service> getServices() { return services; }
@@ -155,6 +158,7 @@ public class Model {
       throwIfNull(queue, "queue");
       throwIfLessThan(maxAttempts, 1, "maxAttempts");
       throwIfNull(tags, "tags");
+      throwIfNull(fileSystems, "fileSystems");
       throwIfNull(services, "services");
       if (services.size() == 0) {
         throw new IllegalArgumentException("There must be at least one service");

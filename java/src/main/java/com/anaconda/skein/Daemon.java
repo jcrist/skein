@@ -271,7 +271,7 @@ public class Daemon {
               credentials,
               ObjectArrays.concat(
                       new Path(defaultFs.getUri()),
-                      spec.getNameNodes().toArray(new Path[0])),
+                      spec.getFileSystems().toArray(new Path[0])),
               conf);
 
       DataOutputBuffer dob = new DataOutputBuffer();

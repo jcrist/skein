@@ -1,6 +1,5 @@
 package com.anaconda.skein;
 
-import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
 
@@ -305,7 +304,7 @@ public class MsgUtils {
         .setQueue(spec.getQueue())
         .setMaxAttempts(spec.getMaxAttempts())
         .addAllTags(spec.getTags())
-        .addAllNameNodes(Lists.transform(spec.getNameNodes(), Functions.toStringFunction()));
+        .addAllFileSystems(Lists.transform(spec.getFileSystems(), Functions.toStringFunction()));
 
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
       builder.putServices(entry.getKey(), writeService(entry.getValue()));
@@ -318,16 +317,16 @@ public class MsgUtils {
     for (Map.Entry<String, Msg.Service> entry : spec.getServicesMap().entrySet()) {
       services.put(entry.getKey(), readService(entry.getValue()));
     }
-    final List<Path> nameNodes = Lists.transform(
-        spec.getNameNodesList(),
-        new Function<String, Path>() {
-          public Path apply(String uri) { return new Path(uri); }
-        });
+
+    final List<Path> fileSystems = new ArrayList<Path>();
+    for (int i = 0; i < spec.getFileSystemsCount(); i++) {
+      fileSystems.add(new Path(spec.getFileSystems(i)));
+    }
     return new Model.ApplicationSpec(spec.getName(),
                                      spec.getQueue(),
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
-                                     nameNodes,
+                                     fileSystems,
                                      services);
   }
 
