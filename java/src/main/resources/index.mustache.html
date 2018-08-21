@@ -54,7 +54,14 @@
                     <th scope="row">{{getId}}</th>
                     <td>{{getYarnContainerId}}</td>
                     <td>{{getState}}</td>
-                    <td><a href="//{{getYarnContainerLogs}}/{{getKey}}.log?start=0">{{getKey}}.log</a></td>
+                    <td>
+                        {{#getYarnContainerLogs}}
+                        <a href="//{{getYarnContainerLogs}}/{{getKey}}.log?start=0">{{getKey}}.log</a>
+                        {{/getYarnContainerLogs}}
+                        {{^getYarnContainerLogs}}
+                        {{getKey}}.log
+                        {{/getYarnContainerLogs}}
+                    </td>
                 </tr>
                 {{/getValue}}
                 </tbody>
