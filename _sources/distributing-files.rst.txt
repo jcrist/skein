@@ -109,49 +109,46 @@ When an application launches, the following process occurs:
    container and any archives are extracted to the destination directories.
    Based on the file ``visibility`` setting, this may be done once per node per
    application, or once per node (with an LRU cache for clearing old files).
-   For more information on this process see `this blogpost from Hortonworks
-   <https://hortonworks.com/blog/resource-localization-in-yarn-deep-dive/>`__.
+   For more information on this process see `this blogpost from Hortonworks`_.
 
 5. When the application completes, the staging directory is deleted.
 
 
-Distribute Python Environments With Conda-Pack
-----------------------------------------------
+Distributing Python Environments
+--------------------------------
 
 When deploying Python applications, one needs to figure out how to distribute
-any library dependencies. If Python and all required libraries are already
-installed on every node (option 1 above), then you can use the local Python and
-avoid this problem completely. Otherwise, one way that users can distribute
-libraries themselves is to use the `conda package manager
-<https://conda.io/docs/>`__ to create a Python environment, and `conda-pack
-<https://conda.github.io/conda-pack/>`__ to package that environment for
-distribution with YARN (or other services).
+any library dependencies. If Python and the required libraries are already
+installed on every node (option 1 above), you can use the local Python and
+avoid this problem completely. If they aren't, then one needs to package the
+environment to distribute with the application. This is typically handled using
 
-``conda-pack`` is a tool for taking a conda environment and creating an archive
-of it in a way that (most) absolute paths in any libraries or scripts are
-altered to be relocatable. This archive then can be distributed with your
-application, and will be automatically extracted during `YARN resource
-localization
-<https://hortonworks.com/blog/resource-localization-in-yarn-deep-dive/>`__.
+- conda-pack_ for conda_ environments
+- venv-pack_  for virtual environments (both venv_ and virtualenv_ supported)
+
+Both are tools for taking an environment and creating an archive of it in a way
+that (most) absolute paths in any libraries or scripts are altered to be
+relocatable. This archive then can be distributed with your application, and
+will be automatically extracted during `YARN resource localization`_
 
 
-Packaging the Environment
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Packaging a Conda Environment with Conda-Pack
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Here we create an example environment using ``conda``, and then use
-``conda-pack`` to package the environment into a ``tar.gz`` file named
+Here we create a conda environment using conda_, and then use
+conda-pack_ to package the environment into a ``tar.gz`` file named
 ``environment.tar.gz``. This is what will be distributed with our application.
 
-.. code-block:: console
+.. code-block:: bash
 
-    # Create a new conda environment (output trimmed for brevity)
+    # Create a new conda environment
     $ conda create -n example
     ...
 
     # Activate the environment
     $ conda activate example
 
-    # Install the needed packages (output trimmed for brevity)
+    # Install the needed packages
     $ conda install conda-pack skein numpy scikit-learn numba -c conda-forge
     ...
 
@@ -162,12 +159,47 @@ Here we create an example environment using ``conda``, and then use
     [########################################] | 100% Completed | 24.2s
 
 
+Packing Virtual Environments using Venv-Pack
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Here we create a virtual environment, and then use venv-pack_ to package it
+into a ``tar.gz`` file named ``environment.tar.gz``. This is what will be
+distributed with our application. The virtual environment can be created using
+either venv_ or virtualenv_.
+
+Note that the python linked to in the virtual environment must exist and be
+accessible on every node in the YARN cluster. If the environment was created
+with a different Python, you can change the link path using the
+``--python-prefix`` flag. For more information see the `venv-pack
+documentation`_.
+
+.. code-block:: bash
+
+    # Create a virtual environment
+    $ python -m venv example            # Using venv
+    $ python -m virtualenv example      # Or using virtualenv
+    ...
+
+    # Activate the environment
+    $ source example/bin/activate
+
+    # Install the needed packages
+    $ pip install venv-pack skein numpy scikit-learn numba
+    ...
+
+    # Package the environment into environment.tar.gz
+    $ venv-pack -o environment.tar.gz
+    Collecting packages...
+    Packing environment at '/home/jcrist/environments/example' to 'environment.tar.gz'
+    [########################################] | 100% Completed |  12.4s
+
+
 Using the Packaged Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To use the packaged environment in a service specification, you need to include
 the archive in ``files``, and activate the environment in the ``commands``
-list.
+list. This looks the same for environments packaged using either tool.
 
 .. code-block:: yaml
 
@@ -185,3 +217,14 @@ list.
           # Run commands inside the environment. All executables or imported
           # python libraries will be from within the packaged environment.
           - my-cool-application
+
+
+.. _conda-pack: https://conda.github.io/conda-pack/
+.. _conda: http://conda.io/
+.. _venv:
+.. _virtual environments: https://docs.python.org/3/library/venv.html
+.. _virtualenv: https://virtualenv.pypa.io/en/stable/
+.. _venv-pack documentation:
+.. _venv-pack: https://jcrist.github.io/venv-pack/
+.. _this blogpost from Hortonworks:
+.. _YARN resource localization: https://hortonworks.com/blog/resource-localization-in-yarn-deep-dive/
