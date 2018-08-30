@@ -11,9 +11,9 @@ if [[ "$DOCS" != "true" ]]; then
         htcluster exec -- kinit testuser -kt testuser.keytab
     fi
     # Run py.test inside docker
-    htcluster exec -- $CONDA_ENV/bin/py.test skein/ -vv
+    htcluster exec -- $CONDA_ENV/bin/py.test skein/skein/ -vv
     # linting
-    htcluster exec -- $CONDA_ENV/bin/flake8 skein/
+    htcluster exec -- $CONDA_ENV/bin/flake8 skein/skein/
 else
     # Build docs
     pushd docs
