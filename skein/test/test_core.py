@@ -268,7 +268,7 @@ def test_file_systems(client):
     spec = skein.ApplicationSpec(name="test_file_systems",
                                  queue="default",
                                  services={'service': service},
-                                 file_systems=["hdfs://master.example.com"])
+                                 file_systems=["hdfs://master.example.com:9000"])
 
     with run_application(client, spec=spec) as app:
         wait_for_success(client, app.id)
