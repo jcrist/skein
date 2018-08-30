@@ -43,6 +43,8 @@ max_attempts: 2
 tags:
     - tag1
     - tag2
+file_systems:
+    - hdfs://preprod
 
 services:
     service_1:
@@ -283,6 +285,7 @@ def test_application_spec_from_yaml():
     assert spec.name == 'test'
     assert spec.queue == 'default'
     assert spec.tags == {'tag1', 'tag2'}
+    assert spec.file_systems == ['hdfs://preprod']
     assert spec.max_attempts == 2
     assert isinstance(spec.services, dict)
     assert isinstance(spec.services['service_1'], Service)

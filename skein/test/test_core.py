@@ -259,3 +259,16 @@ def test_container_environment(client, has_kerberos_enabled):
     else:
         assert "LOGIN_ID=[yarn]" in logs
         assert "HADOOP_USER_NAME" in logs
+
+
+def test_file_systems(client):
+    commands = ['hdfs dfs -touchz /user/testuser/test_file_systems']
+    service = skein.Service(resources=skein.Resources(memory=124, vcores=1),
+                            commands=commands)
+    spec = skein.ApplicationSpec(name="test_file_systems",
+                                 queue="default",
+                                 services={'service': service},
+                                 file_systems=["hdfs://master.example.com:9000"])
+
+    with run_application(client, spec=spec) as app:
+        wait_for_success(client, app.id)

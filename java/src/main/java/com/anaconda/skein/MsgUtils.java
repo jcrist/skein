@@ -1,5 +1,9 @@
 package com.anaconda.skein;
 
+import com.google.common.base.Functions;
+import com.google.common.collect.Lists;
+
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -299,7 +303,8 @@ public class MsgUtils {
         .setName(spec.getName())
         .setQueue(spec.getQueue())
         .setMaxAttempts(spec.getMaxAttempts())
-        .addAllTags(spec.getTags());
+        .addAllTags(spec.getTags())
+        .addAllFileSystems(Lists.transform(spec.getFileSystems(), Functions.toStringFunction()));
 
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
       builder.putServices(entry.getKey(), writeService(entry.getValue()));
@@ -312,10 +317,16 @@ public class MsgUtils {
     for (Map.Entry<String, Msg.Service> entry : spec.getServicesMap().entrySet()) {
       services.put(entry.getKey(), readService(entry.getValue()));
     }
+
+    final List<Path> fileSystems = new ArrayList<Path>();
+    for (int i = 0; i < spec.getFileSystemsCount(); i++) {
+      fileSystems.add(new Path(spec.getFileSystems(i)));
+    }
     return new Model.ApplicationSpec(spec.getName(),
                                      spec.getQueue(),
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
+                                     fileSystems,
                                      services);
   }
 

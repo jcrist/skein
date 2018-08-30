@@ -472,20 +472,25 @@ class ApplicationSpec(Specification):
         The queue to submit to. Defaults to the default queue.
     tags : set, optional
         A set of strings to use as tags for this application.
+    file_systems : list, optional
+        A list of Hadoop file systems to acquire delegation tokens for.
+        A token is always acuired for the ``defaultFS``.
     max_attempts : int, optional
         The maximum number of submission attempts before marking the
         application as failed. Note that this only considers failures of the
         application master during startup. Default is 1.
     """
-    __slots__ = ('services', 'name', 'queue', 'tags', 'max_attempts')
+    __slots__ = ('services', 'name', 'queue', 'tags', 'file_systems',
+                 'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
-    def __init__(self, services=required, name='skein', queue='default', tags=None,
-                 max_attempts=1):
+    def __init__(self, services=required, name='skein', queue='default',
+                 tags=None, file_systems=None, max_attempts=1):
         self._assign_required('services', services)
         self.name = name
         self.queue = queue
         self.tags = set() if tags is None else set(tags)
+        self.file_systems = [] if file_systems is None else file_systems
         self.max_attempts = max_attempts
         self._validate()
 
@@ -497,6 +502,7 @@ class ApplicationSpec(Specification):
         self._check_is_type('name', string)
         self._check_is_type('queue', string)
         self._check_is_set_of('tags', string)
+        self._check_is_list_of('file_systems', string)
         self._check_is_bounded_int('max_attempts', min=1)
         self._check_is_dict_of('services', string, Service)
         if not self.services:
@@ -536,6 +542,7 @@ class ApplicationSpec(Specification):
         return cls(name=obj.name,
                    queue=obj.queue,
                    tags=set(obj.tags),
+                   file_systems=list(obj.file_systems),
                    max_attempts=min(1, obj.max_attempts),
                    services=services)
 

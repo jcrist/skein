@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.google.common.collect.ObjectArrays;
+
 import io.grpc.Server;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -17,10 +19,11 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -263,14 +266,14 @@ public class Daemon {
     // Add security tokens as needed
     ByteBuffer fsTokens = null;
     if (UserGroupInformation.isSecurityEnabled()) {
-      Credentials credentials = new Credentials();
-      String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
-      if (tokenRenewer == null || tokenRenewer.length() == 0) {
-        throw new IOException("Can't determine Yarn ResourceManager Kerberos "
-                              + "principal for the RM to use as renewer");
-      }
+      Credentials credentials = UserGroupInformation.getLoginUser().getCredentials();
+      TokenCache.obtainTokensForNamenodes(
+              credentials,
+              ObjectArrays.concat(
+                      new Path(defaultFs.getUri()),
+                      spec.getFileSystems().toArray(new Path[0])),
+              conf);
 
-      defaultFs.addDelegationTokens(tokenRenewer, credentials);
       DataOutputBuffer dob = new DataOutputBuffer();
       credentials.writeTokenStorageToStream(dob);
       fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());

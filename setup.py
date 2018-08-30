@@ -65,6 +65,8 @@ class build_proto(Command):
 class build_java(Command):
     description = "build java artifacts"
 
+    user_options = []
+
     def initialize_options(self):
         pass
 
