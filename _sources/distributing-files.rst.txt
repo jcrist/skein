@@ -159,8 +159,8 @@ conda-pack_ to package the environment into a ``tar.gz`` file named
     [########################################] | 100% Completed | 24.2s
 
 
-Packing Virtual Environments using Venv-Pack
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Packaging a Virtual Environment with Venv-Pack
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here we create a virtual environment, and then use venv-pack_ to package it
 into a ``tar.gz`` file named ``environment.tar.gz``. This is what will be
