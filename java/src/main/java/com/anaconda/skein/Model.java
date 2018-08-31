@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.google.common.base.Joiner;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -184,6 +186,7 @@ public class Model {
     private State state;
     private ContainerId yarnContainerId;
     private NodeId yarnNodeId;
+    private String yarnNodeHttpAddress;
     private long startTime;
     private long finishTime;
     private ContainerRequest req;
@@ -236,6 +239,23 @@ public class Model {
 
     public void setYarnNodeId(NodeId yarnNodeId) { this.yarnNodeId = yarnNodeId; }
     public NodeId getYarnNodeId() { return yarnNodeId; }
+
+    public void setYarnNodeHttpAddress(String yarnNodeHttpAddress) {
+      this.yarnNodeHttpAddress = yarnNodeHttpAddress;
+    }
+    public String getYarnNodeHttpAddress() { return yarnNodeHttpAddress; }
+
+    public String getYarnContainerLogs() {
+      if (yarnNodeHttpAddress == null || yarnContainerId == null) {
+        return "";  // Not able to construct a URL yet.
+      }
+
+      return Joiner.on('/').join(
+          yarnNodeHttpAddress,
+          "node", "containerlogs",
+          yarnContainerId,
+          System.getProperty("user.name"));
+    }
 
     public void setStartTime(long startTime) { this.startTime = startTime; }
     public long getStartTime() { return startTime; }

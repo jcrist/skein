@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <link rel="stylesheet" href="webjars/bootstrap/4.1.1/css/bootstrap.min.css">
+    <style>
+        #service-containers thead th,
+        #kv thead th { border-width: 0; }
+
+        .page { display: none; }
+    </style>
+
+    <title>Skein</title>
+</head>
+
+<body>
+<nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4">
+    <a class="navbar-brand" href="#">Skein</a>
+    <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+            <a class="nav-link" href="#services">Services</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#kv">Key/Value Store</a>
+        </li>
+    </ul>
+    <span class="navbar-text" id="application">{{appId}}</span>
+</nav>
+
+<main role="main" class="container-fluid">
+    <div class="page" id="services">
+        <ul class="nav nav-pills" id="service-tabs">
+            {{#services}}
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#{{getKey}}">{{getKey}}</a>
+            {{/services}}
+        </ul>
+
+        <div class="tab-content" id="service-containers">
+            {{#services}}
+            <div class="tab-pane" id="{{getKey}}">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Container ID</th>
+                    <th scope="col">State</th>
+                    <th scope="col">Log</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{#getValue}}
+                <tr>
+                    <th scope="row">{{getId}}</th>
+                    <td>{{getYarnContainerId}}</td>
+                    <td>{{getState}}</td>
+                    <td>
+                        {{#getYarnContainerLogs}}
+                        <a href="//{{getYarnContainerLogs}}/{{getKey}}.log?start=0">{{getKey}}.log</a>
+                        {{/getYarnContainerLogs}}
+                        {{^getYarnContainerLogs}}
+                        {{getKey}}.log
+                        {{/getYarnContainerLogs}}
+                    </td>
+                </tr>
+                {{/getValue}}
+                </tbody>
+            </table>
+        </div>
+            {{/services}}
+        </div>
+    </div>
+
+    <div class="page" id="kv">
+        <table class="table">
+            <thead>
+            <tr><th scope="col">Key</th><th scope="col">Value</th></tr>
+            </thead>
+            <tbody>
+            {{#kv}}
+            <tr><th scope="row">{{getKey}}</th><td>{{getValue}}</td></tr>
+            {{/kv}}
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<script src="webjars/jquery/3.0.0/jquery.min.js"></script>
+<script src="webjars/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+<script>
+    $("#service-tabs li:first-child a").tab("show");
+
+    function go(page) {
+        $(`li > a[href="${page}"]`).parent().addClass("active");
+        $(page).show();
+    };
+
+    $(window).on("hashchange", function(event) {
+        $($(".navbar .active a").attr("href")).hide();
+        $(".navbar .active").removeClass("active");
+        go(window.location.hash);
+    });
+
+    if (window.location.hash === "") {
+        window.location.hash = "services";
+    } else {
+        go(window.location.hash);
+    }
+</script>
+</body>
+</html>
