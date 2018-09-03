@@ -1,7 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
 import os
-import re
 import weakref
 
 import pytest
@@ -345,7 +344,7 @@ def test_mem_limit_exceeded(client):
     commands = [
         'python -c "xs = list(range(5 * 10**6)); import time; time.sleep(5)"'
     ]
-    service = skein.Service(resources=skein.Resources(memory=1, vcores=1),
+    service = skein.Service(resources=skein.Resources(memory=124, vcores=1),
                             commands=commands)
     spec = skein.ApplicationSpec(name="test_mem_limit_exceeded",
                                  queue="default",

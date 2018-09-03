@@ -78,9 +78,9 @@ def check_is_shutdown(client, app_id, status=None):
 
 def wait_for_completion(client, app_id, timeout=30):
     while timeout:
-        report = client.application_report(app_id)
-        if report.final_status != 'undefined':
-            return report.final_status
+        final_status = client.application_report(app_id).final_status
+        if final_status != 'UNDEFINED':
+            return final_status
         time.sleep(0.1)
         timeout -= 0.1
     else:
