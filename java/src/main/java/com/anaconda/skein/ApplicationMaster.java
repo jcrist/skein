@@ -3,6 +3,7 @@ package com.anaconda.skein;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import io.grpc.Server;
 import io.grpc.Status;
@@ -63,6 +64,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ApplicationMaster {
 
@@ -355,20 +358,55 @@ public class ApplicationMaster {
         continue;  // release container that was never started
       }
 
-      Model.Container.State state;
-      int exitStatus = status.getExitStatus();
+      LOG.info(String.format(
+          "Completed container %s (state: %s, exit status: %s)",
+          status.getContainerId().toString(),
+          status.getState(),
+          status.getExitStatus()));
 
-      if (exitStatus == ContainerExitStatus.SUCCESS) {
-        state = Model.Container.State.SUCCEEDED;
-      } else if (exitStatus == ContainerExitStatus.KILLED_BY_APPMASTER) {
-        return;  // state change already handled by killContainer
-      } else {
-        state = Model.Container.State.FAILED;
+      Model.Container.State state;
+      switch (status.getExitStatus()) {
+        case ContainerExitStatus.SUCCESS:
+          state = Model.Container.State.SUCCEEDED;
+          break;
+        case ContainerExitStatus.KILLED_BY_APPMASTER:
+          return;  // state change already handled by killContainer.
+        case ContainerExitStatus.KILLED_EXCEEDED_PMEM:
+        case ContainerExitStatus.KILLED_EXCEEDED_VMEM:
+          LOG.error(memLimitExceededLogMessage(
+              status.getDiagnostics(),
+              memLimitExceededPattern(status.getExitStatus())));
+          // Should be KILLED, but KILLED_BY_YARN rather than just KILLED
+          // which is a result of a user request.
+          state = Model.Container.State.FAILED;
+          break;
+        default:
+          state = Model.Container.State.FAILED;
+          break;
       }
 
       services.get(container.getServiceName())
               .finishContainer(container.getInstance(), state);
     }
+  }
+
+  private static Pattern memLimitExceededPattern(int exitStatus) {
+    String type;
+    if (exitStatus == ContainerExitStatus.KILLED_EXCEEDED_PMEM) {
+      type = "physical";
+    } else {
+      checkArgument(exitStatus == ContainerExitStatus.KILLED_EXCEEDED_VMEM,
+          "existStatus must be KILLED_EXCEEDED_PMEM or KILLED_EXCEEDED_VMEM");
+      type = "virtual";
+    }
+    String memRegex = "[0-9.]+ [KMG]B";
+    return Pattern.compile(memRegex + " of " + memRegex + " " + type + " memory used");
+  }
+
+  private static String memLimitExceededLogMessage(String diagnostics, Pattern pattern) {
+    Matcher matcher = pattern.matcher(diagnostics);
+    String reason = matcher.find() ? matcher.group() : "";
+    return "Container killed by YARN for exceeding memory limits. " + reason;
   }
 
   private static void fatal(String msg, Throwable exc) {

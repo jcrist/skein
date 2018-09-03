@@ -76,17 +76,15 @@ def check_is_shutdown(client, app_id, status=None):
         assert client.application_report(app_id).final_status == status
 
 
-def wait_for_success(client, app_id, timeout=30):
+def wait_for_completion(client, app_id, timeout=30):
     while timeout:
-        state = client.application_report(app_id).state
-        if state == 'FINISHED':
-            return
-        elif state in ['FAILED', 'KILLED']:
-            assert False, "Application state = %r, expected 'FINISHED'" % state
+        report = client.application_report(app_id)
+        if report.final_status != 'undefined':
+            return report.final_status
         time.sleep(0.1)
         timeout -= 0.1
     else:
-        assert False, "Application timed out"
+        assert False, 'Application timed out'
 
 
 @contextmanager
