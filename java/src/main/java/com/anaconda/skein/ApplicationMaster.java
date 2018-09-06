@@ -175,8 +175,13 @@ public class ApplicationMaster {
         }
     );
 
+    boolean https = conf.get(
+        YarnConfiguration.YARN_HTTP_POLICY_KEY,
+        YarnConfiguration.YARN_HTTP_POLICY_DEFAULT
+    ).equals("HTTPS_ONLY");
+
     try {
-      ui = WebUI.create(0, appId.toString(), keyValueStore, serviceContexts);
+      ui = WebUI.create(0, appId.toString(), keyValueStore, serviceContexts, https);
       ui.start();
     } catch (Exception e) {
       fatal("Failed to start UI server", e);
@@ -746,7 +751,7 @@ public class ApplicationMaster {
                                     container.getStartTime(),
                                     container.getFinishTime(),
                                     container.getState(),
-                                    container.getLogAddress());
+                                    container.getLogsAddress());
         switch (info.state) {
           case REQUESTED:
           case RUNNING:

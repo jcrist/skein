@@ -42,7 +42,8 @@ public class WebUI {
   public static WebUI create(int port,
                              String appId,
                              Map<String, Msg.KeyValue.Builder> keyValueStore,
-                             List<ServiceContext> services)
+                             List<ServiceContext> services,
+                             boolean httpsOnly)
       throws Exception {
 
     Server server = new Server(port);
@@ -66,7 +67,7 @@ public class WebUI {
 
     server.setHandler(new HandlerList(
         rewrite,
-        new WebApiHandler(appId, keyValueStore, services),
+        new WebApiHandler(appId, keyValueStore, services, httpsOnly),
         context,
         new DefaultHandler()));
 
@@ -136,7 +137,7 @@ public class WebUI {
 
     try {
       WebUI webui = WebUI.create(port, "application_1526497750451_0001",
-                                 kv, services);
+                                 kv, services, false);
       webui.start();
     } catch (Throwable exc) {
       LOG.fatal("Error running WebUI", exc);
@@ -149,15 +150,15 @@ public class WebUI {
     public long startTime;
     public long finishTime;
     public Model.Container.State state;
-    public String logAddress;
+    public String logsAddress;
 
     public ContainerInfo(int instance, long startTime, long finishTime,
-                         Model.Container.State state, String logAddress) {
+                         Model.Container.State state, String logsAddress) {
       this.instance = instance;
       this.startTime = startTime;
       this.finishTime = finishTime;
       this.state = state;
-      this.logAddress = logAddress;
+      this.logsAddress = logsAddress;
     }
 
     public String runtime() {
@@ -173,7 +174,6 @@ public class WebUI {
           delta = finishTime - startTime;
       }
       long secs = delta / 1000;
-      secs = finishTime - startTime;
       long hours = secs / (60 * 60);
       secs = secs % (60 * 60);
       long mins = secs / 60;
@@ -203,19 +203,20 @@ public class WebUI {
   }
 
   private static class Context {
-    private final String appId;
+    public final String appId;
     private final List<ServiceContext> services;
     private final Map<String, Msg.KeyValue.Builder> keyValueStore;
+    public final String linkProtocol;
 
     public Context(String appId,
                    Map<String, Msg.KeyValue.Builder> keyValueStore,
-                   List<ServiceContext> services) {
+                   List<ServiceContext> services,
+                   boolean httpsOnly) {
       this.appId = appId;
       this.keyValueStore = keyValueStore;
       this.services = services;
+      this.linkProtocol = httpsOnly ? "https://" : "http://";
     }
-
-    public String appId() { return appId; }
 
     public List<Map.Entry<String, String>> kv() {
       synchronized (keyValueStore) {
@@ -248,8 +249,9 @@ public class WebUI {
 
     public WebApiHandler(String appId,
                          Map<String, Msg.KeyValue.Builder> keyValueStore,
-                         List<ServiceContext> services) {
-      this.context = new Context(appId, keyValueStore, services);
+                         List<ServiceContext> services,
+                         boolean httpsOnly) {
+      this.context = new Context(appId, keyValueStore, services, httpsOnly);
     }
 
     public void handle(String target, Request baseRequest,

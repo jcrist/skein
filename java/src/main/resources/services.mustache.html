@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <link rel="stylesheet" href="/webjars/bootstrap/4.1.1/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/webjars/open-iconic/1.1.1/font/css/open-iconic-bootstrap.css">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="shortcut icon" href="/favicon.ico">
-    <link rel="manifest" href="/site.webmanifest">
-    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#333333">
+    <link rel="stylesheet" href="webjars/bootstrap/4.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="webjars/open-iconic/1.1.1/font/css/open-iconic-bootstrap.css">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="manifest" href="site.webmanifest">
+    <link rel="mask-icon" href="safari-pinned-tab.svg" color="#333333">
     <meta name="msapplication-TileColor" content="#333333">
     <meta name="theme-color" content="#ffffff">
 
@@ -26,6 +26,11 @@
             counter-increment: AutoIndexCounter;
             content: counter(AutoIndexCounter);
         }
+        .collapsing {
+            -webkit-transition: none;
+            transition: none;
+            display: none;
+        }
     </style>
 
     <title>Services - Skein | {{appId}}</title>
@@ -35,7 +40,7 @@
 <nav class="navbar navbar-expand-md navbar-dark bg-dark">
 
     <span class="navbar-brand">
-      <img src="/yarn_white.svg" width="28" height="28" class="d-inline-block align-top" alt="">
+      <img src="yarn_white.svg" width="28" height="28" class="d-inline-block align-top" alt="">
       Skein
     </span>
 
@@ -75,7 +80,7 @@
       </div>
     </div>
 
-    <div id="cardCollapse{{index}}" class="collapse" aria-labelledby="cardHeader{{index}}">
+    <div id="cardCollapse{{index}}" class="services-card collapse" aria-labelledby="cardHeader{{index}}">
       <div class="card-body">
         <h4>Active</h4>
 
@@ -103,12 +108,12 @@
                     <td>{{state}}</td>
                     <td>{{runtime}}</td>
                     <td>
-                        {{#logAddress}}
-                        <a href="{{logAddress}}">{{name}}_{{instance}}.log</a>
-                        {{/logAddress}}
-                        {{^logAddress}}
+                        {{#logsAddress}}
+                        <a href="{{linkProtocol}}{{logsAddress}}/{{name}}.log?start=-4096">{{name}}.log</a>
+                        {{/logsAddress}}
+                        {{^logsAddress}}
                         N/A
-                        {{/logAddress}}
+                        {{/logsAddress}}
                     </td>
                 </tr>
                 {{/active}}
@@ -141,12 +146,12 @@
                     <td>{{state}}</td>
                     <td>{{runtime}}</td>
                     <td>
-                        {{#logAddress}}
-                        <a href="{{logAddress}}">{{name}}_{{instance}}.log</a>
-                        {{/logAddress}}
-                        {{^logAddress}}
+                        {{#logsAddress}}
+                        <a href="{{linkProtocol}}{{logsAddress}}/{{name}}.log?start=-4096">{{name}}.log</a>
+                        {{/logsAddress}}
+                        {{^logsAddress}}
                         N/A
-                        {{/logAddress}}
+                        {{/logsAddress}}
                     </td>
                 </tr>
                 {{/completed}}
@@ -159,7 +164,37 @@
   {{/services}}
 </div>
 
-<script src="/webjars/jquery/3.0.0/jquery.min.js"></script>
-<script src="/webjars/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+<script src="webjars/jquery/3.0.0/jquery.min.js"></script>
+<script src="webjars/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+<script>
+$(document).ready(function () {
+    // Store and manage collapsed state for the service cards
+    var STORAGE_KEY = 'skeinCollapseState{{appId}}'
+    var i, len;
+    var collapseState = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
+    if (collapseState == null) {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+    } else {
+        for (i = 0, len = collapseState.length; i < len; ++i) {
+            $('#' + collapseState[i]).collapse('show');
+        }
+    }
+
+    $(".services-card").on('shown.bs.collapse', function () {
+        collapseState = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
+        if ($.inArray($(this).attr('id'), collapseState) == -1) {
+            collapseState.push($(this).attr('id'));
+        };
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(collapseState));
+
+    })
+
+    $(".services-card").on('hidden.bs.collapse', function () {
+        collapseState = JSON.parse(sessionStorage.getItem(STORAGE_KEY))
+        collapseState.splice($.inArray($(this).attr('id'), collapseState), 1);
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(collapseState));
+    })
+})
+</script>
 </body>
 </html>

@@ -245,7 +245,7 @@ public class Model {
     }
     public String getYarnNodeHttpAddress() { return yarnNodeHttpAddress; }
 
-    public String getLogAddress() {
+    public String getLogsAddress() {
       if (yarnNodeHttpAddress == null || yarnContainerId == null) {
         return "";  // Not able to construct a URL yet.
       }
@@ -255,9 +255,7 @@ public class Model {
           "node",
           "containerlogs",
           yarnContainerId,
-          System.getProperty("user.name"),
-          serviceName,
-          ".log");
+          System.getProperty("user.name"));
     }
 
     public void setStartTime(long startTime) { this.startTime = startTime; }
