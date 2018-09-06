@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
 import io.grpc.Server;
@@ -48,6 +50,7 @@ import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -143,7 +146,6 @@ public class ApplicationMaster {
           @Override
           public void run() {
             ApplicationMaster.this.stopServer();
-            ApplicationMaster.this.stopUI();
           }
         });
   }
@@ -157,25 +159,45 @@ public class ApplicationMaster {
   }
 
   private void startUI() {
-    ui = new WebUI();
+    // Sorted list of service trackers
+    final List<ServiceTracker> sortedServices = Lists.newArrayList(services.values());
+    Collections.sort(sortedServices, new Comparator<ServiceTracker>() {
+      public int compare(ServiceTracker x, ServiceTracker y) {
+        return x.getName().compareTo(y.getName());
+      }
+    });
+
+    List<WebUI.ServiceContext> serviceContexts = Lists.transform(sortedServices,
+        new Function<ServiceTracker, WebUI.ServiceContext>() {
+          public WebUI.ServiceContext apply(ServiceTracker tracker) {
+            return tracker.toServiceContext();
+          }
+        }
+    );
+
     try {
-      // TODO
-      ui.configure(0, appId.toString(), keyValueStore, null);
+      ui = WebUI.create(0, appId.toString(), keyValueStore, serviceContexts);
       ui.start();
     } catch (Exception e) {
       fatal("Failed to start UI server", e);
     }
 
+    Runtime.getRuntime().addShutdownHook(
+        new Thread() {
+          @Override
+          public void run() {
+            ApplicationMaster.this.stopUI();
+          }
+        });
+
     LOG.info("UI server started, listening on " + ui.getURI().getPort());
   }
 
   private void stopUI() {
-    try {
-      LOG.info("Stopping UI server");
+    if (ui != null) {
+      LOG.info("Shutting down WebUI server");
       ui.stop();
-      LOG.info("UI server stopped");
-    } catch (Exception e) {
-      LOG.error("Failed to stop UI server", e);
+      LOG.info("WebUI server shut down");
     }
   }
 
@@ -708,8 +730,33 @@ public class ApplicationMaster {
       return null;
     }
 
-    List<Model.Container> getContainers() {
-      return Collections.unmodifiableList(containers);
+    public synchronized WebUI.ServiceContext toServiceContext() {
+      WebUI.ServiceContext context = new WebUI.ServiceContext();
+      context.name = name;
+      context.running = requested.size() + running.size();
+      context.succeeded = numSucceeded;
+      context.killed = numKilled;
+      context.failed = numFailed;
+      context.active = Lists.newArrayListWithCapacity(context.running);
+      context.completed = Lists.newArrayListWithCapacity(
+          context.succeeded + context.killed + context.failed);
+      for (Model.Container container : containers) {
+        WebUI.ContainerInfo info =
+            new WebUI.ContainerInfo(container.getInstance(),
+                                    container.getStartTime(),
+                                    container.getFinishTime(),
+                                    container.getState(),
+                                    container.getLogAddress());
+        switch (info.state) {
+          case REQUESTED:
+          case RUNNING:
+            context.active.add(info);
+            break;
+          default:
+            context.completed.add(info);
+        }
+      }
+      return context;
     }
 
     public List<Model.Container> scale(int instances) {

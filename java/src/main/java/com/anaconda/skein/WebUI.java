@@ -24,8 +24,6 @@ import org.eclipse.jetty.util.resource.Resource;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -37,15 +35,17 @@ public class WebUI {
 
   private Server server;
 
-  public WebUI() {}
+  private WebUI(Server server) {
+    this.server = server;
+  }
 
-  public void configure(int port,
-                        String appId,
-                        Map<String, Msg.KeyValue.Builder> keyValueStore,
-                        List<ServiceContext> services)
+  public static WebUI create(int port,
+                             String appId,
+                             Map<String, Msg.KeyValue.Builder> keyValueStore,
+                             List<ServiceContext> services)
       throws Exception {
 
-    server = new Server(port);
+    Server server = new Server(port);
 
     // Handler for all static resources
     ServletContextHandler context = new ServletContextHandler();
@@ -69,14 +69,20 @@ public class WebUI {
         new WebApiHandler(appId, keyValueStore, services),
         context,
         new DefaultHandler()));
+
+    return new WebUI(server);
   }
 
   public void start() throws Exception {
     server.start();
   }
 
-  public void stop() throws Exception {
-    server.stop();
+  public void stop() {
+    try {
+      server.stop();
+    } catch (Exception e) {
+      LOG.error("Failed to stop UI server", e);
+    }
   }
 
   public URI getURI() {
@@ -90,7 +96,6 @@ public class WebUI {
     }
     int port = Integer.parseInt(args[0]);
 
-    WebUI webui = new WebUI();
     // Create a dummy key-value store
     Map<String, Msg.KeyValue.Builder> kv = new TreeMap<String, Msg.KeyValue.Builder>();
     kv.put("Key 1", Msg.KeyValue.newBuilder().setValue(ByteString.copyFromUtf8("Val 1")));
@@ -130,7 +135,8 @@ public class WebUI {
     services.add(service2);
 
     try {
-      webui.configure(port, "application_1526497750451_0001", kv, services);
+      WebUI webui = WebUI.create(port, "application_1526497750451_0001",
+                                 kv, services);
       webui.start();
     } catch (Throwable exc) {
       LOG.fatal("Error running WebUI", exc);
@@ -142,21 +148,21 @@ public class WebUI {
     public int instance;
     public long startTime;
     public long finishTime;
-    public Model.Container.State status;
+    public Model.Container.State state;
     public String logAddress;
 
     public ContainerInfo(int instance, long startTime, long finishTime,
-                         Model.Container.State status, String logAddress) {
+                         Model.Container.State state, String logAddress) {
       this.instance = instance;
       this.startTime = startTime;
       this.finishTime = finishTime;
-      this.status = status;
+      this.state = state;
       this.logAddress = logAddress;
     }
 
     public String runtime() {
       long delta;
-      switch (status) {
+      switch (state) {
         case WAITING:
         case REQUESTED:
           return "0s";
@@ -227,13 +233,7 @@ public class WebUI {
     }
 
     public DecoratedCollection<ServiceContext> services() {
-      List<ServiceContext> entries = Lists.newArrayList(services);
-      Collections.sort(entries, new Comparator<ServiceContext>() {
-        public int compare(ServiceContext e1, ServiceContext e2) {
-          return e1.name.compareTo(e2.name);
-        }
-      });
-      return new DecoratedCollection<ServiceContext>(entries);
+      return new DecoratedCollection<ServiceContext>(services);
     }
   }
 

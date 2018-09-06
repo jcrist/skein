@@ -245,16 +245,19 @@ public class Model {
     }
     public String getYarnNodeHttpAddress() { return yarnNodeHttpAddress; }
 
-    public String getYarnContainerLogs() {
+    public String getLogAddress() {
       if (yarnNodeHttpAddress == null || yarnContainerId == null) {
         return "";  // Not able to construct a URL yet.
       }
 
       return Joiner.on('/').join(
           yarnNodeHttpAddress,
-          "node", "containerlogs",
+          "node",
+          "containerlogs",
           yarnContainerId,
-          System.getProperty("user.name"));
+          System.getProperty("user.name"),
+          serviceName,
+          ".log");
     }
 
     public void setStartTime(long startTime) { this.startTime = startTime; }
