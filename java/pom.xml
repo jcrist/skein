@@ -15,6 +15,16 @@
   </properties>
 
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/webroot</directory>
+        <targetPath>META-INF/resources</targetPath>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+    </resources>
+
     <extensions>
       <extension>
         <groupId>kr.motd.maven</groupId>
@@ -49,6 +59,14 @@
                 <relocation>
                   <pattern>io.netty</pattern>
                   <shadedPattern>com.anaconda.skein.shaded.io.netty</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.eclipse.jetty</pattern>
+                  <shadedPattern>com.anaconda.skein.shaded.org.eclipse.jetty</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.github.mustachejava</pattern>
+                  <shadedPattern>com.anaconda.skein.shaded.com.github.mustachejava</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>io.grpc</pattern>
@@ -131,34 +149,6 @@
           <enableAssertions>true</enableAssertions>
         </configuration>
       </plugin>
-
-			<plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>java</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <executable>mvn</executable>
-          <mainClass>com.anaconda.skein.WebUI</mainClass>
-          <workingDirectory>/tmp</workingDirectory>
-          <arguments>
-            <argument>8787</argument>
-          </arguments>
-					<systemProperties>
-            <systemProperty>
-              <key>org.eclipse.jetty.io.LEVEL</key>
-              <value>DEBUG</value>
-            </systemProperty>
-          </systemProperties>
-        </configuration>
-      </plugin>
-
     </plugins>
   </build>
 
@@ -197,6 +187,12 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-servlet</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-rewrite</artifactId>
       <version>${jetty.version}</version>
     </dependency>
 
