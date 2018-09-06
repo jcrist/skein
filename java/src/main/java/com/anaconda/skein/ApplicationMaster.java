@@ -1,7 +1,5 @@
 package com.anaconda.skein;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 
 import io.grpc.Server;
@@ -159,25 +157,11 @@ public class ApplicationMaster {
   }
 
   private void startUI() {
+    ui = new WebUI();
     try {
-      ui = WebUI.start(
-          appId,
-          Collections.unmodifiableMap(
-              Maps.transformValues(
-                  keyValueStore,
-                  new Function<Msg.KeyValue.Builder, Msg.KeyValue>() {
-                    public Msg.KeyValue apply(Msg.KeyValue.Builder b) {
-                      return b.build();
-                    }
-                  })),
-          Collections.unmodifiableMap(
-              Maps.transformValues(
-                  services,
-                  new Function<ServiceTracker, List<Model.Container>>() {
-                    public List<Model.Container> apply(ServiceTracker serviceTracker) {
-                      return serviceTracker.getContainers();
-                    }
-                  })));
+      // TODO
+      ui.configure(0, appId.toString(), keyValueStore, null);
+      ui.start();
     } catch (Exception e) {
       fatal("Failed to start UI server", e);
     }
