@@ -236,7 +236,7 @@ def test_container_environment(client, has_kerberos_enabled):
     commands = ['env',
                 'echo "LOGIN_ID=[$(whoami)]"',
                 'hdfs dfs -touchz /user/testuser/test_container_permissions']
-    service = skein.Service(resources=skein.Resources(memory=124, vcores=1),
+    service = skein.Service(resources=skein.Resources(memory=64, vcores=1),
                             commands=commands)
     spec = skein.ApplicationSpec(name="test_container_permissions",
                                  queue="default",
@@ -250,7 +250,7 @@ def test_container_environment(client, has_kerberos_enabled):
     assert 'SKEIN_APPMASTER_ADDRESS=' in logs
     assert 'SKEIN_APPLICATION_ID=%s' % app.id in logs
     assert 'SKEIN_CONTAINER_ID=service_0' in logs
-    assert 'SKEIN_RESOURCE_MEMORY=128' in logs
+    assert 'SKEIN_RESOURCE_MEMORY=64' in logs
     assert 'SKEIN_RESOURCE_VCORES=1' in logs
 
     if has_kerberos_enabled:
@@ -263,7 +263,7 @@ def test_container_environment(client, has_kerberos_enabled):
 
 def test_file_systems(client):
     commands = ['hdfs dfs -touchz /user/testuser/test_file_systems']
-    service = skein.Service(resources=skein.Resources(memory=124, vcores=1),
+    service = skein.Service(resources=skein.Resources(memory=64, vcores=1),
                             commands=commands)
     spec = skein.ApplicationSpec(name="test_file_systems",
                                  queue="default",
@@ -356,7 +356,7 @@ def test_application_node_label(client, worker_as_gpu):
 
 def test_service_node_label(client, worker_as_gpu):
     service = skein.Service(
-        resources=skein.Resources(memory=128, vcores=1),
+        resources=skein.Resources(memory=32, vcores=1),
         commands=["env"],
         node_label="gpu")
     spec = skein.ApplicationSpec(

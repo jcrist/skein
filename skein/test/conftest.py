@@ -52,7 +52,7 @@ def client(security, kinit):
         yield client
 
 
-sleeper = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+sleeper = skein.Service(resources=skein.Resources(memory=32, vcores=1),
                         commands=['sleep infinity'])
 
 
