@@ -3,6 +3,7 @@ package com.anaconda.skein;
 import com.google.common.base.Joiner;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -255,7 +256,7 @@ public class Model {
           "node",
           "containerlogs",
           yarnContainerId,
-          System.getProperty("user.name"));
+          System.getenv(Environment.USER.name()));
     }
 
     public void setStartTime(long startTime) { this.startTime = startTime; }

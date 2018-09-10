@@ -272,3 +272,57 @@ def test_file_systems(client):
 
     with run_application(client, spec=spec) as app:
         wait_for_success(client, app.id)
+
+
+def test_webui(client, has_kerberos_enabled):
+    # Smoke-tests for webui
+    if has_kerberos_enabled:
+        pytest.skip("Testing only implemented for simple authentication")
+    requests = pytest.importorskip('requests')
+
+    with run_application(client) as app:
+        # Wait for a single container
+        initial = wait_for_containers(app, 1, states=['RUNNING'])
+        assert initial[0].state == 'RUNNING'
+        assert initial[0].service_name == 'sleeper'
+
+        # Set some key-values
+        app.kv['foo'] = b'bar'
+        app.kv['bad'] = b'\255\255\255'  # non-unicode
+
+        # Base url of web ui
+        base = 'http://master.example.com:8088/proxy/%s' % app.id
+
+        # Fails without authentication
+        resp = requests.get(base)
+        assert resp.status_code == 401
+
+        # With authentication
+        resp = requests.get(base + "?user.name=testuser")
+        assert resp.ok
+        cookies = resp.cookies
+
+        # / and /services are the same
+        for suffix in ['', '/services']:
+            resp = requests.get(base + suffix, cookies=cookies)
+            assert resp.ok
+            assert 'sleeper_0' in resp.text  # list of containers
+            assert '/testuser/sleeper.log' in resp.text  # link to logs
+
+        # /kv store has a few items in it
+        resp = requests.get(base + '/kv', cookies=cookies)
+        assert resp.ok
+        assert 'foo' in resp.text
+        assert 'bar' in resp.text
+        assert 'bad' in resp.text
+        assert '&lt;binary value&gt;' in resp.text
+
+        # Resources are reachable
+        resp = requests.get(base + '/favicon.ico', cookies=cookies)
+        assert resp.ok
+
+        # 404 for fake pages
+        resp = requests.get(base + '/not-a-real-page', cookies=cookies)
+        assert resp.status_code == 404
+
+        app.shutdown()
