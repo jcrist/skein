@@ -181,7 +181,8 @@ public class ApplicationMaster {
     ).equals("HTTPS_ONLY");
 
     try {
-      ui = WebUI.create(0, appId.toString(), keyValueStore, serviceContexts, https);
+      ui = WebUI.create(0, appId.toString(), keyValueStore, serviceContexts,
+                        conf, false);
       ui.start();
     } catch (Exception e) {
       fatal("Failed to start UI server", e);

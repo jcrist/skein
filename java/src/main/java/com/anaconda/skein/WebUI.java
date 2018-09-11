@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
@@ -7,26 +9,30 @@ import com.google.protobuf.ByteString;
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
 import com.github.mustachejava.util.DecoratedCollection;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.webproxy.amfilter.AmIpFilter;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.rewrite.handler.RedirectPatternRule;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
-import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.server.handler.DefaultHandler;
-import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.resource.Resource;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import javax.servlet.DispatcherType;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -43,8 +49,12 @@ public class WebUI {
                              String appId,
                              Map<String, Msg.KeyValue.Builder> keyValueStore,
                              List<ServiceContext> services,
-                             boolean httpsOnly)
+                             Configuration conf,
+                             boolean testing)
       throws Exception {
+
+    // Set the jetty log level
+    System.setProperty("org.eclipse.jetty.LEVEL", "WARN");
 
     Server server = new Server(port);
 
@@ -57,19 +67,52 @@ public class WebUI {
         WebUI.class.getResource("/META-INF/resources/favicon.ico").toURI()
                    .toASCIIString().replaceFirst("/favicon.ico$","/")
     );
-    LOG.info("Serving Resources From: " + baseURI);
+    LOG.info("Serving resources from: " + baseURI);
     context.setBaseResource(Resource.newResource(baseURI));
     context.addServlet(new ServletHolder("default", DefaultServlet.class), "/");
+
+    final String prefix = WebAppUtils.getHttpSchemePrefix(conf);
+    UIModel uiModel = new UIModel(appId, keyValueStore, services, prefix);
+    context.addServlet(
+        new ServletHolder(new TemplateServlet(uiModel, "services.mustache.html")),
+        "/services");
+    context.addServlet(
+        new ServletHolder(new TemplateServlet(uiModel, "kv.mustache.html")),
+        "/kv");
+
+    // Add the yarn proxy filter
+    if (!testing) {
+      FilterHolder filter = context.addFilter(
+          AmIpFilter.class, "/*", EnumSet.allOf(DispatcherType.class));
+      List<String> proxies = WebAppUtils.getProxyHostsAndPortsForAmFilter(conf);
+      final String proxyBase = System.getenv(
+          ApplicationConstants.APPLICATION_WEB_PROXY_BASE_ENV);
+      String hosts = Joiner.on(AmIpFilter.PROXY_HOSTS_DELIMITER).join(
+          Lists.transform(proxies,
+            new Function<String, String>() {
+              public String apply(String proxy) {
+                return proxy.split(":", 2)[0];
+              }
+            })
+      );
+      String uriBases = Joiner.on(AmIpFilter.PROXY_URI_BASES_DELIMITER).join(
+          Lists.transform(proxies,
+            new Function<String, String>() {
+              public String apply(String proxy) {
+                return prefix + proxy + proxyBase;
+              }
+            })
+      );
+      filter.setInitParameter(AmIpFilter.PROXY_HOSTS, hosts);
+      filter.setInitParameter(AmIpFilter.PROXY_URI_BASES, uriBases);
+    }
 
     // Issue a 302 redirect to services from homepage
     RewriteHandler rewrite = new RewriteHandler();
     rewrite.addRule(new RedirectPatternRule("", "/services"));
+    context.insertHandler(rewrite);
 
-    server.setHandler(new HandlerList(
-        rewrite,
-        new WebApiHandler(appId, keyValueStore, services, httpsOnly),
-        context,
-        new DefaultHandler()));
+    server.setHandler(context);
 
     return new WebUI(server);
   }
@@ -115,12 +158,14 @@ public class WebUI {
     service1.active = Lists.newArrayList(
         new ContainerInfo(1, 0, 0, Model.Container.State.WAITING, ""),
         new ContainerInfo(2, 0, 0, Model.Container.State.REQUESTED, ""),
-        new ContainerInfo(4, 0, 3 * 60 + 24, Model.Container.State.RUNNING, url)
+        new ContainerInfo(4, System.currentTimeMillis() - (3 * 60 + 24) * 1000, 0,
+                          Model.Container.State.RUNNING, url)
     );
     service1.completed = Lists.newArrayList(
-        new ContainerInfo(0, 0, 30, Model.Container.State.SUCCEEDED, url),
-        new ContainerInfo(3, 0, 90, Model.Container.State.KILLED, url),
-        new ContainerInfo(5, 0, 60 * 60 * 2 + 90, Model.Container.State.FAILED, url)
+        new ContainerInfo(0, 0, 30 * 1000, Model.Container.State.SUCCEEDED, url),
+        new ContainerInfo(3, 0, 90 * 1000, Model.Container.State.KILLED, url),
+        new ContainerInfo(5, 0, (60 * 60 * 2 + 90) * 1000,
+                          Model.Container.State.FAILED, url)
     );
     services.add(service1);
     ServiceContext service2 = new ServiceContext();
@@ -130,14 +175,15 @@ public class WebUI {
     service2.killed = 0;
     service2.failed = 0;
     service2.active = Lists.newArrayList(
-        new ContainerInfo(0, 0, 24, Model.Container.State.RUNNING, url)
+        new ContainerInfo(0, (System.currentTimeMillis() - (24 * 1000)), 0,
+                          Model.Container.State.RUNNING, url)
     );
     service2.completed = Lists.newArrayList();
     services.add(service2);
 
     try {
       WebUI webui = WebUI.create(port, "application_1526497750451_0001",
-                                 kv, services, false);
+                                 kv, services, new YarnConfiguration(), true);
       webui.start();
     } catch (Throwable exc) {
       LOG.fatal("Error running WebUI", exc);
@@ -202,20 +248,20 @@ public class WebUI {
     public ServiceContext() {}
   }
 
-  private static class Context {
+  private static class UIModel {
     public final String appId;
     private final List<ServiceContext> services;
     private final Map<String, Msg.KeyValue.Builder> keyValueStore;
-    public final String linkProtocol;
+    public final String prefix;
 
-    public Context(String appId,
+    public UIModel(String appId,
                    Map<String, Msg.KeyValue.Builder> keyValueStore,
                    List<ServiceContext> services,
-                   boolean httpsOnly) {
+                   String prefix) {
       this.appId = appId;
       this.keyValueStore = keyValueStore;
       this.services = services;
-      this.linkProtocol = httpsOnly ? "https://" : "http://";
+      this.prefix = prefix;
     }
 
     public List<Map.Entry<String, String>> kv() {
@@ -238,42 +284,20 @@ public class WebUI {
     }
   }
 
-  private static class WebApiHandler extends AbstractHandler {
-    private final Mustache servicesTemplate = new DefaultMustacheFactory()
-        .compile("services.mustache.html");
+  private static class TemplateServlet extends HttpServlet {
+    private final Mustache template;
+    private final UIModel uiModel;
 
-    private final Mustache kvTemplate = new DefaultMustacheFactory()
-        .compile("kv.mustache.html");
-
-    private final Context context;
-
-    public WebApiHandler(String appId,
-                         Map<String, Msg.KeyValue.Builder> keyValueStore,
-                         List<ServiceContext> services,
-                         boolean httpsOnly) {
-      this.context = new Context(appId, keyValueStore, services, httpsOnly);
+    public TemplateServlet(UIModel uiModel, String templatePath) {
+      this.uiModel = uiModel;
+      this.template = new DefaultMustacheFactory().compile(templatePath);
     }
 
-    public void handle(String target, Request baseRequest,
-                       HttpServletRequest request,
-                       HttpServletResponse response)
-        throws IOException {
-
-      if (baseRequest.isHandled() || !HttpMethod.GET.is(request.getMethod())) {
-        return;
-      }
-
-      if (request.getPathInfo().equals("/services")) {
-        baseRequest.setHandled(true);
-        response.setContentType("text/html");
-        response.setStatus(HttpServletResponse.SC_OK);
-        servicesTemplate.execute(response.getWriter(), context);
-      } else if (request.getPathInfo().equals("/kv")) {
-        baseRequest.setHandled(true);
-        response.setContentType("text/html");
-        response.setStatus(HttpServletResponse.SC_OK);
-        kvTemplate.execute(response.getWriter(), context);
-      }
+    @Override
+    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+      response.setContentType("text/html");
+      response.setStatus(HttpServletResponse.SC_OK);
+      template.execute(response.getWriter(), uiModel);
     }
   }
 }

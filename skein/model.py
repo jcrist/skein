@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, division
 import json
 import os
 from datetime import datetime
+from getpass import getuser
 
 import yaml
 
@@ -881,7 +882,7 @@ class Container(ProtobufMessage):
             "node",
             "containerlogs",
             self.yarn_container_id,
-            os.environ["USER"]
+            getuser()
         ])
 
     @classmethod

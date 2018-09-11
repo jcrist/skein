@@ -1,7 +1,5 @@
 package com.anaconda.skein;
 
-import com.google.common.base.Joiner;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -9,6 +7,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import java.util.HashSet;
 import java.util.List;
@@ -251,12 +250,11 @@ public class Model {
         return "";  // Not able to construct a URL yet.
       }
 
-      return Joiner.on('/').join(
+      return WebAppUtils.getRunningLogURL(
           yarnNodeHttpAddress,
-          "node",
-          "containerlogs",
-          yarnContainerId,
-          System.getenv(Environment.USER.name()));
+          yarnContainerId.toString(),
+          System.getenv(Environment.USER.name())
+      );
     }
 
     public void setStartTime(long startTime) { this.startTime = startTime; }
