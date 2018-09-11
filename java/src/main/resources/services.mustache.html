@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="webjars/bootstrap/4.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="webjars/open-iconic/1.1.1/font/css/open-iconic-bootstrap.css">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="manifest" href="site.webmanifest">
+    <link rel="mask-icon" href="safari-pinned-tab.svg" color="#333333">
+    <meta name="msapplication-TileColor" content="#333333">
+    <meta name="theme-color" content="#ffffff">
+
+    <style>
+      .auto-index tbody tr:first-child {
+        counter-reset: AutoIndexCounter;
+      }
+
+      .auto-index tbody tr th:first-child:before {
+        counter-increment: AutoIndexCounter;
+        content: counter(AutoIndexCounter);
+      }
+
+      .collapsing {
+        -webkit-transition: none;
+        transition: none;
+        display: none;
+      }
+    </style>
+
+    <title>Services - Skein | {{appId}}</title>
+  </head>
+
+  <body>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+      <span class="navbar-brand">
+        <img src="yarn_white.svg" width="28" height="28" class="d-inline-block align-top" alt="">
+        Skein
+      </span>
+
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggler" aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarToggler">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="./services">Services</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="./kv">Key/Value</a>
+          </li>
+        </ul>
+        <div class="dropdown-divider"></div>
+        <span class="navbar-text" id="application">{{appId}}</span>
+      </div>
+    </nav>
+
+    <div class="accordion" id="servicesList">
+
+      {{#services}}
+      {{#value}}
+      <div class="card">
+        <div class="card-header" id="cardHeader{{index}}">
+          <div class="row">
+            <div class="col-sm-4">
+              <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#cardCollapse{{index}}" aria-expanded="false" aria-controls="cardCollapse{{index}}">
+                {{name}}
+              </button>
+            </div>
+            <div class="col-sm-1">
+              <span class="oi oi-loop text-dark" title="Running" aria-hidden="true"></span> {{running}}
+            </div>
+            <div class="col-sm-1">
+              <span class="oi oi-circle-check text-success" title="Succeeded" aria-hidden="true"></span> {{succeeded}}
+            </div>
+            <div class="col-sm-1">
+              <span class="oi oi-warning text-warning" title="Killed" aria-hidden="true"></span> {{killed}}
+            </div>
+            <div class="col-sm-1">
+              <span class="oi oi-circle-x text-danger" title="Failed" aria-hidden="true"></span> {{failed}}
+            </div>
+          </div>
+        </div>
+
+        <div id="cardCollapse{{index}}" class="services-card collapse" aria-labelledby="cardHeader{{index}}">
+          <div class="card-body">
+            <h4>Active</h4>
+
+            <table class="table table-striped table-bordered table-sm auto-index">
+              <colgroup>
+                <col style="width: 5%;">
+                <col style="width: 35%;">
+                <col style="width: 25%;">
+                <col style="width: 15%;">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Container ID</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Runtime</th>
+                  <th scope="col">Logs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#active}}
+                <tr>
+                  <th scope="row"></th>
+                  <td>{{name}}_{{instance}}</td>
+                  <td>{{state}}</td>
+                  <td>{{runtime}}</td>
+                  <td>
+                    {{#logsAddress}}
+                    <a href="{{prefix}}{{logsAddress}}/{{name}}.log?start=0">{{name}}.log</a>
+                    {{/logsAddress}}
+                    {{^logsAddress}}
+                    N/A
+                    {{/logsAddress}}
+                  </td>
+                </tr>
+                {{/active}}
+              </tbody>
+            </table>
+
+            <h4>Completed</h4>
+
+            <table class="table table-striped table-bordered table-sm auto-index">
+              <colgroup>
+                <col style="width: 5%;">
+                <col style="width: 35%;">
+                <col style="width: 25%;">
+                <col style="width: 15%;">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Container ID</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Runtime</th>
+                  <th scope="col">Logs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#completed}}
+                <tr>
+                  <th scope="row"></th>
+                  <td>{{name}}_{{instance}}</td>
+                  <td>{{state}}</td>
+                  <td>{{runtime}}</td>
+                  <td>
+                    {{#logsAddress}}
+                    <a href="{{prefix}}{{logsAddress}}/{{name}}.log?start=-4096">{{name}}.log</a>
+                    {{/logsAddress}}
+                    {{^logsAddress}}
+                    N/A
+                    {{/logsAddress}}
+                  </td>
+                </tr>
+                {{/completed}}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {{/value}}
+      {{/services}}
+    </div>
+
+    <script src="webjars/jquery/3.0.0/jquery.min.js"></script>
+    <script src="webjars/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        // Need to try session storage, as it may exist but fail in private mode
+        var hasSessionStorage = function () {
+          try {
+            sessionStorage.setItem("skeinTestSessionStorage", "test");
+            sessionStorage.removeItem("skeinTestSessionStorage", "test");
+            return true;
+          } catch (e) {
+            return false;
+          }
+        }
+
+        if (hasSessionStorage()) {
+          // Store and manage collapsed state for the service cards
+          var STORAGE_KEY = 'skeinCollapseState{{appId}}';
+          var i, len;
+          var collapseState = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
+          if (collapseState == null) {
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+          } else {
+            for (i = 0, len = collapseState.length; i < len; ++i) {
+              $('#' + collapseState[i]).collapse('show');
+            }
+          }
+
+          $(".services-card").on('shown.bs.collapse', function () {
+            collapseState = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
+            if ($.inArray($(this).attr('id'), collapseState) == -1) {
+              collapseState.push($(this).attr('id'));
+            };
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(collapseState));
+
+          })
+
+          $(".services-card").on('hidden.bs.collapse', function () {
+            collapseState = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
+            collapseState.splice($.inArray($(this).attr('id'), collapseState), 1);
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(collapseState));
+          })
+        }
+      });
+    </script>
+  </body>
+</html>

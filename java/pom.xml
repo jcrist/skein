@@ -10,10 +10,21 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <grpc.version>1.11.0</grpc.version>
+    <jetty.version>9.4.11.v20180605</jetty.version>
     <hadoopVersion>2.7.2</hadoopVersion>
   </properties>
 
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/webroot</directory>
+        <targetPath>META-INF/resources</targetPath>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+    </resources>
+
     <extensions>
       <extension>
         <groupId>kr.motd.maven</groupId>
@@ -48,6 +59,14 @@
                 <relocation>
                   <pattern>io.netty</pattern>
                   <shadedPattern>com.anaconda.skein.shaded.io.netty</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.eclipse.jetty</pattern>
+                  <shadedPattern>com.anaconda.skein.shaded.org.eclipse.jetty</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.github.mustachejava</pattern>
+                  <shadedPattern>com.anaconda.skein.shaded.com.github.mustachejava</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>io.grpc</pattern>
@@ -94,6 +113,8 @@
           <compilerArgs>
             <arg>-Xlint:all</arg>
           </compilerArgs>
+          <source>7</source>
+          <target>7</target>
         </configuration>
       </plugin>
 
@@ -128,7 +149,6 @@
           <enableAssertions>true</enableAssertions>
         </configuration>
       </plugin>
-
     </plugins>
   </build>
 
@@ -159,6 +179,42 @@
     </dependency>
 
     <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-rewrite</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.webjars</groupId>
+      <artifactId>bootstrap</artifactId>
+      <version>4.1.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.webjars.bower</groupId>
+      <artifactId>open-iconic</artifactId>
+      <version>1.1.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.spullara.mustache.java</groupId>
+      <artifactId>compiler</artifactId>
+      <version>0.8.18</version>
+    </dependency>
+
+    <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <version>1.2.17</version>
@@ -174,6 +230,13 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-core</artifactId>
+      <version>${hadoopVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-web-proxy</artifactId>
       <version>${hadoopVersion}</version>
       <scope>provided</scope>
     </dependency>

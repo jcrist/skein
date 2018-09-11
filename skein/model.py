@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, division
 import json
 import os
 from datetime import datetime
+from getpass import getuser
 
 import yaml
 
@@ -815,26 +816,26 @@ class Container(ProtobufMessage):
         The current container state.
     yarn_container_id : str
         The YARN container id.
-    yarn_node_address : str
-        The YARN node address given as ``host:port``.
+    yarn_node_http_address : str
+        The YARN node HTTP address given as ``host:port``.
     start_time : datetime
         The start time, None if container has not started.
     finish_time : datetime
         The finish time, None if container has not finished.
     """
     __slots__ = ('service_name', 'instance', '_state', 'yarn_container_id',
-                 'yarn_node_address', 'start_time', 'finish_time')
+                 'yarn_node_http_address', 'start_time', 'finish_time')
     _params = ('service_name', 'instance', 'state', 'yarn_container_id',
-               'yarn_node_address', 'start_time', 'finish_time')
+               'yarn_node_http_address', 'start_time', 'finish_time')
     _protobuf_cls = _proto.Container
 
     def __init__(self, service_name, instance, state, yarn_container_id,
-                 yarn_node_address, start_time, finish_time):
+                 yarn_node_http_address, start_time, finish_time):
         self.service_name = service_name
         self.instance = instance
         self.state = state
         self.yarn_container_id = yarn_container_id
-        self.yarn_node_address = yarn_node_address
+        self.yarn_node_http_address = yarn_node_http_address
         self.start_time = start_time
         self.finish_time = finish_time
 
@@ -857,7 +858,7 @@ class Container(ProtobufMessage):
         self._check_is_type('instance', integer)
         self._check_is_type('state', ContainerState)
         self._check_is_type('yarn_container_id', string)
-        self._check_is_type('yarn_node_address', string)
+        self._check_is_type('yarn_node_http_address', string)
         self._check_is_type('start_time', datetime, nullable=True)
         self._check_is_type('finish_time', datetime, nullable=True)
 
@@ -871,6 +872,19 @@ class Container(ProtobufMessage):
         """The total runtime of the application."""
         return runtime(self.start_time, self.finish_time)
 
+    @property
+    def yarn_container_logs(self):
+        if not self.yarn_node_http_address or not self.yarn_container_id:
+            return ""
+
+        return "/".join([
+            self.yarn_node_http_address,
+            "node",
+            "containerlogs",
+            self.yarn_container_id,
+            getuser()
+        ])
+
     @classmethod
     @implements(ProtobufMessage.from_protobuf)
     def from_protobuf(cls, obj):
@@ -878,6 +892,6 @@ class Container(ProtobufMessage):
                    instance=obj.instance,
                    state=ContainerState(_proto.Container.State.Name(obj.state)),
                    yarn_container_id=obj.yarn_container_id,
-                   yarn_node_address=obj.yarn_node_address,
+                   yarn_node_http_address=obj.yarn_node_http_address,
                    start_time=datetime_from_millis(obj.start_time),
                    finish_time=datetime_from_millis(obj.finish_time))

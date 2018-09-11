@@ -1,11 +1,13 @@
 package com.anaconda.skein;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import java.util.HashSet;
 import java.util.List;
@@ -184,6 +186,7 @@ public class Model {
     private State state;
     private ContainerId yarnContainerId;
     private NodeId yarnNodeId;
+    private String yarnNodeHttpAddress;
     private long startTime;
     private long finishTime;
     private ContainerRequest req;
@@ -236,6 +239,23 @@ public class Model {
 
     public void setYarnNodeId(NodeId yarnNodeId) { this.yarnNodeId = yarnNodeId; }
     public NodeId getYarnNodeId() { return yarnNodeId; }
+
+    public void setYarnNodeHttpAddress(String yarnNodeHttpAddress) {
+      this.yarnNodeHttpAddress = yarnNodeHttpAddress;
+    }
+    public String getYarnNodeHttpAddress() { return yarnNodeHttpAddress; }
+
+    public String getLogsAddress() {
+      if (yarnNodeHttpAddress == null || yarnContainerId == null) {
+        return "";  // Not able to construct a URL yet.
+      }
+
+      return WebAppUtils.getRunningLogURL(
+          yarnNodeHttpAddress,
+          yarnContainerId.toString(),
+          System.getenv(Environment.USER.name())
+      );
+    }
 
     public void setStartTime(long startTime) { this.startTime = startTime; }
     public long getStartTime() { return startTime; }

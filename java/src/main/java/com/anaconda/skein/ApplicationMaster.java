@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
 import io.grpc.Server;
@@ -30,8 +32,8 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -47,6 +49,8 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -97,9 +101,9 @@ public class ApplicationMaster {
       new TreeMap<Priority, ServiceTracker>();
   private int nextPriority = 1;
 
-  private Server server;
+  private Server grpcServer;
+  private WebUI ui;
   private String hostname;
-  private int port = -1;
 
   private AMRMClient<ContainerRequest> rmClient;
   private NMClient nmClient;
@@ -126,7 +130,7 @@ public class ApplicationMaster {
         MAX_GRPC_EXECUTOR_THREADS,
         true);
 
-    server = NettyServerBuilder.forPort(0)
+    grpcServer = NettyServerBuilder.forPort(0)
         .sslContext(sslContext)
         .addService(new MasterImpl())
         .workerEventLoopGroup(eg)
@@ -135,9 +139,7 @@ public class ApplicationMaster {
         .build()
         .start();
 
-    port = server.getPort();
-
-    LOG.info("Server started, listening on " + port);
+    LOG.info("gRPC server started, listening on " + grpcServer.getPort());
 
     Runtime.getRuntime().addShutdownHook(
         new Thread() {
@@ -149,10 +151,54 @@ public class ApplicationMaster {
   }
 
   private void stopServer() {
-    if (server != null) {
+    if (grpcServer != null) {
       LOG.info("Shutting down gRPC server");
-      server.shutdown();
+      grpcServer.shutdown();
       LOG.info("gRPC server shut down");
+    }
+  }
+
+  private void startUI() {
+    // Sorted list of service trackers
+    final List<ServiceTracker> sortedServices = Lists.newArrayList(services.values());
+    Collections.sort(sortedServices, new Comparator<ServiceTracker>() {
+      public int compare(ServiceTracker x, ServiceTracker y) {
+        return x.getName().compareTo(y.getName());
+      }
+    });
+
+    List<WebUI.ServiceContext> serviceContexts = Lists.transform(sortedServices,
+        new Function<ServiceTracker, WebUI.ServiceContext>() {
+          public WebUI.ServiceContext apply(ServiceTracker tracker) {
+            return tracker.toServiceContext();
+          }
+        }
+    );
+
+    try {
+      ui = WebUI.create(0, appId.toString(), keyValueStore, serviceContexts,
+                        conf, false);
+      ui.start();
+    } catch (Exception e) {
+      fatal("Failed to start UI server", e);
+    }
+
+    Runtime.getRuntime().addShutdownHook(
+        new Thread() {
+          @Override
+          public void run() {
+            ApplicationMaster.this.stopUI();
+          }
+        });
+
+    LOG.info("UI server started, listening on " + ui.getURI().getPort());
+  }
+
+  private void stopUI() {
+    if (ui != null) {
+      LOG.info("Shutting down WebUI server");
+      ui.stop();
+      LOG.info("WebUI server shut down");
     }
   }
 
@@ -390,8 +436,9 @@ public class ApplicationMaster {
         true);
 
     startServer();
+    startUI();
 
-    rmClient.registerApplicationMaster(hostname, port, "");
+    rmClient.registerApplicationMaster(hostname, grpcServer.getPort(), ui.getURI().toString());
 
     startAllocator();
 
@@ -400,7 +447,7 @@ public class ApplicationMaster {
       tracker.initialize();
     }
 
-    server.awaitTermination();
+    grpcServer.awaitTermination();
   }
 
   private void maybeShutdown() {
@@ -589,7 +636,7 @@ public class ApplicationMaster {
     }
   }
 
-  private final class ServiceTracker {
+  final class ServiceTracker {
     private String name;
     private Model.Service service;
     private boolean initialRunning = false;
@@ -684,6 +731,35 @@ public class ApplicationMaster {
       return null;
     }
 
+    public synchronized WebUI.ServiceContext toServiceContext() {
+      WebUI.ServiceContext context = new WebUI.ServiceContext();
+      context.name = name;
+      context.running = requested.size() + running.size();
+      context.succeeded = numSucceeded;
+      context.killed = numKilled;
+      context.failed = numFailed;
+      context.active = Lists.newArrayListWithCapacity(context.running);
+      context.completed = Lists.newArrayListWithCapacity(
+          context.succeeded + context.killed + context.failed);
+      for (Model.Container container : containers) {
+        WebUI.ContainerInfo info =
+            new WebUI.ContainerInfo(container.getInstance(),
+                                    container.getStartTime(),
+                                    container.getFinishTime(),
+                                    container.getState(),
+                                    container.getLogsAddress());
+        switch (info.state) {
+          case REQUESTED:
+          case RUNNING:
+            context.active.add(info);
+            break;
+          default:
+            context.completed.add(info);
+        }
+      }
+      return context;
+    }
+
     public List<Model.Container> scale(int instances) {
       List<Model.Container> out =  new ArrayList<Model.Container>();
 
@@ -768,13 +844,14 @@ public class ApplicationMaster {
         out.setStartTime(System.currentTimeMillis());
         out.setYarnContainerId(container.getId());
         out.setYarnNodeId(container.getNodeId());
+        out.setYarnNodeHttpAddress(container.getNodeHttpAddress());
 
         ApplicationMaster.this.containers.put(container.getId(), out);
         running.add(instance);
 
         // Update container environment variables
         Map<String, String> env = new HashMap<String, String>(service.getEnv());
-        env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + port);
+        env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + grpcServer.getPort());
         env.put("SKEIN_APPLICATION_ID", appId.toString());
         env.put("SKEIN_CONTAINER_ID", out.getId());
         env.put("SKEIN_RESOURCE_VCORES", String.valueOf(resource.getVirtualCores()));
