@@ -65,7 +65,7 @@ public class WebUI {
     // work on opaque (e.g. non-filesystem) paths.
     URI baseURI = URI.create(
         WebUI.class.getResource("/META-INF/resources/favicon.ico").toURI()
-                   .toASCIIString().replaceFirst("/favicon.ico$","/")
+                   .toASCIIString().replaceFirst("/favicon.ico$", "/")
     );
     LOG.info("Serving resources from: " + baseURI);
     context.setBaseResource(Resource.newResource(baseURI));

@@ -175,11 +175,6 @@ public class ApplicationMaster {
         }
     );
 
-    boolean https = conf.get(
-        YarnConfiguration.YARN_HTTP_POLICY_KEY,
-        YarnConfiguration.YARN_HTTP_POLICY_DEFAULT
-    ).equals("HTTPS_ONLY");
-
     try {
       ui = WebUI.create(0, appId.toString(), keyValueStore, serviceContexts,
                         conf, false);
