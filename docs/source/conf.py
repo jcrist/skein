@@ -23,8 +23,10 @@ html_theme = 'alabaster'
 html_theme_path = [alabaster.get_path()]
 templates_path = ['_templates']
 html_static_path = ['_static']
+html_favicon = '_static/favicon.ico'
 html_theme_options = {
-    'description': 'Simple tool for deploying applications on Apache YARN',
+    'logo': 'logo.svg',
+    'description': 'A tool and library for easily deploying applications on Apache YARN',
     'github_button': True,
     'github_count': False,
     'github_user': 'jcrist',
