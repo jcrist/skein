@@ -233,6 +233,10 @@ public class Daemon {
     return true;
   }
 
+  public Path getAppDir(ApplicationId appId) {
+    return new Path(defaultFs.getHomeDirectory(), ".skein/" + appId.toString());
+  }
+
   /** Start a new application. **/
   public ApplicationId submitApplication(Model.ApplicationSpec spec)
       throws IOException, YarnException {
@@ -246,8 +250,7 @@ public class Daemon {
     ApplicationId appId = appContext.getApplicationId();
 
     // Setup the LocalResources for the appmaster and containers
-    Path appDir = new Path(defaultFs.getHomeDirectory(),
-                           ".skein/" + appId.toString());
+    Path appDir = getAppDir(appId);
     Map<String, LocalResource> localResources = setupAppDir(spec, appDir);
 
     // Setup the appmaster environment variables
@@ -671,6 +674,22 @@ public class Daemon {
         resp.onError(Status.INTERNAL
             .withDescription("Failed to kill application '"
                              + report.getApplicationId()
+                             + "' , exception:\n"
+                             + exc.getMessage())
+            .asRuntimeException());
+        return;
+      }
+
+      // Delete the application directory
+      Path appDir = getAppDir(report.getApplicationId());
+      try {
+        if (defaultFs.exists(appDir)) {
+          defaultFs.delete(appDir, true);
+        }
+      } catch (IOException exc) {
+        resp.onError(Status.INTERNAL
+            .withDescription("Failed to delete application directory "
+                             + appDir
                              + "' , exception:\n"
                              + exc.getMessage())
             .asRuntimeException());

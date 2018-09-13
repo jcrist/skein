@@ -326,3 +326,13 @@ def test_webui(client, has_kerberos_enabled):
         assert resp.status_code == 404
 
         app.shutdown()
+
+
+def test_kill_application_removes_appdir(client):
+    hdfs = pytest.importorskip('pyarrow.hdfs')
+
+    with run_application(client) as app:
+        client.kill_application(app.id)
+
+    fs = hdfs.connect()
+    assert not fs.exists("/user/testuser/.skein/%s" % app.id)
