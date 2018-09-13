@@ -6,13 +6,14 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.1.1+10.g57d198c documentation</title>
+    <title>API Docs &#8212; Skein 0.1.1+11.g9c293e1 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="_static/favicon.ico"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -737,10 +738,10 @@ Default is False.</p>
 <p>Subscribe to events starting with <code class="docutils literal notranslate"><span class="pre">'foo'</span></code> or <code class="docutils literal notranslate"><span class="pre">'bar'</span></code>.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">EventFilter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">bar</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">EventFilter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">event_queue</span><span class="p">()</span>              
-<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">foo</span><span class="p">)</span>                      
-<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">bar</span><span class="p">)</span>                      
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">queue</span><span class="p">:</span>                       
+<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">event_queue</span><span class="p">()</span>              <span class="c1"># doctest: skip</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">foo</span><span class="p">)</span>                      <span class="c1"># doctest: skip</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">bar</span><span class="p">)</span>                      <span class="c1"># doctest: skip</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">queue</span><span class="p">:</span>                       <span class="c1"># doctest: skip</span>
 <span class="gp">... </span>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">filter</span> <span class="o">==</span> <span class="n">foo</span><span class="p">:</span>
 <span class="gp">... </span>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;foo event&quot;</span><span class="p">)</span>
 <span class="gp">... </span>    <span class="k">else</span><span class="p">:</span>
@@ -793,7 +794,7 @@ may be provided.</p>
 </table>
 <p class="rubric">Examples</p>
 <p>Subscribe to all events with prefix <code class="docutils literal notranslate"><span class="pre">'foo'</span></code>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">):</span>  
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">):</span>  <span class="c1"># doctest: skip</span>
 <span class="gp">... </span>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;PUT&#39;</span><span class="p">:</span>
 <span class="gp">... </span>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PUT&lt;key=</span><span class="si">%r</span><span class="s2">, value=</span><span class="si">%r</span><span class="s2">&gt;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">value</span><span class="p">))</span>
 <span class="gp">... </span>    <span class="k">else</span><span class="p">:</span>  <span class="c1"># DELETE</span>
@@ -1241,18 +1242,18 @@ is <code class="docutils literal notranslate"><span class="pre">prev</span></cod
 <span class="gp">... </span>    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">succeeded</span>
 </pre></div>
 </div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span>  
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span>  <span class="c1"># doctest: skip</span>
 </pre></div>
 </div>
 <p>Since <code class="docutils literal notranslate"><span class="pre">'key'</span></code> currently is <code class="docutils literal notranslate"><span class="pre">b'value'</span></code>, the conditional expression
 succeeds and <code class="docutils literal notranslate"><span class="pre">'key'</span></code> is set to <code class="docutils literal notranslate"><span class="pre">b'new_value'</span></code></p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;new_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>  
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;new_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>  <span class="c1"># doctest: skip</span>
 <span class="go">True</span>
 </pre></div>
 </div>
 <p>Since <code class="docutils literal notranslate"><span class="pre">'key'</span></code> currently is <code class="docutils literal notranslate"><span class="pre">b'value'</span></code> and not <code class="docutils literal notranslate"><span class="pre">b'wrong'</span></code>, the
 conditional expression fails and <code class="docutils literal notranslate"><span class="pre">'key'</span></code> remains unchanged.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;another_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;wrong&#39;</span><span class="p">)</span>  
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;another_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;wrong&#39;</span><span class="p">)</span>  <span class="c1"># doctest: skip</span>
 <span class="go">False</span>
 </pre></div>
 </div>
