@@ -271,7 +271,7 @@ def test_file_systems(client):
                                  file_systems=["hdfs://master.example.com:9000"])
 
     with run_application(client, spec=spec) as app:
-        wait_for_success(client, app.id)
+        assert wait_for_completion(client, app.id) == "SUCCEEDED"
 
 
 def test_webui(client, has_kerberos_enabled):
@@ -336,7 +336,6 @@ def test_kill_application_removes_appdir(client):
 
     fs = hdfs.connect()
     assert not fs.exists("/user/testuser/.skein/%s" % app.id)
-        assert wait_for_completion(client, app.id) == "SUCCEEDED"
 
 
 def test_mem_limit_exceeded(client):
