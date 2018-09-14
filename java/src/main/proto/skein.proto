@@ -108,6 +108,7 @@ message Container {
   string yarn_node_http_address = 5;
   int64 start_time = 6;
   int64 finish_time = 7;
+  string exit_message = 8;
 }
 
 

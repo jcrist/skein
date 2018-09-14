@@ -347,10 +347,10 @@ def test_mem_limit_exceeded(client):
                             commands=commands)
     spec = skein.ApplicationSpec(name="test_mem_limit_exceeded",
                                  queue="default",
-                                 services={'service': service})
+                                 services={"service": service})
 
     with run_application(client, spec=spec) as app:
         assert wait_for_completion(client, app.id) == "FAILED"
 
     logs = get_logs(app.id)
-    assert "Container killed by YARN for exceeding memory limits" in logs
+    assert "Container killed by YARN" in logs

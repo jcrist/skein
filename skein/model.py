@@ -822,15 +822,20 @@ class Container(ProtobufMessage):
         The start time, None if container has not started.
     finish_time : datetime
         The finish time, None if container has not finished.
+    exit_message : str
+        The diagnostic exit message for failed containers.
     """
     __slots__ = ('service_name', 'instance', '_state', 'yarn_container_id',
-                 'yarn_node_http_address', 'start_time', 'finish_time')
+                 'yarn_node_http_address', 'start_time', 'finish_time',
+                 'exit_message')
     _params = ('service_name', 'instance', 'state', 'yarn_container_id',
-               'yarn_node_http_address', 'start_time', 'finish_time')
+               'yarn_node_http_address', 'start_time', 'finish_time',
+               'exit_message')
     _protobuf_cls = _proto.Container
 
     def __init__(self, service_name, instance, state, yarn_container_id,
-                 yarn_node_http_address, start_time, finish_time):
+                 yarn_node_http_address, start_time, finish_time,
+                 exit_message):
         self.service_name = service_name
         self.instance = instance
         self.state = state
@@ -838,6 +843,7 @@ class Container(ProtobufMessage):
         self.yarn_node_http_address = yarn_node_http_address
         self.start_time = start_time
         self.finish_time = finish_time
+        self.exit_message = exit_message
 
         self._validate()
 
@@ -861,6 +867,7 @@ class Container(ProtobufMessage):
         self._check_is_type('yarn_node_http_address', string)
         self._check_is_type('start_time', datetime, nullable=True)
         self._check_is_type('finish_time', datetime, nullable=True)
+        self._check_is_type('exit_message', string, nullable=True)
 
     @property
     def id(self):
@@ -894,4 +901,5 @@ class Container(ProtobufMessage):
                    yarn_container_id=obj.yarn_container_id,
                    yarn_node_http_address=obj.yarn_node_http_address,
                    start_time=datetime_from_millis(obj.start_time),
-                   finish_time=datetime_from_millis(obj.finish_time))
+                   finish_time=datetime_from_millis(obj.finish_time),
+                   exit_message=obj.exit_message)
