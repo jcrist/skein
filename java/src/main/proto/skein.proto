@@ -207,6 +207,14 @@ service Master {
   rpc killContainer (ContainerInstance) returns (Empty);
 
   rpc scale (ScaleRequest) returns (ContainersResponse);
+
+  rpc AddProxy (Proxy) returns (Empty);
+
+  rpc RemoveProxy (RemoveProxyRequest) returns (Empty);
+
+  rpc UiInfo (UIInfoRequest) returns (UIInfoResponse);
+
+  rpc GetProxies (GetProxiesRequest) returns (GetProxiesResponse);
 }
 
 
@@ -388,4 +396,35 @@ message ContainersResponse {
 message ScaleRequest {
   string service_name = 1;
   int32 instances = 2;
+}
+
+
+message Proxy {
+  string prefix = 1;
+  string name = 2;
+  string target = 3;
+}
+
+
+message RemoveProxyRequest {
+  string prefix = 1;
+}
+
+
+message UIInfoRequest {
+}
+
+
+message UIInfoResponse {
+  repeated string ui_address = 1;
+  string proxy_prefix = 2;
+}
+
+
+message GetProxiesRequest {
+}
+
+
+message GetProxiesResponse {
+  repeated Proxy proxy = 1;
 }

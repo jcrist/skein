@@ -190,8 +190,8 @@ public class ApplicationMaster {
     }
 
     try {
-      ui = WebUI.create(0, appId.toString(), keyValueStore, serviceContexts,
-                        allowedUsers, conf, false);
+      ui = new WebUI(0, appId.toString(), keyValueStore, serviceContexts,
+                     allowedUsers, conf, false);
       ui.start();
     } catch (Exception e) {
       fatal("Failed to start UI server", e);
@@ -1560,6 +1560,27 @@ public class ApplicationMaster {
     public StreamObserver<Msg.WatchRequest> watch(final StreamObserver<Msg.WatchResponse> resp) {
       LOG.info("watch called");
       return new WatchRequestStream(resp);
+    }
+
+    @Override
+    public void addProxy(Msg.Proxy req, StreamObserver<Msg.Empty> resp) {
+      ui.addProxy(req, resp);
+    }
+
+    @Override
+    public void removeProxy(Msg.RemoveProxyRequest req, StreamObserver<Msg.Empty> resp) {
+      ui.removeProxy(req, resp);
+    }
+
+    @Override
+    public void uiInfo(Msg.UIInfoRequest req, StreamObserver<Msg.UIInfoResponse> resp) {
+      ui.uiInfo(req, resp);
+    }
+
+    @Override
+    public void getProxies(Msg.GetProxiesRequest req,
+                           StreamObserver<Msg.GetProxiesResponse> resp) {
+      ui.getProxies(req, resp);
     }
   }
 }
