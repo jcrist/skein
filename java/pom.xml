@@ -10,7 +10,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <grpc.version>1.11.0</grpc.version>
-    <jetty.version>9.4.11.v20180605</jetty.version>
+    <jetty.version>9.2.10.v20150310</jetty.version>
     <hadoopVersion>2.7.2</hadoopVersion>
   </properties>
 

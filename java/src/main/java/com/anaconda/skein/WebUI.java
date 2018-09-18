@@ -109,7 +109,10 @@ public class WebUI {
 
     // Issue a 302 redirect to services from homepage
     RewriteHandler rewrite = new RewriteHandler();
-    rewrite.addRule(new RedirectPatternRule("", "/services"));
+    RedirectPatternRule redirect = new RedirectPatternRule();
+    redirect.setPattern("");
+    redirect.setLocation("/services");
+    rewrite.addRule(redirect);
     context.insertHandler(rewrite);
 
     server.setHandler(context);
