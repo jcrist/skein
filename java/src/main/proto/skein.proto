@@ -14,6 +14,11 @@ message Empty {
 }
 
 
+message NullableStringList {
+  repeated string values = 1;
+}
+
+
 message FinalStatus {
   enum Type {
     UNDEFINED = 0;
@@ -82,13 +87,23 @@ message Service {
 }
 
 
+message Acls {
+  NullableStringList view_users = 1;
+  NullableStringList view_groups = 2;
+  NullableStringList modify_users = 3;
+  NullableStringList modify_groups = 4;
+  NullableStringList ui_users = 5;
+}
+
+
 message ApplicationSpec {
   string name = 1;
   string queue = 2;
   int32 max_attempts = 3;
   repeated string tags = 4;
   repeated string file_systems = 5;
-  map<string, Service> services = 6;
+  Acls acls = 6;
+  map<string, Service> services = 7;
 }
 
 

@@ -2,6 +2,7 @@ package com.anaconda.skein;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -9,6 +10,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -104,24 +106,76 @@ public class Model {
     }
   }
 
+  public static class Acls {
+    private List<String> viewUsers;
+    private List<String> viewGroups;
+    private List<String> modifyUsers;
+    private List<String> modifyGroups;
+    private List<String> uiUsers;
+
+    public Acls(List<String> viewUsers, List<String> viewGroups,
+                List<String> modifyUsers, List<String> modifyGroups,
+                List<String> uiUsers) {
+      this.viewUsers = viewUsers;
+      this.viewGroups = viewGroups;
+      this.modifyUsers = modifyUsers;
+      this.modifyGroups = modifyGroups;
+      this.uiUsers = uiUsers;
+    }
+
+    public Map<ApplicationAccessType, String> getYarnAcls() {
+      Map<ApplicationAccessType, String> out = new HashMap<ApplicationAccessType, String>();
+
+      String view = Utils.formatAcl(viewUsers, viewGroups);
+      if (view != null) {
+        out.put(ApplicationAccessType.VIEW_APP, view);
+      }
+
+      String modify = Utils.formatAcl(modifyUsers, modifyGroups);
+      if (modify != null) {
+        out.put(ApplicationAccessType.MODIFY_APP, modify);
+      }
+
+      return out;
+    }
+
+    public void setViewUsers(List<String> viewUsers) { this.viewUsers = viewUsers; }
+    public List<String> getViewUsers() { return viewUsers; }
+
+    public void setViewGroups(List<String> viewGroups) { this.viewGroups = viewGroups; }
+    public List<String> getViewGroups() { return viewGroups; }
+
+    public void setModifyUsers(List<String> modifyUsers) { this.modifyUsers = modifyUsers; }
+    public List<String> getModifyUsers() { return modifyUsers; }
+
+    public void setModifyGroups(List<String> modifyGroups) { this.modifyGroups = modifyGroups; }
+    public List<String> getModifyGroups() { return modifyGroups; }
+
+    public void setUiUsers(List<String> uiUsers) { this.uiUsers = uiUsers; }
+    public List<String> getUiUsers() { return uiUsers; }
+  }
+
   public static class ApplicationSpec {
     private String name;
     private String queue;
     private int maxAttempts;
     private Set<String> tags;
     private List<Path> fileSystems;
+    private Acls acls;
     private Map<String, Service> services;
 
     public ApplicationSpec() {}
 
     public ApplicationSpec(String name, String queue, int maxAttempts,
                            Set<String> tags, List<Path> fileSystems,
+                           Acls acls,
                            Map<String, Service> services) {
       this.name = name;
       this.queue = queue;
       this.maxAttempts = maxAttempts;
       this.tags = tags;
       this.fileSystems = fileSystems;
+      this.acls = acls;
       this.services = services;
     }
 
@@ -151,6 +205,9 @@ public class Model {
       this.fileSystems = fileSystems;
     }
     public List<Path> getFileSystems() { return this.fileSystems; }
+
+    public void setAcls(Acls acls) { this.acls = acls; }
+    public Acls getAcls() { return this.acls; }
 
     public void setServices(Map<String, Service> services) { this.services = services; }
     public Map<String, Service> getServices() { return services; }

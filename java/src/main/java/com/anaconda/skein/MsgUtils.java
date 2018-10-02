@@ -297,12 +297,52 @@ public class MsgUtils {
         new HashSet<String>(service.getDependsList()));
   }
 
+  public static Msg.Acls writeAcls(Model.Acls acl) {
+    Msg.Acls.Builder builder = Msg.Acls.newBuilder();
+
+    List<String> aclList;
+
+    aclList = acl.getViewUsers();
+    if (aclList != null) {
+      builder.getViewUsersBuilder().addAllValues(aclList);
+    }
+    aclList = acl.getViewGroups();
+    if (aclList != null) {
+      builder.getViewGroupsBuilder().addAllValues(aclList);
+    }
+    aclList = acl.getModifyUsers();
+    if (aclList != null) {
+      builder.getModifyUsersBuilder().addAllValues(aclList);
+    }
+    aclList = acl.getModifyGroups();
+    if (aclList != null) {
+      builder.getModifyGroupsBuilder().addAllValues(aclList);
+    }
+    aclList = acl.getUiUsers();
+    if (aclList != null) {
+      builder.getUiUsersBuilder().addAllValues(aclList);
+    }
+
+    return builder.build();
+  }
+
+  public static Model.Acls readAcls(Msg.Acls acl) {
+    return new Model.Acls(
+        acl.hasViewUsers() ? acl.getViewUsers().getValuesList() : null,
+        acl.hasViewGroups() ? acl.getViewGroups().getValuesList() : null,
+        acl.hasModifyUsers() ? acl.getModifyUsers().getValuesList() : null,
+        acl.hasModifyGroups() ? acl.getModifyGroups().getValuesList() : null,
+        acl.hasUiUsers() ? acl.getUiUsers().getValuesList() : null
+    );
+  }
+
   public static Msg.ApplicationSpec writeApplicationSpec(Model.ApplicationSpec spec) {
     Msg.ApplicationSpec.Builder builder = Msg.ApplicationSpec.newBuilder()
         .setName(spec.getName())
         .setQueue(spec.getQueue())
         .setMaxAttempts(spec.getMaxAttempts())
         .addAllTags(spec.getTags())
+        .setAcls(writeAcls(spec.getAcls()))
         .addAllFileSystems(Lists.transform(spec.getFileSystems(), Functions.toStringFunction()));
 
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
@@ -326,6 +366,7 @@ public class MsgUtils {
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
                                      fileSystems,
+                                     readAcls(spec.getAcls()),
                                      services);
   }
 

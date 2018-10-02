@@ -23,6 +23,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -861,6 +862,10 @@ public class ApplicationMaster {
           env.put("HADOOP_USER_NAME", ugi.getUserName());
         }
 
+        Map<ApplicationAccessType, String> acls = new HashMap<ApplicationAccessType, String>();
+        acls.put(ApplicationAccessType.MODIFY_APP, "testuser");
+        acls.put(ApplicationAccessType.VIEW_APP, "testuser");
+
         final ContainerLaunchContext ctx =
             ContainerLaunchContext.newInstance(
                 service.getLocalResources(),
@@ -868,7 +873,7 @@ public class ApplicationMaster {
                 service.getCommands(),
                 null,
                 tokens,
-                null);
+                acls);
 
         executor.execute(
             new Runnable() {
