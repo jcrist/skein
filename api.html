@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.1.1+12.gd509219 documentation</title>
+    <title>API Docs &#8212; Skein 0.1.1+13.gae0aa43 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -2089,7 +2089,7 @@ may be provided.</p>
 <h2>Application Specification<a class="headerlink" href="#application-specification" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="skein.ApplicationSpec">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">ApplicationSpec</code><span class="sig-paren">(</span><em>services=required</em>, <em>name='skein'</em>, <em>queue='default'</em>, <em>tags=None</em>, <em>file_systems=None</em>, <em>max_attempts=1</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">ApplicationSpec</code><span class="sig-paren">(</span><em>services=required</em>, <em>name='skein'</em>, <em>queue='default'</em>, <em>tags=None</em>, <em>file_systems=None</em>, <em>acls=None</em>, <em>max_attempts=1</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec" title="Permalink to this definition">¶</a></dt>
 <dd><p>A complete description of an application.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2111,6 +2111,10 @@ may be provided.</p>
 <dt><strong>file_systems</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list, optional</span></dt>
 <dd><p class="first last">A list of Hadoop file systems to acquire delegation tokens for.
 A token is always acuired for the <code class="docutils literal notranslate"><span class="pre">defaultFS</span></code>.</p>
+</dd>
+<dt><strong>acls</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ACLs, optional</span></dt>
+<dd><p class="first last">Allows restricting users/groups to subsets of application access. See
+<code class="docutils literal notranslate"><span class="pre">skein.ACLs</span></code> for more information.</p>
 </dd>
 <dt><strong>max_attempts</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
 <dd><p class="first last">The maximum number of submission attempts before marking the
@@ -2545,6 +2549,133 @@ error on application submission.</p>
 
 </dd></dl>
 
+<dl class="class">
+<dt id="skein.ACLs">
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">ACLs</code><span class="sig-paren">(</span><em>enable=False</em>, <em>view_users=None</em>, <em>view_groups=None</em>, <em>modify_users=None</em>, <em>modify_groups=None</em>, <em>ui_users=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Skein Access Control Lists.</p>
+<p>Maps access types to users/groups to provide that access.</p>
+<p>The following access types are supported:</p>
+<ul class="simple">
+<li>VIEW : view application details</li>
+<li>MODIFY : modify the application via YARN (e.g. killing the application)</li>
+<li>UI : access the application Web UI</li>
+</ul>
+<p>The VIEW and MODIFY access types are handled by YARN directly; permissions
+for these can be set by users and/or groups. Authorizing UI access is
+handled by Skein internally, and only user-level access control is
+supported.</p>
+<p>The application owner (the user who submitted the application) will always
+have permission for all access types.</p>
+<p>By default, ACLs are disabled - to enable, set <code class="docutils literal notranslate"><span class="pre">enable=True</span></code>. If enabled,
+access is restricted only to the application owner by default - add
+users/groups to the access types you wish to expand to other users.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>enable</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the ACLs will be enforced. Default is False.</p>
+</dd>
+<dt><strong>view_users, view_groups</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list, optional</span></dt>
+<dd><p class="first last">Lists of users/groups to give VIEW access to this application. If both
+are empty, only the application owner has access (default). If either
+contains <code class="docutils literal notranslate"><span class="pre">&quot;*&quot;</span></code>, all users are given access (default). See the YARN
+documentation for more information on what VIEW access entails.</p>
+</dd>
+<dt><strong>modify_users, modify_groups</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list, optional</span></dt>
+<dd><p class="first last">Lists of users/groups to give MODIFY access to this application. If
+both are empty, only the application owner has access (default). If
+either contains <code class="docutils literal notranslate"><span class="pre">&quot;*&quot;</span></code>, all users are given access (default). See the
+YARN documentation for more information on what MODIFY access entails.</p>
+</dd>
+<dt><strong>ui_users</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list, optional</span></dt>
+<dd><p class="first last">A list of users to give access to the application Web UI. If empty,
+only the application owner has access (default). If it contains
+<code class="docutils literal notranslate"><span class="pre">&quot;*&quot;</span></code>, all users are given access.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>By default ACLs are disabled, and all users have access.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skein</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">acls</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ACLs</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Enabling ACLs results in only the application owner having access (provided
+YARN is also configured with ACLs enabled).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">acls</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ACLs</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To give access to other users, add users/groups to the desired access
+types. Here we enable view access for all users in group <code class="docutils literal notranslate"><span class="pre">engineering</span></code>,
+and modify access for user <code class="docutils literal notranslate"><span class="pre">nancy</span></code>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">acls</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ACLs</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="gp">... </span>                  <span class="n">view_groups</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;engineering&#39;</span><span class="p">],</span>
+<span class="gp">... </span>                  <span class="n">modify_users</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nancy&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>You can use the wildcard character <code class="docutils literal notranslate"><span class="pre">&quot;*&quot;</span></code> to enable access for all users.
+Here we give view access to all users:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">acls</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ACLs</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="gp">... </span>                  <span class="n">view_users</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;*&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<dl class="classmethod">
+<dt id="skein.ACLs.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a dict.</p>
+<p>Keys in the dict should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.ACLs.from_json">
+<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a json string.</p>
+<p>Keys in the json object should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.ACLs.from_protobuf">
+<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a protobuf message.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.ACLs.from_yaml">
+<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a yaml string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.ACLs.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.ACLs.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a json string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.ACLs.to_protobuf">
+<code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a protobuf message</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.ACLs.to_yaml">
+<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a yaml string</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="application-responses">
 <h2>Application Responses<a class="headerlink" href="#application-responses" title="Permalink to this headline">¶</a></h2>
@@ -2836,7 +2967,7 @@ number of seconds the application has been running.</p>
     
 
 <p>
-<a href="https://travis-ci.org/jcrist/skein">
+<a class="badge" href="https://travis-ci.org/jcrist/skein">
     <img
         alt="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
         src="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"

@@ -143,6 +143,10 @@ Application Specification
     :members:
     :inherited-members:
 
+.. autoclass:: ACLs
+    :members:
+    :inherited-members:
+
 
 Application Responses
 ---------------------
