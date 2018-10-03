@@ -9,7 +9,7 @@ import pytest
 
 from skein.compatibility import UTC
 from skein.model import (ApplicationSpec, Service, Resources, File,
-                         ApplicationState, FinalStatus, FileType,
+                         ApplicationState, FinalStatus, FileType, ACLs,
                          Container, ApplicationReport, ResourceUsageReport)
 
 
@@ -45,6 +45,11 @@ tags:
     - tag2
 file_systems:
     - hdfs://preprod
+
+acls:
+    enable: true
+    view_users:
+        - '*'
 
 services:
     service_1:
@@ -149,6 +154,20 @@ def test_file_invariants():
     assert f.type == FileType.FILE
     f.type = 'archive'
     assert f.type == FileType.ARCHIVE
+
+
+def test_acls():
+    acl1 = ACLs()
+    acl2 = ACLs(enable=True, view_users=['ted', 'nancy'])
+    check_specification_methods(acl1, acl2)
+
+
+def test_acls_invariants():
+    with pytest.raises(TypeError):
+        ACLs(enable=1)
+
+    with pytest.raises(TypeError):
+        ACLs(view_users="*")
 
 
 def test_service():
@@ -287,6 +306,8 @@ def test_application_spec_from_yaml():
     assert spec.tags == {'tag1', 'tag2'}
     assert spec.file_systems == ['hdfs://preprod']
     assert spec.max_attempts == 2
+    assert spec.acls.enable
+    assert spec.acls.view_users == ['*']
     assert isinstance(spec.services, dict)
     assert isinstance(spec.services['service_1'], Service)
 

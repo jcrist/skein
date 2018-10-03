@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.google.common.base.Joiner;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -15,6 +17,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -67,6 +70,28 @@ public class Utils {
         minCount, maxCount, 60, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(),
         new CustomThreadFactory(name, isDaemon));
+  }
+
+  public static String formatAcl(List<String> users, List<String> groups) {
+    // "*" in either groups or users -> "*"
+    if (users.contains("*") || groups.contains("*")) {
+      return "*";
+    }
+
+    StringBuilder builder = new StringBuilder();
+    Joiner joiner = Joiner.on(",");
+
+    if (users != null) {
+      joiner.appendTo(builder, users);
+    }
+
+    builder.append(" ");
+
+    if (groups != null) {
+      joiner.appendTo(builder, groups);
+    }
+
+    return builder.toString();
   }
 
   public static ApplicationId appIdFromString(String appId) {

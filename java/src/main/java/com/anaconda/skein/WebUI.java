@@ -30,8 +30,15 @@ import java.net.URI;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -49,6 +56,7 @@ public class WebUI {
                              String appId,
                              Map<String, Msg.KeyValue.Builder> keyValueStore,
                              List<ServiceContext> services,
+                             Set<String> users,
                              Configuration conf,
                              boolean testing)
       throws Exception {
@@ -105,6 +113,11 @@ public class WebUI {
       );
       filter.setInitParameter(AmIpFilter.PROXY_HOSTS, hosts);
       filter.setInitParameter(AmIpFilter.PROXY_URI_BASES, uriBases);
+
+      if (users != null) {
+        context.addFilter(new FilterHolder(new AccessFilter(users)),
+                          "/*", EnumSet.allOf(DispatcherType.class));
+      }
     }
 
     // Issue a 302 redirect to services from homepage
@@ -186,7 +199,8 @@ public class WebUI {
 
     try {
       WebUI webui = WebUI.create(port, "application_1526497750451_0001",
-                                 kv, services, new YarnConfiguration(), true);
+                                 kv, services, null, new YarnConfiguration(),
+                                 true);
       webui.start();
     } catch (Throwable exc) {
       LOG.fatal("Error running WebUI", exc);
@@ -301,6 +315,39 @@ public class WebUI {
       response.setContentType("text/html");
       response.setStatus(HttpServletResponse.SC_OK);
       template.execute(response.getWriter(), uiModel);
+    }
+  }
+
+  private static class AccessFilter implements Filter {
+    Set<String> users;
+
+    public AccessFilter(Set<String> users) {
+      this.users = users;
+    }
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response,
+        FilterChain chain) throws IOException, ServletException {
+      HttpServletRequest req = (HttpServletRequest) request;
+      HttpServletResponse resp = (HttpServletResponse) response;
+
+      String user = req.getRemoteUser();
+      if (!users.contains(user)) {
+        resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        resp.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        resp.sendError(HttpServletResponse.SC_FORBIDDEN,
+                       "User is not authorized to access this page.");
+        return;
+      }
+      chain.doFilter(request, response);
+    }
+
+    @Override
+    public void destroy() {
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
     }
   }
 }

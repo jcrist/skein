@@ -82,13 +82,24 @@ message Service {
 }
 
 
+message Acls {
+  bool enable = 1;
+  repeated string view_users = 2;
+  repeated string view_groups = 3;
+  repeated string modify_users = 4;
+  repeated string modify_groups = 5;
+  repeated string ui_users = 6;
+}
+
+
 message ApplicationSpec {
   string name = 1;
   string queue = 2;
   int32 max_attempts = 3;
   repeated string tags = 4;
   repeated string file_systems = 5;
-  map<string, Service> services = 6;
+  Acls acls = 6;
+  map<string, Service> services = 7;
 }
 
 

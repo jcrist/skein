@@ -236,7 +236,7 @@ def test_container_environment(client, has_kerberos_enabled):
     commands = ['env',
                 'echo "LOGIN_ID=[$(whoami)]"',
                 'hdfs dfs -touchz /user/testuser/test_container_permissions']
-    service = skein.Service(resources=skein.Resources(memory=124, vcores=1),
+    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
                             commands=commands)
     spec = skein.ApplicationSpec(name="test_container_permissions",
                                  queue="default",
@@ -263,7 +263,7 @@ def test_container_environment(client, has_kerberos_enabled):
 
 def test_file_systems(client):
     commands = ['hdfs dfs -touchz /user/testuser/test_file_systems']
-    service = skein.Service(resources=skein.Resources(memory=124, vcores=1),
+    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
                             commands=commands)
     spec = skein.ApplicationSpec(name="test_file_systems",
                                  queue="default",
@@ -302,6 +302,10 @@ def test_webui(client, has_kerberos_enabled):
         assert resp.ok
         cookies = resp.cookies
 
+        # No ACLs mean anyone has access
+        resp = requests.get(base + "?user.name=testuser2")
+        assert resp.ok
+
         # / and /services are the same
         for suffix in ['', '/services']:
             resp = requests.get(base + suffix, cookies=cookies)
@@ -324,6 +328,43 @@ def test_webui(client, has_kerberos_enabled):
         # 404 for fake pages
         resp = requests.get(base + '/not-a-real-page', cookies=cookies)
         assert resp.status_code == 404
+
+        app.shutdown()
+
+
+@pytest.mark.parametrize('ui_users, checks', [
+    (['*'], [('testuser', True), ('testuser2', True)]),
+    ([], [('testuser', True), ('testuser2', False)]),
+    (['testuser', 'testuser2'], [('testuser', True),
+                                 ('testuser2', True),
+                                 ('testuser3', False)])
+])
+def test_webui_acls(client, has_kerberos_enabled, ui_users, checks):
+    # Smoke-tests for webui
+    if has_kerberos_enabled:
+        pytest.skip("Testing only implemented for simple authentication")
+    requests = pytest.importorskip('requests')
+
+    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+                            commands=['sleep infinity'])
+    spec = skein.ApplicationSpec(name="test_webui_acls",
+                                 queue="default",
+                                 acls=skein.ACLs(enable=True, ui_users=ui_users),
+                                 services={'sleeper': service})
+
+    with run_application(client, spec=spec) as app:
+        # Wait for a single container
+        initial = wait_for_containers(app, 1, states=['RUNNING'])
+        assert initial[0].state == 'RUNNING'
+        assert initial[0].service_name == 'sleeper'
+
+        # Base url of web ui
+        base = 'http://master.example.com:8088/proxy/%s' % app.id
+
+        # Check proper subset of users allowed
+        for user, ok in checks:
+            resp = requests.get(base + "?user.name=%s" % user)
+            assert resp.ok == ok
 
         app.shutdown()
 

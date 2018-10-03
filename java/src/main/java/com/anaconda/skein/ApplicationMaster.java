@@ -175,9 +175,23 @@ public class ApplicationMaster {
         }
     );
 
+    // Forward restricted set of users to the WebUI if:
+    // - ACLs are enabled
+    // - The wildcard * is not in the ui acl
+    Set<String> allowedUsers = null;
+    Model.Acls acls = spec.getAcls();
+    if (acls.getEnable()) {
+      List<String> uiUsers = acls.getUiUsers();
+      if (!uiUsers.contains("*")) {
+        allowedUsers = new HashSet<String>(uiUsers);
+        // The application owner is always allowed
+        allowedUsers.add(ugi.getShortUserName());
+      }
+    }
+
     try {
       ui = WebUI.create(0, appId.toString(), keyValueStore, serviceContexts,
-                        conf, false);
+                        allowedUsers, conf, false);
       ui.start();
     } catch (Exception e) {
       fatal("Failed to start UI server", e);
@@ -868,7 +882,7 @@ public class ApplicationMaster {
                 service.getCommands(),
                 null,
                 tokens,
-                null);
+                spec.getAcls().getYarnAcls());
 
         executor.execute(
             new Runnable() {

@@ -297,12 +297,35 @@ public class MsgUtils {
         new HashSet<String>(service.getDependsList()));
   }
 
+  public static Msg.Acls writeAcls(Model.Acls acl) {
+    return Msg.Acls.newBuilder()
+              .setEnable(acl.getEnable())
+              .addAllViewUsers(acl.getViewUsers())
+              .addAllViewGroups(acl.getViewGroups())
+              .addAllModifyUsers(acl.getModifyUsers())
+              .addAllModifyGroups(acl.getModifyGroups())
+              .addAllUiUsers(acl.getUiUsers())
+              .build();
+  }
+
+  public static Model.Acls readAcls(Msg.Acls acl) {
+    return new Model.Acls(
+        acl.getEnable(),
+        acl.getViewUsersList(),
+        acl.getViewGroupsList(),
+        acl.getModifyUsersList(),
+        acl.getModifyGroupsList(),
+        acl.getUiUsersList()
+    );
+  }
+
   public static Msg.ApplicationSpec writeApplicationSpec(Model.ApplicationSpec spec) {
     Msg.ApplicationSpec.Builder builder = Msg.ApplicationSpec.newBuilder()
         .setName(spec.getName())
         .setQueue(spec.getQueue())
         .setMaxAttempts(spec.getMaxAttempts())
         .addAllTags(spec.getTags())
+        .setAcls(writeAcls(spec.getAcls()))
         .addAllFileSystems(Lists.transform(spec.getFileSystems(), Functions.toStringFunction()));
 
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
@@ -326,6 +349,7 @@ public class MsgUtils {
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
                                      fileSystems,
+                                     readAcls(spec.getAcls()),
                                      services);
   }
 

@@ -22,8 +22,9 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -282,8 +283,10 @@ public class Daemon {
       fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
     }
 
+    Map<ApplicationAccessType, String> acls = spec.getAcls().getYarnAcls();
+
     ContainerLaunchContext amContext = ContainerLaunchContext.newInstance(
-        localResources, env, commands, null, fsTokens, null);
+        localResources, env, commands, null, fsTokens, acls);
 
     appContext.setApplicationType("skein");
     appContext.setAMContainerSpec(amContext);
