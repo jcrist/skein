@@ -298,41 +298,24 @@ public class MsgUtils {
   }
 
   public static Msg.Acls writeAcls(Model.Acls acl) {
-    Msg.Acls.Builder builder = Msg.Acls.newBuilder();
-
-    List<String> aclList;
-
-    aclList = acl.getViewUsers();
-    if (aclList != null) {
-      builder.getViewUsersBuilder().addAllValues(aclList);
-    }
-    aclList = acl.getViewGroups();
-    if (aclList != null) {
-      builder.getViewGroupsBuilder().addAllValues(aclList);
-    }
-    aclList = acl.getModifyUsers();
-    if (aclList != null) {
-      builder.getModifyUsersBuilder().addAllValues(aclList);
-    }
-    aclList = acl.getModifyGroups();
-    if (aclList != null) {
-      builder.getModifyGroupsBuilder().addAllValues(aclList);
-    }
-    aclList = acl.getUiUsers();
-    if (aclList != null) {
-      builder.getUiUsersBuilder().addAllValues(aclList);
-    }
-
-    return builder.build();
+    return Msg.Acls.newBuilder()
+              .setEnable(acl.getEnable())
+              .addAllViewUsers(acl.getViewUsers())
+              .addAllViewGroups(acl.getViewGroups())
+              .addAllModifyUsers(acl.getModifyUsers())
+              .addAllModifyGroups(acl.getModifyGroups())
+              .addAllUiUsers(acl.getUiUsers())
+              .build();
   }
 
   public static Model.Acls readAcls(Msg.Acls acl) {
     return new Model.Acls(
-        acl.hasViewUsers() ? acl.getViewUsers().getValuesList() : null,
-        acl.hasViewGroups() ? acl.getViewGroups().getValuesList() : null,
-        acl.hasModifyUsers() ? acl.getModifyUsers().getValuesList() : null,
-        acl.hasModifyGroups() ? acl.getModifyGroups().getValuesList() : null,
-        acl.hasUiUsers() ? acl.getUiUsers().getValuesList() : null
+        acl.getEnable(),
+        acl.getViewUsersList(),
+        acl.getViewGroupsList(),
+        acl.getModifyUsersList(),
+        acl.getModifyGroupsList(),
+        acl.getUiUsersList()
     );
   }
 

@@ -14,11 +14,6 @@ message Empty {
 }
 
 
-message NullableStringList {
-  repeated string values = 1;
-}
-
-
 message FinalStatus {
   enum Type {
     UNDEFINED = 0;
@@ -88,11 +83,12 @@ message Service {
 
 
 message Acls {
-  NullableStringList view_users = 1;
-  NullableStringList view_groups = 2;
-  NullableStringList modify_users = 3;
-  NullableStringList modify_groups = 4;
-  NullableStringList ui_users = 5;
+  bool enable = 1;
+  repeated string view_users = 2;
+  repeated string view_groups = 3;
+  repeated string modify_users = 4;
+  repeated string modify_groups = 5;
+  repeated string ui_users = 6;
 }
 
 

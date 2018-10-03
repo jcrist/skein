@@ -14,7 +14,7 @@ from .exceptions import context
 from .utils import implements, format_list, datetime_from_millis, runtime
 
 __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
-           'FileVisibility', 'ApplicationState', 'FinalStatus',
+           'FileVisibility', 'ACLs', 'ApplicationState', 'FinalStatus',
            'ResourceUsageReport', 'ApplicationReport', 'ContainerState',
            'Container')
 
@@ -460,6 +460,113 @@ class Service(Specification):
         return cls(**kwargs)
 
 
+class ACLs(Specification):
+    """Skein Access Control Lists.
+
+    Maps access types to users/groups to provide that access.
+
+    The following access types are supported:
+
+    - VIEW : view application details
+    - MODIFY : modify the application via YARN (e.g. killing the application)
+    - UI : access the application Web UI
+
+    The VIEW and MODIFY access types are handled by YARN directly; permissions
+    for these can be set by users and/or groups. Authorizing UI access is
+    handled by Skein internally, and only user-level access control is
+    supported.
+
+    The application owner (the user who submitted the application) will always
+    have permission for all access types.
+
+    By default, ACLs are disabled - to enable, set ``enable=True``. If enabled,
+    access is restricted only to the application owner by default - add
+    users/groups to the access types you wish to expand to other users.
+
+    Parameters
+    ----------
+    enable : bool, optional
+        If True, the ACLs will be enforced. Default is False.
+    view_users, view_groups : list, optional
+        Lists of users/groups to give VIEW access to this application. If both
+        are empty, only the application owner has access (default). If either
+        contains ``"*"``, all users are given access (default). See the YARN
+        documentation for more information on what VIEW access entails.
+    modify_users, modify_groups : list, optional
+        Lists of users/groups to give MODIFY access to this application. If
+        both are empty, only the application owner has access (default). If
+        either contains ``"*"``, all users are given access (default). See the
+        YARN documentation for more information on what MODIFY access entails.
+    ui_users : list, optional
+        A list of users to give access to the application Web UI. If empty,
+        only the application owner has access (default). If it contains
+        ``"*"``, all users are given access.
+
+    Examples
+    --------
+    By default ACLs are disabled, and all users have access.
+
+    >>> import skein
+    >>> acls = skein.ACLs()
+
+    Enabling ACLs results in only the application owner having access (provided
+    YARN is also configured with ACLs enabled).
+
+    >>> acls = skein.ACLs(enable=True)
+
+    To give access to other users, add users/groups to the desired access
+    types. Here we enable view access for all users in group ``engineering``,
+    and modify access for user ``nancy``.
+
+    >>> acls = skein.ACLs(enable=True,
+    ...                   view_groups=['engineering'],
+    ...                   modify_users=['nancy'])
+
+    You can use the wildcard character ``"*"`` to enable access for all users.
+    Here we give view access to all users:
+
+    >>> acls = skein.ACLs(enable=True,
+    ...                   view_users=['*'])
+    """
+    __slots__ = ('enable', 'view_users', 'view_groups', 'modify_users',
+                 'modify_groups', 'ui_users')
+    _protobuf_cls = _proto.Acls
+
+    def __init__(self, enable=False, view_users=None, view_groups=None,
+                 modify_users=None, modify_groups=None, ui_users=None):
+        self.enable = enable
+        self.view_users = [] if view_users is None else view_users
+        self.view_groups = [] if view_groups is None else view_groups
+        self.modify_users = [] if modify_users is None else modify_users
+        self.modify_groups = [] if modify_groups is None else modify_groups
+        self.ui_users = [] if ui_users is None else ui_users
+        self._validate()
+
+    def __repr__(self):
+        return 'ACLs<enable=%r, ...>' % self.enable
+
+    def _validate(self):
+        self._check_is_type('enable', bool)
+        self._check_is_list_of('view_users', string)
+        self._check_is_list_of('view_groups', string)
+        self._check_is_list_of('modify_users', string)
+        self._check_is_list_of('modify_groups', string)
+        self._check_is_list_of('ui_users', string)
+
+    @classmethod
+    @implements(Specification.from_protobuf)
+    def from_protobuf(cls, obj):
+        if not isinstance(obj, cls._protobuf_cls):
+            raise TypeError("Expected message of type "
+                            "%r" % cls._protobuf_cls.__name__)
+        return cls(enable=obj.enable,
+                   view_users=list(obj.view_users),
+                   view_groups=list(obj.view_groups),
+                   modify_users=list(obj.modify_users),
+                   modify_groups=list(obj.modify_groups),
+                   ui_users=list(obj.ui_users))
+
+
 class ApplicationSpec(Specification):
     """A complete description of an application.
 
@@ -476,22 +583,26 @@ class ApplicationSpec(Specification):
     file_systems : list, optional
         A list of Hadoop file systems to acquire delegation tokens for.
         A token is always acuired for the ``defaultFS``.
+    acls : ACLs, optional
+        Allows restricting users/groups to subsets of application access. See
+        ``skein.ACLs`` for more information.
     max_attempts : int, optional
         The maximum number of submission attempts before marking the
         application as failed. Note that this only considers failures of the
         application master during startup. Default is 1.
     """
-    __slots__ = ('services', 'name', 'queue', 'tags', 'file_systems',
+    __slots__ = ('services', 'name', 'queue', 'tags', 'file_systems', 'acls',
                  'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
     def __init__(self, services=required, name='skein', queue='default',
-                 tags=None, file_systems=None, max_attempts=1):
+                 tags=None, file_systems=None, acls=None, max_attempts=1):
         self._assign_required('services', services)
         self.name = name
         self.queue = queue
         self.tags = set() if tags is None else set(tags)
         self.file_systems = [] if file_systems is None else file_systems
+        self.acls = ACLs() if acls is None else acls
         self.max_attempts = max_attempts
         self._validate()
 
@@ -505,6 +616,8 @@ class ApplicationSpec(Specification):
         self._check_is_set_of('tags', string)
         self._check_is_list_of('file_systems', string)
         self._check_is_bounded_int('max_attempts', min=1)
+        self._check_is_type('acls', ACLs)
+        self.acls._validate()
         self._check_is_dict_of('services', string, Service)
         if not self.services:
             raise context.ValueError("There must be at least one service")
@@ -527,13 +640,18 @@ class ApplicationSpec(Specification):
         _origin = _pop_origin(kwargs)
         cls._check_keys(obj)
 
-        services = obj.get('services')
-        if services is not None and isinstance(services, dict):
-            obj = dict(obj)
-            obj['services'] = {k: Service.from_dict(v, _origin=_origin)
-                               for k, v in services.items()}
+        obj = obj.copy()
 
-        return cls(**obj)
+        services = obj.pop('services', None)
+        if services is not None and isinstance(services, dict):
+            services = {k: Service.from_dict(v, _origin=_origin)
+                        for k, v in services.items()}
+
+        acls = obj.pop('acls', None)
+        if acls is not None and isinstance(acls, dict):
+            acls = ACLs.from_dict(acls)
+
+        return cls(services=services, acls=acls, **obj)
 
     @classmethod
     @implements(Specification.from_protobuf)
@@ -545,6 +663,7 @@ class ApplicationSpec(Specification):
                    tags=set(obj.tags),
                    file_systems=list(obj.file_systems),
                    max_attempts=min(1, obj.max_attempts),
+                   acls=ACLs.from_protobuf(obj.acls),
                    services=services)
 
     @classmethod

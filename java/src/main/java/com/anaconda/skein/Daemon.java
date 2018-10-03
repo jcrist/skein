@@ -283,9 +283,7 @@ public class Daemon {
       fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
     }
 
-    Map<ApplicationAccessType, String> acls = new HashMap<ApplicationAccessType, String>();
-    acls.put(ApplicationAccessType.MODIFY_APP, "testuser");
-    acls.put(ApplicationAccessType.VIEW_APP, "testuser");
+    Map<ApplicationAccessType, String> acls = spec.getAcls().getYarnAcls();
 
     ContainerLaunchContext amContext = ContainerLaunchContext.newInstance(
         localResources, env, commands, null, fsTokens, acls);

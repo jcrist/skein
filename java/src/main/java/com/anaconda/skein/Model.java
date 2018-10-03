@@ -107,15 +107,17 @@ public class Model {
   }
 
   public static class Acls {
+    private boolean enable;
     private List<String> viewUsers;
     private List<String> viewGroups;
     private List<String> modifyUsers;
     private List<String> modifyGroups;
     private List<String> uiUsers;
 
-    public Acls(List<String> viewUsers, List<String> viewGroups,
-                List<String> modifyUsers, List<String> modifyGroups,
-                List<String> uiUsers) {
+    public Acls(boolean enable, List<String> viewUsers,
+                List<String> viewGroups, List<String> modifyUsers,
+                List<String> modifyGroups, List<String> uiUsers) {
+      this.enable = enable;
       this.viewUsers = viewUsers;
       this.viewGroups = viewGroups;
       this.modifyUsers = modifyUsers;
@@ -124,20 +126,19 @@ public class Model {
     }
 
     public Map<ApplicationAccessType, String> getYarnAcls() {
+      if (!enable) {
+        return null;
+      }
       Map<ApplicationAccessType, String> out = new HashMap<ApplicationAccessType, String>();
 
-      String view = Utils.formatAcl(viewUsers, viewGroups);
-      if (view != null) {
-        out.put(ApplicationAccessType.VIEW_APP, view);
-      }
-
-      String modify = Utils.formatAcl(modifyUsers, modifyGroups);
-      if (modify != null) {
-        out.put(ApplicationAccessType.MODIFY_APP, modify);
-      }
+      out.put(ApplicationAccessType.VIEW_APP, Utils.formatAcl(viewUsers, viewGroups));
+      out.put(ApplicationAccessType.MODIFY_APP, Utils.formatAcl(modifyUsers, modifyGroups));
 
       return out;
     }
+
+    public void setEnable(boolean enable) { this.enable = enable; }
+    public boolean getEnable() { return enable; }
 
     public void setViewUsers(List<String> viewUsers) { this.viewUsers = viewUsers; }
     public List<String> getViewUsers() { return viewUsers; }

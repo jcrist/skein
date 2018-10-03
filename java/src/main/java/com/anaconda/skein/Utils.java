@@ -73,13 +73,8 @@ public class Utils {
   }
 
   public static String formatAcl(List<String> users, List<String> groups) {
-    if (users == null && groups == null) {
-      return null;
-    }
-
     // "*" in either groups or users -> "*"
-    if ((users != null && users.contains("*"))
-        || (groups != null && groups.contains("*"))) {
+    if (users.contains("*") || groups.contains("*")) {
       return "*";
     }
 
