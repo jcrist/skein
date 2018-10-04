@@ -48,6 +48,16 @@
           <li class="nav-item active">
             <a class="nav-link" href="./kv">Key/Value</a>
           </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle {{^pages}}disabled{{/pages}}" {{^pages}}title="No service pages available"{{/pages}} href="#" id="servicePages" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Service Pages
+            </a>
+            <div class="dropdown-menu" aria-labelledby="servicePages">
+              {{#pages}}
+              <a class="dropdown-item" href=".{{proxyPrefix}}/{{getValue}}">{{getKey}}</a>
+              {{/pages}}
+            </div>
+          </li>
         </ul>
         <div class="dropdown-divider"></div>
         <span class="navbar-text" id="application">{{appId}}</span>
@@ -72,8 +82,8 @@
           {{#kv}}
           <tr>
             <th scope="row"></th>
-            <td>{{key}}</td>
-            <td>{{value}}</td>
+            <td>{{getKey}}</td>
+            <td>{{getValue}}</td>
           </tr>
           {{/kv}}
         </tbody>

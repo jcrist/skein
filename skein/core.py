@@ -19,6 +19,7 @@ from .exceptions import (context, FileNotFoundError, ConnectionError,
                          TimeoutError, ApplicationNotRunningError,
                          ApplicationError, DaemonNotRunningError, DaemonError)
 from .kv import KeyValueStore
+from .ui import WebUI
 from .model import (ApplicationSpec, ApplicationReport, ApplicationState,
                     ContainerState, Container, FinalStatus, Resources,
                     container_instance_from_string)
@@ -688,6 +689,15 @@ class ApplicationClient(_ClientBase):
         >>> app_client.kv.wait('mykey')
         """
         return KeyValueStore(self)
+
+    @cached_property
+    def ui(self):
+        """The Skein Web UI.
+
+        Used by applications to register additional web pages, and to get the
+        addresses of these pages.
+        """
+        return WebUI(self)
 
     def get_specification(self):
         """Get the specification for the running application.

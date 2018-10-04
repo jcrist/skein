@@ -12,4 +12,6 @@ from .skein_pb2 import (GetRangeRequest, GetRangeResponse,
                         TransactionRequest, TransactionResponse,
                         WatchRequest, WatchCreateRequest, WatchCancelRequest,
                         WatchResponse)
+from .skein_pb2 import (Proxy, RemoveProxyRequest, UIInfoRequest, UIInfoResponse,
+                        GetProxiesRequest, GetProxiesResponse)
 from .skein_pb2_grpc import DaemonStub, MasterStub
