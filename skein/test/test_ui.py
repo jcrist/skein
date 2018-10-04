@@ -22,7 +22,7 @@ PAGES = [('route-1', 'http://worker.example.com:8888', 'link 1'),
 
 def get_page(address, **kwargs):
     # Set timeout on all requests so tests don't hang on error
-    kwargs.setdefault('timeout', 1)
+    kwargs.setdefault('timeout', 5)
     return requests.get(address, **kwargs)
 
 
