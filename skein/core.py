@@ -692,7 +692,11 @@ class ApplicationClient(_ClientBase):
 
     @cached_property
     def ui(self):
-        """The Skein Web-UI."""
+        """The Skein Web UI.
+
+        Used by applications to register additional web pages, and to get the
+        addresses of these pages.
+        """
         return WebUI(self)
 
     def get_specification(self):

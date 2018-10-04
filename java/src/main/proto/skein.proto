@@ -400,14 +400,14 @@ message ScaleRequest {
 
 
 message Proxy {
-  string prefix = 1;
-  string name = 2;
+  string route = 1;
+  string link_name = 2;
   string target = 3;
 }
 
 
 message RemoveProxyRequest {
-  string prefix = 1;
+  string route = 1;
 }
 
 

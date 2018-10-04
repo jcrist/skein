@@ -53,8 +53,8 @@ import javax.servlet.http.HttpServletResponse;
 public class WebUI {
   private static final Logger LOG = LogManager.getLogger(WebUI.class);
 
-  private final Map<String, Msg.Proxy> prefixToProxy = new HashMap<String, Msg.Proxy>();
-  protected final Map<String, String> nameToPrefix = new TreeMap<String, String>();
+  private final Map<String, Msg.Proxy> routeToProxy = new HashMap<String, Msg.Proxy>();
+  protected final Map<String, String> nameToRoute = new TreeMap<String, String>();
   private final Map<String, String> prefixToTarget = new HashMap<String, String>();
   private static final String PROXY_PREFIX = "/pages";
   private final List<String> uiAddresses;
@@ -177,13 +177,13 @@ public class WebUI {
   }
 
   public void addProxy(Msg.Proxy req, StreamObserver<Msg.Empty> resp) {
-    String prefix = req.getPrefix();
+    String route = req.getRoute();
     String target = req.getTarget();
-    String name = req.getName();
+    String name = req.getLinkName();
 
-    if (prefix.contains("/")) {
+    if (route.contains("/")) {
       resp.onError(Status.INVALID_ARGUMENT
-          .withDescription("prefix must not contain '/'")
+          .withDescription("Page page routes must not contain '/'")
           .asRuntimeException());
       return;
     }
@@ -197,35 +197,41 @@ public class WebUI {
       targetURL = new URL(target);
     } catch (MalformedURLException exc) {
       resp.onError(Status.INVALID_ARGUMENT
-          .withDescription("Target address '" + target + "' is an invalid URL:\n"
-                           + exc.getMessage())
+          .withDescription("Page target address '" + target
+                           + "' is an invalid URL:\n" + exc.getMessage())
           .asRuntimeException());
       return;
     }
 
-    // If the target address has no path, the prefix needs a trailing slash to
-    // resolve relative links correctly.
-    String linkPrefix = targetURL.getPath().isEmpty() ? prefix + "/" : prefix;
+    // If the target address has no path or is a directory, the link route
+    // needs a trailing slash to resolve relative links correctly.
+    String linkRoute = route;
+    String targetPath = targetURL.getPath();
+    if (targetPath.isEmpty() || targetPath.endsWith("/")) {
+      linkRoute = route + "/";
+    }
 
     writeLock.lock();
     try {
-      if (prefixToProxy.containsKey(prefix)) {
+      if (routeToProxy.containsKey(route)) {
         resp.onError(Status.ALREADY_EXISTS
-            .withDescription("Proxy prefix '" + prefix + "' already exists")
+            .withDescription("A proxied page with route '" + route
+                             + "' already exists")
             .asRuntimeException());
         return;
       }
-      if (!name.isEmpty() && nameToPrefix.containsKey(name)) {
+      if (!name.isEmpty() && nameToRoute.containsKey(name)) {
         resp.onError(Status.ALREADY_EXISTS
-            .withDescription("Proxy name '" + name + "' already exists")
+            .withDescription("A proxied page with name '" + name
+                             + "' already exists")
             .asRuntimeException());
         return;
       }
-      prefixToProxy.put(prefix, req);
+      routeToProxy.put(route, req);
       if (!name.isEmpty()) {
-        nameToPrefix.put(name, linkPrefix);
+        nameToRoute.put(name, linkRoute);
       }
-      prefixToTarget.put(prefix, target);
+      prefixToTarget.put(route, target);
     } finally {
       writeLock.unlock();
     }
@@ -236,21 +242,22 @@ public class WebUI {
 
   public void removeProxy(Msg.RemoveProxyRequest req,
                           StreamObserver<Msg.Empty> resp) {
-    String prefix = req.getPrefix();
+    String route = req.getRoute();
 
     writeLock.lock();
     try {
-      Msg.Proxy prev = prefixToProxy.remove(prefix);
+      Msg.Proxy prev = routeToProxy.remove(route);
       if (prev == null) {
-        resp.onError(Status.NOT_FOUND
-            .withDescription("Proxy prefix '" + prefix + "' doesn't exist")
+        resp.onError(Status.FAILED_PRECONDITION
+            .withDescription("A proxied page with route '" + route
+                             + "' doesn't exist")
             .asRuntimeException());
         return;
       }
-      prefixToTarget.remove(prefix);
-      String name = prev.getName();
+      prefixToTarget.remove(route);
+      String name = prev.getLinkName();
       if (!name.isEmpty()) {
-        nameToPrefix.remove(name);
+        nameToRoute.remove(name);
       }
     } finally {
       writeLock.unlock();
@@ -279,7 +286,7 @@ public class WebUI {
 
     writeLock.lock();
     try {
-      msg.addAllProxy(prefixToProxy.values());
+      msg.addAllProxy(routeToProxy.values());
     } finally {
       writeLock.unlock();
     }
@@ -339,8 +346,8 @@ public class WebUI {
     try {
       WebUI webui = new WebUI(port, "application_1526497750451_0001", kv,
                               services, null, new YarnConfiguration(), true);
-      webui.nameToPrefix.put("name1", "page1");
-      webui.nameToPrefix.put("name2", "page2");
+      webui.nameToRoute.put("name1", "page1");
+      webui.nameToRoute.put("name2", "page2");
       webui.start();
     } catch (Throwable exc) {
       LOG.fatal("Error running WebUI", exc);
@@ -443,7 +450,7 @@ public class WebUI {
     public List<Map.Entry<String, String>> pages() {
       readLock.lock();
       try {
-        return Lists.newArrayList(nameToPrefix.entrySet());
+        return Lists.newArrayList(nameToRoute.entrySet());
       } finally {
         readLock.unlock();
       }
@@ -464,7 +471,8 @@ public class WebUI {
     }
 
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws IOException {
       response.setContentType("text/html");
       response.setStatus(HttpServletResponse.SC_OK);
       template.execute(response.getWriter(), uiModel);
