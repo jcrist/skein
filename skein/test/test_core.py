@@ -152,7 +152,8 @@ def test_simple_app(client):
         client.connect(app.id, wait=False)
 
     with pytest.raises(skein.ConnectionError):
-        app.get_specification()
+        res = app.get_specification()
+        print(res)
 
     running_apps = client.get_applications()
     assert app.id not in {a.id for a in running_apps}

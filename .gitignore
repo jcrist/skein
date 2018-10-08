@@ -9,4 +9,5 @@ docs/build/
 .coverage
 .pytest_cache/
 .eggs/
+.DS_Store
 htmlcov/
