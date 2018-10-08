@@ -15,41 +15,123 @@ application specification in detail.
 Specification Components
 ------------------------
 
+Top-Level Fields
+^^^^^^^^^^^^^^^^
+
 At the top-level, a specification starts with an :class:`ApplicationSpec`.
 This takes the following fields:
 
-- ``name``
+``name``
+~~~~~~~~
 
-  The name of the application. Optional, defaults to ``skein``.
+The name of the application. Optional, defaults to ``skein``.
 
-- ``queue``
+``queue``
+~~~~~~~~~
 
-  The queue to submit the application to. Optional, defaults to ``default``.
+The queue to submit the application to. Optional, defaults to ``default``.
 
-- ``max_attempts``
+``max_attempts``
+~~~~~~~~~~~~~~~~
 
-  The maximum number of submission attempts before marking the application as
-  failed. Note that this only considers failures of the application master
-  during startup. Optional, default is 1 (recommended).
+The maximum number of submission attempts before marking the application as
+failed. Note that this only considers failures of the application master
+during startup. Optional, default is 1 (recommended).
 
-- ``tags``
+``tags``
+~~~~~~~~
 
-  A list of strings to use as tags for this application. Optional.
-
-- ``services``
-
-  A dict of service-name to :class:`Service`. At least one service is required.
-
+A list of strings to use as tags for this application. Optional.
 
 **Example**
 
 .. code-block:: none
 
-    name: my-application
-    queue: my-queue
-    tags:
-      - my-tag
-      - my-other-tag
+  tags:
+    - my-tag
+    - my-other-tag
+
+``file_systems``
+~~~~~~~~~~~~~~~~
+
+A list of Hadoop file systems to acquire delegation tokens for. A token is
+always acquired for the default filesystem (``fs.defaultFS`` in
+``core-site.xml``). In many cases the default is sufficient. Optional.
+
+**Example**
+
+.. code-block:: none
+
+  file_systems:
+    - hdfs://nn1.com:8032
+    - hdfs://nn2.com:8032
+    - webhdfs://nn3.com:50070
+
+``acls``
+~~~~~~~~
+
+Configures the application-level Access Control Lists (ACLs). Optional,
+defaults to no ACLs.
+
+The following access types are supported:
+
+- ``VIEW`` : view application details
+- ``MODIFY`` : modify the application via YARN (e.g. killing the application)
+- ``UI`` : access the application Web UI
+
+The ``VIEW`` and ``MODIFY`` access types are handled by YARN directly;
+permissions for these can be set by users and/or groups. Authorizing ``UI``
+access is handled by Skein internally, and only user-level access control is
+supported.
+
+The application owner (the user who submitted the application) will always
+have permission for all access types.
+
+By default, ACLs are disabled - to enable, set ``enable: True``. If enabled,
+access is restricted only to the application owner by default - add
+users/groups to the access types you wish to expand to other users. You can
+use the wildcard character ``"*"`` to enable access for all users. Here we
+give view access to all users:
+
+Supported subfields are:
+
+- ``enable``: whether to enable ACLs for this application. Default is ``False``.
+- ``view_users``: users to give ``VIEW`` access. Default is ``[]``.
+- ``view_groups``: groups to give ``VIEW`` access. Default is ``[]``.
+- ``modify_users``: users to give ``MODIFY`` access. Default is ``[]``.
+- ``modify_groups``: groups to give ``MODIFY`` access. Default is ``[]``.
+- ``ui_users``: users to give ``UI`` access. Default is ``[]``.
+
+**Example**
+
+.. code-block:: none
+
+  acls:
+    enable: True    # Enable ACLs. Without this ACLs will be ignored.
+
+    ui_users:
+    - "*"           # Give all users access to the Web UI
+
+    view_users:
+    - nancy         # Give nancy view access
+
+    # The application owner always has access to all access types. Since
+    # `modify_users`/`modify_groups` are unchanged, only the owner has modify
+    # access.
+
+For more information on ACLs see:
+
+- Cloudera's `documentation on YARN ACLs <https://www.cloudera.com/documentation/enterprise/6/6.0/topics/cm_mc_yarn_service1.html>`__
+- The :class:`ACLs` docstring
+
+``services``
+~~~~~~~~~~~~
+
+A dict of service-name to :class:`Service`. At least one service is required.
+
+**Example**
+
+.. code-block:: none
 
     services:
       my_service:
