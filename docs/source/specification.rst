@@ -67,6 +67,8 @@ always acquired for the default filesystem (``fs.defaultFS`` in
     - hdfs://nn2.com:8032
     - webhdfs://nn3.com:50070
 
+.. _specification-acls:
+
 ``acls``
 ~~~~~~~~
 
