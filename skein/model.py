@@ -582,7 +582,7 @@ class ApplicationSpec(Specification):
         A set of strings to use as tags for this application.
     file_systems : list, optional
         A list of Hadoop file systems to acquire delegation tokens for.
-        A token is always acuired for the ``defaultFS``.
+        A token is always acquired for the ``defaultFS``.
     acls : ACLs, optional
         Allows restricting users/groups to subsets of application access. See
         ``skein.ACLs`` for more information.
