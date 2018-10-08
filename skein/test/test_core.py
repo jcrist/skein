@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import os
+import time
 import weakref
 
 import pytest
@@ -151,8 +152,19 @@ def test_simple_app(client):
     with pytest.raises(skein.ConnectionError):
         client.connect(app.id, wait=False)
 
+    # On Travis CI there can be some lag between application being shutdown and
+    # application actually shutting down. Retry up to 5 seconds before failing.
     with pytest.raises(skein.ConnectionError):
-        app.get_specification()
+        timeout = 5
+        while timeout:
+            try:
+                app.get_specification()
+            except skein.ConnectionError:
+                raise
+            else:
+                # Didn't fail, try again later
+                time.sleep(0.1)
+                timeout -= 0.1
 
     running_apps = client.get_applications()
     assert app.id not in {a.id for a in running_apps}
