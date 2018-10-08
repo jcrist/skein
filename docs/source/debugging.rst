@@ -6,6 +6,20 @@ the remote nodes to debug failures. This page provides several tips for what to
 do when you encounter failures.
 
 
+Accessing the Skein Web UI
+--------------------------
+
+For running applications, the Skein `Web UI <web-ui.html>`__ can provide useful
+information including:
+
+- What services are currently running in the application
+- Status of all current and past containers
+- Live links to logs for each service (these are especially useful)
+- Key-value pairs in the `Key-Value Store <key-value-store.html>`__
+
+For more information, see the `Web UI docs <web-ui.html>`__.
+
+
 Accessing the Application Logs
 ------------------------------
 
