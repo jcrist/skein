@@ -60,6 +60,7 @@ User Documentation
     specification.rst
     distributing-files.rst
     key-value-store.rst
+    web-ui.rst
     recipes.rst
     debugging.rst
     api.rst
