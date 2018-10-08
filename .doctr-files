@@ -1,4 +1,9 @@
 ./_images/jupyter_demo.png
+./_images/pricing-dashboard.gif
+./_images/webui-key-value.png
+./_images/webui-services-closed.png
+./_images/webui-services-open.png
+./_images/yarn-resourcemanager-webui-link.png
 ./_images/yarn.jpg
 ./_sources/api.rst.txt
 ./_sources/cli.rst.txt
@@ -12,6 +17,7 @@
 ./_sources/recipes-jupyter-notebook.rst.txt
 ./_sources/recipes.rst.txt
 ./_sources/specification.rst.txt
+./_sources/web-ui.rst.txt
 ./_static/ajax-loader.gif
 ./_static/alabaster.css
 ./_static/basic.css
@@ -53,3 +59,4 @@
 ./search.html
 ./searchindex.js
 ./specification.html
+./web-ui.html
