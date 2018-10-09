@@ -319,6 +319,23 @@ public class MsgUtils {
     );
   }
 
+  public static Msg.Master writeMaster(Model.Master master) {
+    Msg.Master.Builder builder = Msg.Master.newBuilder();
+
+    if (master.hasLogConfig()) {
+      builder.setLogConfig(writeFile(master.getLogConfig()));
+    }
+    return builder.build();
+  }
+
+  public static Model.Master readMaster(Msg.Master master) {
+    LocalResource logConfig = null;
+    if (master.hasLogConfig()) {
+      logConfig = readFile(master.getLogConfig());
+    }
+    return new Model.Master(logConfig);
+  }
+
   public static Msg.ApplicationSpec writeApplicationSpec(Model.ApplicationSpec spec) {
     Msg.ApplicationSpec.Builder builder = Msg.ApplicationSpec.newBuilder()
         .setName(spec.getName())
@@ -326,6 +343,7 @@ public class MsgUtils {
         .setMaxAttempts(spec.getMaxAttempts())
         .addAllTags(spec.getTags())
         .setAcls(writeAcls(spec.getAcls()))
+        .setMaster(writeMaster(spec.getMaster()))
         .addAllFileSystems(Lists.transform(spec.getFileSystems(), Functions.toStringFunction()));
 
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
@@ -344,12 +362,14 @@ public class MsgUtils {
     for (int i = 0; i < spec.getFileSystemsCount(); i++) {
       fileSystems.add(new Path(spec.getFileSystems(i)));
     }
+
     return new Model.ApplicationSpec(spec.getName(),
                                      spec.getQueue(),
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
                                      fileSystems,
                                      readAcls(spec.getAcls()),
+                                     readMaster(spec.getMaster()),
                                      services);
   }
 

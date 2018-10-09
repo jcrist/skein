@@ -92,6 +92,11 @@ message Acls {
 }
 
 
+message Master {
+  File log_config = 1;
+}
+
+
 message ApplicationSpec {
   string name = 1;
   string queue = 2;
@@ -99,7 +104,8 @@ message ApplicationSpec {
   repeated string tags = 4;
   repeated string file_systems = 5;
   Acls acls = 6;
-  map<string, Service> services = 7;
+  Master master = 7;
+  map<string, Service> services = 8;
 }
 
 
@@ -187,7 +193,7 @@ message ApplicationsResponse {
 // Master only definitions
 
 
-service Master {
+service AppMaster {
   rpc shutdown (ShutdownRequest) returns (Empty);
 
   rpc GetRange (GetRangeRequest) returns (GetRangeResponse);

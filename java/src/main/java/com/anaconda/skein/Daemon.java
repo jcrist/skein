@@ -260,9 +260,13 @@ public class Daemon {
 
     // Setup the appmaster commands
     String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
+    String log4jConfig = (spec.getMaster().hasLogConfig()
+                          ? "-Dlog4j.configuration=file:./log4j.properties "
+                          : "");
     List<String> commands = Arrays.asList(
         (Environment.JAVA_HOME.$$() + "/bin/java "
          + "-Xmx128M "
+         + log4jConfig
          + "com.anaconda.skein.ApplicationMaster "
          + appDir + " " + appId.toString()
          + " >" + logdir + "/appmaster.log 2>&1"));
@@ -322,6 +326,17 @@ public class Daemon {
     }
     spec.validate();
 
+    // Setup the LocalResources for the application master
+    Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
+    lr.put("skein.jar", newLocalResource(uploadCache, appDir, jarPath));
+    if (spec.getMaster().hasLogConfig()) {
+      LocalResource logConfig = spec.getMaster().getLogConfig();
+      finalizeLocalResource(uploadCache, appDir, logConfig, false);
+      lr.put("log4j.properties", logConfig);
+    }
+    lr.put(".skein.crt", certFile);
+    lr.put(".skein.pem", keyFile);
+
     // Write the application specification to file
     Path specPath = new Path(appDir, ".skein.proto");
     LOG.info("Writing application specification to " + specPath);
@@ -333,12 +348,6 @@ public class Daemon {
     }
     LocalResource specFile = Utils.localResource(defaultFs, specPath,
                                                  LocalResourceType.FILE);
-
-    // Setup the LocalResources for the application master
-    Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
-    lr.put("skein.jar", newLocalResource(uploadCache, appDir, jarPath));
-    lr.put(".skein.crt", certFile);
-    lr.put(".skein.pem", keyFile);
     lr.put(".skein.proto", specFile);
     return lr;
   }

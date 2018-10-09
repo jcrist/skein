@@ -132,7 +132,7 @@ public class ApplicationMaster {
 
     grpcServer = NettyServerBuilder.forPort(0)
         .sslContext(sslContext)
-        .addService(new MasterImpl())
+        .addService(new AppMasterImpl())
         .workerEventLoopGroup(eg)
         .bossEventLoopGroup(eg)
         .executor(executor)
@@ -999,7 +999,7 @@ public class ApplicationMaster {
     }
   }
 
-  class MasterImpl extends MasterGrpc.MasterImplBase {
+  class AppMasterImpl extends AppMasterGrpc.AppMasterImplBase {
 
     private boolean checkService(String name, StreamObserver<?> resp) {
       if (services.get(name) == null) {
