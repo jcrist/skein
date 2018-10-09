@@ -369,19 +369,33 @@ public class ApplicationMaster {
         continue;  // release container that was never started
       }
 
-      Model.Container.State state;
-      int exitStatus = status.getExitStatus();
+      LOG.info(String.format(
+          "Completed container %s (state: %s, exit status: %s)",
+          status.getContainerId().toString(),
+          status.getState(),
+          status.getExitStatus()));
 
-      if (exitStatus == ContainerExitStatus.SUCCESS) {
-        state = Model.Container.State.SUCCEEDED;
-      } else if (exitStatus == ContainerExitStatus.KILLED_BY_APPMASTER) {
-        return;  // state change already handled by killContainer
-      } else {
-        state = Model.Container.State.FAILED;
+      Model.Container.State state;
+      switch (status.getExitStatus()) {
+        case ContainerExitStatus.SUCCESS:
+          state = Model.Container.State.SUCCEEDED;
+          break;
+        case ContainerExitStatus.KILLED_BY_APPMASTER:
+          return;  // state change already handled by killContainer.
+        case ContainerExitStatus.KILLED_EXCEEDED_PMEM:
+        case ContainerExitStatus.KILLED_EXCEEDED_VMEM:
+          LOG.error(String.format(
+              "Container killed by YARN, original error message is below: \n%s",
+              status.getDiagnostics()));
+          state = Model.Container.State.FAILED;
+          break;
+        default:
+          state = Model.Container.State.FAILED;
+          break;
       }
 
       services.get(container.getServiceName())
-              .finishContainer(container.getInstance(), state);
+              .finishContainer(container.getInstance(), state, status.getDiagnostics());
     }
   }
 
@@ -802,7 +816,7 @@ public class ApplicationMaster {
               } else {
                 instance = Utils.popfirst(running);
               }
-              finishContainer(instance, Model.Container.State.KILLED);
+              finishContainer(instance, Model.Container.State.KILLED, null);
               out.add(containers.get(instance));
             }
           }
@@ -893,8 +907,8 @@ public class ApplicationMaster {
                 } catch (Throwable exc) {
                   LOG.warn("Failed to start " + ServiceTracker.this.name
                            + "_" + instance, exc);
-                  ServiceTracker.this.finishContainer(instance,
-                      Model.Container.State.FAILED);
+                  ServiceTracker.this
+                      .finishContainer(instance, Model.Container.State.FAILED, null);
                 }
               }
             });
@@ -911,7 +925,7 @@ public class ApplicationMaster {
       return out;
     }
 
-    public void finishContainer(int instance, Model.Container.State state) {
+    public void finishContainer(int instance, Model.Container.State state, String exitMessage) {
       // Any function that may remove containers, needs to lock the kv store
       // outside the tracker to prevent deadlocks.
       synchronized (keyValueStore) {
@@ -951,12 +965,12 @@ public class ApplicationMaster {
               mayRestart = true;
               break;
             default:
-              throw new IllegalArgumentException(
-                  "finishContainer got illegal state " + state);
+              throw new IllegalArgumentException("finishContainer got illegal state " + state);
           }
 
           LOG.info(state + ": " + container.getId());
           container.setState(state);
+          container.setExitMessage(exitMessage);
 
           // Remove any owned keys from the key-value store
           for (String key : container.getOwnedKeys()) {
@@ -1114,7 +1128,7 @@ public class ApplicationMaster {
         return;
       }
 
-      services.get(service).finishContainer(instance, Model.Container.State.KILLED);
+      services.get(service).finishContainer(instance, Model.Container.State.KILLED, null);
       resp.onNext(MsgUtils.EMPTY);
       resp.onCompleted();
     }

@@ -362,6 +362,9 @@ public class MsgUtils {
         .setStartTime(container.getStartTime())
         .setFinishTime(container.getFinishTime());
 
+    if (container.getExitMessage() != null) {
+      builder.setExitMessage(container.getExitMessage());
+    }
     ContainerId containerId = container.getYarnContainerId();
     if (containerId != null) {
       builder.setYarnContainerId(containerId.toString());
@@ -381,6 +384,7 @@ public class MsgUtils {
     out.setYarnContainerId(ContainerId.fromString(container.getYarnContainerId()));
     out.setStartTime(container.getStartTime());
     out.setFinishTime(container.getFinishTime());
+    out.setExitMessage(container.getExitMessage());
     return out;
   }
 }

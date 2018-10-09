@@ -385,14 +385,17 @@ def test_container():
     c = Container(state='RUNNING',
                   start_time=start,
                   finish_time=None,
+                  exit_message="",
                   **kwargs)
     c2 = Container(state='SUCCEEDED',
                    start_time=start,
                    finish_time=finish,
+                   exit_message="Ooops",
                    **kwargs)
     c3 = Container(state='WAITING',
                    start_time=None,
                    finish_time=None,
+                   exit_message="",
                    **kwargs)
 
     check_base_methods(c, c2)

@@ -9,7 +9,7 @@ import pytest
 import skein
 from skein.exceptions import FileNotFoundError, FileExistsError
 from skein.test.conftest import (run_application, wait_for_containers,
-                                 wait_for_success, get_logs)
+                                 wait_for_completion, get_logs)
 
 
 def test_properties():
@@ -255,7 +255,7 @@ def test_container_environment(client, has_kerberos_enabled):
                                  services={'service': service})
 
     with run_application(client, spec=spec) as app:
-        wait_for_success(client, app.id)
+        assert wait_for_completion(client, app.id) == "SUCCEEDED"
 
     logs = get_logs(app.id)
     assert "USER=testuser" in logs
@@ -283,7 +283,7 @@ def test_file_systems(client):
                                  file_systems=["hdfs://master.example.com:9000"])
 
     with run_application(client, spec=spec) as app:
-        wait_for_success(client, app.id)
+        assert wait_for_completion(client, app.id) == "SUCCEEDED"
 
 
 def test_kill_application_removes_appdir(client):
@@ -294,3 +294,21 @@ def test_kill_application_removes_appdir(client):
 
     fs = hdfs.connect()
     assert not fs.exists("/user/testuser/.skein/%s" % app.id)
+
+
+def test_mem_limit_exceeded(client):
+    # A list of 5 * 10**6 integers takes ~114 Mb in CPython.
+    commands = [
+        'python -c "xs = list(range(5 * 10**6)); import time; time.sleep(5)"'
+    ]
+    service = skein.Service(resources=skein.Resources(memory=124, vcores=1),
+                            commands=commands)
+    spec = skein.ApplicationSpec(name="test_mem_limit_exceeded",
+                                 queue="default",
+                                 services={"service": service})
+
+    with run_application(client, spec=spec) as app:
+        assert wait_for_completion(client, app.id) == "FAILED"
+
+    logs = get_logs(app.id)
+    assert "Container killed by YARN" in logs

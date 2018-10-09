@@ -247,6 +247,7 @@ public class Model {
     private String yarnNodeHttpAddress;
     private long startTime;
     private long finishTime;
+    private String exitMessage;
     private ContainerRequest req;
     private Set<String> ownedKeys;
 
@@ -320,6 +321,9 @@ public class Model {
 
     public void setFinishTime(long finishTime) { this.finishTime = finishTime; }
     public long getFinishTime() { return finishTime; }
+
+    public void setExitMessage(String diagnostics) { this.exitMessage = diagnostics; }
+    public String getExitMessage() { return exitMessage; }
 
     public void setContainerRequest(ContainerRequest req) { this.req = req; }
     public ContainerRequest popContainerRequest() {
