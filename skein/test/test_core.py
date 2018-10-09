@@ -294,3 +294,35 @@ def test_kill_application_removes_appdir(client):
 
     fs = hdfs.connect()
     assert not fs.exists("/user/testuser/.skein/%s" % app.id)
+
+
+custom_log4j_properties = """
+# Root logger option
+log4j.rootCategory=INFO, console
+log4j.logger.com.anaconda.skein.ApplicationMaster=INFO
+log4j.logger.com.anaconda.skein.WebUI=INFO
+
+# Redirect log messages to console
+log4j.appender.console=org.apache.log4j.ConsoleAppender
+log4j.appender.console.Target=System.out
+log4j.appender.console.layout=org.apache.log4j.PatternLayout
+log4j.appender.console.layout.ConversionPattern=CUSTOM-LOG4J-SUCCEEDED %m
+"""
+
+
+def test_custom_log4j_properties(client, tmpdir):
+    configpath = str(tmpdir.join("log4j.properties"))
+    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+                            commands=['ls'])
+    spec = skein.ApplicationSpec(name="test_custom_log4j_properties",
+                                 queue="default",
+                                 master=skein.Master(log_config=configpath),
+                                 services={'service': service})
+    with open(configpath, 'w') as f:
+        f.write(custom_log4j_properties)
+
+    with run_application(client, spec=spec) as app:
+        wait_for_success(client, app.id)
+
+    logs = get_logs(app.id)
+    assert 'CUSTOM-LOG4J-SUCCEEDED' in logs

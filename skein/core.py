@@ -644,7 +644,7 @@ class ApplicationClient(_ClientBase):
     def __init__(self, address, app_id, security=None):
         self.address = address
         self.id = app_id
-        self._stub = proto.MasterStub(secure_channel(address, security))
+        self._stub = proto.AppMasterStub(secure_channel(address, security))
         self._shutdown = False
 
     def __repr__(self):

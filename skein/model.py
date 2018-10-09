@@ -14,9 +14,9 @@ from .exceptions import context
 from .utils import implements, format_list, datetime_from_millis, runtime
 
 __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
-           'FileVisibility', 'ACLs', 'ApplicationState', 'FinalStatus',
-           'ResourceUsageReport', 'ApplicationReport', 'ContainerState',
-           'Container')
+           'FileVisibility', 'ACLs', 'Master', 'ApplicationState',
+           'FinalStatus', 'ResourceUsageReport', 'ApplicationReport',
+           'ContainerState', 'Container')
 
 
 def _pop_origin(kwargs):
@@ -567,6 +567,51 @@ class ACLs(Specification):
                    ui_users=list(obj.ui_users))
 
 
+class Master(Specification):
+    """Configuration for the Application Master.
+
+    Parameters
+    ----------
+    log_config : str or File, optional
+        A custom ``log4j.properties`` file to use for the application master.
+        If not provided, the default logging configuration will be used.
+    """
+    __slots__ = ('log_config',)
+    _protobuf_cls = _proto.Master
+
+    def __init__(self, log_config=None):
+        if isinstance(log_config, string):
+            log_config = File(log_config)
+        self.log_config = log_config
+        self._validate()
+
+    def _validate(self):
+        self._check_is_type('log_config', File, nullable=True)
+
+    def __repr__(self):
+        return 'Master<log_config=%r>' % self.log_config
+
+    @classmethod
+    @implements(Specification.from_dict)
+    def from_dict(cls, obj, **kwargs):
+        cls._check_keys(obj)
+
+        log_config = obj.get('log_config', None)
+        if log_config is not None:
+            log_config = File.from_dict(log_config, **kwargs)
+
+        return cls(log_config=log_config)
+
+    @classmethod
+    @implements(Specification.from_protobuf)
+    def from_protobuf(cls, obj):
+        if obj.HasField('log_config'):
+            log_config = File.from_protobuf(obj.log_config)
+        else:
+            log_config = None
+        return cls(log_config=log_config)
+
+
 class ApplicationSpec(Specification):
     """A complete description of an application.
 
@@ -586,23 +631,28 @@ class ApplicationSpec(Specification):
     acls : ACLs, optional
         Allows restricting users/groups to subsets of application access. See
         ``skein.ACLs`` for more information.
+    master : Master, optional
+        Additional configuration for the application master service. See
+        ``skein.Master`` for more information.
     max_attempts : int, optional
         The maximum number of submission attempts before marking the
         application as failed. Note that this only considers failures of the
         application master during startup. Default is 1.
     """
     __slots__ = ('services', 'name', 'queue', 'tags', 'file_systems', 'acls',
-                 'max_attempts')
+                 'master', 'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
     def __init__(self, services=required, name='skein', queue='default',
-                 tags=None, file_systems=None, acls=None, max_attempts=1):
+                 tags=None, file_systems=None, acls=None, master=None,
+                 max_attempts=1):
         self._assign_required('services', services)
         self.name = name
         self.queue = queue
         self.tags = set() if tags is None else set(tags)
         self.file_systems = [] if file_systems is None else file_systems
         self.acls = ACLs() if acls is None else acls
+        self.master = Master() if master is None else master
         self.max_attempts = max_attempts
         self._validate()
 
@@ -618,6 +668,8 @@ class ApplicationSpec(Specification):
         self._check_is_bounded_int('max_attempts', min=1)
         self._check_is_type('acls', ACLs)
         self.acls._validate()
+        self._check_is_type('master', Master)
+        self.master._validate()
         self._check_is_dict_of('services', string, Service)
         if not self.services:
             raise context.ValueError("There must be at least one service")
@@ -651,7 +703,11 @@ class ApplicationSpec(Specification):
         if acls is not None and isinstance(acls, dict):
             acls = ACLs.from_dict(acls)
 
-        return cls(services=services, acls=acls, **obj)
+        master = obj.pop('master', None)
+        if master is not None and isinstance(master, dict):
+            master = Master.from_dict(master, _origin=_origin)
+
+        return cls(services=services, acls=acls, master=master, **obj)
 
     @classmethod
     @implements(Specification.from_protobuf)
@@ -664,6 +720,7 @@ class ApplicationSpec(Specification):
                    file_systems=list(obj.file_systems),
                    max_attempts=min(1, obj.max_attempts),
                    acls=ACLs.from_protobuf(obj.acls),
+                   master=Master.from_protobuf(obj.master),
                    services=services)
 
     @classmethod

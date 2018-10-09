@@ -156,6 +156,18 @@ public class Model {
     public List<String> getUiUsers() { return uiUsers; }
   }
 
+  public static class Master {
+    private LocalResource logConfig;
+
+    public Master(LocalResource logConfig) {
+      this.logConfig = logConfig;
+    }
+
+    public void setLogConfig(LocalResource logConfig) { this.logConfig = logConfig; }
+    public LocalResource getLogConfig() { return this.logConfig; }
+    public boolean hasLogConfig() { return this.logConfig != null; }
+  }
+
   public static class ApplicationSpec {
     private String name;
     private String queue;
@@ -163,13 +175,14 @@ public class Model {
     private Set<String> tags;
     private List<Path> fileSystems;
     private Acls acls;
+    private Master master;
     private Map<String, Service> services;
 
     public ApplicationSpec() {}
 
     public ApplicationSpec(String name, String queue, int maxAttempts,
                            Set<String> tags, List<Path> fileSystems,
-                           Acls acls,
+                           Acls acls, Master master,
                            Map<String, Service> services) {
       this.name = name;
       this.queue = queue;
@@ -177,6 +190,7 @@ public class Model {
       this.tags = tags;
       this.fileSystems = fileSystems;
       this.acls = acls;
+      this.master = master;
       this.services = services;
     }
 
@@ -209,6 +223,9 @@ public class Model {
 
     public void setAcls(Acls acls) { this.acls = acls; }
     public Acls getAcls() { return this.acls; }
+
+    public void setMaster(Master master) { this.master = master; }
+    public Master getMaster() { return this.master; }
 
     public void setServices(Map<String, Service> services) { this.services = services; }
     public Map<String, Service> getServices() { return services; }
