@@ -112,10 +112,10 @@ Supported subfields are:
     enable: True    # Enable ACLs. Without this ACLs will be ignored.
 
     ui_users:
-    - "*"           # Give all users access to the Web UI
+      - "*"           # Give all users access to the Web UI
 
     view_users:
-    - nancy         # Give nancy view access
+      - nancy         # Give nancy view access
 
     # The application owner always has access to all access types. Since
     # `modify_users`/`modify_groups` are unchanged, only the owner has modify
@@ -125,6 +125,26 @@ For more information on ACLs see:
 
 - Cloudera's `documentation on YARN ACLs <https://www.cloudera.com/documentation/enterprise/6/6.0/topics/cm_mc_yarn_service1.html>`__
 - The :class:`ACLs` docstring
+
+``master``
+~~~~~~~~~~
+
+Additional configuration tuning for the Application Master. Optional. Under
+common use the defaults should be sufficient.
+
+Supported subfields are:
+
+- ``log_config``: a path to a custom ``log4j.properties`` file. Could be local
+  or on a remote filesystem. If not provided, a default logging configuration
+  is used. See the `Log4j documentation <https://logging.apache.org/log4j/1.2/>`__
+  for more information.
+
+**Example**
+
+.. code-block:: none
+
+  master:
+    log_config: path/to/my/log4j.properties
 
 ``services``
 ~~~~~~~~~~~~

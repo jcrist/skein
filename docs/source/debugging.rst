@@ -43,7 +43,7 @@ the full container environment before executing any application specific
 commands. This includes all localized paths, and all environment variables.
 Since ``skein`` accepts multiple commands for each service, this is easy to do.
 
-.. code-block:: console
+.. code-block:: none
 
     services:
       my_service:
@@ -58,6 +58,24 @@ Since ``skein`` accepts multiple commands for each service, this is easy to do.
 It's also useful to log application logic as your application progresses. This
 could as simple as periodic ``print`` statements, or using the standard
 library's `logging module <https://docs.python.org/3/library/logging.html>`_.
+
+
+Configuring Logging in the Application Master
+---------------------------------------------
+
+Skein's `Application Master
+<https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YARN.html>`__
+uses `Log4j <http://logging.apache.org/log4j/1.2/>`__ for logging. The default
+log configuration can be overridden by specifying a custom ``log4j.properties``
+file in the `specification <specification.html>`__. When debugging issues in
+Skein itself, it can be useful to increase the log level to provide more
+information. See the `Log4j documentation
+<https://logging.apache.org/log4j/1.2/>`__ for more information.
+
+.. code-block:: none
+
+    master:
+      log_config: path/to/my/log4j.properties
 
 
 Start a Remote IPython Kernel on the Container
