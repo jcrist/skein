@@ -25,6 +25,8 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Slf4jLog;
 import org.eclipse.jetty.util.resource.Resource;
 
 import java.io.IOException;
@@ -75,8 +77,8 @@ public class WebUI {
     writeLock = rwLock.writeLock();
     readLock = rwLock.readLock();
 
-    // Set the jetty log level
-    System.setProperty("org.eclipse.jetty.LEVEL", "WARN");
+    // Setup the jetty loggers
+    Log.setLog(new Slf4jLog());
 
     // Create the server
     server = new Server(port);
