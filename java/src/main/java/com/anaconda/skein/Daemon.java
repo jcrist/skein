@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.log4j.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -262,11 +263,13 @@ public class Daemon {
     String log4jConfig = (spec.getMaster().hasLogConfig()
                           ? "-Dlog4j.configuration=file:./log4j.properties "
                           : "");
+    Level logLevel = spec.getMaster().getLogLevel();
     List<String> commands = Arrays.asList(
         (Environment.JAVA_HOME.$$() + "/bin/java "
          + "-Xmx128M "
          + log4jConfig
-         + "com.anaconda.skein.ApplicationMaster "
+         + "-Dskein.log.level=" + logLevel
+         + " com.anaconda.skein.ApplicationMaster "
          + appDir + " " + appId.toString()
          + " >" + logdir + "/appmaster.log 2>&1"));
 

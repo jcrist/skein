@@ -16,7 +16,7 @@ from .utils import implements, format_list, datetime_from_millis, runtime
 __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
            'FileVisibility', 'ACLs', 'Master', 'ApplicationState',
            'FinalStatus', 'ResourceUsageReport', 'ApplicationReport',
-           'ContainerState', 'Container')
+           'ContainerState', 'Container', 'LogLevel')
 
 
 def _pop_origin(kwargs):
@@ -567,19 +567,63 @@ class ACLs(Specification):
                    ui_users=list(obj.ui_users))
 
 
+class LogLevel(Enum):
+    """Enum of log levels.
+
+    Corresponds with ``log4j`` logging levels.
+
+    Attributes
+    ----------
+    OFF : LogLevel
+        Turns on all logging.
+    TRACE : LogLevel
+        The finest level of events.
+    DEBUG : LogLevel
+        Fine-grained informational events that are most useful to debug an
+        application.
+    INFO : LogLevel
+        Informational messages that highlight the progress of the application
+        at a coarse-grained level. The default LogLevel.
+    WARN : LogLevel
+        Potentially harmful situations that still allow the application to
+        continue running.
+    ERROR : LogLevel
+        Error events that might still allow the application to continue
+        running.
+    FATAL : LogLevel
+        Severe error events that will lead the application to abort.
+    OFF : LogLevel
+        Turns off all logging.
+    """
+    _values = ('ALL',
+               'TRACE',
+               'DEBUG',
+               'INFO',
+               'WARN',
+               'ERROR',
+               'FATAL',
+               'OFF')
+
+
 class Master(Specification):
     """Configuration for the Application Master.
 
     Parameters
     ----------
+    log_level : str or LogLevel, optional
+        The application master log level. Sets the ``skein.log.level`` system
+        property. One of {'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR',
+        'FATAL', 'OFF'} (from most to least verbose). Default is 'INFO'.
     log_config : str or File, optional
         A custom ``log4j.properties`` file to use for the application master.
         If not provided, the default logging configuration will be used.
     """
-    __slots__ = ('log_config',)
+    __slots__ = ('_log_level', 'log_config')
+    _params = ('log_level', 'log_config')
     _protobuf_cls = _proto.Master
 
-    def __init__(self, log_config=None):
+    def __init__(self, log_level=LogLevel.INFO, log_config=None):
+        self.log_level = log_level
         if isinstance(log_config, string):
             log_config = File(log_config)
         self.log_config = log_config
@@ -588,28 +632,38 @@ class Master(Specification):
     def _validate(self):
         self._check_is_type('log_config', File, nullable=True)
 
+    @property
+    def log_level(self):
+        return self._log_level
+
+    @log_level.setter
+    def log_level(self, log_level):
+        self._log_level = LogLevel(log_level)
+
     def __repr__(self):
-        return 'Master<log_config=%r>' % self.log_config
+        return 'Master<log_level=%r>' % self.log_level
 
     @classmethod
     @implements(Specification.from_dict)
     def from_dict(cls, obj, **kwargs):
         cls._check_keys(obj)
 
-        log_config = obj.get('log_config', None)
+        obj = obj.copy()
+        log_config = obj.pop('log_config', None)
         if log_config is not None:
             log_config = File.from_dict(log_config, **kwargs)
 
-        return cls(log_config=log_config)
+        return cls(log_config=log_config, **obj)
 
     @classmethod
     @implements(Specification.from_protobuf)
     def from_protobuf(cls, obj):
+        log_level = _proto.Log.Level.Name(obj.log_level)
         if obj.HasField('log_config'):
             log_config = File.from_protobuf(obj.log_config)
         else:
             log_config = None
-        return cls(log_config=log_config)
+        return cls(log_level=log_level, log_config=log_config)
 
 
 class ApplicationSpec(Specification):

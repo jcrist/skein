@@ -330,8 +330,6 @@ public class ApplicationMaster {
 
     List<Container> allocated = resp.getAllocatedContainers();
     List<ContainerStatus> completed = resp.getCompletedContainersStatuses();
-    LOG.debug("Received {} new containers, {} completed containers.",
-              allocated.size(), completed.size());
 
     if (allocated.size() > 0) {
       handleAllocated(allocated);
@@ -347,6 +345,8 @@ public class ApplicationMaster {
   }
 
   private void handleAllocated(List<Container> newContainers) {
+    LOG.debug("Received {} new containers", newContainers.size());
+
     for (Container c : newContainers) {
       Priority priority = c.getPriority();
       Resource resource = c.getResource();
@@ -363,6 +363,8 @@ public class ApplicationMaster {
   }
 
   private void handleCompleted(List<ContainerStatus> containerStatuses) {
+    LOG.debug("Received {} completed containers", containerStatuses.size());
+
     for (ContainerStatus status : containerStatuses) {
       Model.Container container = containers.get(status.getContainerId());
       if (container == null) {
@@ -380,7 +382,7 @@ public class ApplicationMaster {
           return;  // state change already handled by killContainer
         case ContainerExitStatus.SUCCESS:
           state = Model.Container.State.SUCCEEDED;
-          exitMessage = "Completed successfully";
+          exitMessage = "Completed successfully.";
           break;
         case ContainerExitStatus.KILLED_EXCEEDED_PMEM:
           state = Model.Container.State.FAILED;
@@ -398,7 +400,7 @@ public class ApplicationMaster {
           state = Model.Container.State.FAILED;
           if (status.getExitStatus() > 0) {
             // Positive error codes indicate service failure
-            exitMessage = "Container failed during execution, see logs for more information";
+            exitMessage = "Container failed during execution, see logs for more information.";
           } else {
             exitMessage = status.getDiagnostics();
           }
@@ -980,9 +982,9 @@ public class ApplicationMaster {
           }
 
           if (warn) {
-            LOG.warn("{}: {}, {}", state, container.getId(), exitMessage);
+            LOG.warn("{}: {} - {}", state, container.getId(), exitMessage);
           } else {
-            LOG.info("{}: {}, {}", state, container.getId(), exitMessage);
+            LOG.info("{}: {} - {}", state, container.getId(), exitMessage);
           }
 
           container.setState(state);

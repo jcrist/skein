@@ -328,6 +328,21 @@ def test_custom_log4j_properties(client, tmpdir):
     assert 'CUSTOM-LOG4J-SUCCEEDED' in logs
 
 
+def test_set_log_level(client):
+    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+                            commands=['ls'])
+    spec = skein.ApplicationSpec(name="test_custom_log4j_properties",
+                                 queue="default",
+                                 master=skein.Master(log_level='debug'),
+                                 services={'service': service})
+
+    with run_application(client, spec=spec) as app:
+        assert wait_for_completion(client, app.id) == 'SUCCEEDED'
+
+    logs = get_logs(app.id)
+    assert 'DEBUG' in logs
+
+
 def test_memory_limit_exceeded(client):
     # Allocate noticeably more memory than the 128 MB limit
     service = skein.Service(

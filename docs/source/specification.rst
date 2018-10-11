@@ -134,6 +134,12 @@ common use the defaults should be sufficient.
 
 Supported subfields are:
 
+- ``log_level``: The application master log level. Possible values are (from
+  most to least verbose): ``all``, ``trace``, ``debug``, ``info``, ``warn``,
+  ``error``, ``fatal`` or ``off``. Default is ``info``. Note that this sets
+  the ``skein.log.level`` system property, which is used in the default
+  ``log4j.properties`` file - if you provide your own ``log4j.properties`` file
+  this field may have no effect.
 - ``log_config``: a path to a custom ``log4j.properties`` file. Could be local
   or on a remote filesystem. If not provided, a default logging configuration
   is used. See the `Log4j documentation <https://logging.apache.org/log4j/1.2/>`__
