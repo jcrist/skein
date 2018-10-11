@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Skein &#8212; Skein 0.1.1+26.ge94cbce documentation</title>
+    <title>Skein &#8212; Skein 0.1.1+27.g8572ea5 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -43,13 +43,31 @@
 <li><em>A quantity of yarn, thread, or the like, put up together, after it is taken from the reel.</em></li>
 </ol>
 </div></blockquote>
-<p>Skein is a simple library and command line interface (CLI) for deploying
+<p>Skein is a simple library and command-line interface (CLI) for deploying
 applications on <a class="reference external" href="https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YARN.html">Apache YARN</a>.
 While YARN has many features that make it powerful for developing resilient
 applications, these features also can make it difficult for developers to use.</p>
 <p>Skein is easy to use, providing just as much YARN as your project needs.</p>
+<div class="section" id="highlights">
+<h2>Highlights<a class="headerlink" href="#highlights" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>No Java required! Compose and deploy applications using either the native
+<a class="reference external" href="api.html">Python API</a> or the <a class="reference external" href="cli.html">CLI</a>.</li>
+<li>A declarative, language independent <a class="reference external" href="specification.html">specification</a>
+allowing applications to be deployed in any language.</li>
+<li>Support for dynamic applications. Containers can be started and stopped at
+runtime, allowing for services to scale to your needs.</li>
+<li>An internal <a class="reference internal" href="key-value-store.html"><span class="doc">Key-Value Store</span></a> for coordinating state between application
+containers.</li>
+<li>An extensible <a class="reference internal" href="web-ui.html"><span class="doc">Web UI</span></a> for tracking and interacting with applications.</li>
+<li>A <a class="reference external" href="https://travis-ci.org/jcrist/skein">rigorous test suite</a>. Skein is
+tested on multiple YARN configurations to ensure wide support.</li>
+</ul>
+</div>
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>Skein doesn’t require elevated user privileges or cluster-wide configuration to
+use. Simply install it on an edge node and get started.</p>
 <p><strong>Install with Conda:</strong></p>
 <div class="code highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">install</span> <span class="o">-</span><span class="n">c</span> <span class="n">conda</span><span class="o">-</span><span class="n">forge</span> <span class="n">skein</span>
 </pre></div>
