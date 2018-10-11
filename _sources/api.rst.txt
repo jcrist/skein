@@ -158,6 +158,10 @@ Application Specification
     :members:
     :inherited-members:
 
+.. autoclass:: Master
+    :members:
+    :inherited-members:
+
 
 Application Responses
 ---------------------
