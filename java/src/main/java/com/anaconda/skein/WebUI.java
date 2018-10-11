@@ -16,8 +16,6 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.webproxy.amfilter.AmIpFilter;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.eclipse.jetty.rewrite.handler.RedirectPatternRule;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Server;
@@ -28,6 +26,8 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Slf4jLog;
 import org.eclipse.jetty.util.resource.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -53,7 +53,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class WebUI {
-  private static final Logger LOG = LogManager.getLogger(WebUI.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WebUI.class);
 
   private final Map<String, Msg.Proxy> routeToProxy = new HashMap<String, Msg.Proxy>();
   protected final Map<String, String> nameToRoute = new TreeMap<String, String>();
@@ -93,7 +93,7 @@ public class WebUI {
         WebUI.class.getResource("/META-INF/resources/favicon.ico").toURI()
                    .toASCIIString().replaceFirst("/favicon.ico$", "/")
     );
-    LOG.info("Serving resources from: " + baseURI);
+    LOG.debug("Serving resources from {}", baseURI);
     context.setBaseResource(Resource.newResource(baseURI));
     context.addServlet(new ServletHolder("default", DefaultServlet.class), "/");
 
@@ -138,6 +138,7 @@ public class WebUI {
           Joiner.on(AmIpFilter.PROXY_URI_BASES_DELIMITER).join(proxyURIBases));
 
       if (users != null) {
+        LOG.info("UI ACLs are enabled, restricted to {} users", users.size());
         context.addFilter(new FilterHolder(new AccessFilter(users)),
                           "/*", EnumSet.allOf(DispatcherType.class));
       }
@@ -238,6 +239,9 @@ public class WebUI {
       writeLock.unlock();
     }
 
+    LOG.info("Added proxied page [route: '{}', target: '{}', name: '{}']",
+             route, target, name);
+
     resp.onNext(MsgUtils.EMPTY);
     resp.onCompleted();
   }
@@ -264,6 +268,8 @@ public class WebUI {
     } finally {
       writeLock.unlock();
     }
+
+    LOG.info("Removed proxied page [route: '{}']", route);
 
     resp.onNext(MsgUtils.EMPTY);
     resp.onCompleted();
@@ -299,7 +305,7 @@ public class WebUI {
 
   public static void main(String[] args) {
     if (args.length != 1) {
-      LOG.fatal("Usage: <command> port");
+      LOG.error("Usage: <command> port");
       System.exit(1);
     }
     int port = Integer.parseInt(args[0]);
@@ -352,7 +358,7 @@ public class WebUI {
       webui.nameToRoute.put("name2", "page2");
       webui.start();
     } catch (Throwable exc) {
-      LOG.fatal("Error running WebUI", exc);
+      LOG.error("Error running WebUI", exc);
       System.exit(1);
     }
   }

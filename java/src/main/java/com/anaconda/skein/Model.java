@@ -266,6 +266,7 @@ public class Model {
     private long finishTime;
     private ContainerRequest req;
     private Set<String> ownedKeys;
+    private String exitMessage;
 
     public Container() {}
 
@@ -337,6 +338,9 @@ public class Model {
 
     public void setFinishTime(long finishTime) { this.finishTime = finishTime; }
     public long getFinishTime() { return finishTime; }
+
+    public void setExitMessage(String diagnostics) { this.exitMessage = diagnostics; }
+    public String getExitMessage() { return exitMessage; }
 
     public void setContainerRequest(ContainerRequest req) { this.req = req; }
     public ContainerRequest popContainerRequest() {
