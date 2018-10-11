@@ -61,7 +61,7 @@ run:
 .. code:: console
 
     # Start the application
-    $ appid=`skein application submit spec.yaml`
+    $ APPID=`skein application submit spec.yaml`
 
 
 The pricing dashboard will then be accessible through the Skein Web UI, under
@@ -74,4 +74,4 @@ The dashboard will run until shutdown. To shutdown the application run:
 
 .. code:: console
 
-    $ skein application shutdown $appid
+    $ skein application shutdown $APPID
