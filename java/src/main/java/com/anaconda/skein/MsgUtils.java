@@ -390,6 +390,10 @@ public class MsgUtils {
     if (nodeHttpAddress != null) {
       builder.setYarnNodeHttpAddress(nodeHttpAddress);
     }
+    String exitMessage = container.getExitMessage();
+    if (exitMessage != null) {
+      builder.setExitMessage(exitMessage);
+    }
     return builder.build();
   }
 
@@ -401,6 +405,7 @@ public class MsgUtils {
     out.setYarnContainerId(ContainerId.fromString(container.getYarnContainerId()));
     out.setStartTime(container.getStartTime());
     out.setFinishTime(container.getFinishTime());
+    out.setExitMessage(container.getExitMessage());
     return out;
   }
 }

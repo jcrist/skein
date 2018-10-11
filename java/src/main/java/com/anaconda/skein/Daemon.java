@@ -41,8 +41,8 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -64,7 +64,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 public class Daemon {
 
-  private static final Logger LOG = LogManager.getLogger(Daemon.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Daemon.class);
 
   // One for the boss, one for the worker. Should be fine under normal loads.
   private static final int NUM_EVENT_LOOP_GROUP_THREADS = 2;
@@ -132,7 +132,7 @@ public class Daemon {
         .build()
         .start();
 
-    LOG.info("Server started, listening on " + server.getPort());
+    LOG.info("Daemon started, listening on {}", server.getPort());
 
     Runtime.getRuntime().addShutdownHook(
         new Thread() {
@@ -145,9 +145,8 @@ public class Daemon {
 
   private void stopServer() {
     if (server != null) {
-      LOG.info("Shutting down gRPC server");
       server.shutdown();
-      LOG.info("gRPC server shut down");
+      LOG.info("Daemon shut down");
     }
   }
 
@@ -160,7 +159,7 @@ public class Daemon {
       daemon.run();
       System.exit(0);
     } catch (Throwable exc) {
-      LOG.fatal("Error running Daemon", exc);
+      LOG.error("Error running Daemon", exc);
       System.exit(1);
     }
   }
@@ -168,7 +167,7 @@ public class Daemon {
   private void init(String[] args) throws IOException {
     String callbackPortEnv = System.getenv("SKEIN_CALLBACK_PORT");
     if (callbackPortEnv == null) {
-      LOG.fatal("Couldn't find 'SKEIN_CALLBACK_PORT' envar");
+      LOG.error("Couldn't find 'SKEIN_CALLBACK_PORT' envar");
       System.exit(1);
     }
     callbackPort = Integer.valueOf(callbackPortEnv);
@@ -176,7 +175,7 @@ public class Daemon {
     // Parse arguments
     if (args.length < 3 || args.length > 4
         || (args.length == 4 && !args[3].equals("--daemon"))) {
-      LOG.fatal("Usage: COMMAND jarPath certPath keyPath [--daemon]");
+      LOG.error("Usage: COMMAND jarPath certPath keyPath [--daemon]");
       System.exit(1);
     }
     jarPath = args[0];
@@ -311,6 +310,7 @@ public class Daemon {
         Path appDir) throws IOException {
 
     // Make the ~/.skein/app_id dir
+    LOG.info("Uploading application resources to {}", appDir);
     FileSystem.mkdirs(defaultFs, appDir, SKEIN_DIR_PERM);
 
     Map<Path, Path> uploadCache = new HashMap<Path, Path>();
@@ -339,7 +339,7 @@ public class Daemon {
 
     // Write the application specification to file
     Path specPath = new Path(appDir, ".skein.proto");
-    LOG.info("Writing application specification to " + specPath);
+    LOG.debug("Writing application specification to {}", specPath);
     OutputStream out = defaultFs.create(specPath);
     try {
       MsgUtils.writeApplicationSpec(spec).writeTo(out);
@@ -366,7 +366,7 @@ public class Daemon {
 
     // Write the service script to file
     final Path scriptPath = new Path(appDir, serviceName + ".sh");
-    LOG.info("SERVICE: " + serviceName + " - writing script to " + scriptPath);
+    LOG.debug("Writing script for service '{}' to {}", serviceName, scriptPath);
 
     OutputStream out = defaultFs.create(scriptPath);
     try {
@@ -441,7 +441,7 @@ public class Daemon {
         } else {
           dstPath = new Path(appDir, srcPath.getName());
         }
-        LOG.info("Uploading " + srcPath + " to " + dstPath);
+        LOG.debug("Uploading {} to {}", srcPath, dstPath);
         FileUtil.copy(srcFs, srcPath, dstFs, dstPath, false, conf);
         dstFs.setPermission(dstPath, SKEIN_FILE_PERM);
       }
@@ -497,19 +497,19 @@ public class Daemon {
               // Get report
               report = yarnClient.getApplicationReport(appId);
             } catch (Exception exc) {
-              LOG.warn("Failed to get report for " + appId.toString()
-                       + ". Notifying " + callbacks.size() + " callbacks.");
+              LOG.warn("Failed to get report for {}. Notifying {} callbacks.",
+                       appId.toString(), callbacks.size());
               for (StreamObserver<Msg.ApplicationReport> resp : callbacks) {
                 // Send error
                 try {
                   resp.onError(Status.INTERNAL
                       .withDescription("Failed to get applications, exception:\n"
-                                      + exc.getMessage())
+                                       + exc.getMessage())
                       .asRuntimeException());
                 } catch (StatusRuntimeException cbExc) {
                   if (cbExc.getStatus().getCode() != Status.Code.CANCELLED) {
-                    LOG.warn("Callback failed for app_id: " + appId.toString()
-                             + ", status: " + cbExc.getStatus());
+                    LOG.warn("Callback failed for app_id: {}, status: {}",
+                             appId.toString(), cbExc.getStatus());
                   }
                 }
               }
@@ -517,8 +517,8 @@ public class Daemon {
             }
 
             if (hasStarted(report)) {
-              LOG.info("Notifying that " + appId.toString() + " has started. "
-                       + callbacks.size() + " callbacks registered.");
+              LOG.debug("Notifying that {} has started. {} callbacks registered.",
+                        appId.toString(), callbacks.size());
               for (StreamObserver<Msg.ApplicationReport> resp : callbacks) {
                 // Send report
                 try {
@@ -526,8 +526,8 @@ public class Daemon {
                   resp.onCompleted();
                 } catch (StatusRuntimeException cbExc) {
                   if (cbExc.getStatus().getCode() != Status.Code.CANCELLED) {
-                    LOG.warn("Callback failed for app_id: " + appId.toString()
-                             + ", status: " + cbExc.getStatus());
+                    LOG.warn("Callback failed for app_id: {}, status: {}",
+                             appId.toString(), cbExc.getStatus());
                   }
                 }
               }
@@ -541,7 +541,7 @@ public class Daemon {
           }
 
           // Remove callbacks for this appId
-          LOG.info("Removing callbacks for " + appId.toString());
+          LOG.debug("Removing callbacks for {}.", appId.toString());
           synchronized (Daemon.this) {
             startedCallbacks.remove(appId);
           }
@@ -695,6 +695,7 @@ public class Daemon {
       // Delete the application directory
       Path appDir = getAppDir(report.getApplicationId());
       try {
+        LOG.debug("Deleting application directory {}", appDir);
         if (defaultFs.exists(appDir)) {
           defaultFs.delete(appDir, true);
         }

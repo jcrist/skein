@@ -23,6 +23,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Utils {
   public static <T> T popfirst(Set<T> s) {
@@ -43,6 +45,18 @@ public class Utils {
       out[j * 2 + 1] = HEX[v & 0x0F];
     }
     return new String(out);
+  }
+
+  private static final String MEM_REGEX = "[0-9.]+ [KMG]B";
+  public static final Pattern EXCEEDED_PMEM_PATTERN =
+      Pattern.compile(MEM_REGEX + " of " + MEM_REGEX + " physical memory used");
+  public static final Pattern EXCEEDED_VMEM_PATTERN =
+      Pattern.compile(MEM_REGEX + " of " + MEM_REGEX + " virtual memory used");
+
+  public static String formatExceededMemMessage(String diagnostics, Pattern pattern) {
+    Matcher matcher = pattern.matcher(diagnostics);
+    return (matcher.find() ? matcher.group() :
+            "Container killed by YARN for exceeding memory limits");
   }
 
   public static final class CustomThreadFactory implements ThreadFactory {

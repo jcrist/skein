@@ -9,7 +9,7 @@ import pytest
 import skein
 from skein.exceptions import FileNotFoundError, FileExistsError
 from skein.test.conftest import (run_application, wait_for_containers,
-                                 wait_for_success, get_logs)
+                                 wait_for_completion, get_logs)
 
 
 def test_properties():
@@ -217,6 +217,8 @@ def test_dynamic_containers(client):
         killed = app.get_containers(states=['killed'])
         assert len(killed) == 3
         assert [c.instance for c in killed] == [0, 1, 3]
+        # All completed containers have an exit message
+        assert all(c.exit_message for c in killed)
 
         # Can't scale non-existant service
         with pytest.raises(ValueError):
@@ -255,7 +257,7 @@ def test_container_environment(client, has_kerberos_enabled):
                                  services={'service': service})
 
     with run_application(client, spec=spec) as app:
-        wait_for_success(client, app.id)
+        assert wait_for_completion(client, app.id) == 'SUCCEEDED'
 
     logs = get_logs(app.id)
     assert "USER=testuser" in logs
@@ -283,7 +285,7 @@ def test_file_systems(client):
                                  file_systems=["hdfs://master.example.com:9000"])
 
     with run_application(client, spec=spec) as app:
-        wait_for_success(client, app.id)
+        assert wait_for_completion(client, app.id) == 'SUCCEEDED'
 
 
 def test_kill_application_removes_appdir(client):
@@ -299,8 +301,6 @@ def test_kill_application_removes_appdir(client):
 custom_log4j_properties = """
 # Root logger option
 log4j.rootCategory=INFO, console
-log4j.logger.com.anaconda.skein.ApplicationMaster=INFO
-log4j.logger.com.anaconda.skein.WebUI=INFO
 
 # Redirect log messages to console
 log4j.appender.console=org.apache.log4j.ConsoleAppender
@@ -322,7 +322,22 @@ def test_custom_log4j_properties(client, tmpdir):
         f.write(custom_log4j_properties)
 
     with run_application(client, spec=spec) as app:
-        wait_for_success(client, app.id)
+        assert wait_for_completion(client, app.id) == 'SUCCEEDED'
 
     logs = get_logs(app.id)
     assert 'CUSTOM-LOG4J-SUCCEEDED' in logs
+
+
+def test_memory_limit_exceeded(client):
+    # Allocate noticeably more memory than the 128 MB limit
+    service = skein.Service(
+        resources=skein.Resources(memory=128, vcores=1),
+        commands=['python -c "b = bytearray(int(256e6)); import time; time.sleep(10)"']
+    )
+    spec = skein.ApplicationSpec(name="test_memory_limit_exceeded",
+                                 queue="default",
+                                 services={"service": service})
+    with run_application(client, spec=spec) as app:
+        assert wait_for_completion(client, app.id) == "FAILED"
+    logs = get_logs(app.id)
+    assert "memory used" in logs
