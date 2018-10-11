@@ -87,6 +87,9 @@ class Enum(with_metaclass(EnumMeta)):
         return (self is other or
                 (isinstance(other, string) and self._value == other.upper()))
 
+    def __ne__(self, other):
+        return not (self == other)
+
     def __hash__(self):
         return hash(self._value)
 

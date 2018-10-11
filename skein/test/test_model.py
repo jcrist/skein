@@ -372,6 +372,7 @@ def test_enums():
     assert ApplicationState.RUNNING is ApplicationState(ApplicationState.RUNNING)
     assert ApplicationState.RUNNING == ApplicationState.RUNNING
     assert ApplicationState.RUNNING == 'RUNNING'
+    assert not ApplicationState.RUNNING != 'RUNNING'
     assert ApplicationState.RUNNING == 'running'
     assert ApplicationState.RUNNING != 'foo'
 
