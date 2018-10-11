@@ -14,6 +14,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.log4j.Level;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -319,8 +320,53 @@ public class MsgUtils {
     );
   }
 
+  public static Msg.Log.Level writeLogLevel(Level logLevel) {
+    switch (logLevel.toInt()) {
+      case Level.INFO_INT:
+        return Msg.Log.Level.INFO;
+      case Level.ALL_INT:
+        return Msg.Log.Level.ALL;
+      case Level.TRACE_INT:
+        return Msg.Log.Level.TRACE;
+      case Level.DEBUG_INT:
+        return Msg.Log.Level.DEBUG;
+      case Level.WARN_INT:
+        return Msg.Log.Level.WARN;
+      case Level.ERROR_INT:
+        return Msg.Log.Level.ERROR;
+      case Level.FATAL_INT:
+        return Msg.Log.Level.FATAL;
+      case Level.OFF_INT:
+        return Msg.Log.Level.OFF;
+    }
+    return null; // appease the compiler, but can't get here
+  }
+
+  public static Level readLogLevel(Msg.Log.Level logLevel) {
+    switch (logLevel) {
+      case INFO:
+        return Level.INFO;
+      case ALL:
+        return Level.ALL;
+      case TRACE:
+        return Level.TRACE;
+      case DEBUG:
+        return Level.DEBUG;
+      case WARN:
+        return Level.WARN;
+      case ERROR:
+        return Level.ERROR;
+      case FATAL:
+        return Level.FATAL;
+      case OFF:
+        return Level.OFF;
+    }
+    return null; // appease the compiler, but can't get here
+  }
+
   public static Msg.Master writeMaster(Model.Master master) {
-    Msg.Master.Builder builder = Msg.Master.newBuilder();
+    Msg.Master.Builder builder = Msg.Master.newBuilder()
+        .setLogLevel(writeLogLevel(master.getLogLevel()));
 
     if (master.hasLogConfig()) {
       builder.setLogConfig(writeFile(master.getLogConfig()));
@@ -333,7 +379,8 @@ public class MsgUtils {
     if (master.hasLogConfig()) {
       logConfig = readFile(master.getLogConfig());
     }
-    return new Model.Master(logConfig);
+    Level logLevel = readLogLevel(master.getLogLevel());
+    return new Model.Master(logConfig, logLevel);
   }
 
   public static Msg.ApplicationSpec writeApplicationSpec(Model.ApplicationSpec spec) {

@@ -9,6 +9,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.log4j.Level;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -158,14 +159,19 @@ public class Model {
 
   public static class Master {
     private LocalResource logConfig;
+    private Level logLevel;
 
-    public Master(LocalResource logConfig) {
+    public Master(LocalResource logConfig, Level logLevel) {
       this.logConfig = logConfig;
+      this.logLevel = logLevel;
     }
 
     public void setLogConfig(LocalResource logConfig) { this.logConfig = logConfig; }
     public LocalResource getLogConfig() { return this.logConfig; }
     public boolean hasLogConfig() { return this.logConfig != null; }
+
+    public void setLogLevel(Level logLevel) { this.logLevel = logLevel; }
+    public Level getLogLevel() { return this.logLevel; }
   }
 
   public static class ApplicationSpec {

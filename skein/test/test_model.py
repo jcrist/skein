@@ -10,7 +10,8 @@ import pytest
 from skein.compatibility import UTC
 from skein.model import (ApplicationSpec, Service, Resources, File,
                          ApplicationState, FinalStatus, FileType, ACLs, Master,
-                         Container, ApplicationReport, ResourceUsageReport)
+                         Container, ApplicationReport, ResourceUsageReport,
+                         LogLevel)
 
 
 def indent(s, n):
@@ -171,8 +172,8 @@ def test_acls_invariants():
 
 
 def test_master():
-    m1 = Master()
-    m2 = Master(log_config='/test/path.properties')
+    m1 = Master(log_level='info', log_config='/test/path.properties')
+    m2 = Master(log_level='debug')
     check_specification_methods(m1, m2)
 
 
@@ -181,13 +182,19 @@ def test_master_invariants():
         Master(log_config=1)
 
     # Strings are converted to File objects
-    m = Master('/test/path.properties')
+    m = Master(log_config='/test/path.properties')
     assert isinstance(m.log_config, File)
     assert m.log_config.type == 'file'
 
     # Relative paths are converted
     sol = 'file://%s' % os.path.join(os.getcwd(), 'foo/bar.properties')
     assert Master(log_config='foo/bar.properties').log_config.source == sol
+
+    # setter/getter
+    f = Master(log_level='debug')
+    assert f.log_level == LogLevel.DEBUG
+    f.log_level = 'info'
+    assert f.log_level == LogLevel.INFO
 
 
 def test_service():

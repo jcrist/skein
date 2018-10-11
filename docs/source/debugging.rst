@@ -65,16 +65,24 @@ Configuring Logging in the Application Master
 
 Skein's `Application Master
 <https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YARN.html>`__
-uses `Log4j <http://logging.apache.org/log4j/1.2/>`__ for logging. The default
-log configuration can be overridden by specifying a custom ``log4j.properties``
-file in the `specification <specification.html>`__. When debugging issues in
+uses `Log4j <http://logging.apache.org/log4j/1.2/>`__ for logging.
+When debugging issues in
 Skein itself, it can be useful to increase the log level to provide more
-information. See the `Log4j documentation
-<https://logging.apache.org/log4j/1.2/>`__ for more information.
+information. This can be accomplished two different ways:
+
+- Change the logging level with the ``log_level`` field (``debug`` is a good option).
+- Override the defaul log configuration by specifying a custom
+  ``log4j.properties`` file in the `specification <specification.html>`__. This
+  allows you to increase the logging level for component libraries as well. See
+  the `Log4j documentation <https://logging.apache.org/log4j/1.2/>`__ for more
+  information on configuration files.
 
 .. code-block:: none
 
     master:
+      # Change the log level to debug
+      log_level: debug
+      # OR provide a custom log configuration file
       log_config: path/to/my/log4j.properties
 
 
