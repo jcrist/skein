@@ -1,0 +1,19 @@
+name: dashboard
+
+services:
+    dashboard:
+        resources:
+            vcores: 1
+            memory: 256
+        files:
+            # A packaged conda or virtual environment to be distributed with
+            # the application. During YARN resource localization this will be
+            # automatically unpacked into the directory ``environment``.
+            environment: environment.tar.gz
+            # The dashboard implementation.
+            dashboard.py: dashboard.py
+        commands:
+            # Activate the conda or virtual environment
+            - source environment/bin/activate
+            # Start the dashboard
+            - python dashboard.py

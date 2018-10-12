@@ -116,6 +116,17 @@ Key Value Store
     :members:
 
 
+Web UI
+------
+
+.. autoclass:: skein.ui.WebUI
+    :members:
+    :member-order: bysource
+
+.. autoclass:: skein.ui.ProxiedPage
+    :members:
+
+
 Application Specification
 -------------------------
 
@@ -140,6 +151,14 @@ Application Specification
     :inherited-members:
 
 .. autoclass:: Resources
+    :members:
+    :inherited-members:
+
+.. autoclass:: ACLs
+    :members:
+    :inherited-members:
+
+.. autoclass:: Master
     :members:
     :inherited-members:
 

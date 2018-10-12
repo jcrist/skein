@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 
 from .skein_pb2 import (Empty, FinalStatus, ApplicationState, Resources, File,
-                        Service, ApplicationSpec, ResourceUsageReport,
-                        ApplicationReport, Application, ApplicationsRequest,
-                        Url, ContainersRequest, Container, ContainerInstance,
-                        ScaleRequest, ShutdownRequest)
+                        Service, Acls, Log, Master, ApplicationSpec,
+                        ResourceUsageReport, ApplicationReport, Application,
+                        ApplicationsRequest, Url, ContainersRequest, Container,
+                        ContainerInstance, ScaleRequest, ShutdownRequest)
 from .skein_pb2 import (GetRangeRequest, GetRangeResponse,
                         PutKeyRequest, PutKeyResponse,
                         DeleteRangeRequest, DeleteRangeResponse,
@@ -12,4 +12,6 @@ from .skein_pb2 import (GetRangeRequest, GetRangeResponse,
                         TransactionRequest, TransactionResponse,
                         WatchRequest, WatchCreateRequest, WatchCancelRequest,
                         WatchResponse)
-from .skein_pb2_grpc import DaemonStub, MasterStub
+from .skein_pb2 import (Proxy, RemoveProxyRequest, UIInfoRequest, UIInfoResponse,
+                        GetProxiesRequest, GetProxiesResponse)
+from .skein_pb2_grpc import DaemonStub, AppMasterStub

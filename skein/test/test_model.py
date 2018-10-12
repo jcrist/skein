@@ -9,8 +9,9 @@ import pytest
 
 from skein.compatibility import UTC
 from skein.model import (ApplicationSpec, Service, Resources, File,
-                         ApplicationState, FinalStatus, FileType,
-                         Container, ApplicationReport, ResourceUsageReport)
+                         ApplicationState, FinalStatus, FileType, ACLs, Master,
+                         Container, ApplicationReport, ResourceUsageReport,
+                         LogLevel)
 
 
 def indent(s, n):
@@ -47,6 +48,11 @@ tags:
     - tag2
 file_systems:
     - hdfs://preprod
+
+acls:
+    enable: true
+    view_users:
+        - '*'
 
 services:
     service_1:
@@ -151,6 +157,46 @@ def test_file_invariants():
     assert f.type == FileType.FILE
     f.type = 'archive'
     assert f.type == FileType.ARCHIVE
+
+
+def test_acls():
+    acl1 = ACLs()
+    acl2 = ACLs(enable=True, view_users=['ted', 'nancy'])
+    check_specification_methods(acl1, acl2)
+
+
+def test_acls_invariants():
+    with pytest.raises(TypeError):
+        ACLs(enable=1)
+
+    with pytest.raises(TypeError):
+        ACLs(view_users="*")
+
+
+def test_master():
+    m1 = Master(log_level='info', log_config='/test/path.properties')
+    m2 = Master(log_level='debug')
+    check_specification_methods(m1, m2)
+
+
+def test_master_invariants():
+    with pytest.raises(TypeError):
+        Master(log_config=1)
+
+    # Strings are converted to File objects
+    m = Master(log_config='/test/path.properties')
+    assert isinstance(m.log_config, File)
+    assert m.log_config.type == 'file'
+
+    # Relative paths are converted
+    sol = 'file://%s' % os.path.join(os.getcwd(), 'foo/bar.properties')
+    assert Master(log_config='foo/bar.properties').log_config.source == sol
+
+    # setter/getter
+    f = Master(log_level='debug')
+    assert f.log_level == LogLevel.DEBUG
+    f.log_level = 'info'
+    assert f.log_level == LogLevel.INFO
 
 
 def test_service():
@@ -292,6 +338,8 @@ def test_application_spec_from_yaml():
     assert spec.tags == {'tag1', 'tag2'}
     assert spec.file_systems == ['hdfs://preprod']
     assert spec.max_attempts == 2
+    assert spec.acls.enable
+    assert spec.acls.view_users == ['*']
     assert isinstance(spec.services, dict)
     assert isinstance(spec.services['service_1'], Service)
 
@@ -329,6 +377,7 @@ def test_enums():
     assert ApplicationState.RUNNING is ApplicationState(ApplicationState.RUNNING)
     assert ApplicationState.RUNNING == ApplicationState.RUNNING
     assert ApplicationState.RUNNING == 'RUNNING'
+    assert not ApplicationState.RUNNING != 'RUNNING'
     assert ApplicationState.RUNNING == 'running'
     assert ApplicationState.RUNNING != 'foo'
 
@@ -364,7 +413,8 @@ def test_container():
     kwargs = dict(service_name="foo",
                   instance=0,
                   yarn_container_id='container_1528138529205_0038_01_000001',
-                  yarn_node_http_address='localhost:14420')
+                  yarn_node_http_address='localhost:14420',
+                  exit_message="")
 
     c = Container(state='RUNNING',
                   start_time=start,

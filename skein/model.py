@@ -14,9 +14,9 @@ from .exceptions import context
 from .utils import implements, format_list, datetime_from_millis, runtime
 
 __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
-           'FileVisibility', 'ApplicationState', 'FinalStatus',
-           'ResourceUsageReport', 'ApplicationReport', 'ContainerState',
-           'Container')
+           'FileVisibility', 'ACLs', 'Master', 'ApplicationState',
+           'FinalStatus', 'ResourceUsageReport', 'ApplicationReport',
+           'ContainerState', 'Container', 'LogLevel')
 
 
 def _pop_origin(kwargs):
@@ -466,6 +466,212 @@ class Service(Specification):
         return cls(**kwargs)
 
 
+class ACLs(Specification):
+    """Skein Access Control Lists.
+
+    Maps access types to users/groups to provide that access.
+
+    The following access types are supported:
+
+    - VIEW : view application details
+    - MODIFY : modify the application via YARN (e.g. killing the application)
+    - UI : access the application Web UI
+
+    The VIEW and MODIFY access types are handled by YARN directly; permissions
+    for these can be set by users and/or groups. Authorizing UI access is
+    handled by Skein internally, and only user-level access control is
+    supported.
+
+    The application owner (the user who submitted the application) will always
+    have permission for all access types.
+
+    By default, ACLs are disabled - to enable, set ``enable=True``. If enabled,
+    access is restricted only to the application owner by default - add
+    users/groups to the access types you wish to expand to other users.
+
+    Parameters
+    ----------
+    enable : bool, optional
+        If True, the ACLs will be enforced. Default is False.
+    view_users, view_groups : list, optional
+        Lists of users/groups to give VIEW access to this application. If both
+        are empty, only the application owner has access (default). If either
+        contains ``"*"``, all users are given access (default). See the YARN
+        documentation for more information on what VIEW access entails.
+    modify_users, modify_groups : list, optional
+        Lists of users/groups to give MODIFY access to this application. If
+        both are empty, only the application owner has access (default). If
+        either contains ``"*"``, all users are given access (default). See the
+        YARN documentation for more information on what MODIFY access entails.
+    ui_users : list, optional
+        A list of users to give access to the application Web UI. If empty,
+        only the application owner has access (default). If it contains
+        ``"*"``, all users are given access.
+
+    Examples
+    --------
+    By default ACLs are disabled, and all users have access.
+
+    >>> import skein
+    >>> acls = skein.ACLs()
+
+    Enabling ACLs results in only the application owner having access (provided
+    YARN is also configured with ACLs enabled).
+
+    >>> acls = skein.ACLs(enable=True)
+
+    To give access to other users, add users/groups to the desired access
+    types. Here we enable view access for all users in group ``engineering``,
+    and modify access for user ``nancy``.
+
+    >>> acls = skein.ACLs(enable=True,
+    ...                   view_groups=['engineering'],
+    ...                   modify_users=['nancy'])
+
+    You can use the wildcard character ``"*"`` to enable access for all users.
+    Here we give view access to all users:
+
+    >>> acls = skein.ACLs(enable=True,
+    ...                   view_users=['*'])
+    """
+    __slots__ = ('enable', 'view_users', 'view_groups', 'modify_users',
+                 'modify_groups', 'ui_users')
+    _protobuf_cls = _proto.Acls
+
+    def __init__(self, enable=False, view_users=None, view_groups=None,
+                 modify_users=None, modify_groups=None, ui_users=None):
+        self.enable = enable
+        self.view_users = [] if view_users is None else view_users
+        self.view_groups = [] if view_groups is None else view_groups
+        self.modify_users = [] if modify_users is None else modify_users
+        self.modify_groups = [] if modify_groups is None else modify_groups
+        self.ui_users = [] if ui_users is None else ui_users
+        self._validate()
+
+    def __repr__(self):
+        return 'ACLs<enable=%r, ...>' % self.enable
+
+    def _validate(self):
+        self._check_is_type('enable', bool)
+        self._check_is_list_of('view_users', string)
+        self._check_is_list_of('view_groups', string)
+        self._check_is_list_of('modify_users', string)
+        self._check_is_list_of('modify_groups', string)
+        self._check_is_list_of('ui_users', string)
+
+    @classmethod
+    @implements(Specification.from_protobuf)
+    def from_protobuf(cls, obj):
+        if not isinstance(obj, cls._protobuf_cls):
+            raise TypeError("Expected message of type "
+                            "%r" % cls._protobuf_cls.__name__)
+        return cls(enable=obj.enable,
+                   view_users=list(obj.view_users),
+                   view_groups=list(obj.view_groups),
+                   modify_users=list(obj.modify_users),
+                   modify_groups=list(obj.modify_groups),
+                   ui_users=list(obj.ui_users))
+
+
+class LogLevel(Enum):
+    """Enum of log levels.
+
+    Corresponds with ``log4j`` logging levels.
+
+    Attributes
+    ----------
+    OFF : LogLevel
+        Turns on all logging.
+    TRACE : LogLevel
+        The finest level of events.
+    DEBUG : LogLevel
+        Fine-grained informational events that are most useful to debug an
+        application.
+    INFO : LogLevel
+        Informational messages that highlight the progress of the application
+        at a coarse-grained level. The default LogLevel.
+    WARN : LogLevel
+        Potentially harmful situations that still allow the application to
+        continue running.
+    ERROR : LogLevel
+        Error events that might still allow the application to continue
+        running.
+    FATAL : LogLevel
+        Severe error events that will lead the application to abort.
+    OFF : LogLevel
+        Turns off all logging.
+    """
+    _values = ('ALL',
+               'TRACE',
+               'DEBUG',
+               'INFO',
+               'WARN',
+               'ERROR',
+               'FATAL',
+               'OFF')
+
+
+class Master(Specification):
+    """Configuration for the Application Master.
+
+    Parameters
+    ----------
+    log_level : str or LogLevel, optional
+        The application master log level. Sets the ``skein.log.level`` system
+        property. One of {'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR',
+        'FATAL', 'OFF'} (from most to least verbose). Default is 'INFO'.
+    log_config : str or File, optional
+        A custom ``log4j.properties`` file to use for the application master.
+        If not provided, the default logging configuration will be used.
+    """
+    __slots__ = ('_log_level', 'log_config')
+    _params = ('log_level', 'log_config')
+    _protobuf_cls = _proto.Master
+
+    def __init__(self, log_level=LogLevel.INFO, log_config=None):
+        self.log_level = log_level
+        if isinstance(log_config, string):
+            log_config = File(log_config)
+        self.log_config = log_config
+        self._validate()
+
+    def _validate(self):
+        self._check_is_type('log_config', File, nullable=True)
+
+    @property
+    def log_level(self):
+        return self._log_level
+
+    @log_level.setter
+    def log_level(self, log_level):
+        self._log_level = LogLevel(log_level)
+
+    def __repr__(self):
+        return 'Master<log_level=%r>' % self.log_level
+
+    @classmethod
+    @implements(Specification.from_dict)
+    def from_dict(cls, obj, **kwargs):
+        cls._check_keys(obj)
+
+        obj = obj.copy()
+        log_config = obj.pop('log_config', None)
+        if log_config is not None:
+            log_config = File.from_dict(log_config, **kwargs)
+
+        return cls(log_config=log_config, **obj)
+
+    @classmethod
+    @implements(Specification.from_protobuf)
+    def from_protobuf(cls, obj):
+        log_level = _proto.Log.Level.Name(obj.log_level)
+        if obj.HasField('log_config'):
+            log_config = File.from_protobuf(obj.log_config)
+        else:
+            log_config = None
+        return cls(log_level=log_level, log_config=log_config)
+
+
 class ApplicationSpec(Specification):
     """A complete description of an application.
 
@@ -483,24 +689,33 @@ class ApplicationSpec(Specification):
         A set of strings to use as tags for this application.
     file_systems : list, optional
         A list of Hadoop file systems to acquire delegation tokens for.
-        A token is always acuired for the ``defaultFS``.
+        A token is always acquired for the ``defaultFS``.
+    acls : ACLs, optional
+        Allows restricting users/groups to subsets of application access. See
+        ``skein.ACLs`` for more information.
+    master : Master, optional
+        Additional configuration for the application master service. See
+        ``skein.Master`` for more information.
     max_attempts : int, optional
         The maximum number of submission attempts before marking the
         application as failed. Note that this only considers failures of the
         application master during startup. Default is 1.
     """
     __slots__ = ('services', 'name', 'queue', 'node_label', 'tags',
-                 'file_systems', 'max_attempts')
+                 'file_systems', 'acls', 'master', 'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
     def __init__(self, services=required, name='skein', queue='default',
-                 node_label="", tags=None, file_systems=None, max_attempts=1):
+                 node_label='', tags=None, file_systems=None, acls=None, master=None,
+                 max_attempts=1):
         self._assign_required('services', services)
         self.name = name
         self.queue = queue
         self.node_label = node_label
         self.tags = set() if tags is None else set(tags)
         self.file_systems = [] if file_systems is None else file_systems
+        self.acls = ACLs() if acls is None else acls
+        self.master = Master() if master is None else master
         self.max_attempts = max_attempts
         self._validate()
 
@@ -515,6 +730,10 @@ class ApplicationSpec(Specification):
         self._check_is_set_of('tags', string)
         self._check_is_list_of('file_systems', string)
         self._check_is_bounded_int('max_attempts', min=1)
+        self._check_is_type('acls', ACLs)
+        self.acls._validate()
+        self._check_is_type('master', Master)
+        self.master._validate()
         self._check_is_dict_of('services', string, Service)
         if not self.services:
             raise context.ValueError("There must be at least one service")
@@ -537,13 +756,22 @@ class ApplicationSpec(Specification):
         _origin = _pop_origin(kwargs)
         cls._check_keys(obj)
 
-        services = obj.get('services')
-        if services is not None and isinstance(services, dict):
-            obj = dict(obj)
-            obj['services'] = {k: Service.from_dict(v, _origin=_origin)
-                               for k, v in services.items()}
+        obj = obj.copy()
 
-        return cls(**obj)
+        services = obj.pop('services', None)
+        if services is not None and isinstance(services, dict):
+            services = {k: Service.from_dict(v, _origin=_origin)
+                        for k, v in services.items()}
+
+        acls = obj.pop('acls', None)
+        if acls is not None and isinstance(acls, dict):
+            acls = ACLs.from_dict(acls)
+
+        master = obj.pop('master', None)
+        if master is not None and isinstance(master, dict):
+            master = Master.from_dict(master, _origin=_origin)
+
+        return cls(services=services, acls=acls, master=master, **obj)
 
     @classmethod
     @implements(Specification.from_protobuf)
@@ -556,6 +784,8 @@ class ApplicationSpec(Specification):
                    tags=set(obj.tags),
                    file_systems=list(obj.file_systems),
                    max_attempts=min(1, obj.max_attempts),
+                   acls=ACLs.from_protobuf(obj.acls),
+                   master=Master.from_protobuf(obj.master),
                    services=services)
 
     @classmethod
@@ -833,15 +1063,19 @@ class Container(ProtobufMessage):
         The start time, None if container has not started.
     finish_time : datetime
         The finish time, None if container has not finished.
+    exit_message : str
+        The diagnostic exit message for completed containers.
     """
     __slots__ = ('service_name', 'instance', '_state', 'yarn_container_id',
-                 'yarn_node_http_address', 'start_time', 'finish_time')
+                 'yarn_node_http_address', 'start_time', 'finish_time',
+                 'exit_message')
     _params = ('service_name', 'instance', 'state', 'yarn_container_id',
-               'yarn_node_http_address', 'start_time', 'finish_time')
+               'yarn_node_http_address', 'start_time', 'finish_time',
+               'exit_message')
     _protobuf_cls = _proto.Container
 
     def __init__(self, service_name, instance, state, yarn_container_id,
-                 yarn_node_http_address, start_time, finish_time):
+                 yarn_node_http_address, start_time, finish_time, exit_message):
         self.service_name = service_name
         self.instance = instance
         self.state = state
@@ -849,6 +1083,7 @@ class Container(ProtobufMessage):
         self.yarn_node_http_address = yarn_node_http_address
         self.start_time = start_time
         self.finish_time = finish_time
+        self.exit_message = exit_message
 
         self._validate()
 
@@ -872,6 +1107,7 @@ class Container(ProtobufMessage):
         self._check_is_type('yarn_node_http_address', string)
         self._check_is_type('start_time', datetime, nullable=True)
         self._check_is_type('finish_time', datetime, nullable=True)
+        self._check_is_type('exit_message', string)
 
     @property
     def id(self):
@@ -905,4 +1141,5 @@ class Container(ProtobufMessage):
                    yarn_container_id=obj.yarn_container_id,
                    yarn_node_http_address=obj.yarn_node_http_address,
                    start_time=datetime_from_millis(obj.start_time),
-                   finish_time=datetime_from_millis(obj.finish_time))
+                   finish_time=datetime_from_millis(obj.finish_time),
+                   exit_message=obj.exit_message)

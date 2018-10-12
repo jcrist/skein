@@ -9,13 +9,13 @@ import com.google.protobuf.ByteString;
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
 import com.github.mustachejava.util.DecoratedCollection;
+import io.grpc.Status;
+import io.grpc.stub.StreamObserver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.webproxy.amfilter.AmIpFilter;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.eclipse.jetty.rewrite.handler.RedirectPatternRule;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Server;
@@ -23,62 +23,92 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Slf4jLog;
 import org.eclipse.jetty.util.resource.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class WebUI {
-  private static final Logger LOG = LogManager.getLogger(WebUI.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WebUI.class);
 
-  private Server server;
+  private final Map<String, Msg.Proxy> routeToProxy = new HashMap<String, Msg.Proxy>();
+  protected final Map<String, String> nameToRoute = new TreeMap<String, String>();
+  private final Map<String, String> prefixToTarget = new HashMap<String, String>();
+  private static final String PROXY_PREFIX = "/pages";
+  private final List<String> uiAddresses;
+  private final Server server;
+  private final Lock writeLock;
+  private final Lock readLock;
 
-  private WebUI(Server server) {
-    this.server = server;
-  }
+  public WebUI(int port,
+               String appId,
+               Map<String, Msg.KeyValue.Builder> keyValueStore,
+               List<ServiceContext> services,
+               Set<String> users,
+               Configuration conf,
+               boolean testing) throws Exception {
 
-  public static WebUI create(int port,
-                             String appId,
-                             Map<String, Msg.KeyValue.Builder> keyValueStore,
-                             List<ServiceContext> services,
-                             Configuration conf,
-                             boolean testing)
-      throws Exception {
+    // Create necessary locks
+    ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+    writeLock = rwLock.writeLock();
+    readLock = rwLock.readLock();
 
-    // Set the jetty log level
-    System.setProperty("org.eclipse.jetty.LEVEL", "WARN");
+    // Setup the jetty loggers
+    Log.setLog(new Slf4jLog());
 
-    Server server = new Server(port);
+    // Create the server
+    server = new Server(port);
 
-    // Handler for all static resources
     ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/");
+
+    // Add a handler for all static resources
     // Hack to get directory containing resources, since `URI.resolve` doesn't
     // work on opaque (e.g. non-filesystem) paths.
     URI baseURI = URI.create(
         WebUI.class.getResource("/META-INF/resources/favicon.ico").toURI()
                    .toASCIIString().replaceFirst("/favicon.ico$", "/")
     );
-    LOG.info("Serving resources from: " + baseURI);
+    LOG.debug("Serving resources from {}", baseURI);
     context.setBaseResource(Resource.newResource(baseURI));
     context.addServlet(new ServletHolder("default", DefaultServlet.class), "/");
 
-    final String prefix = WebAppUtils.getHttpSchemePrefix(conf);
-    UIModel uiModel = new UIModel(appId, keyValueStore, services, prefix);
+    // Add application servlets
+    final String protocol = WebAppUtils.getHttpSchemePrefix(conf);
+    UIModel uiModel = new UIModel(appId, keyValueStore, services, protocol);
     context.addServlet(
         new ServletHolder(new TemplateServlet(uiModel, "services.mustache.html")),
         "/services");
     context.addServlet(
         new ServletHolder(new TemplateServlet(uiModel, "kv.mustache.html")),
         "/kv");
+    context.addServlet(
+        new ServletHolder(new DynamicProxyServlet(prefixToTarget, readLock)),
+        PROXY_PREFIX + "/*");
 
     // Add the yarn proxy filter
     if (!testing) {
@@ -87,34 +117,50 @@ public class WebUI {
       List<String> proxies = WebAppUtils.getProxyHostsAndPortsForAmFilter(conf);
       final String proxyBase = System.getenv(
           ApplicationConstants.APPLICATION_WEB_PROXY_BASE_ENV);
-      String hosts = Joiner.on(AmIpFilter.PROXY_HOSTS_DELIMITER).join(
+
+      String proxyHosts = Joiner.on(AmIpFilter.PROXY_HOSTS_DELIMITER).join(
           Lists.transform(proxies,
             new Function<String, String>() {
               public String apply(String proxy) {
                 return proxy.split(":", 2)[0];
               }
-            })
-      );
-      String uriBases = Joiner.on(AmIpFilter.PROXY_URI_BASES_DELIMITER).join(
+            }));
+
+      List<String> proxyURIBases = Lists.newArrayList(
           Lists.transform(proxies,
             new Function<String, String>() {
               public String apply(String proxy) {
-                return prefix + proxy + proxyBase;
+                return protocol + proxy + proxyBase;
               }
-            })
-      );
-      filter.setInitParameter(AmIpFilter.PROXY_HOSTS, hosts);
-      filter.setInitParameter(AmIpFilter.PROXY_URI_BASES, uriBases);
+            }));
+      filter.setInitParameter(AmIpFilter.PROXY_HOSTS, proxyHosts);
+      filter.setInitParameter(AmIpFilter.PROXY_URI_BASES,
+          Joiner.on(AmIpFilter.PROXY_URI_BASES_DELIMITER).join(proxyURIBases));
+
+      if (users != null) {
+        LOG.info("UI ACLs are enabled, restricted to {} users", users.size());
+        context.addFilter(new FilterHolder(new AccessFilter(users)),
+                          "/*", EnumSet.allOf(DispatcherType.class));
+      }
+
+      // The uiAddresses are the proxy bases with a trailing slash
+      uiAddresses = Lists.newArrayList();
+      for (String base : proxyURIBases) {
+        uiAddresses.add(base + "/");
+      }
+    } else {
+      uiAddresses = Lists.newArrayList();
     }
 
     // Issue a 302 redirect to services from homepage
     RewriteHandler rewrite = new RewriteHandler();
-    rewrite.addRule(new RedirectPatternRule("", "/services"));
+    RedirectPatternRule redirect = new RedirectPatternRule();
+    redirect.setPattern("");
+    redirect.setLocation("/services");
+    rewrite.addRule(redirect);
     context.insertHandler(rewrite);
 
     server.setHandler(context);
-
-    return new WebUI(server);
   }
 
   public void start() throws Exception {
@@ -133,9 +179,133 @@ public class WebUI {
     return server.getURI();
   }
 
+  public void addProxy(Msg.Proxy req, StreamObserver<Msg.Empty> resp) {
+    String route = req.getRoute();
+    String target = req.getTarget();
+    String name = req.getLinkName();
+
+    if (route.contains("/")) {
+      resp.onError(Status.INVALID_ARGUMENT
+          .withDescription("Page page routes must not contain '/'")
+          .asRuntimeException());
+      return;
+    }
+
+    if (target.endsWith("/")) {
+      target.substring(0, target.length() - 1);
+    }
+
+    URL targetURL;
+    try {
+      targetURL = new URL(target);
+    } catch (MalformedURLException exc) {
+      resp.onError(Status.INVALID_ARGUMENT
+          .withDescription("Page target address '" + target
+                           + "' is an invalid URL:\n" + exc.getMessage())
+          .asRuntimeException());
+      return;
+    }
+
+    // If the target address has no path or is a directory, the link route
+    // needs a trailing slash to resolve relative links correctly.
+    String linkRoute = route;
+    String targetPath = targetURL.getPath();
+    if (targetPath.isEmpty() || targetPath.endsWith("/")) {
+      linkRoute = route + "/";
+    }
+
+    writeLock.lock();
+    try {
+      if (routeToProxy.containsKey(route)) {
+        resp.onError(Status.ALREADY_EXISTS
+            .withDescription("A proxied page with route '" + route
+                             + "' already exists")
+            .asRuntimeException());
+        return;
+      }
+      if (!name.isEmpty() && nameToRoute.containsKey(name)) {
+        resp.onError(Status.ALREADY_EXISTS
+            .withDescription("A proxied page with name '" + name
+                             + "' already exists")
+            .asRuntimeException());
+        return;
+      }
+      routeToProxy.put(route, req);
+      if (!name.isEmpty()) {
+        nameToRoute.put(name, linkRoute);
+      }
+      prefixToTarget.put(route, target);
+    } finally {
+      writeLock.unlock();
+    }
+
+    LOG.info("Added proxied page [route: '{}', target: '{}', name: '{}']",
+             route, target, name);
+
+    resp.onNext(MsgUtils.EMPTY);
+    resp.onCompleted();
+  }
+
+  public void removeProxy(Msg.RemoveProxyRequest req,
+                          StreamObserver<Msg.Empty> resp) {
+    String route = req.getRoute();
+
+    writeLock.lock();
+    try {
+      Msg.Proxy prev = routeToProxy.remove(route);
+      if (prev == null) {
+        resp.onError(Status.FAILED_PRECONDITION
+            .withDescription("A proxied page with route '" + route
+                             + "' doesn't exist")
+            .asRuntimeException());
+        return;
+      }
+      prefixToTarget.remove(route);
+      String name = prev.getLinkName();
+      if (!name.isEmpty()) {
+        nameToRoute.remove(name);
+      }
+    } finally {
+      writeLock.unlock();
+    }
+
+    LOG.info("Removed proxied page [route: '{}']", route);
+
+    resp.onNext(MsgUtils.EMPTY);
+    resp.onCompleted();
+  }
+
+  public void uiInfo(Msg.UIInfoRequest req,
+                     StreamObserver<Msg.UIInfoResponse> resp) {
+    Msg.UIInfoResponse.Builder msg =
+        Msg.UIInfoResponse
+           .newBuilder()
+           .addAllUiAddress(uiAddresses)
+           .setProxyPrefix(PROXY_PREFIX);
+
+    resp.onNext(msg.build());
+    resp.onCompleted();
+  }
+
+  public void getProxies(Msg.GetProxiesRequest req,
+                         StreamObserver<Msg.GetProxiesResponse> resp) {
+
+    Msg.GetProxiesResponse.Builder msg = Msg.GetProxiesResponse.newBuilder();
+
+    writeLock.lock();
+    try {
+      msg.addAllProxy(routeToProxy.values());
+    } finally {
+      writeLock.unlock();
+    }
+
+    resp.onNext(msg.build());
+    resp.onCompleted();
+  }
+
   public static void main(String[] args) {
     if (args.length != 1) {
-      LOG.fatal("Usage: <command> port");
+      LOG.error("Usage: <command> port");
       System.exit(1);
     }
     int port = Integer.parseInt(args[0]);
@@ -182,11 +352,13 @@ public class WebUI {
     services.add(service2);
 
     try {
-      WebUI webui = WebUI.create(port, "application_1526497750451_0001",
-                                 kv, services, new YarnConfiguration(), true);
+      WebUI webui = new WebUI(port, "application_1526497750451_0001", kv,
+                              services, null, new YarnConfiguration(), true);
+      webui.nameToRoute.put("name1", "page1");
+      webui.nameToRoute.put("name2", "page2");
       webui.start();
     } catch (Throwable exc) {
-      LOG.fatal("Error running WebUI", exc);
+      LOG.error("Error running WebUI", exc);
       System.exit(1);
     }
   }
@@ -248,20 +420,24 @@ public class WebUI {
     public ServiceContext() {}
   }
 
-  private static class UIModel {
+  private class UIModel {
     public final String appId;
     private final List<ServiceContext> services;
     private final Map<String, Msg.KeyValue.Builder> keyValueStore;
-    public final String prefix;
+    public final String protocol;
 
     public UIModel(String appId,
                    Map<String, Msg.KeyValue.Builder> keyValueStore,
                    List<ServiceContext> services,
-                   String prefix) {
+                   String protocol) {
       this.appId = appId;
       this.keyValueStore = keyValueStore;
       this.services = services;
-      this.prefix = prefix;
+      this.protocol = protocol;
+    }
+
+    public String proxyPrefix() {
+      return PROXY_PREFIX;
     }
 
     public List<Map.Entry<String, String>> kv() {
@@ -276,6 +452,15 @@ public class WebUI {
                                       : "<binary value>"));
         }
         return out;
+      }
+    }
+
+    public List<Map.Entry<String, String>> pages() {
+      readLock.lock();
+      try {
+        return Lists.newArrayList(nameToRoute.entrySet());
+      } finally {
+        readLock.unlock();
       }
     }
 
@@ -294,10 +479,44 @@ public class WebUI {
     }
 
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws IOException {
       response.setContentType("text/html");
       response.setStatus(HttpServletResponse.SC_OK);
       template.execute(response.getWriter(), uiModel);
+    }
+  }
+
+  private static class AccessFilter implements Filter {
+    Set<String> users;
+
+    public AccessFilter(Set<String> users) {
+      this.users = users;
+    }
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response,
+        FilterChain chain) throws IOException, ServletException {
+      HttpServletRequest req = (HttpServletRequest) request;
+      HttpServletResponse resp = (HttpServletResponse) response;
+
+      String user = req.getRemoteUser();
+      if (!users.contains(user)) {
+        resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        resp.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        resp.sendError(HttpServletResponse.SC_FORBIDDEN,
+                       "User is not authorized to access this page.");
+        return;
+      }
+      chain.doFilter(request, response);
+    }
+
+    @Override
+    public void destroy() {
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
     }
   }
 }

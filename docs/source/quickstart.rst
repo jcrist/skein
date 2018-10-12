@@ -3,10 +3,10 @@ Quickstart
 
 First make sure that `Skein is installed <index.html#installation>`__.
 
-Skein is intended to be used either as a commandline application or
+Skein is intended to be used either as a command-line application or
 programmatically using the Python API. This document provides a brief example
-using the commandline -- for more information please see the `API <api.html>`__
-or `CLI <cli.html>`__ documentation.
+using the command-line -- for more information please see the `API
+<api.html>`__ or `CLI <cli.html>`__ documentation.
 
 
 .. _quickstart-kinit:
@@ -37,7 +37,7 @@ may look like:
 2. Run yarn application/applications
 3. Shut down the Skein daemon
 
-To do this from the command line, use `skein daemon start
+To do this from the command-line, use `skein daemon start
 <cli.html#skein-daemon-start>`__:
 
 .. code::
@@ -204,7 +204,7 @@ above), you'll probably want to shut it down when you're done.  This isn't
 strictly necessary (the daemon can run for long periods), but helps keep
 resource usage on the edge node low.
 
-To do this from the command line, use `skein daemon stop
+To do this from the command-line, use `skein daemon stop
 <cli.html#skein-daemon-stop>`__.
 
 .. code::

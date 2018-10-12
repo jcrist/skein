@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import os
+import time
 import weakref
 
 import pytest
@@ -8,7 +9,7 @@ import pytest
 import skein
 from skein.exceptions import FileNotFoundError, FileExistsError
 from skein.test.conftest import (run_application, wait_for_containers,
-                                 wait_for_success, get_logs)
+                                 wait_for_completion, get_logs)
 
 
 def test_properties():
@@ -151,8 +152,19 @@ def test_simple_app(client):
     with pytest.raises(skein.ConnectionError):
         client.connect(app.id, wait=False)
 
+    # On Travis CI there can be some lag between application being shutdown and
+    # application actually shutting down. Retry up to 5 seconds before failing.
     with pytest.raises(skein.ConnectionError):
-        app.get_specification()
+        timeout = 5
+        while timeout:
+            try:
+                app.get_specification()
+            except skein.ConnectionError:
+                raise
+            else:
+                # Didn't fail, try again later
+                time.sleep(0.1)
+                timeout -= 0.1
 
     running_apps = client.get_applications()
     assert app.id not in {a.id for a in running_apps}
@@ -205,6 +217,8 @@ def test_dynamic_containers(client):
         killed = app.get_containers(states=['killed'])
         assert len(killed) == 3
         assert [c.instance for c in killed] == [0, 1, 3]
+        # All completed containers have an exit message
+        assert all(c.exit_message for c in killed)
 
         # Can't scale non-existant service
         with pytest.raises(ValueError):
@@ -243,7 +257,7 @@ def test_container_environment(client, has_kerberos_enabled):
                                  services={'service': service})
 
     with run_application(client, spec=spec) as app:
-        wait_for_success(client, app.id)
+        assert wait_for_completion(client, app.id) == 'SUCCEEDED'
 
     logs = get_logs(app.id)
     assert "USER=testuser" in logs
@@ -271,61 +285,7 @@ def test_file_systems(client):
                                  file_systems=["hdfs://master.example.com:9000"])
 
     with run_application(client, spec=spec) as app:
-        wait_for_success(client, app.id)
-
-
-def test_webui(client, has_kerberos_enabled):
-    # Smoke-tests for webui
-    if has_kerberos_enabled:
-        pytest.skip("Testing only implemented for simple authentication")
-    requests = pytest.importorskip('requests')
-
-    with run_application(client) as app:
-        # Wait for a single container
-        initial = wait_for_containers(app, 1, states=['RUNNING'])
-        assert initial[0].state == 'RUNNING'
-        assert initial[0].service_name == 'sleeper'
-
-        # Set some key-values
-        app.kv['foo'] = b'bar'
-        app.kv['bad'] = b'\255\255\255'  # non-unicode
-
-        # Base url of web ui
-        base = 'http://master.example.com:8088/proxy/%s' % app.id
-
-        # Fails without authentication
-        resp = requests.get(base)
-        assert resp.status_code == 401
-
-        # With authentication
-        resp = requests.get(base + "?user.name=testuser")
-        assert resp.ok
-        cookies = resp.cookies
-
-        # / and /services are the same
-        for suffix in ['', '/services']:
-            resp = requests.get(base + suffix, cookies=cookies)
-            assert resp.ok
-            assert 'sleeper_0' in resp.text  # list of containers
-            assert '/testuser/sleeper.log' in resp.text  # link to logs
-
-        # /kv store has a few items in it
-        resp = requests.get(base + '/kv', cookies=cookies)
-        assert resp.ok
-        assert 'foo' in resp.text
-        assert 'bar' in resp.text
-        assert 'bad' in resp.text
-        assert '&lt;binary value&gt;' in resp.text
-
-        # Resources are reachable
-        resp = requests.get(base + '/favicon.ico', cookies=cookies)
-        assert resp.ok
-
-        # 404 for fake pages
-        resp = requests.get(base + '/not-a-real-page', cookies=cookies)
-        assert resp.status_code == 404
-
-        app.shutdown()
+        assert wait_for_completion(client, app.id) == 'SUCCEEDED'
 
 
 def test_kill_application_removes_appdir(client):
@@ -336,6 +296,66 @@ def test_kill_application_removes_appdir(client):
 
     fs = hdfs.connect()
     assert not fs.exists("/user/testuser/.skein/%s" % app.id)
+
+
+custom_log4j_properties = """
+# Root logger option
+log4j.rootCategory=INFO, console
+
+# Redirect log messages to console
+log4j.appender.console=org.apache.log4j.ConsoleAppender
+log4j.appender.console.Target=System.out
+log4j.appender.console.layout=org.apache.log4j.PatternLayout
+log4j.appender.console.layout.ConversionPattern=CUSTOM-LOG4J-SUCCEEDED %m
+"""
+
+
+def test_custom_log4j_properties(client, tmpdir):
+    configpath = str(tmpdir.join("log4j.properties"))
+    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+                            commands=['ls'])
+    spec = skein.ApplicationSpec(name="test_custom_log4j_properties",
+                                 queue="default",
+                                 master=skein.Master(log_config=configpath),
+                                 services={'service': service})
+    with open(configpath, 'w') as f:
+        f.write(custom_log4j_properties)
+
+    with run_application(client, spec=spec) as app:
+        assert wait_for_completion(client, app.id) == 'SUCCEEDED'
+
+    logs = get_logs(app.id)
+    assert 'CUSTOM-LOG4J-SUCCEEDED' in logs
+
+
+def test_set_log_level(client):
+    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+                            commands=['ls'])
+    spec = skein.ApplicationSpec(name="test_custom_log4j_properties",
+                                 queue="default",
+                                 master=skein.Master(log_level='debug'),
+                                 services={'service': service})
+
+    with run_application(client, spec=spec) as app:
+        assert wait_for_completion(client, app.id) == 'SUCCEEDED'
+
+    logs = get_logs(app.id)
+    assert 'DEBUG' in logs
+
+
+def test_memory_limit_exceeded(client):
+    # Allocate noticeably more memory than the 128 MB limit
+    service = skein.Service(
+        resources=skein.Resources(memory=128, vcores=1),
+        commands=['python -c "b = bytearray(int(256e6)); import time; time.sleep(10)"']
+    )
+    spec = skein.ApplicationSpec(name="test_memory_limit_exceeded",
+                                 queue="default",
+                                 services={"service": service})
+    with run_application(client, spec=spec) as app:
+        assert wait_for_completion(client, app.id) == "FAILED"
+    logs = get_logs(app.id)
+    assert "memory used" in logs
 
 
 def test_application_node_label(client, worker_as_gpu):

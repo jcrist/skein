@@ -2,13 +2,16 @@ package com.anaconda.skein;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.log4j.Level;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -111,6 +114,73 @@ public class Model {
     }
   }
 
+  public static class Acls {
+    private boolean enable;
+    private List<String> viewUsers;
+    private List<String> viewGroups;
+    private List<String> modifyUsers;
+    private List<String> modifyGroups;
+    private List<String> uiUsers;
+
+    public Acls(boolean enable, List<String> viewUsers,
+                List<String> viewGroups, List<String> modifyUsers,
+                List<String> modifyGroups, List<String> uiUsers) {
+      this.enable = enable;
+      this.viewUsers = viewUsers;
+      this.viewGroups = viewGroups;
+      this.modifyUsers = modifyUsers;
+      this.modifyGroups = modifyGroups;
+      this.uiUsers = uiUsers;
+    }
+
+    public Map<ApplicationAccessType, String> getYarnAcls() {
+      if (!enable) {
+        return null;
+      }
+      Map<ApplicationAccessType, String> out = new HashMap<ApplicationAccessType, String>();
+
+      out.put(ApplicationAccessType.VIEW_APP, Utils.formatAcl(viewUsers, viewGroups));
+      out.put(ApplicationAccessType.MODIFY_APP, Utils.formatAcl(modifyUsers, modifyGroups));
+
+      return out;
+    }
+
+    public void setEnable(boolean enable) { this.enable = enable; }
+    public boolean getEnable() { return enable; }
+
+    public void setViewUsers(List<String> viewUsers) { this.viewUsers = viewUsers; }
+    public List<String> getViewUsers() { return viewUsers; }
+
+    public void setViewGroups(List<String> viewGroups) { this.viewGroups = viewGroups; }
+    public List<String> getViewGroups() { return viewGroups; }
+
+    public void setModifyUsers(List<String> modifyUsers) { this.modifyUsers = modifyUsers; }
+    public List<String> getModifyUsers() { return modifyUsers; }
+
+    public void setModifyGroups(List<String> modifyGroups) { this.modifyGroups = modifyGroups; }
+    public List<String> getModifyGroups() { return modifyGroups; }
+
+    public void setUiUsers(List<String> uiUsers) { this.uiUsers = uiUsers; }
+    public List<String> getUiUsers() { return uiUsers; }
+  }
+
+  public static class Master {
+    private LocalResource logConfig;
+    private Level logLevel;
+
+    public Master(LocalResource logConfig, Level logLevel) {
+      this.logConfig = logConfig;
+      this.logLevel = logLevel;
+    }
+
+    public void setLogConfig(LocalResource logConfig) { this.logConfig = logConfig; }
+    public LocalResource getLogConfig() { return this.logConfig; }
+    public boolean hasLogConfig() { return this.logConfig != null; }
+
+    public void setLogLevel(Level logLevel) { this.logLevel = logLevel; }
+    public Level getLogLevel() { return this.logLevel; }
+  }
+
   public static class ApplicationSpec {
     private String name;
     private String queue;
@@ -118,12 +188,15 @@ public class Model {
     private int maxAttempts;
     private Set<String> tags;
     private List<Path> fileSystems;
+    private Acls acls;
+    private Master master;
     private Map<String, Service> services;
 
     public ApplicationSpec() {}
 
     public ApplicationSpec(String name, String queue, String nodeLabel, int maxAttempts,
                            Set<String> tags, List<Path> fileSystems,
+                           Acls acls, Master master,
                            Map<String, Service> services) {
       this.name = name;
       this.queue = queue;
@@ -131,6 +204,8 @@ public class Model {
       this.maxAttempts = maxAttempts;
       this.tags = tags;
       this.fileSystems = fileSystems;
+      this.acls = acls;
+      this.master = master;
       this.services = services;
     }
 
@@ -164,6 +239,12 @@ public class Model {
       this.fileSystems = fileSystems;
     }
     public List<Path> getFileSystems() { return this.fileSystems; }
+
+    public void setAcls(Acls acls) { this.acls = acls; }
+    public Acls getAcls() { return this.acls; }
+
+    public void setMaster(Master master) { this.master = master; }
+    public Master getMaster() { return this.master; }
 
     public void setServices(Map<String, Service> services) { this.services = services; }
     public Map<String, Service> getServices() { return services; }
@@ -204,6 +285,7 @@ public class Model {
     private long finishTime;
     private ContainerRequest req;
     private Set<String> ownedKeys;
+    private String exitMessage;
 
     public Container() {}
 
@@ -275,6 +357,9 @@ public class Model {
 
     public void setFinishTime(long finishTime) { this.finishTime = finishTime; }
     public long getFinishTime() { return finishTime; }
+
+    public void setExitMessage(String diagnostics) { this.exitMessage = diagnostics; }
+    public String getExitMessage() { return exitMessage; }
 
     public void setContainerRequest(ContainerRequest req) { this.req = req; }
     public ContainerRequest popContainerRequest() {

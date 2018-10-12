@@ -187,7 +187,7 @@ setup(name='skein',
       long_description=(open('README.rst').read()
                         if os.path.exists('README.rst') else ''),
       url='http://github.com/jcrist/skein/',
-      classifiers=["Development Status :: 3 - Alpha",
+      classifiers=["Development Status :: 5 - Production/Stable",
                    "License :: OSI Approved :: BSD License",
                    "Programming Language :: Java",
                    "Programming Language :: Python :: 2.7",

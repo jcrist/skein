@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.google.common.base.Joiner;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -15,11 +17,14 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Utils {
   public static <T> T popfirst(Set<T> s) {
@@ -40,6 +45,18 @@ public class Utils {
       out[j * 2 + 1] = HEX[v & 0x0F];
     }
     return new String(out);
+  }
+
+  private static final String MEM_REGEX = "[0-9.]+ [KMG]B";
+  public static final Pattern EXCEEDED_PMEM_PATTERN =
+      Pattern.compile(MEM_REGEX + " of " + MEM_REGEX + " physical memory used");
+  public static final Pattern EXCEEDED_VMEM_PATTERN =
+      Pattern.compile(MEM_REGEX + " of " + MEM_REGEX + " virtual memory used");
+
+  public static String formatExceededMemMessage(String diagnostics, Pattern pattern) {
+    Matcher matcher = pattern.matcher(diagnostics);
+    return (matcher.find() ? matcher.group() :
+            "Container killed by YARN for exceeding memory limits");
   }
 
   public static final class CustomThreadFactory implements ThreadFactory {
@@ -67,6 +84,28 @@ public class Utils {
         minCount, maxCount, 60, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(),
         new CustomThreadFactory(name, isDaemon));
+  }
+
+  public static String formatAcl(List<String> users, List<String> groups) {
+    // "*" in either groups or users -> "*"
+    if (users.contains("*") || groups.contains("*")) {
+      return "*";
+    }
+
+    StringBuilder builder = new StringBuilder();
+    Joiner joiner = Joiner.on(",");
+
+    if (users != null) {
+      joiner.appendTo(builder, users);
+    }
+
+    builder.append(" ");
+
+    if (groups != null) {
+      joiner.appendTo(builder, groups);
+    }
+
+    return builder.toString();
   }
 
   public static ApplicationId appIdFromString(String appId) {

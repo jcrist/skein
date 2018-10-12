@@ -14,6 +14,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.log4j.Level;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -299,6 +300,91 @@ public class MsgUtils {
         new HashSet<String>(service.getDependsList()));
   }
 
+  public static Msg.Acls writeAcls(Model.Acls acl) {
+    return Msg.Acls.newBuilder()
+              .setEnable(acl.getEnable())
+              .addAllViewUsers(acl.getViewUsers())
+              .addAllViewGroups(acl.getViewGroups())
+              .addAllModifyUsers(acl.getModifyUsers())
+              .addAllModifyGroups(acl.getModifyGroups())
+              .addAllUiUsers(acl.getUiUsers())
+              .build();
+  }
+
+  public static Model.Acls readAcls(Msg.Acls acl) {
+    return new Model.Acls(
+        acl.getEnable(),
+        acl.getViewUsersList(),
+        acl.getViewGroupsList(),
+        acl.getModifyUsersList(),
+        acl.getModifyGroupsList(),
+        acl.getUiUsersList()
+    );
+  }
+
+  public static Msg.Log.Level writeLogLevel(Level logLevel) {
+    switch (logLevel.toInt()) {
+      case Level.INFO_INT:
+        return Msg.Log.Level.INFO;
+      case Level.ALL_INT:
+        return Msg.Log.Level.ALL;
+      case Level.TRACE_INT:
+        return Msg.Log.Level.TRACE;
+      case Level.DEBUG_INT:
+        return Msg.Log.Level.DEBUG;
+      case Level.WARN_INT:
+        return Msg.Log.Level.WARN;
+      case Level.ERROR_INT:
+        return Msg.Log.Level.ERROR;
+      case Level.FATAL_INT:
+        return Msg.Log.Level.FATAL;
+      case Level.OFF_INT:
+        return Msg.Log.Level.OFF;
+    }
+    return null; // appease the compiler, but can't get here
+  }
+
+  public static Level readLogLevel(Msg.Log.Level logLevel) {
+    switch (logLevel) {
+      case INFO:
+        return Level.INFO;
+      case ALL:
+        return Level.ALL;
+      case TRACE:
+        return Level.TRACE;
+      case DEBUG:
+        return Level.DEBUG;
+      case WARN:
+        return Level.WARN;
+      case ERROR:
+        return Level.ERROR;
+      case FATAL:
+        return Level.FATAL;
+      case OFF:
+        return Level.OFF;
+    }
+    return null; // appease the compiler, but can't get here
+  }
+
+  public static Msg.Master writeMaster(Model.Master master) {
+    Msg.Master.Builder builder = Msg.Master.newBuilder()
+        .setLogLevel(writeLogLevel(master.getLogLevel()));
+
+    if (master.hasLogConfig()) {
+      builder.setLogConfig(writeFile(master.getLogConfig()));
+    }
+    return builder.build();
+  }
+
+  public static Model.Master readMaster(Msg.Master master) {
+    LocalResource logConfig = null;
+    if (master.hasLogConfig()) {
+      logConfig = readFile(master.getLogConfig());
+    }
+    Level logLevel = readLogLevel(master.getLogLevel());
+    return new Model.Master(logConfig, logLevel);
+  }
+
   public static Msg.ApplicationSpec writeApplicationSpec(Model.ApplicationSpec spec) {
     Msg.ApplicationSpec.Builder builder = Msg.ApplicationSpec.newBuilder()
         .setName(spec.getName())
@@ -306,6 +392,8 @@ public class MsgUtils {
         .setNodeLabel(spec.getNodeLabel())
         .setMaxAttempts(spec.getMaxAttempts())
         .addAllTags(spec.getTags())
+        .setAcls(writeAcls(spec.getAcls()))
+        .setMaster(writeMaster(spec.getMaster()))
         .addAllFileSystems(Lists.transform(spec.getFileSystems(), Functions.toStringFunction()));
 
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
@@ -324,12 +412,15 @@ public class MsgUtils {
     for (int i = 0; i < spec.getFileSystemsCount(); i++) {
       fileSystems.add(new Path(spec.getFileSystems(i)));
     }
+
     return new Model.ApplicationSpec(spec.getName(),
                                      spec.getQueue(),
                                      spec.getNodeLabel(),
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
                                      fileSystems,
+                                     readAcls(spec.getAcls()),
+                                     readMaster(spec.getMaster()),
                                      services);
   }
 
@@ -350,6 +441,10 @@ public class MsgUtils {
     if (nodeHttpAddress != null) {
       builder.setYarnNodeHttpAddress(nodeHttpAddress);
     }
+    String exitMessage = container.getExitMessage();
+    if (exitMessage != null) {
+      builder.setExitMessage(exitMessage);
+    }
     return builder.build();
   }
 
@@ -361,6 +456,7 @@ public class MsgUtils {
     out.setYarnContainerId(ContainerId.fromString(container.getYarnContainerId()));
     out.setStartTime(container.getStartTime());
     out.setFinishTime(container.getFinishTime());
+    out.setExitMessage(container.getExitMessage());
     return out;
   }
 }

@@ -39,8 +39,8 @@ import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -67,7 +67,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 public class ApplicationMaster {
 
-  private static final Logger LOG = LogManager.getLogger(ApplicationMaster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ApplicationMaster.class);
 
   // One for the boss, one for the worker. Should be fine under normal loads.
   private static final int NUM_EVENT_LOOP_GROUP_THREADS = 2;
@@ -133,14 +133,12 @@ public class ApplicationMaster {
 
     grpcServer = NettyServerBuilder.forPort(0)
         .sslContext(sslContext)
-        .addService(new MasterImpl())
+        .addService(new AppMasterImpl())
         .workerEventLoopGroup(eg)
         .bossEventLoopGroup(eg)
         .executor(executor)
         .build()
         .start();
-
-    LOG.info("gRPC server started, listening on " + grpcServer.getPort());
 
     Runtime.getRuntime().addShutdownHook(
         new Thread() {
@@ -149,11 +147,12 @@ public class ApplicationMaster {
             ApplicationMaster.this.stopServer();
           }
         });
+
+    LOG.info("gRPC server started, listening on {}", grpcServer.getPort());
   }
 
   private void stopServer() {
     if (grpcServer != null) {
-      LOG.info("Shutting down gRPC server");
       grpcServer.shutdown();
       LOG.info("gRPC server shut down");
     }
@@ -176,12 +175,26 @@ public class ApplicationMaster {
         }
     );
 
+    // Forward restricted set of users to the WebUI if:
+    // - ACLs are enabled
+    // - The wildcard * is not in the ui acl
+    Set<String> allowedUsers = null;
+    Model.Acls acls = spec.getAcls();
+    if (acls.getEnable()) {
+      List<String> uiUsers = acls.getUiUsers();
+      if (!uiUsers.contains("*")) {
+        allowedUsers = new HashSet<String>(uiUsers);
+        // The application owner is always allowed
+        allowedUsers.add(ugi.getShortUserName());
+      }
+    }
+
     try {
-      ui = WebUI.create(0, appId.toString(), keyValueStore, serviceContexts,
-                        conf, false);
+      ui = new WebUI(0, appId.toString(), keyValueStore, serviceContexts,
+                     allowedUsers, conf, false);
       ui.start();
     } catch (Exception e) {
-      fatal("Failed to start UI server", e);
+      fatal("Failed to start WebUI server", e);
     }
 
     Runtime.getRuntime().addShutdownHook(
@@ -192,12 +205,11 @@ public class ApplicationMaster {
           }
         });
 
-    LOG.info("UI server started, listening on " + ui.getURI().getPort());
+    LOG.info("WebUI server started, listening on {}", ui.getURI().getPort());
   }
 
   private void stopUI() {
     if (ui != null) {
-      LOG.info("Shutting down WebUI server");
       ui.stop();
       LOG.info("WebUI server shut down");
     }
@@ -341,6 +353,8 @@ public class ApplicationMaster {
   }
 
   private void handleAllocated(List<Container> newContainers) {
+    LOG.debug("Received {} new containers", newContainers.size());
+
     for (Container c : newContainers) {
       Priority priority = c.getPriority();
       Resource resource = c.getResource();
@@ -349,49 +363,71 @@ public class ApplicationMaster {
       if (tracker != null && tracker.matches(resource)) {
         tracker.startContainer(c, resource);
       } else {
-        LOG.warn("No matching service found for resource: " + resource
-                 + ", priority: " + priority + ", releasing " + c.getId());
+        LOG.warn("No matching service found for resource {}, priority {}, releasing {}",
+                 resource, priority, c.getId());
         rmClient.releaseAssignedContainer(c.getId());
       }
     }
   }
 
   private void handleCompleted(List<ContainerStatus> containerStatuses) {
+    LOG.debug("Received {} completed containers", containerStatuses.size());
+
     for (ContainerStatus status : containerStatuses) {
       Model.Container container = containers.get(status.getContainerId());
       if (container == null) {
-        continue;  // release container that was never started
+        // released container that was never started
+        LOG.debug("Releasing newly allocated container {} due to canceled request",
+                  status.getContainerId());
+        continue;
       }
 
       Model.Container.State state;
-      int exitStatus = status.getExitStatus();
+      String exitMessage;
 
-      if (exitStatus == ContainerExitStatus.SUCCESS) {
-        state = Model.Container.State.SUCCEEDED;
-      } else if (exitStatus == ContainerExitStatus.KILLED_BY_APPMASTER) {
-        return;  // state change already handled by killContainer
-      } else {
-        state = Model.Container.State.FAILED;
+      switch (status.getExitStatus()) {
+        case ContainerExitStatus.KILLED_BY_APPMASTER:
+          return;  // state change already handled by killContainer
+        case ContainerExitStatus.SUCCESS:
+          state = Model.Container.State.SUCCEEDED;
+          exitMessage = "Completed successfully.";
+          break;
+        case ContainerExitStatus.KILLED_EXCEEDED_PMEM:
+          state = Model.Container.State.FAILED;
+          exitMessage = Utils.formatExceededMemMessage(
+              status.getDiagnostics(),
+              Utils.EXCEEDED_PMEM_PATTERN);
+          break;
+        case ContainerExitStatus.KILLED_EXCEEDED_VMEM:
+          state = Model.Container.State.FAILED;
+          exitMessage = Utils.formatExceededMemMessage(
+              status.getDiagnostics(),
+              Utils.EXCEEDED_VMEM_PATTERN);
+          break;
+        default:
+          state = Model.Container.State.FAILED;
+          if (status.getExitStatus() > 0) {
+            // Positive error codes indicate service failure
+            exitMessage = "Container failed during execution, see logs for more information.";
+          } else {
+            exitMessage = status.getDiagnostics();
+          }
+          break;
       }
 
       services.get(container.getServiceName())
-              .finishContainer(container.getInstance(), state);
+              .finishContainer(container.getInstance(), state, exitMessage);
     }
   }
 
   private static void fatal(String msg, Throwable exc) {
-    LOG.fatal(msg, exc);
-    System.exit(1);
-  }
-
-  private static void fatal(String msg) {
-    LOG.fatal(msg);
+    LOG.error(msg, exc);
     System.exit(1);
   }
 
   public void init(String[] args) {
     if (args.length == 0 || args.length > 2) {
-      LOG.fatal("Usage: <command> applicationDirectory applicationId");
+      LOG.error("Usage: <command> applicationDirectory applicationId");
       System.exit(1);
     }
     appDir = new Path(args[0]);
@@ -411,7 +447,8 @@ public class ApplicationMaster {
 
     // Create ugi and add original tokens to it
     String userName = System.getenv(Environment.USER.name());
-    LOG.info("user: " + userName);
+    LOG.info("Running as user {}", userName);
+
     ugi = UserGroupInformation.createRemoteUser(userName);
 
     Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
@@ -472,17 +509,19 @@ public class ApplicationMaster {
       }
     }
     if (finished) {
-      shutdown(FinalApplicationStatus.SUCCEEDED, "Completed Successfully");
+      shutdown(FinalApplicationStatus.SUCCEEDED,
+               "Application completed successfully.");
     }
   }
 
   private void shutdown(FinalApplicationStatus status, String msg) {
     preshutdown(status, msg);
-
     System.exit(0);  // Trigger exit hooks
   }
 
   private void preshutdown(FinalApplicationStatus status, String msg) {
+    LOG.info("Shutting down: {}", msg);
+
     try {
       rmClient.unregisterApplicationMaster(status, msg, null);
     } catch (Exception ex) {
@@ -497,9 +536,9 @@ public class ApplicationMaster {
             try {
               FileSystem fs = FileSystem.get(conf);
               fs.delete(appDir, true);
-              LOG.info("Deleted application directory " + appDir);
+              LOG.info("Deleted application directory {}", appDir);
             } catch (IOException exc) {
-              LOG.warn("Failed to delete application directory " + appDir, exc);
+              LOG.warn("Failed to delete application directory {}", appDir, exc);
             }
             return null;
           }
@@ -537,7 +576,7 @@ public class ApplicationMaster {
         synchronized (keyValueStore) {
           intervalTree.remove(watchId);
         }
-        LOG.info("Removed Watcher " + watchId);
+        LOG.debug("Removed Watcher [id: {}]", watchId);
       }
     }
 
@@ -546,7 +585,7 @@ public class ApplicationMaster {
         for (Iterator<Integer> it = registered.iterator(); it.hasNext();) {
           int watchId = it.next();
           intervalTree.remove(watchId);
-          LOG.info("Removed Watcher " + watchId);
+          LOG.debug("Removed Watcher [id: {}]", watchId);
           it.remove();
         }
       }
@@ -567,11 +606,8 @@ public class ApplicationMaster {
           synchronized (keyValueStore) {
             watchId = intervalTree.add(start, end, new Watcher(resp, this, type));
           }
-          LOG.info("Created Watcher."
-                   + " id=" + watchId
-                   + ", start=" + start
-                   + ", end=" + end
-                   + ", type=" + type);
+          LOG.debug("Created Watcher [id: {}, start: {}, end: {}, type: {}]",
+                    watchId, start, end, type);
           registered.add(watchId);
           builder.setWatchId(watchId);
           builder.setType(Msg.WatchResponse.Type.CREATE);
@@ -636,7 +672,8 @@ public class ApplicationMaster {
           resp.onNext(msg);
         } catch (StatusRuntimeException exc) {
           if (exc.getStatus().getCode() != Status.Code.CANCELLED) {
-            LOG.info("Watcher " + watchId + " failed to send, got status: " + exc.getStatus());
+            LOG.warn("Watcher {} failed to send, got status {}",
+                     watchId, exc.getStatus());
           }
           req.removeAllWatches();
         }
@@ -725,7 +762,7 @@ public class ApplicationMaster {
     }
 
     public void initialize() throws IOException {
-      LOG.info("INTIALIZING: " + name);
+      LOG.info("Initializing service '{}'.", name);
       // Request initial containers
       for (int i = 0; i < service.getInstances(); i++) {
         addContainer();
@@ -777,8 +814,8 @@ public class ApplicationMaster {
         synchronized (this) {
           int active = getNumActive();
           int delta = instances - active;
-          LOG.info("Scaling service '" + name + "' to " + instances
-                   + " instances, a delta of " + delta);
+          LOG.info("Scaling service '{}' to {} instances, a delta of {}.",
+                   name, instances, delta);
           if (delta > 0) {
             // Scale up
             for (int i = 0; i < delta; i++) {
@@ -796,7 +833,8 @@ public class ApplicationMaster {
               } else {
                 instance = Utils.popfirst(running);
               }
-              finishContainer(instance, Model.Container.State.KILLED);
+              finishContainer(instance, Model.Container.State.KILLED,
+                              "Killed by user request.");
               out.add(containers.get(instance));
             }
           }
@@ -817,7 +855,7 @@ public class ApplicationMaster {
       container.setContainerRequest(req);
       rmClient.addContainerRequest(req);
       requested.put(priority, container);
-      LOG.info("REQUESTED: " + container.getId());
+      LOG.info("REQUESTED: {}", container.getId());
     }
 
     public synchronized Model.Container addContainer() {
@@ -826,7 +864,7 @@ public class ApplicationMaster {
         container = new Model.Container(name, containers.size(),
                                         Model.Container.State.WAITING);
         waiting.add(container.getInstance());
-        LOG.info("WAITING: " + container.getId());
+        LOG.info("WAITING: {}", container.getId());
       } else {
         container = new Model.Container(name, containers.size(),
                                         Model.Container.State.REQUESTED);
@@ -838,7 +876,7 @@ public class ApplicationMaster {
 
     public Model.Container startContainer(final Container container,
         Resource resource) {
-      LOG.info("Starting " + container.getId());
+      LOG.info("Starting {}...", container.getId());
       Priority priority = container.getPriority();
       removePriority(priority);
 
@@ -881,7 +919,7 @@ public class ApplicationMaster {
                 service.getCommands(),
                 null,
                 tokens,
-                null);
+                spec.getAcls().getYarnAcls());
 
         executor.execute(
             new Runnable() {
@@ -890,15 +928,15 @@ public class ApplicationMaster {
                 try {
                   nmClient.startContainer(container, ctx);
                 } catch (Throwable exc) {
-                  LOG.warn("Failed to start " + ServiceTracker.this.name
-                           + "_" + instance, exc);
+                  LOG.warn("Failed to start {}_{}", ServiceTracker.this.name, instance, exc);
                   ServiceTracker.this.finishContainer(instance,
-                      Model.Container.State.FAILED);
+                      Model.Container.State.FAILED,
+                      "Failed to start, exception raised: " + exc.getMessage());
                 }
               }
             });
 
-        LOG.info("RUNNING: " + out.getId() + " on " + container.getId());
+        LOG.info("RUNNING: {} on {}", out.getId(), container.getId());
       }
 
       if (!initialRunning && requested.size() == 0) {
@@ -910,7 +948,7 @@ public class ApplicationMaster {
       return out;
     }
 
-    public void finishContainer(int instance, Model.Container.State state) {
+    public void finishContainer(int instance, Model.Container.State state, String exitMessage) {
       // Any function that may remove containers, needs to lock the kv store
       // outside the tracker to prevent deadlocks.
       synchronized (keyValueStore) {
@@ -938,6 +976,7 @@ public class ApplicationMaster {
           }
 
           boolean mayRestart = false;
+          boolean warn = false;
           switch (state) {
             case SUCCEEDED:
               numSucceeded += 1;
@@ -948,14 +987,21 @@ public class ApplicationMaster {
             case FAILED:
               numFailed += 1;
               mayRestart = true;
+              warn = true;
               break;
             default:
               throw new IllegalArgumentException(
                   "finishContainer got illegal state " + state);
           }
 
-          LOG.info(state + ": " + container.getId());
+          if (warn) {
+            LOG.warn("{}: {} - {}", state, container.getId(), exitMessage);
+          } else {
+            LOG.info("{}: {} - {}", state, container.getId(), exitMessage);
+          }
+
           container.setState(state);
+          container.setExitMessage(exitMessage);
 
           // Remove any owned keys from the key-value store
           for (String key : container.getOwnedKeys()) {
@@ -976,9 +1022,8 @@ public class ApplicationMaster {
                 }
               }
             } else {
-              LOG.warn("Key '" + key
-                       + "' already deleted, but wasn't removed from "
-                       + "owned-keys set of service " + name);
+              LOG.error("Key '{}' already deleted, but wasn't removed from "
+                        + "owned-keys set of service '{}'", key, name);
             }
           }
           container.clearOwnedKeys();
@@ -986,7 +1031,8 @@ public class ApplicationMaster {
           if (mayRestart && (service.getMaxRestarts() == -1
               || numRestarted < service.getMaxRestarts())) {
             numRestarted += 1;
-            LOG.info("RESTARTING: adding new container to replace " + container.getId());
+            LOG.info("RESTARTING: adding new container to replace {}.",
+                     container.getId());
             addContainer();
           }
 
@@ -998,7 +1044,7 @@ public class ApplicationMaster {
     }
   }
 
-  class MasterImpl extends MasterGrpc.MasterImplBase {
+  class AppMasterImpl extends AppMasterGrpc.AppMasterImplBase {
 
     private boolean checkService(String name, StreamObserver<?> resp) {
       if (services.get(name) == null) {
@@ -1041,7 +1087,7 @@ public class ApplicationMaster {
       FinalApplicationStatus status = MsgUtils.readFinalStatus(req.getFinalStatus());
 
       // Shutdown everything but the grpc server
-      preshutdown(status, "Shutdown by user");
+      preshutdown(status, "Shutdown requested by user.");
 
       resp.onNext(MsgUtils.EMPTY);
       resp.onCompleted();
@@ -1113,7 +1159,8 @@ public class ApplicationMaster {
         return;
       }
 
-      services.get(service).finishContainer(instance, Model.Container.State.KILLED);
+      services.get(service).finishContainer(instance, Model.Container.State.KILLED,
+                                            "Killed by user request.");
       resp.onNext(MsgUtils.EMPTY);
       resp.onCompleted();
     }
@@ -1559,6 +1606,27 @@ public class ApplicationMaster {
     public StreamObserver<Msg.WatchRequest> watch(final StreamObserver<Msg.WatchResponse> resp) {
       LOG.info("watch called");
       return new WatchRequestStream(resp);
+    }
+
+    @Override
+    public void addProxy(Msg.Proxy req, StreamObserver<Msg.Empty> resp) {
+      ui.addProxy(req, resp);
+    }
+
+    @Override
+    public void removeProxy(Msg.RemoveProxyRequest req, StreamObserver<Msg.Empty> resp) {
+      ui.removeProxy(req, resp);
+    }
+
+    @Override
+    public void uiInfo(Msg.UIInfoRequest req, StreamObserver<Msg.UIInfoResponse> resp) {
+      ui.uiInfo(req, resp);
+    }
+
+    @Override
+    public void getProxies(Msg.GetProxiesRequest req,
+                           StreamObserver<Msg.GetProxiesResponse> resp) {
+      ui.getProxies(req, resp);
     }
   }
 }

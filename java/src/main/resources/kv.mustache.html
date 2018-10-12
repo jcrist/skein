@@ -6,13 +6,10 @@
 
     <link rel="stylesheet" href="webjars/bootstrap/4.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="webjars/open-iconic/1.1.1/font/css/open-iconic-bootstrap.css">
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
     <link rel="shortcut icon" href="favicon.ico">
-    <link rel="manifest" href="site.webmanifest">
-    <link rel="mask-icon" href="safari-pinned-tab.svg" color="#333333">
-    <meta name="msapplication-TileColor" content="#333333">
     <meta name="theme-color" content="#ffffff">
 
     <style>
@@ -48,6 +45,16 @@
           <li class="nav-item active">
             <a class="nav-link" href="./kv">Key/Value</a>
           </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle {{^pages}}disabled{{/pages}}" {{^pages}}title="No service pages available"{{/pages}} href="#" id="servicePages" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Service Pages
+            </a>
+            <div class="dropdown-menu" aria-labelledby="servicePages">
+              {{#pages}}
+              <a class="dropdown-item" href=".{{proxyPrefix}}/{{getValue}}">{{getKey}}</a>
+              {{/pages}}
+            </div>
+          </li>
         </ul>
         <div class="dropdown-divider"></div>
         <span class="navbar-text" id="application">{{appId}}</span>
@@ -72,8 +79,8 @@
           {{#kv}}
           <tr>
             <th scope="row"></th>
-            <td>{{key}}</td>
-            <td>{{value}}</td>
+            <td>{{getKey}}</td>
+            <td>{{getValue}}</td>
           </tr>
           {{/kv}}
         </tbody>

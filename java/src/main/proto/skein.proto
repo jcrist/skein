@@ -83,6 +83,36 @@ message Service {
 }
 
 
+message Acls {
+  bool enable = 1;
+  repeated string view_users = 2;
+  repeated string view_groups = 3;
+  repeated string modify_users = 4;
+  repeated string modify_groups = 5;
+  repeated string ui_users = 6;
+}
+
+
+message Log {
+  enum Level {
+    INFO = 0;
+    ALL = 1;
+    TRACE = 2;
+    DEBUG = 3;
+    WARN = 4;
+    ERROR = 5;
+    FATAL = 6;
+    OFF = 7;
+  }
+}
+
+
+message Master {
+  File log_config = 1;
+  Log.Level log_level = 2;
+}
+
+
 message ApplicationSpec {
   string name = 1;
   string queue = 2;
@@ -90,7 +120,9 @@ message ApplicationSpec {
   int32 max_attempts = 4;
   repeated string tags = 5;
   repeated string file_systems = 6;
-  map<string, Service> services = 7;
+  Acls acls = 7;
+  Master master = 8;
+  map<string, Service> services = 9;
 }
 
 
@@ -110,6 +142,7 @@ message Container {
   string yarn_node_http_address = 5;
   int64 start_time = 6;
   int64 finish_time = 7;
+  string exit_message = 8;
 }
 
 
@@ -178,7 +211,7 @@ message ApplicationsResponse {
 // Master only definitions
 
 
-service Master {
+service AppMaster {
   rpc shutdown (ShutdownRequest) returns (Empty);
 
   rpc GetRange (GetRangeRequest) returns (GetRangeResponse);
@@ -198,6 +231,14 @@ service Master {
   rpc killContainer (ContainerInstance) returns (Empty);
 
   rpc scale (ScaleRequest) returns (ContainersResponse);
+
+  rpc AddProxy (Proxy) returns (Empty);
+
+  rpc RemoveProxy (RemoveProxyRequest) returns (Empty);
+
+  rpc UiInfo (UIInfoRequest) returns (UIInfoResponse);
+
+  rpc GetProxies (GetProxiesRequest) returns (GetProxiesResponse);
 }
 
 
@@ -379,4 +420,35 @@ message ContainersResponse {
 message ScaleRequest {
   string service_name = 1;
   int32 instances = 2;
+}
+
+
+message Proxy {
+  string route = 1;
+  string link_name = 2;
+  string target = 3;
+}
+
+
+message RemoveProxyRequest {
+  string route = 1;
+}
+
+
+message UIInfoRequest {
+}
+
+
+message UIInfoResponse {
+  repeated string ui_address = 1;
+  string proxy_prefix = 2;
+}
+
+
+message GetProxiesRequest {
+}
+
+
+message GetProxiesResponse {
+  repeated Proxy proxy = 1;
 }
