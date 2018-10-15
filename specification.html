@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Specification &#8212; Skein 0.2.0 documentation</title>
+    <title>Specification &#8212; Skein 0.2.0+1.g9bf96d2 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -42,56 +42,64 @@ specificed as a YAML or JSON document, or via the <a class="reference external" 
 application specification in detail.</p>
 <div class="contents local topic" id="contents">
 <ul class="simple">
-<li><a class="reference internal" href="#specification-components" id="id1">Specification Components</a><ul>
-<li><a class="reference internal" href="#top-level-fields" id="id2">Top-Level Fields</a><ul>
-<li><a class="reference internal" href="#name" id="id3"><code class="docutils literal notranslate"><span class="pre">name</span></code></a></li>
-<li><a class="reference internal" href="#queue" id="id4"><code class="docutils literal notranslate"><span class="pre">queue</span></code></a></li>
-<li><a class="reference internal" href="#max-attempts" id="id5"><code class="docutils literal notranslate"><span class="pre">max_attempts</span></code></a></li>
-<li><a class="reference internal" href="#tags" id="id6"><code class="docutils literal notranslate"><span class="pre">tags</span></code></a></li>
-<li><a class="reference internal" href="#file-systems" id="id7"><code class="docutils literal notranslate"><span class="pre">file_systems</span></code></a></li>
-<li><a class="reference internal" href="#acls" id="id8"><code class="docutils literal notranslate"><span class="pre">acls</span></code></a></li>
-<li><a class="reference internal" href="#master" id="id9"><code class="docutils literal notranslate"><span class="pre">master</span></code></a></li>
-<li><a class="reference internal" href="#services" id="id10"><code class="docutils literal notranslate"><span class="pre">services</span></code></a></li>
+<li><a class="reference internal" href="#specification-components" id="id2">Specification Components</a><ul>
+<li><a class="reference internal" href="#top-level-fields" id="id3">Top-Level Fields</a><ul>
+<li><a class="reference internal" href="#name" id="id4"><code class="docutils literal notranslate"><span class="pre">name</span></code></a></li>
+<li><a class="reference internal" href="#queue" id="id5"><code class="docutils literal notranslate"><span class="pre">queue</span></code></a></li>
+<li><a class="reference internal" href="#node-label" id="id6"><code class="docutils literal notranslate"><span class="pre">node_label</span></code></a></li>
+<li><a class="reference internal" href="#max-attempts" id="id7"><code class="docutils literal notranslate"><span class="pre">max_attempts</span></code></a></li>
+<li><a class="reference internal" href="#tags" id="id8"><code class="docutils literal notranslate"><span class="pre">tags</span></code></a></li>
+<li><a class="reference internal" href="#file-systems" id="id9"><code class="docutils literal notranslate"><span class="pre">file_systems</span></code></a></li>
+<li><a class="reference internal" href="#acls" id="id10"><code class="docutils literal notranslate"><span class="pre">acls</span></code></a></li>
+<li><a class="reference internal" href="#master" id="id11"><code class="docutils literal notranslate"><span class="pre">master</span></code></a></li>
+<li><a class="reference internal" href="#services" id="id12"><code class="docutils literal notranslate"><span class="pre">services</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#service" id="id11">Service</a><ul>
-<li><a class="reference internal" href="#instances" id="id12"><code class="docutils literal notranslate"><span class="pre">instances</span></code></a></li>
-<li><a class="reference internal" href="#max-restarts" id="id13"><code class="docutils literal notranslate"><span class="pre">max_restarts</span></code></a></li>
-<li><a class="reference internal" href="#resources" id="id14"><code class="docutils literal notranslate"><span class="pre">resources</span></code></a></li>
-<li><a class="reference internal" href="#files" id="id15"><code class="docutils literal notranslate"><span class="pre">files</span></code></a></li>
-<li><a class="reference internal" href="#env" id="id16"><code class="docutils literal notranslate"><span class="pre">env</span></code></a></li>
-<li><a class="reference internal" href="#depends" id="id17"><code class="docutils literal notranslate"><span class="pre">depends</span></code></a></li>
-<li><a class="reference internal" href="#commands" id="id18"><code class="docutils literal notranslate"><span class="pre">commands</span></code></a></li>
+<li><a class="reference internal" href="#service" id="id13">Service</a><ul>
+<li><a class="reference internal" href="#instances" id="id14"><code class="docutils literal notranslate"><span class="pre">instances</span></code></a></li>
+<li><a class="reference internal" href="#id1" id="id15"><code class="docutils literal notranslate"><span class="pre">node_label</span></code></a></li>
+<li><a class="reference internal" href="#max-restarts" id="id16"><code class="docutils literal notranslate"><span class="pre">max_restarts</span></code></a></li>
+<li><a class="reference internal" href="#resources" id="id17"><code class="docutils literal notranslate"><span class="pre">resources</span></code></a></li>
+<li><a class="reference internal" href="#files" id="id18"><code class="docutils literal notranslate"><span class="pre">files</span></code></a></li>
+<li><a class="reference internal" href="#env" id="id19"><code class="docutils literal notranslate"><span class="pre">env</span></code></a></li>
+<li><a class="reference internal" href="#depends" id="id20"><code class="docutils literal notranslate"><span class="pre">depends</span></code></a></li>
+<li><a class="reference internal" href="#commands" id="id21"><code class="docutils literal notranslate"><span class="pre">commands</span></code></a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#example" id="id19">Example</a></li>
-<li><a class="reference internal" href="#python-api-example" id="id20">Python API Example</a></li>
+<li><a class="reference internal" href="#example" id="id22">Example</a></li>
+<li><a class="reference internal" href="#python-api-example" id="id23">Python API Example</a></li>
 </ul>
 </div>
 <div class="section" id="specification-components">
-<h2><a class="toc-backref" href="#id1">Specification Components</a><a class="headerlink" href="#specification-components" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id2">Specification Components</a><a class="headerlink" href="#specification-components" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="top-level-fields">
-<h3><a class="toc-backref" href="#id2">Top-Level Fields</a><a class="headerlink" href="#top-level-fields" title="Permalink to this headline">¶</a></h3>
+<h3><a class="toc-backref" href="#id3">Top-Level Fields</a><a class="headerlink" href="#top-level-fields" title="Permalink to this headline">¶</a></h3>
 <p>At the top-level, a specification starts with an <a class="reference internal" href="api.html#skein.ApplicationSpec" title="skein.ApplicationSpec"><code class="xref py py-class docutils literal notranslate"><span class="pre">ApplicationSpec</span></code></a>.
 This takes the following fields:</p>
 <div class="section" id="name">
-<h4><a class="toc-backref" href="#id3"><code class="docutils literal notranslate"><span class="pre">name</span></code></a><a class="headerlink" href="#name" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id4"><code class="docutils literal notranslate"><span class="pre">name</span></code></a><a class="headerlink" href="#name" title="Permalink to this headline">¶</a></h4>
 <p>The name of the application. Optional, defaults to <code class="docutils literal notranslate"><span class="pre">skein</span></code>.</p>
 </div>
 <div class="section" id="queue">
-<h4><a class="toc-backref" href="#id4"><code class="docutils literal notranslate"><span class="pre">queue</span></code></a><a class="headerlink" href="#queue" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id5"><code class="docutils literal notranslate"><span class="pre">queue</span></code></a><a class="headerlink" href="#queue" title="Permalink to this headline">¶</a></h4>
 <p>The queue to submit the application to. Optional, defaults to <code class="docutils literal notranslate"><span class="pre">default</span></code>.</p>
 </div>
+<div class="section" id="node-label">
+<h4><a class="toc-backref" href="#id6"><code class="docutils literal notranslate"><span class="pre">node_label</span></code></a><a class="headerlink" href="#node-label" title="Permalink to this headline">¶</a></h4>
+<p>The <a class="reference external" href="https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/NodeLabel.html">node_label</a>
+to request for all containers in this application. Services can override this
+value by setting <code class="docutils literal notranslate"><span class="pre">node_label</span></code> on the service directly. Default is no label.</p>
+</div>
 <div class="section" id="max-attempts">
-<h4><a class="toc-backref" href="#id5"><code class="docutils literal notranslate"><span class="pre">max_attempts</span></code></a><a class="headerlink" href="#max-attempts" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id7"><code class="docutils literal notranslate"><span class="pre">max_attempts</span></code></a><a class="headerlink" href="#max-attempts" title="Permalink to this headline">¶</a></h4>
 <p>The maximum number of submission attempts before marking the application as
 failed. Note that this only considers failures of the application master
 during startup. Optional, default is 1 (recommended).</p>
 </div>
 <div class="section" id="tags">
-<h4><a class="toc-backref" href="#id6"><code class="docutils literal notranslate"><span class="pre">tags</span></code></a><a class="headerlink" href="#tags" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id8"><code class="docutils literal notranslate"><span class="pre">tags</span></code></a><a class="headerlink" href="#tags" title="Permalink to this headline">¶</a></h4>
 <p>A list of strings to use as tags for this application. Optional.</p>
 <p><strong>Example</strong></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>tags:
@@ -101,7 +109,7 @@ during startup. Optional, default is 1 (recommended).</p>
 </div>
 </div>
 <div class="section" id="file-systems">
-<h4><a class="toc-backref" href="#id7"><code class="docutils literal notranslate"><span class="pre">file_systems</span></code></a><a class="headerlink" href="#file-systems" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id9"><code class="docutils literal notranslate"><span class="pre">file_systems</span></code></a><a class="headerlink" href="#file-systems" title="Permalink to this headline">¶</a></h4>
 <p>A list of Hadoop file systems to acquire delegation tokens for. A token is
 always acquired for the default filesystem (<code class="docutils literal notranslate"><span class="pre">fs.defaultFS</span></code> in
 <code class="docutils literal notranslate"><span class="pre">core-site.xml</span></code>). In many cases the default is sufficient. Optional.</p>
@@ -114,7 +122,7 @@ always acquired for the default filesystem (<code class="docutils literal notran
 </div>
 </div>
 <div class="section" id="acls">
-<span id="specification-acls"></span><h4><a class="toc-backref" href="#id8"><code class="docutils literal notranslate"><span class="pre">acls</span></code></a><a class="headerlink" href="#acls" title="Permalink to this headline">¶</a></h4>
+<span id="specification-acls"></span><h4><a class="toc-backref" href="#id10"><code class="docutils literal notranslate"><span class="pre">acls</span></code></a><a class="headerlink" href="#acls" title="Permalink to this headline">¶</a></h4>
 <p>Configures the application-level Access Control Lists (ACLs). Optional,
 defaults to no ACLs.</p>
 <p>The following access types are supported:</p>
@@ -165,7 +173,7 @@ give view access to all users:</p>
 </ul>
 </div>
 <div class="section" id="master">
-<h4><a class="toc-backref" href="#id9"><code class="docutils literal notranslate"><span class="pre">master</span></code></a><a class="headerlink" href="#master" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id11"><code class="docutils literal notranslate"><span class="pre">master</span></code></a><a class="headerlink" href="#master" title="Permalink to this headline">¶</a></h4>
 <p>Additional configuration tuning for the Application Master. Optional. Under
 common use the defaults should be sufficient.</p>
 <p>Supported subfields are:</p>
@@ -188,7 +196,7 @@ for more information.</li>
 </div>
 </div>
 <div class="section" id="services">
-<h4><a class="toc-backref" href="#id10"><code class="docutils literal notranslate"><span class="pre">services</span></code></a><a class="headerlink" href="#services" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id12"><code class="docutils literal notranslate"><span class="pre">services</span></code></a><a class="headerlink" href="#services" title="Permalink to this headline">¶</a></h4>
 <p>A dict of service-name to <a class="reference internal" href="api.html#skein.Service" title="skein.Service"><code class="xref py py-class docutils literal notranslate"><span class="pre">Service</span></code></a>. At least one service is required.</p>
 <p><strong>Example</strong></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
@@ -199,14 +207,14 @@ for more information.</li>
 </div>
 </div>
 <div class="section" id="service">
-<h3><a class="toc-backref" href="#id11">Service</a><a class="headerlink" href="#service" title="Permalink to this headline">¶</a></h3>
+<h3><a class="toc-backref" href="#id13">Service</a><a class="headerlink" href="#service" title="Permalink to this headline">¶</a></h3>
 <p>The basic of unit of an application is a <a class="reference internal" href="api.html#skein.Service" title="skein.Service"><code class="xref py py-class docutils literal notranslate"><span class="pre">Service</span></code></a>. Services describe
 how to launch an executable, as well as how that executable should be managed
 over the course of the application. A service may also have multiple instances,
 each running in their own YARN container. A service description takes the
 following fields:</p>
 <div class="section" id="instances">
-<h4><a class="toc-backref" href="#id12"><code class="docutils literal notranslate"><span class="pre">instances</span></code></a><a class="headerlink" href="#instances" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id14"><code class="docutils literal notranslate"><span class="pre">instances</span></code></a><a class="headerlink" href="#instances" title="Permalink to this headline">¶</a></h4>
 <p>The number of instances to create on startup. Must be &gt;= 0. After startup
 additional instances may be created by the <a class="reference internal" href="api.html#skein.ApplicationClient" title="skein.ApplicationClient"><code class="xref py py-class docutils literal notranslate"><span class="pre">ApplicationClient</span></code></a>.
 Optional, default is 1.</p>
@@ -217,13 +225,32 @@ Optional, default is 1.</p>
 </pre></div>
 </div>
 </div>
+<div class="section" id="id1">
+<h4><a class="toc-backref" href="#id15"><code class="docutils literal notranslate"><span class="pre">node_label</span></code></a><a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h4>
+<p>The <a class="reference external" href="https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/NodeLabel.html">node_label</a>
+to request for all containers in this service. If not set, defaults to the
+application-level <code class="docutils literal notranslate"><span class="pre">node_label</span></code> (if set).</p>
+<p><strong>Example</strong></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>node_label: mylabel
+
+services:
+  my_service1:
+    node_label: GPU  # This service will be allocated on &quot;GPU&quot; nodes only.
+    ...
+
+  my_service2:
+    # node_label is not set, the application label &quot;mylabel&quot; will be used.
+    ...
+</pre></div>
+</div>
+</div>
 <div class="section" id="max-restarts">
-<h4><a class="toc-backref" href="#id13"><code class="docutils literal notranslate"><span class="pre">max_restarts</span></code></a><a class="headerlink" href="#max-restarts" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id16"><code class="docutils literal notranslate"><span class="pre">max_restarts</span></code></a><a class="headerlink" href="#max-restarts" title="Permalink to this headline">¶</a></h4>
 <p>The maximum number of restarts allowed for this service. Must be &gt;= -1. On
 failure, a container will be restarted if the total number of restarts for its
 service is &lt; <code class="docutils literal notranslate"><span class="pre">max_restarts</span></code>. Once this limit is exceeded, the service is
 marked as failed and the application will be terminated. Set to -1 to always
-restart, or 0 to never restart. Optinoal, default is 0.</p>
+restart, or 0 to never restart. Optional, default is 0.</p>
 <p><strong>Example</strong></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
   my_service:
@@ -241,7 +268,7 @@ restart, or 0 to never restart. Optinoal, default is 0.</p>
 </div>
 </div>
 <div class="section" id="resources">
-<h4><a class="toc-backref" href="#id14"><code class="docutils literal notranslate"><span class="pre">resources</span></code></a><a class="headerlink" href="#resources" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id17"><code class="docutils literal notranslate"><span class="pre">resources</span></code></a><a class="headerlink" href="#resources" title="Permalink to this headline">¶</a></h4>
 <p>The memory and cpu requirements to a single instance of the service. Takes the
 following fields:</p>
 <ul>
@@ -266,7 +293,7 @@ application submission.</p>
 </div>
 </div>
 <div class="section" id="files">
-<span id="specification-files"></span><h4><a class="toc-backref" href="#id15"><code class="docutils literal notranslate"><span class="pre">files</span></code></a><a class="headerlink" href="#files" title="Permalink to this headline">¶</a></h4>
+<span id="specification-files"></span><h4><a class="toc-backref" href="#id18"><code class="docutils literal notranslate"><span class="pre">files</span></code></a><a class="headerlink" href="#files" title="Permalink to this headline">¶</a></h4>
 <p>Any files or archives needed to run the service. A mapping of destination
 relative paths to <a class="reference internal" href="api.html#skein.File" title="skein.File"><code class="xref py py-class docutils literal notranslate"><span class="pre">File</span></code></a> or <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> objects describing the sources
 for these paths. <a class="reference internal" href="api.html#skein.File" title="skein.File"><code class="xref py py-class docutils literal notranslate"><span class="pre">File</span></code></a> objects are described in more detail below.
@@ -325,7 +352,7 @@ object.</p>
 </div>
 </div>
 <div class="section" id="env">
-<h4><a class="toc-backref" href="#id16"><code class="docutils literal notranslate"><span class="pre">env</span></code></a><a class="headerlink" href="#env" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id19"><code class="docutils literal notranslate"><span class="pre">env</span></code></a><a class="headerlink" href="#env" title="Permalink to this headline">¶</a></h4>
 <p>A mapping of environment variables needed to run the service. Optional.</p>
 <p><strong>Example</strong></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
@@ -337,7 +364,7 @@ object.</p>
 </div>
 </div>
 <div class="section" id="depends">
-<h4><a class="toc-backref" href="#id17"><code class="docutils literal notranslate"><span class="pre">depends</span></code></a><a class="headerlink" href="#depends" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id20"><code class="docutils literal notranslate"><span class="pre">depends</span></code></a><a class="headerlink" href="#depends" title="Permalink to this headline">¶</a></h4>
 <p>A list of service names that this service depends on. The service will only be
 started after all its dependencies have been started. Optional.</p>
 <p><strong>Example</strong></p>
@@ -351,7 +378,7 @@ started after all its dependencies have been started. Optional.</p>
 </div>
 </div>
 <div class="section" id="commands">
-<h4><a class="toc-backref" href="#id18"><code class="docutils literal notranslate"><span class="pre">commands</span></code></a><a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h4>
+<h4><a class="toc-backref" href="#id21"><code class="docutils literal notranslate"><span class="pre">commands</span></code></a><a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h4>
 <p>Shell commands to startup the service. Commands are run in the order provided,
 with subsequent commands only run if the prior commands succeeded. At least one
 command must be provided.</p>
@@ -370,7 +397,7 @@ command must be provided.</p>
 </div>
 </div>
 <div class="section" id="example">
-<h2><a class="toc-backref" href="#id19">Example</a><a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id22">Example</a><a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <p>An example specification file. This starts a <a class="reference external" href="http://jupyter.org/">jupyter</a>
 notebook and a 4 node <a class="reference external" href="http://dask.pydata.org/">dask.distributed</a> cluster.
 The example uses <a class="reference external" href="https://github.com/jcrist/conda-pack/">conda-pack</a> to
@@ -418,7 +445,7 @@ services:
 </div>
 </div>
 <div class="section" id="python-api-example">
-<h2><a class="toc-backref" href="#id20">Python API Example</a><a class="headerlink" href="#python-api-example" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id23">Python API Example</a><a class="headerlink" href="#python-api-example" title="Permalink to this headline">¶</a></h2>
 <p>The above YAML file format is also composable using the <a class="reference external" href="api.html#application-specification">Python API</a>. The python classes
 (<a class="reference internal" href="api.html#skein.ApplicationSpec" title="skein.ApplicationSpec"><code class="xref py py-class docutils literal notranslate"><span class="pre">ApplicationSpec</span></code></a>, <a class="reference internal" href="api.html#skein.Service" title="skein.Service"><code class="xref py py-class docutils literal notranslate"><span class="pre">Service</span></code></a>, etc…) map 1:1 to the YAML format
 described above. They can be read from a file, or created directly:</p>
