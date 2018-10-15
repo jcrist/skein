@@ -1,6 +1,7 @@
 package com.anaconda.skein;
 
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
@@ -837,8 +838,13 @@ public class ApplicationMaster {
 
     private synchronized void requestContainer(Model.Container container) {
       Priority priority = newPriority(this);
-      ContainerRequest req = new ContainerRequest(service.getResources(),
-                                                  null, null, priority);
+      ContainerRequest req = new ContainerRequest(
+          service.getResources(),
+          null,
+          null,
+          priority,
+          true,
+          Strings.emptyToNull(service.getNodeLabel()));
       container.setContainerRequest(req);
       rmClient.addContainerRequest(req);
       requested.put(priority, container);

@@ -73,12 +73,13 @@ message File {
 
 message Service {
   int32 instances = 1;
-  int32 max_restarts = 2;
-  Resources resources = 3;
-  map<string, File> files = 4;
-  map<string, string> env = 5;
-  repeated string commands = 6;
-  repeated string depends = 7;
+  string node_label = 2;
+  int32 max_restarts = 3;
+  Resources resources = 4;
+  map<string, File> files = 5;
+  map<string, string> env = 6;
+  repeated string commands = 7;
+  repeated string depends = 8;
 }
 
 
@@ -115,12 +116,13 @@ message Master {
 message ApplicationSpec {
   string name = 1;
   string queue = 2;
-  int32 max_attempts = 3;
-  repeated string tags = 4;
-  repeated string file_systems = 5;
-  Acls acls = 6;
-  Master master = 7;
-  map<string, Service> services = 8;
+  string node_label = 3;
+  int32 max_attempts = 4;
+  repeated string tags = 5;
+  repeated string file_systems = 6;
+  Acls acls = 7;
+  Master master = 8;
+  map<string, Service> services = 9;
 }
 
 

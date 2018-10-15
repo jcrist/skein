@@ -20,6 +20,7 @@ def indent(s, n):
 
 
 service_spec = """\
+node_label: gpu
 resources:
     vcores: 1
     memory: 1024
@@ -40,6 +41,7 @@ commands:
 app_spec = """\
 name: test
 queue: default
+node_label: cpu
 max_attempts: 2
 tags:
     - tag1
@@ -201,6 +203,7 @@ def test_service():
     r = Resources(memory=1024, vcores=1)
     c = ['commands']
     s1 = Service(resources=r, commands=c,
+                 node_label="testlabel",
                  files={'file': File(source='/test/path')})
     s2 = Service(resources=r, commands=c,
                  files={'file': File(source='/test/path', size=1024)})
@@ -254,7 +257,10 @@ def test_application_spec():
                  files={'file': File(source='/test/path')})
     s2 = Service(resources=r, commands=c,
                  files={'file': File(source='/test/path', size=1024)})
-    spec1 = ApplicationSpec(services={'service': s1})
+    spec1 = ApplicationSpec(name='test',
+                            queue='testqueue',
+                            node_label='testlabel',
+                            services={'service': s1})
     spec2 = ApplicationSpec(services={'service': s2})
     check_specification_methods(spec1, spec2)
 
@@ -299,6 +305,8 @@ def test_service_from_yaml():
     s = Service.from_yaml(service_spec)
     assert isinstance(s, Service)
 
+    assert s.node_label == 'gpu'
+
     assert s.resources.vcores == 1
     assert s.resources.memory == 1024
 
@@ -330,6 +338,7 @@ def test_application_spec_from_yaml():
 
     assert spec.name == 'test'
     assert spec.queue == 'default'
+    assert spec.node_label == 'cpu'
     assert spec.tags == {'tag1', 'tag2'}
     assert spec.file_systems == ['hdfs://preprod']
     assert spec.max_attempts == 2

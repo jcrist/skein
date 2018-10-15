@@ -1,5 +1,6 @@
 package com.anaconda.skein;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ObjectArrays;
 
 import io.grpc.Server;
@@ -301,6 +302,7 @@ public class Daemon {
     appContext.setPriority(Priority.newInstance(0));
     appContext.setQueue(spec.getQueue());
     appContext.setMaxAppAttempts(spec.getMaxAttempts());
+    appContext.setNodeLabelExpression(Strings.emptyToNull(spec.getNodeLabel()));
     appContext.setApplicationTags(spec.getTags());
 
     LOG.info("Submitting application...");

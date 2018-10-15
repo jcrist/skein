@@ -34,6 +34,7 @@ public class Model {
 
   public static class Service {
     private int instances;
+    private String nodeLabel;
     private int maxRestarts;
     private Resource resources;
     private Map<String, LocalResource> localResources;
@@ -44,6 +45,7 @@ public class Model {
     public Service() {}
 
     public Service(int instances,
+                   String nodeLabel,
                    int maxRestarts,
                    Resource resources,
                    Map<String, LocalResource> localResources,
@@ -51,6 +53,7 @@ public class Model {
                    List<String> commands,
                    Set<String> depends) {
       this.instances = instances;
+      this.nodeLabel = nodeLabel;
       this.maxRestarts = maxRestarts;
       this.resources = resources;
       this.localResources = localResources;
@@ -62,6 +65,7 @@ public class Model {
     public String toString() {
       return ("Service:\n"
               + "instances: " + instances + "\n"
+              + "nodeLabel: " + nodeLabel + "\n"
               + "maxRestarts: " + maxRestarts + "\n"
               + "resources: " + resources + "\n"
               + "localResources: " + localResources + "\n"
@@ -72,6 +76,9 @@ public class Model {
 
     public void setInstances(int instances) { this.instances = instances; }
     public int getInstances() { return instances; }
+
+    public void setNodeLabel(String nodeLabel) { this.nodeLabel = nodeLabel; }
+    public String getNodeLabel() { return nodeLabel; }
 
     public void setMaxRestarts(int maxRestarts) { this.maxRestarts = maxRestarts; }
     public int getMaxRestarts() { return maxRestarts; }
@@ -177,6 +184,7 @@ public class Model {
   public static class ApplicationSpec {
     private String name;
     private String queue;
+    private String nodeLabel;
     private int maxAttempts;
     private Set<String> tags;
     private List<Path> fileSystems;
@@ -186,12 +194,13 @@ public class Model {
 
     public ApplicationSpec() {}
 
-    public ApplicationSpec(String name, String queue, int maxAttempts,
+    public ApplicationSpec(String name, String queue, String nodeLabel, int maxAttempts,
                            Set<String> tags, List<Path> fileSystems,
                            Acls acls, Master master,
                            Map<String, Service> services) {
       this.name = name;
       this.queue = queue;
+      this.nodeLabel = nodeLabel;
       this.maxAttempts = maxAttempts;
       this.tags = tags;
       this.fileSystems = fileSystems;
@@ -204,6 +213,7 @@ public class Model {
       return ("ApplicationSpec<"
               + "name: " + name + ", "
               + "queue: " + queue + ", "
+              + "nodeLabel: " + nodeLabel + ", "
               + "maxAttempts: " + maxAttempts + ", "
               + "tags: " + tags + ", "
               + "fileSystems" + fileSystems + ", "
@@ -215,6 +225,9 @@ public class Model {
 
     public void setQueue(String queue) { this.queue = queue; }
     public String getQueue() { return queue; }
+
+    public void setNodeLabel(String nodeLabel) { this.nodeLabel = nodeLabel; }
+    public String getNodeLabel() { return nodeLabel; }
 
     public void setMaxAttempts(int maxAttempts) { this.maxAttempts = maxAttempts; }
     public int getMaxAttempts() { return maxAttempts; }
