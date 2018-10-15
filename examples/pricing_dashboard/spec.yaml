@@ -4,7 +4,7 @@ services:
     dashboard:
         resources:
             vcores: 1
-            memory: 256
+            memory: 256 MiB
         files:
             # A packaged conda or virtual environment to be distributed with
             # the application. During YARN resource localization this will be
