@@ -4,11 +4,10 @@ import copy
 import datetime
 import os
 import pickle
-from math import ceil
 
 import pytest
 
-from skein.compatibility import UTC
+from skein.compatibility import UTC, math_ceil
 from skein.model import (ApplicationSpec, Service, Resources, File,
                          ApplicationState, FinalStatus, FileType, ACLs, Master,
                          Container, ApplicationReport, ResourceUsageReport,
@@ -93,14 +92,14 @@ def test_parse_memory():
     mib = 2 ** 20
     assert parse_memory('100') == 100
     assert parse_memory('100 MiB') == 100
-    assert parse_memory('100 MB') == ceil(100 * 1e6 / mib)
-    assert parse_memory('100M') == ceil(100 * 1e6 / mib)
+    assert parse_memory('100 MB') == math_ceil(100 * 1e6 / mib)
+    assert parse_memory('100M') == math_ceil(100 * 1e6 / mib)
     assert parse_memory('100Mi') == 100
     assert parse_memory('5kB') == 1
     assert parse_memory('5.4 MiB') == 6
     assert parse_memory('0.9 MiB') == 1
     assert parse_memory('1e3') == 1000
-    assert parse_memory('1e6 kB') == ceil(1e6 * 1e3 / mib)
+    assert parse_memory('1e6 kB') == math_ceil(1e6 * 1e3 / mib)
     assert parse_memory('MiB') == 1
 
     with pytest.raises(ValueError):

@@ -4,12 +4,11 @@ import json
 import os
 from datetime import datetime
 from getpass import getuser
-from math import ceil
 
 import yaml
 
 from . import proto as _proto
-from .compatibility import urlparse, string, integer
+from .compatibility import urlparse, string, integer, math_ceil
 from .objects import Enum, ProtobufMessage, Specification, required
 from .exceptions import context
 from .utils import implements, format_list, datetime_from_millis, runtime
@@ -50,7 +49,7 @@ def parse_memory(s):
     if isinstance(s, integer):
         out = s
     elif isinstance(s, float):
-        out = ceil(s)
+        out = math_ceil(s)
     elif isinstance(s, string):
         s = s.replace(' ', '')
 
@@ -79,7 +78,7 @@ def parse_memory(s):
         except KeyError:
             raise context.ValueError("Could not interpret %r as a byte unit" % suffix)
 
-        out = ceil(int(n * multiplier) / (2 ** 20))
+        out = math_ceil(n * multiplier / (2 ** 20))
     else:
         raise context.TypeError("memory must be an integer, got %r"
                                 % type(s).__name__)
