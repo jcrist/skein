@@ -52,7 +52,7 @@ def client(security, kinit):
         yield client
 
 
-sleeper = skein.Service(resources=skein.Resources(memory=32, vcores=1),
+sleeper = skein.Service(resources=skein.Resources(memory=128, vcores=1),
                         commands=['sleep infinity'])
 
 
@@ -131,23 +131,3 @@ def get_logs(app_id, tries=3):
         except Exception:
             pass
     return subprocess.check_output(command).decode()
-
-
-@pytest.fixture(params=[
-    "worker0.example.com",
-    "worker1.example.com"
-])
-def worker_as_gpu(request):
-    def rmadmin(cmd):
-        return subprocess.check_call(("yarn rmadmin " + cmd).split())
-
-    worker_host = request.param
-    rmadmin("-addToClusterNodeLabels gpu")
-    rmadmin("-replaceLabelsOnNode %s,gpu" % worker_host)
-    rmadmin("-refreshQueues")
-    try:
-        yield worker_host
-    finally:
-        rmadmin("-replaceLabelsOnNode %s," % worker_host)
-        rmadmin("-removeFromClusterNodeLabels gpu")
-        rmadmin("-refreshQueues")

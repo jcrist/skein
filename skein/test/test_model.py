@@ -203,6 +203,7 @@ def test_service():
     r = Resources(memory=1024, vcores=1)
     c = ['commands']
     s1 = Service(resources=r, commands=c,
+                 node_label="testlabel",
                  files={'file': File(source='/test/path')})
     s2 = Service(resources=r, commands=c,
                  files={'file': File(source='/test/path', size=1024)})
@@ -256,7 +257,10 @@ def test_application_spec():
                  files={'file': File(source='/test/path')})
     s2 = Service(resources=r, commands=c,
                  files={'file': File(source='/test/path', size=1024)})
-    spec1 = ApplicationSpec(services={'service': s1})
+    spec1 = ApplicationSpec(name='test',
+                            queue='testqueue',
+                            node_label='testlabel',
+                            services={'service': s1})
     spec2 = ApplicationSpec(services={'service': s2})
     check_specification_methods(spec1, spec2)
 

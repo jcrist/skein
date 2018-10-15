@@ -367,7 +367,9 @@ class Service(Specification):
     instances : int, optional
         The number of instances to create on startup. Default is 1.
     node_label : str, optional
-        The node label expression to use when requesting containers.
+        The node label expression to use when requesting containers for this
+        service. If not set, defaults to the application-level ``node_label``
+        (if set).
     max_restarts : int, optional
         The maximum number of restarts to allow for this service. Containers
         are only restarted on failure, and the cap is set for all containers in
@@ -389,7 +391,7 @@ class Service(Specification):
     _protobuf_cls = _proto.Service
 
     def __init__(self, commands=required, resources=required, instances=1,
-                 node_label="", max_restarts=0, files=None, env=None,
+                 node_label='', max_restarts=0, files=None, env=None,
                  depends=None):
         self._assign_required('commands', commands)
         self._assign_required('resources', resources)
@@ -684,7 +686,9 @@ class ApplicationSpec(Specification):
     queue : string, optional
         The queue to submit to. Defaults to the default queue.
     node_label : string, optional
-        The node label expression to use for requesting containers.
+        The node label expression to use when requesting containers for this
+        application. Services can override this setting by specifying
+        ``node_label`` on the service directly. Default is no label.
     tags : set, optional
         A set of strings to use as tags for this application.
     file_systems : list, optional

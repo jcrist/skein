@@ -250,7 +250,7 @@ def test_container_environment(client, has_kerberos_enabled):
     commands = ['env',
                 'echo "LOGIN_ID=[$(whoami)]"',
                 'hdfs dfs -touchz /user/testuser/test_container_permissions']
-    service = skein.Service(resources=skein.Resources(memory=64, vcores=1),
+    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
                             commands=commands)
     spec = skein.ApplicationSpec(name="test_container_permissions",
                                  queue="default",
@@ -264,7 +264,7 @@ def test_container_environment(client, has_kerberos_enabled):
     assert 'SKEIN_APPMASTER_ADDRESS=' in logs
     assert 'SKEIN_APPLICATION_ID=%s' % app.id in logs
     assert 'SKEIN_CONTAINER_ID=service_0' in logs
-    assert 'SKEIN_RESOURCE_MEMORY=64' in logs
+    assert 'SKEIN_RESOURCE_MEMORY=128' in logs
     assert 'SKEIN_RESOURCE_VCORES=1' in logs
 
     if has_kerberos_enabled:
@@ -277,7 +277,7 @@ def test_container_environment(client, has_kerberos_enabled):
 
 def test_file_systems(client):
     commands = ['hdfs dfs -touchz /user/testuser/test_file_systems']
-    service = skein.Service(resources=skein.Resources(memory=64, vcores=1),
+    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
                             commands=commands)
     spec = skein.ApplicationSpec(name="test_file_systems",
                                  queue="default",
@@ -356,35 +356,3 @@ def test_memory_limit_exceeded(client):
         assert wait_for_completion(client, app.id) == "FAILED"
     logs = get_logs(app.id)
     assert "memory used" in logs
-
-
-def test_application_node_label(client, worker_as_gpu):
-    service = skein.Service(
-        resources=skein.Resources(memory=128, vcores=1),
-        commands=["env"])
-    spec = skein.ApplicationSpec(
-        name="test_application_node_label",
-        services={"service": service},
-        node_label="gpu")
-
-    with run_application(client, spec=spec) as app:
-        wait_for_success(client, app.id)
-
-    logs = get_logs(app.id)
-    assert "NM_HOST=" + worker_as_gpu in logs
-
-
-def test_service_node_label(client, worker_as_gpu):
-    service = skein.Service(
-        resources=skein.Resources(memory=32, vcores=1),
-        commands=["env"],
-        node_label="gpu")
-    spec = skein.ApplicationSpec(
-        name="test_service_node_label",
-        services={"service": service})
-
-    with run_application(client, spec=spec) as app:
-        wait_for_success(client, app.id)
-
-    logs = get_logs(app.id)
-    assert "NM_HOST=" + worker_as_gpu in logs

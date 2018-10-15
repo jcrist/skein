@@ -213,7 +213,7 @@ public class Model {
       return ("ApplicationSpec<"
               + "name: " + name + ", "
               + "queue: " + queue + ", "
-              + "queue: " + nodeLabel + ", "
+              + "nodeLabel: " + nodeLabel + ", "
               + "maxAttempts: " + maxAttempts + ", "
               + "tags: " + tags + ", "
               + "fileSystems" + fileSystems + ", "

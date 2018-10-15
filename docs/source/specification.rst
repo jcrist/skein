@@ -31,6 +31,14 @@ The name of the application. Optional, defaults to ``skein``.
 
 The queue to submit the application to. Optional, defaults to ``default``.
 
+``node_label``
+~~~~~~~~~~~~~~
+
+The `node_label
+<https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/NodeLabel.html>`__
+to request for all containers in this application. Services can override this
+value by setting ``node_label`` on the service directly. Default is no label.
+
 ``max_attempts``
 ~~~~~~~~~~~~~~~~
 
@@ -189,6 +197,28 @@ Optional, default is 1.
       my_service:
         instances: 4  # Start 4 instances
 
+``node_label``
+~~~~~~~~~~~~~~
+
+The `node_label
+<https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/NodeLabel.html>`__
+to request for all containers in this service. If not set, defaults to the
+application-level ``node_label`` (if set).
+
+**Example**
+
+.. code-block:: none
+
+    node_label: mylabel
+
+    services:
+      my_service1:
+        node_label: GPU  # This service will be allocated on "GPU" nodes only.
+        ...
+
+      my_service2:
+        # node_label is not set, the application label "mylabel" will be used.
+        ...
 
 ``max_restarts``
 ~~~~~~~~~~~~~~~~
@@ -197,7 +227,7 @@ The maximum number of restarts allowed for this service. Must be >= -1. On
 failure, a container will be restarted if the total number of restarts for its
 service is < ``max_restarts``. Once this limit is exceeded, the service is
 marked as failed and the application will be terminated. Set to -1 to always
-restart, or 0 to never restart. Optinoal, default is 0.
+restart, or 0 to never restart. Optional, default is 0.
 
 **Example**
 

@@ -259,15 +259,8 @@ public class ApplicationMaster {
 
     // Setup service trackers
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
-      Model.Service service = entry.getValue();
-      if (service.getNodeLabel().isEmpty()) {
-        // If the service does not have a node label expression, use
-        // the one configured on the application level.
-        service.setNodeLabel(spec.getNodeLabel());
-      }
-
       services.put(entry.getKey(),
-          new ServiceTracker(entry.getKey(), service));
+          new ServiceTracker(entry.getKey(), entry.getValue()));
     }
 
     // Setup dependents
