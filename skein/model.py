@@ -8,7 +8,7 @@ from getpass import getuser
 import yaml
 
 from . import proto as _proto
-from .compatibility import urlparse, string, integer
+from .compatibility import urlparse, string, integer, math_ceil
 from .objects import Enum, ProtobufMessage, Specification, required
 from .exceptions import context
 from .utils import implements, format_list, datetime_from_millis, runtime
@@ -40,6 +40,70 @@ def container_instance_from_string(id):
 def container_instance_to_string(id):
     """Create an id string from a ContainerInstance"""
     return '%s_%d' % (id.service_name, id.instance)
+
+
+def parse_memory(s):
+    """Converts bytes expression to number of mebibytes.
+
+    If no unit is specified, ``MiB`` is used."""
+    if isinstance(s, integer):
+        out = s
+    elif isinstance(s, float):
+        out = math_ceil(s)
+    elif isinstance(s, string):
+        s = s.replace(' ', '')
+
+        if not s:
+            raise context.ValueError("Could not interpret %r as a byte unit" % s)
+
+        if s[0].isdigit():
+            for i, c in enumerate(reversed(s)):
+                if not c.isalpha():
+                    break
+
+            index = len(s) - i
+            prefix = s[:index]
+            suffix = s[index:]
+
+            try:
+                n = float(prefix)
+            except ValueError:
+                raise context.ValueError("Could not interpret %r as a number" % prefix)
+        else:
+            n = 1
+            suffix = s
+
+        try:
+            multiplier = _byte_sizes[suffix.lower()]
+        except KeyError:
+            raise context.ValueError("Could not interpret %r as a byte unit" % suffix)
+
+        out = math_ceil(n * multiplier / (2 ** 20))
+    else:
+        raise context.TypeError("memory must be an integer, got %r"
+                                % type(s).__name__)
+
+    if out < 0:
+        raise context.ValueError("memory must be positive")
+
+    return out
+
+
+_byte_sizes = {
+    'kb': 10**3,
+    'mb': 10**6,
+    'gb': 10**9,
+    'tb': 10**12,
+    'pb': 10**15,
+    'kib': 2**10,
+    'mib': 2**20,
+    'gib': 2**30,
+    'tib': 2**40,
+    'pib': 2**50,
+    'b': 1,
+    '': 2 ** 20
+}
+_byte_sizes.update({k[:-1]: v for k, v in _byte_sizes.items() if len(k) >= 2})
 
 
 def check_no_cycles(dependencies):
@@ -157,24 +221,38 @@ class Resources(Specification):
 
     Parameters
     ----------
-    memory : int
-        The amount of memory to request, in MB. Requests smaller than the
-        minimum allocation will receive the minimum allocation (usually 1024).
-        Requests larger than the maximum allocation will error on application
-        submission.
+    memory : string or int
+        The amount of memory to request. Can be either a string with units
+        (e.g. ``"5 GiB"``), or numeric. If numeric, specifies the amount of
+        memory in *MiB*. Note that the units are in mebibytes (MiB) NOT
+        megabytes (MB) - the former being binary based (1024 MiB in a GiB), the
+        latter being decimal based (1000 MB in a GB).
+
+        Requests smaller than the minimum allocation will receive the minimum
+        allocation (1024 MiB by default). Requests larger than the maximum
+        allocation will error on application submission.
     vcores : int
         The number of virtual cores to request. Depending on your system
         configuration one virtual core may map to a single actual core, or a
         fraction of a core. Requests larger than the maximum allocation will
         error on application submission.
     """
-    __slots__ = ('memory', 'vcores')
+    __slots__ = ('_memory', 'vcores')
+    _params = ('memory', 'vcores')
     _protobuf_cls = _proto.Resources
 
     def __init__(self, memory=required, vcores=required):
         self._assign_required('memory', memory)
         self._assign_required('vcores', vcores)
         self._validate()
+
+    @property
+    def memory(self):
+        return self._memory
+
+    @memory.setter
+    def memory(self, value):
+        self._memory = parse_memory(value)
 
     def __repr__(self):
         return 'Resources<memory=%d, vcores=%d>' % (self.memory, self.vcores)

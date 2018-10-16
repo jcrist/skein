@@ -10,6 +10,7 @@ if PY2:
     import os
     import re
     import types
+    from math import ceil as _ceil
     from urlparse import urlparse, urlsplit  # noqa
     from Queue import Queue  # noqa
     unicode = unicode  # noqa
@@ -45,7 +46,10 @@ if PY2:
     def isidentifier(s):
         return bool(_name_re.match(s))
 
+    def math_ceil(x):
+        return int(_ceil(x))
 else:
+    from math import ceil as math_ceil  # noqa
     from urllib.parse import urlparse, urlsplit  # noqa
     from os import makedirs  # noqa
     from queue import Queue  # noqa

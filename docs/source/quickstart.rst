@@ -68,7 +68,7 @@ Here we create a simple "Hello World" application as a YAML file:
       my_service:
         resources:
           vcores: 1
-          memory: 128
+          memory: 128 MiB
         files:
           payload.txt: payload.txt
         commands:
@@ -94,7 +94,7 @@ Walking through this specification:
      queue: default
 
 - The application starts a single service ``my_service`` on a container using 1
-  virtual core and 128 MB of memory.
+  virtual core and 128 MiB of memory.
 
   .. code-block:: yaml
 
@@ -102,7 +102,7 @@ Walking through this specification:
        my_service:
          resources:
            vcores: 1
-           memory: 128
+           memory: 128 MiB
 
 
 - The file ``payload.txt`` is distributed with the application, and is named

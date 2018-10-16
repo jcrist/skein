@@ -7,11 +7,11 @@ import pickle
 
 import pytest
 
-from skein.compatibility import UTC
+from skein.compatibility import UTC, math_ceil
 from skein.model import (ApplicationSpec, Service, Resources, File,
                          ApplicationState, FinalStatus, FileType, ACLs, Master,
                          Container, ApplicationReport, ResourceUsageReport,
-                         LogLevel)
+                         LogLevel, parse_memory)
 
 
 def indent(s, n):
@@ -23,7 +23,7 @@ service_spec = """\
 node_label: gpu
 resources:
     vcores: 1
-    memory: 1024
+    memory: 1 GiB
 files:
     testfile: /path/to/testfile
     testarchive: /path/to/testarchive.zip
@@ -88,6 +88,39 @@ def check_specification_methods(obj, obj2):
             assert obj == obj2
 
 
+def test_parse_memory():
+    mib = 2 ** 20
+    assert parse_memory('100') == 100
+    assert parse_memory('100 MiB') == 100
+    assert parse_memory('100 MB') == math_ceil(100 * 1e6 / mib)
+    assert parse_memory('100M') == math_ceil(100 * 1e6 / mib)
+    assert parse_memory('100Mi') == 100
+    assert parse_memory('5kB') == 1
+    assert parse_memory('5.4 MiB') == 6
+    assert parse_memory('0.9 MiB') == 1
+    assert parse_memory('1e3') == 1000
+    assert parse_memory('1e6 kB') == math_ceil(1e6 * 1e3 / mib)
+    assert parse_memory('MiB') == 1
+
+    with pytest.raises(ValueError):
+        parse_memory('5 foos')
+
+    with pytest.raises(ValueError):
+        parse_memory('')
+
+    with pytest.raises(ValueError):
+        parse_memory('1.1.1GB')
+
+    with pytest.raises(ValueError):
+        parse_memory(-1)
+
+    with pytest.raises(ValueError):
+        parse_memory('-1.5 MiB')
+
+    with pytest.raises(TypeError):
+        parse_memory([])
+
+
 def test_resources():
     r = Resources(memory=1024, vcores=1)
     r2 = Resources(memory=1024, vcores=2)
@@ -95,14 +128,36 @@ def test_resources():
 
 
 def test_resources_invariants():
+    assert Resources(memory='1024 MiB', vcores=1).memory == 1024
+    assert Resources(memory='5 GiB', vcores=1).memory == 5 * 1024
+    assert Resources(memory='512', vcores=1).memory == 512
+    assert Resources(memory=1e3, vcores=1).memory == 1000
+    assert Resources(memory='0.9 MiB', vcores=1).memory == 1
+
+    r = Resources(memory='1 GiB', vcores=1)
+    assert r.memory == 1024
+    r.memory = '2 GiB'
+    assert r.memory == 2048
+    r.memory = 1e3
+    assert r.memory == 1000
+
+    with pytest.raises(ValueError):
+        r.memory = -1
+
+    with pytest.raises(ValueError):
+        r.memory = -1
+
     with pytest.raises(TypeError):
         Resources()
 
     with pytest.raises(TypeError):
         Resources(None, None)
 
+    with pytest.raises(ValueError):
+        Resources(memory='foo', vcores=1)
+
     with pytest.raises(TypeError):
-        Resources(memory='foo', vcores='bar')
+        Resources(memory=1, vcores='foo')
 
     with pytest.raises(ValueError):
         Resources(memory=-1, vcores=-1)

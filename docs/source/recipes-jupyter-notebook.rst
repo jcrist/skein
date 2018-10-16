@@ -140,7 +140,7 @@ the `specification docs <specification.html>`__.
     services:
       jupyter:
         resources:
-          memory: 1024
+          memory: 1 GiB
           vcores: 1
         files:
           # Distribute the bundled environment as part of the application.
