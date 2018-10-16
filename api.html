@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.2.0+1.g9bf96d2 documentation</title>
+    <title>API Docs &#8212; Skein 0.2.0+2.g8a97d20 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -2644,11 +2644,15 @@ determined by the file system.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>memory</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
-<dd><p class="first last">The amount of memory to request, in MB. Requests smaller than the
-minimum allocation will receive the minimum allocation (usually 1024).
-Requests larger than the maximum allocation will error on application
-submission.</p>
+<dt><strong>memory</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string or int</span></dt>
+<dd><p class="first">The amount of memory to request. Can be either a string with units
+(e.g. <code class="docutils literal notranslate"><span class="pre">&quot;5</span> <span class="pre">GiB&quot;</span></code>), or numeric. If numeric, specifies the amount of
+memory in <em>MiB</em>. Note that the units are in mebibytes (MiB) NOT
+megabytes (MB) - the former being binary based (1024 MiB in a GiB), the
+latter being decimal based (1000 MB in a GB).</p>
+<p class="last">Requests smaller than the minimum allocation will receive the minimum
+allocation (1024 MiB by default). Requests larger than the maximum
+allocation will error on application submission.</p>
 </dd>
 <dt><strong>vcores</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
 <dd><p class="first last">The number of virtual cores to request. Depending on your system

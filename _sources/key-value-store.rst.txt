@@ -49,7 +49,7 @@ forever.
     ... services:
     ...   sleeper:
     ...     resources:
-    ...       memory: 128
+    ...       memory: 128 MiB
     ...       vcores: 1
     ...     commands:
     ...       - sleep infinity

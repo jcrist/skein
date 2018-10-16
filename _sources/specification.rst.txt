@@ -254,9 +254,16 @@ following fields:
 
 - ``memory``
 
-  The amount of memory to request, in MB. Requests smaller than the minimum
-  allocation will receive the minimum allocation (usually 1024). Requests
-  larger than the maximum allocation will error on application submission.
+  The amount of memory to request. Can be either a string with units (e.g. ``"5
+  GiB"``), or numeric. If numeric, specifies the amount of memory in *MiB*.
+  Note that the units are in mebibytes (MiB) *not* megabytes (MB) - the former
+  being binary based (1024 MiB in a GiB), the latter being decimal based (1000
+  MB in a GB). See `here <https://en.wikipedia.org/wiki/Mebibyte>`__ for more
+  information on this distinction.
+
+  Requests smaller than the minimum allocation will receive the minimum
+  allocation (1024 MiB by default). Requests larger than the maximum allocation
+  will error on application submission.
 
 - ``vcores``
 
@@ -272,7 +279,7 @@ following fields:
 
     services:
       my_service:
-        memory: 2048  # 2 GB
+        memory: 2 GiB
         vcores: 2
 
 
@@ -414,7 +421,7 @@ applications are free to package files any way they see fit.
     services:
       jupyter:
         resources:
-          memory: 1024
+          memory: 1 GiB
           vcores: 1
         files:
           conda_env: env.zip
@@ -425,7 +432,7 @@ applications are free to package files any way they see fit.
 
       dask.scheduler:
         resources:
-          memory: 2048
+          memory: 2 GiB
           vcores: 1
         files:
           conda_env: env.zip
@@ -436,7 +443,7 @@ applications are free to package files any way they see fit.
       dask.worker:
         instances: 4
         resources:
-          memory: 2048
+          memory: 2 GiB
           vcores: 4
         max_restarts: 8  # Restart workers a maximum of 8 times
         files:
