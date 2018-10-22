@@ -395,6 +395,7 @@ public class MsgUtils {
     Msg.ApplicationSpec.Builder builder = Msg.ApplicationSpec.newBuilder()
         .setName(spec.getName())
         .setQueue(spec.getQueue())
+        .setUser(spec.getUser())
         .setNodeLabel(spec.getNodeLabel())
         .setMaxAttempts(spec.getMaxAttempts())
         .addAllTags(spec.getTags())
@@ -421,6 +422,7 @@ public class MsgUtils {
 
     return new Model.ApplicationSpec(spec.getName(),
                                      spec.getQueue(),
+                                     spec.getUser(),
                                      spec.getNodeLabel(),
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
