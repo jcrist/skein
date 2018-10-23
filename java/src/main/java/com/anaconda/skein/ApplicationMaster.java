@@ -838,12 +838,18 @@ public class ApplicationMaster {
 
     private synchronized void requestContainer(Model.Container container) {
       Priority priority = newPriority(this);
+      String[] nodes = (service.getNodes().isEmpty() ? null
+                        : service.getNodes().toArray(new String[0]));
+      String[] racks = (service.getRacks().isEmpty() ? null
+                        : service.getRacks().toArray(new String[0]));
+      boolean relaxLocality = ((nodes == null && racks == null) ? true
+                               : service.getRelaxLocality());
       ContainerRequest req = new ContainerRequest(
           service.getResources(),
-          null,
-          null,
+          nodes,
+          racks,
           priority,
-          true,
+          relaxLocality,
           Strings.emptyToNull(service.getNodeLabel()));
       container.setContainerRequest(req);
       rmClient.addContainerRequest(req);

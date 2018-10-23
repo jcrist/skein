@@ -36,6 +36,9 @@ env:
 commands:
     - command 1
     - command 2
+nodes:
+    - worker.example.com
+relax_locality: true
 """
 
 app_spec = """\
@@ -259,7 +262,10 @@ def test_service():
     c = ['commands']
     s1 = Service(resources=r, commands=c,
                  node_label="testlabel",
-                 files={'file': File(source='/test/path')})
+                 files={'file': File(source='/test/path')},
+                 nodes=['worker.example.com'],
+                 racks=['rack1', 'rack2'],
+                 relax_locality=True)
     s2 = Service(resources=r, commands=c,
                  files={'file': File(source='/test/path', size=1024)})
     check_specification_methods(s1, s2)

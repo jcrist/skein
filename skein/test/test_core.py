@@ -356,3 +356,35 @@ def test_memory_limit_exceeded(client):
         assert wait_for_completion(client, app.id) == "FAILED"
     logs = get_logs(app.id)
     assert "memory used" in logs
+
+
+@pytest.mark.parametrize('strict', [False, True])
+def test_node_locality(client, strict):
+    if strict:
+        relax_locality = False
+        nodes = ['worker.example.com']
+        racks = []
+    else:
+        relax_locality = True
+        nodes = ['not.a.real.host.name']
+        racks = ['not.a.real.rack.name']
+
+    service = skein.Service(
+        resources=skein.Resources(memory=128, vcores=1),
+        commands=['sleep infinity'],
+        nodes=nodes,
+        racks=racks,
+        relax_locality=relax_locality
+    )
+    spec = skein.ApplicationSpec(name="test_node_locality",
+                                 queue="default",
+                                 services={"service": service})
+    with run_application(client, spec=spec) as app:
+        wait_for_containers(app, 1, states=['RUNNING'])
+        spec2 = app.get_specification()
+        app.shutdown()
+
+    service2 = spec2.services['service']
+    assert service2.nodes == nodes
+    assert service2.racks == racks
+    assert service2.relax_locality == relax_locality
