@@ -279,9 +279,13 @@ def application_status(app_id):
 
 @subcommand(application.subs,
             'kill', 'Kill a Skein application',
-            app_id)
-def application_kill(app_id):
-    get_daemon().kill_application(app_id)
+            app_id,
+            arg('--user', default='', type=str,
+                help=('The user to kill the application as. Requires the '
+                      'current user to have permissions to proxy as ``user``. '
+                      'Default is the current user.')))
+def application_kill(app_id, user):
+    get_daemon().kill_application(app_id, user=user)
 
 
 @subcommand(application.subs,

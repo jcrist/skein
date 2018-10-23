@@ -193,7 +193,7 @@ service Daemon {
 
   rpc waitForStart (Application) returns (ApplicationReport);
 
-  rpc kill (Application) returns (Empty);
+  rpc kill (KillRequest) returns (Empty);
 }
 
 
@@ -209,6 +209,12 @@ message ApplicationsRequest {
 
 message ApplicationsResponse {
   repeated ApplicationReport reports = 1;
+}
+
+
+message KillRequest {
+  string id = 1;
+  string user = 2;
 }
 
 
