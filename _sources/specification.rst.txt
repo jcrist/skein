@@ -182,70 +182,6 @@ over the course of the application. A service may also have multiple instances,
 each running in their own YARN container. A service description takes the
 following fields:
 
-``instances``
-~~~~~~~~~~~~~
-
-The number of instances to create on startup. Must be >= 0. After startup
-additional instances may be created by the :class:`ApplicationClient`.
-Optional, default is 1.
-
-**Example**
-
-.. code-block:: none
-
-    services:
-      my_service:
-        instances: 4  # Start 4 instances
-
-``node_label``
-~~~~~~~~~~~~~~
-
-The `node_label
-<https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/NodeLabel.html>`__
-to request for all containers in this service. If not set, defaults to the
-application-level ``node_label`` (if set).
-
-**Example**
-
-.. code-block:: none
-
-    node_label: mylabel
-
-    services:
-      my_service1:
-        node_label: GPU  # This service will be allocated on "GPU" nodes only.
-        ...
-
-      my_service2:
-        # node_label is not set, the application label "mylabel" will be used.
-        ...
-
-``max_restarts``
-~~~~~~~~~~~~~~~~
-
-The maximum number of restarts allowed for this service. Must be >= -1. On
-failure, a container will be restarted if the total number of restarts for its
-service is < ``max_restarts``. Once this limit is exceeded, the service is
-marked as failed and the application will be terminated. Set to -1 to always
-restart, or 0 to never restart. Optional, default is 0.
-
-**Example**
-
-.. code-block:: none
-
-    services:
-      my_service:
-        max_restarts: -1  # always restart
-        ...
-
-      my_service2:
-        max_restarts: 0   # never restart
-        ...
-
-      my_service3:
-        max_restarts: 3   # restart a maximum of 3 times
-        ...
-
 ``resources``
 ~~~~~~~~~~~~~
 
@@ -282,6 +218,39 @@ following fields:
         memory: 2 GiB
         vcores: 2
 
+``commands``
+~~~~~~~~~~~~
+
+Shell commands to startup the service. Commands are run in the order provided,
+with subsequent commands only run if the prior commands succeeded. At least one
+command must be provided.
+
+.. code-block:: none
+
+    services:
+      my_service:
+        commands:
+          - echo "This is a single command"
+          - |
+            if [[ "$SOME_CONDITION" == "true" ]]; then
+                echo "You can use multi-line strings "
+                echo "to handle more complicated behavior"
+            fi
+
+``instances``
+~~~~~~~~~~~~~
+
+The number of instances to create on startup. Must be >= 0. After startup
+additional instances may be created by the :class:`ApplicationClient`.
+Optional, default is 1.
+
+**Example**
+
+.. code-block:: none
+
+    services:
+      my_service:
+        instances: 4  # Start 4 instances
 
 .. _specification-files:
 
@@ -352,7 +321,6 @@ For more information see :doc:`distributing-files`.
           # Files on remote filesystems can be used by specifying the scheme.
           script2_path.py: hdfs:///remote/path/to/script2.py
 
-
 ``env``
 ~~~~~~~
 
@@ -385,24 +353,95 @@ started after all its dependencies have been started. Optional.
         depends:
           - starts_first
 
-``commands``
-~~~~~~~~~~~~
+``max_restarts``
+~~~~~~~~~~~~~~~~
 
-Shell commands to startup the service. Commands are run in the order provided,
-with subsequent commands only run if the prior commands succeeded. At least one
-command must be provided.
+The maximum number of restarts allowed for this service. Must be >= -1. On
+failure, a container will be restarted if the total number of restarts for its
+service is < ``max_restarts``. Once this limit is exceeded, the service is
+marked as failed and the application will be terminated. Set to -1 to always
+restart, or 0 to never restart. Optional, default is 0.
+
+**Example**
 
 .. code-block:: none
 
     services:
       my_service:
-        commands:
-          - echo "This is a single command"
-          - |
-            if [[ "$SOME_CONDITION" == "true" ]]; then
-                echo "You can use multi-line strings "
-                echo "to handle more complicated behavior"
-            fi
+        max_restarts: -1  # always restart
+        ...
+
+      my_service2:
+        max_restarts: 0   # never restart
+        ...
+
+      my_service3:
+        max_restarts: 3   # restart a maximum of 3 times
+        ...
+
+``node_label``
+~~~~~~~~~~~~~~
+
+The `node_label
+<https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/NodeLabel.html>`__
+to request for all containers in this service. If not set, defaults to the
+application-level ``node_label`` (if set).
+
+**Example**
+
+.. code-block:: none
+
+    node_label: mylabel
+
+    services:
+      my_service1:
+        node_label: GPU  # This service will be allocated on "GPU" nodes only.
+        ...
+
+      my_service2:
+        # node_label is not set, the application label "mylabel" will be used.
+        ...
+
+``nodes``
+~~~~~~~~~
+
+A list of node host names to restrict containers for this service to. Optional,
+defaults to no node restrictions.
+
+``racks``
+~~~~~~~~~
+
+A list of rack names to restrict containers for this service to. The racks
+corresponding to any nodes requested will be automatically added to this list.
+Optional, defaults to no rack restrictions.
+
+``relax_locality``
+~~~~~~~~~~~~~~~~~~
+
+Whether to interpret the ``nodes`` and ``racks`` specifications as locality
+*suggestions* whether than *requirements*. If True, containers for this request
+may be assigned on hosts and racks other than the ones explicitly requested. If
+False, those restrictions are strictly enforced. Optional, default is False.
+
+**Example**
+
+.. code-block:: none
+
+    services:
+      my_service1:
+        # This service *must* run on either worker1 or worker2
+        relax_locality: false
+        nodes:
+          - worker1
+          - worker2
+
+      my_service2:
+        # This service is *suggested* to run on either worker1 or worker2,
+        # but may run on any node
+        relax_locality: true
+        nodes:
+          - worker1
+          - worker2
 
 Example
 -------

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.2.0+2.g8a97d20 documentation</title>
+    <title>API Docs &#8212; Skein 0.2.0+3.g4c71e2b documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -2389,34 +2389,23 @@ output all fields.</p>
 
 <dl class="class">
 <dt id="skein.Service">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Service</code><span class="sig-paren">(</span><em>commands=required</em>, <em>resources=required</em>, <em>instances=1</em>, <em>node_label=''</em>, <em>max_restarts=0</em>, <em>files=None</em>, <em>env=None</em>, <em>depends=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Service</code><span class="sig-paren">(</span><em>resources=required</em>, <em>commands=required</em>, <em>instances=1</em>, <em>files=None</em>, <em>env=None</em>, <em>depends=None</em>, <em>max_restarts=0</em>, <em>node_label=''</em>, <em>nodes=None</em>, <em>racks=None</em>, <em>relax_locality=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service" title="Permalink to this definition">¶</a></dt>
 <dd><p>Description of a Skein service.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>resources</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Resources</span></dt>
+<dd><p class="first last">Describes the resources needed to run the service.</p>
+</dd>
 <dt><strong>commands</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
 <dd><p class="first last">Shell commands to startup the service. Commands are run in the order
 provided, with subsequent commands only run if the prior commands
 succeeded. At least one command must be provided</p>
 </dd>
-<dt><strong>resources</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Resources</span></dt>
-<dd><p class="first last">Describes the resources needed to run the service.</p>
-</dd>
 <dt><strong>instances</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
 <dd><p class="first last">The number of instances to create on startup. Default is 1.</p>
-</dd>
-<dt><strong>node_label</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">The node label expression to use when requesting containers for this
-service. If not set, defaults to the application-level <code class="docutils literal notranslate"><span class="pre">node_label</span></code>
-(if set).</p>
-</dd>
-<dt><strong>max_restarts</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
-<dd><p class="first last">The maximum number of restarts to allow for this service. Containers
-are only restarted on failure, and the cap is set for all containers in
-the service, not per container. Set to -1 to allow infinite restarts.
-Default is 0.</p>
 </dd>
 <dt><strong>files</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
 <dd><p class="first last">Describes any files needed to run the service. A mapping of destination
@@ -2430,6 +2419,31 @@ extension.</p>
 <dt><strong>depends</strong> <span class="classifier-delimiter">:</span> <span class="classifier">set, optional</span></dt>
 <dd><p class="first last">A set of service names that this service depends on. The service will
 only be started after all its dependencies have been started.</p>
+</dd>
+<dt><strong>max_restarts</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">The maximum number of restarts to allow for this service. Containers
+are only restarted on failure, and the cap is set for all containers in
+the service, not per container. Set to -1 to allow infinite restarts.
+Default is 0.</p>
+</dd>
+<dt><strong>node_label</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The node label expression to use when requesting containers for this
+service. If not set, defaults to the application-level <code class="docutils literal notranslate"><span class="pre">node_label</span></code>
+(if set).</p>
+</dd>
+<dt><strong>nodes</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list, optional</span></dt>
+<dd><p class="first last">A list of node host names to restrict containers for this service to.
+If not set, defaults to no node restrictions.</p>
+</dd>
+<dt><strong>racks</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list, optional</span></dt>
+<dd><p class="first last">A list of rack names to restrict containers for this service to. The
+racks corresponding to any nodes requested will be automatically added
+to this list. If not set, defaults to no rack restrictions.</p>
+</dd>
+<dt><strong>relax_locality</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If true, containers for this request may be assigned on hosts and racks
+other than the ones explicitly requested. If False, those restrictions
+are strictly enforced. Default is False.</p>
 </dd>
 </dl>
 </td>
