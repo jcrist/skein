@@ -6,6 +6,7 @@
 ./_images/yarn-resourcemanager-webui-link.png
 ./_images/yarn.jpg
 ./_sources/api.rst.txt
+./_sources/changelog.rst.txt
 ./_sources/cli.rst.txt
 ./_sources/debugging.rst.txt
 ./_sources/develop.rst.txt
@@ -44,6 +45,7 @@
 ./_static/up.png
 ./_static/websupport.js
 ./api.html
+./changelog.html
 ./cli.html
 ./debugging.html
 ./develop.html

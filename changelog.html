@@ -1,0 +1,194 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Changelog &#8212; Skein 0.2.0+4.g4a22140 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Development" href="develop.html" />
+    <link rel="prev" title="CLI Docs" href="cli.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="changelog">
+<h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="upcoming-release">
+<h2>Upcoming Release<a class="headerlink" href="#upcoming-release" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Add support for YARN node label expressions (<a class="reference external" href="https://github.com/jcrist/skein/pull/44">PR #44</a>)</li>
+<li>Allow memory requirements to be specified with human-readable units
+(<a class="reference external" href="https://github.com/jcrist/skein/pull/87">PR #87</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/86">Issue #86</a>)</li>
+<li>Add support for YARN node and rack requirements/suggestions (<a class="reference external" href="https://github.com/jcrist/skein/pull/90">PR #90</a>,
+<a class="reference external" href="https://github.com/jcrist/skein/issues/89">Issue #89</a>)</li>
+</ul>
+</div>
+<div class="section" id="version-0-2-0-october-11-2018">
+<h2>Version 0.2.0 (October 11, 2018)<a class="headerlink" href="#version-0-2-0-october-11-2018" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Add support for specifying additional filesystems, needed for ViewFs
+(<a class="reference external" href="https://github.com/jcrist/skein/pull/58">PR #58</a>)</li>
+<li>Add a Web UI for viewing application status and logs (<a class="reference external" href="https://github.com/jcrist/skein/pull/68">PR #68</a>, <a class="reference external" href="https://github.com/jcrist/skein/pull/42">PR #42</a>,
+<a class="reference external" href="https://github.com/jcrist/skein/issues/34">Issue #34</a>)</li>
+<li>Cleanup staging directory for killed applications (<a class="reference external" href="https://github.com/jcrist/skein/pull/71">PR #71</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/69">Issue #69</a>)</li>
+<li>Support application-level Access Control Lists (ACLs) (<a class="reference external" href="https://github.com/jcrist/skein/pull/78">PR #78</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/74">Issue #74</a>)</li>
+<li>Add support for user-defined pages in the Web UI (<a class="reference external" href="https://github.com/jcrist/skein/pull/72">PR #72</a>)</li>
+<li>Remove unneeded resources to reduce JAR size (<a class="reference external" href="https://github.com/jcrist/skein/pull/83">PR #83</a>)</li>
+<li>Support custom logging configurations (<a class="reference external" href="https://github.com/jcrist/skein/pull/84">PR #84</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/79">Issue #79</a>)</li>
+<li>Improve logging messages and granularity (<a class="reference external" href="https://github.com/jcrist/skein/pull/84">PR #84</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/79">Issue #79</a>)</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">exit_message</span></code> field for completed containers to aid in debugging
+(<a class="reference external" href="https://github.com/jcrist/skein/pull/84">PR #84</a>, <a class="reference external" href="https://github.com/jcrist/skein/pull/66">PR #66</a>)</li>
+</ul>
+</div>
+<div class="section" id="version-0-1-1-august-6-2018">
+<h2>Version 0.1.1 (August 6, 2018)<a class="headerlink" href="#version-0-1-1-august-6-2018" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Fix bug in key ownership model (<a class="reference external" href="https://github.com/jcrist/skein/pull/53">PR #53</a>)</li>
+<li>Cleanup and document <code class="docutils literal notranslate"><span class="pre">skein.recipes</span></code> (<a class="reference external" href="https://github.com/jcrist/skein/pull/50">PR #50</a>)</li>
+</ul>
+</div>
+<div class="section" id="version-0-1-0-august-1-2018">
+<h2>Version 0.1.0 (August 1, 2018)<a class="headerlink" href="#version-0-1-0-august-1-2018" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Initial Public Release</li>
+<li>Clean rewrite of Key-Value Store to support more powerful operations
+(<a class="reference external" href="https://github.com/jcrist/skein/pull/40">PR #40</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/33">Issue #33</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/35">Issue #35</a>)</li>
+<li>Expose container node addresses in Python API (<a class="reference external" href="https://github.com/jcrist/skein/pull/39">PR #39</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/38">Issue #38</a>)</li>
+<li>Expose application and container ids, as well as resource limits in running
+containers via environment variables (<a class="reference external" href="https://github.com/jcrist/skein/pull/37">PR #37</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/32">Issue #32</a>).</li>
+<li>Cleanup internals and rework public API (<a class="reference external" href="https://github.com/jcrist/skein/pull/36">PR #36</a>)</li>
+<li>Correctly handle multiple values in <code class="docutils literal notranslate"><span class="pre">LOCAL_DIRS</span></code> (<a class="reference external" href="https://github.com/jcrist/skein/pull/31">PR #31</a>)</li>
+</ul>
+</div>
+<div class="section" id="version-0-0-4-july-3-2018">
+<h2>Version 0.0.4 (July 3, 2018)<a class="headerlink" href="#version-0-0-4-july-3-2018" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Initial Alpha Release</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/logo.svg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+<p class="blurb">A tool and library for easily deploying applications on Apache YARN</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=jcrist&repo=skein&type=watch&count=False&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/jcrist/skein">
+    <img
+        alt="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+        src="https://secure.travis-ci.org/jcrist/skein.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="specification.html">Specification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributing-files.html">Distributing Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-value-store.html">Key-Value Store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="web-ui.html">Web UI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="recipes.html">Recipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Changelog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#upcoming-release">Upcoming Release</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version-0-2-0-october-11-2018">Version 0.2.0 (October 11, 2018)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version-0-1-1-august-6-2018">Version 0.1.1 (August 6, 2018)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version-0-1-0-august-1-2018">Version 0.1.0 (August 1, 2018)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version-0-0-4-july-3-2018">Version 0.0.4 (July 3, 2018)</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="develop.html">Development</a></li>
+</ul>
+
+<h3>Need help?</h3>
+
+<p>
+  Open an issue in the <a href="https://github.com/jcrist/skein/issues">issue tracker</a>.
+</p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Jim Crist.
+      
+      |
+      <a href="_sources/changelog.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
