@@ -14,9 +14,15 @@ pygments_style = 'sphinx'
 exclude_patterns = []
 
 # Sphinx Extensions
-extensions = ['sphinx.ext.autodoc', 'numpydoc', 'sphinxcontrib.autoprogram']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.extlinks', 'numpydoc',
+              'sphinxcontrib.autoprogram']
 
 numpydoc_show_class_members = False
+
+extlinks = {
+    'issue': ('https://github.com/jcrist/skein/issues/%s', 'Issue #'),
+    'pr': ('https://github.com/jcrist/skein/pull/%s', 'PR #')
+}
 
 # Sphinx Theme
 html_theme = 'alabaster'
