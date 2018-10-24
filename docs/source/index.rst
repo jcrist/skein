@@ -83,6 +83,7 @@ User Documentation
     debugging.rst
     api.rst
     cli.rst
+    changelog.rst
 
 Developer Documentation
 -----------------------
