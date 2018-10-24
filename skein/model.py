@@ -436,23 +436,14 @@ class Service(Specification):
 
     Parameters
     ----------
+    resources : Resources
+        Describes the resources needed to run the service.
     commands : list
         Shell commands to startup the service. Commands are run in the order
         provided, with subsequent commands only run if the prior commands
         succeeded. At least one command must be provided
-    resources : Resources
-        Describes the resources needed to run the service.
     instances : int, optional
         The number of instances to create on startup. Default is 1.
-    node_label : str, optional
-        The node label expression to use when requesting containers for this
-        service. If not set, defaults to the application-level ``node_label``
-        (if set).
-    max_restarts : int, optional
-        The maximum number of restarts to allow for this service. Containers
-        are only restarted on failure, and the cap is set for all containers in
-        the service, not per container. Set to -1 to allow infinite restarts.
-        Default is 0.
     files : dict, optional
         Describes any files needed to run the service. A mapping of destination
         relative paths to ``File`` or ``str`` objects describing the sources
@@ -463,27 +454,48 @@ class Service(Specification):
     depends : set, optional
         A set of service names that this service depends on. The service will
         only be started after all its dependencies have been started.
+    max_restarts : int, optional
+        The maximum number of restarts to allow for this service. Containers
+        are only restarted on failure, and the cap is set for all containers in
+        the service, not per container. Set to -1 to allow infinite restarts.
+        Default is 0.
+    node_label : str, optional
+        The node label expression to use when requesting containers for this
+        service. If not set, defaults to the application-level ``node_label``
+        (if set).
+    nodes : list, optional
+        A list of node host names to restrict containers for this service to.
+        If not set, defaults to no node restrictions.
+    racks : list, optional
+        A list of rack names to restrict containers for this service to. The
+        racks corresponding to any nodes requested will be automatically added
+        to this list. If not set, defaults to no rack restrictions.
+    relax_locality : bool, optional
+        If true, containers for this request may be assigned on hosts and racks
+        other than the ones explicitly requested. If False, those restrictions
+        are strictly enforced. Default is False.
     """
-    __slots__ = ('commands', 'resources', 'instances', 'node_label',
-                 'max_restarts', 'files', 'env', 'depends')
+    __slots__ = ('resources', 'commands', 'instances', 'files', 'env',
+                 'depends', 'max_restarts', 'node_label', 'nodes', 'racks',
+                 'relax_locality')
     _protobuf_cls = _proto.Service
 
-    def __init__(self, commands=required, resources=required, instances=1,
-                 node_label='', max_restarts=0, files=None, env=None,
-                 depends=None):
-        self._assign_required('commands', commands)
+    def __init__(self, resources=required, commands=required, instances=1,
+                 files=None, env=None, depends=None, max_restarts=0,
+                 node_label='', nodes=None, racks=None, relax_locality=False):
         self._assign_required('resources', resources)
+        self._assign_required('commands', commands)
         self.instances = instances
-        self.node_label = node_label
-        self.max_restarts = max_restarts
-        if files is not None:
-            files = {k: v if isinstance(v, File) else File(v)
-                     for (k, v) in files.items()}
-        else:
-            files = {}
-        self.files = files
+        self.files = ({k: v if isinstance(v, File) else File(v)
+                       for (k, v) in files.items()}
+                      if files is not None else {})
         self.env = {} if env is None else env
         self.depends = set() if depends is None else set(depends)
+        self.max_restarts = max_restarts
+        self.node_label = node_label
+        self.nodes = [] if nodes is None else nodes
+        self.racks = [] if racks is None else racks
+        self.relax_locality = relax_locality
         self._validate()
 
     def __repr__(self):
@@ -492,6 +504,9 @@ class Service(Specification):
     def _validate(self):
         self._check_is_bounded_int('instances', min=0)
         self._check_is_type('node_label', string)
+        self._check_is_list_of('nodes', string)
+        self._check_is_list_of('racks', string)
+        self._check_is_type('relax_locality', bool)
         self._check_is_bounded_int('max_restarts', min=-1)
 
         self._check_is_type('resources', Resources)
@@ -537,6 +552,9 @@ class Service(Specification):
         files = {k: File.from_protobuf(v) for k, v in obj.files.items()}
         kwargs = {'instances': obj.instances,
                   'node_label': obj.node_label,
+                  'nodes': list(obj.nodes),
+                  'racks': list(obj.racks),
+                  'relax_locality': obj.relax_locality,
                   'max_restarts': obj.max_restarts,
                   'resources': resources,
                   'files': files,

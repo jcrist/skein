@@ -35,6 +35,9 @@ public class Model {
   public static class Service {
     private int instances;
     private String nodeLabel;
+    private List<String> nodes;
+    private List<String> racks;
+    private boolean relaxLocality;
     private int maxRestarts;
     private Resource resources;
     private Map<String, LocalResource> localResources;
@@ -46,6 +49,9 @@ public class Model {
 
     public Service(int instances,
                    String nodeLabel,
+                   List<String> nodes,
+                   List<String> racks,
+                   boolean relaxLocality,
                    int maxRestarts,
                    Resource resources,
                    Map<String, LocalResource> localResources,
@@ -54,6 +60,9 @@ public class Model {
                    Set<String> depends) {
       this.instances = instances;
       this.nodeLabel = nodeLabel;
+      this.nodes = nodes;
+      this.racks = racks;
+      this.relaxLocality = relaxLocality;
       this.maxRestarts = maxRestarts;
       this.resources = resources;
       this.localResources = localResources;
@@ -79,6 +88,15 @@ public class Model {
 
     public void setNodeLabel(String nodeLabel) { this.nodeLabel = nodeLabel; }
     public String getNodeLabel() { return nodeLabel; }
+
+    public void setNodes(List<String> nodes) { this.nodes = nodes; }
+    public List<String> getNodes() { return nodes; }
+
+    public void setRacks(List<String> racks) { this.racks = racks; }
+    public List<String> getRacks() { return racks; }
+
+    public void setRelaxLocality(boolean relaxLocality) { this.relaxLocality = relaxLocality; }
+    public boolean getRelaxLocality() { return relaxLocality; }
 
     public void setMaxRestarts(int maxRestarts) { this.maxRestarts = maxRestarts; }
     public int getMaxRestarts() { return maxRestarts; }

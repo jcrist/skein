@@ -272,6 +272,9 @@ public class MsgUtils {
     Msg.Service.Builder builder = Msg.Service.newBuilder()
         .setInstances(service.getInstances())
         .setNodeLabel(service.getNodeLabel())
+        .addAllNodes(service.getNodes())
+        .addAllRacks(service.getRacks())
+        .setRelaxLocality(service.getRelaxLocality())
         .setMaxRestarts(service.getMaxRestarts())
         .setResources(writeResources(service.getResources()))
         .putAllEnv(service.getEnv())
@@ -292,6 +295,9 @@ public class MsgUtils {
     return new Model.Service(
         service.getInstances(),
         service.getNodeLabel(),
+        new ArrayList<String>(service.getNodesList()),
+        new ArrayList<String>(service.getRacksList()),
+        service.getRelaxLocality(),
         service.getMaxRestarts(),
         readResources(service.getResources()),
         localResources,

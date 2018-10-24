@@ -74,12 +74,15 @@ message File {
 message Service {
   int32 instances = 1;
   string node_label = 2;
-  int32 max_restarts = 3;
-  Resources resources = 4;
-  map<string, File> files = 5;
-  map<string, string> env = 6;
-  repeated string commands = 7;
-  repeated string depends = 8;
+  repeated string nodes = 3;
+  repeated string racks = 4;
+  bool relax_locality = 5;
+  int32 max_restarts = 6;
+  Resources resources = 7;
+  map<string, File> files = 8;
+  map<string, string> env = 9;
+  repeated string commands = 10;
+  repeated string depends = 11;
 }
 
 
