@@ -9,6 +9,7 @@ Upcoming Release
   (:pr:`87`, :issue:`86`)
 - Add support for YARN node and rack requirements/suggestions (:pr:`90`,
   :issue:`89`)
+- Allow setting diagnostics message on user-requested shutdown (:pr:`92`)
 
 Version 0.2.0 (October 11, 2018)
 --------------------------------
