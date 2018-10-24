@@ -410,3 +410,20 @@ def test_node_locality(client, strict):
     assert service2.nodes == nodes
     assert service2.racks == racks
     assert service2.relax_locality == relax_locality
+
+
+def test_set_application_progress(client):
+    with run_application(client) as app:
+        app.set_progress(0.5)
+        # Give the allocate loop time to update
+        time.sleep(2)
+        report = client.application_report(app.id)
+        assert report.progress == 0.5
+
+        with pytest.raises(ValueError):
+            app.set_progress(-0.5)
+
+        with pytest.raises(ValueError):
+            app.set_progress(1.5)
+
+        app.shutdown()
