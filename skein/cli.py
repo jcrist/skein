@@ -284,9 +284,12 @@ def application_kill(app_id):
             'shutdown', 'Shutdown a Skein application',
             app_id_or_current,
             arg('--status', default='SUCCEEDED',
-                help='Final Application Status. Default is SUCCEEDED'))
-def application_shutdown(app_id, status):
-    application_client_from_app_id(app_id).shutdown(status)
+                help='Final Application Status. Default is SUCCEEDED'),
+            arg('--diagnostics', default=None,
+                help=('The application diagnostic exit message. If not '
+                      'provided, a default will be used.')))
+def application_shutdown(app_id, status, diagnostics):
+    application_client_from_app_id(app_id).shutdown(status, diagnostics)
 
 
 @subcommand(application.subs,

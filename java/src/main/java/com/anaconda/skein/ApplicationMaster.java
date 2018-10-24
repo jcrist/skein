@@ -497,7 +497,7 @@ public class ApplicationMaster {
       if (tracker.isFailed()) {
         shutdown(FinalApplicationStatus.FAILED,
                  "Failure in service " + tracker.getName()
-                 + ", see logs for details");
+                 + ", see logs for details.");
         return;
       }
     }
@@ -1085,8 +1085,13 @@ public class ApplicationMaster {
         StreamObserver<Msg.Empty> resp) {
       FinalApplicationStatus status = MsgUtils.readFinalStatus(req.getFinalStatus());
 
+      String message = req.getDiagnostics();
+      if (message.isEmpty()) {
+        message = "Shutdown requested by user.";
+      }
+
       // Shutdown everything but the grpc server
-      preshutdown(status, "Shutdown requested by user.");
+      preshutdown(status, message);
 
       resp.onNext(MsgUtils.EMPTY);
       resp.onCompleted();

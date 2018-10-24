@@ -650,7 +650,7 @@ class ApplicationClient(_ClientBase):
     def __repr__(self):
         return 'ApplicationClient<%s, %s>' % (self.id, self.address)
 
-    def shutdown(self, status='SUCCEEDED'):
+    def shutdown(self, status='SUCCEEDED', diagnostics=None):
         """Shutdown the application.
 
         Stop all running containers and shutdown the application.
@@ -659,9 +659,16 @@ class ApplicationClient(_ClientBase):
         ----------
         status : FinalStatus, optional
             The final application status. Default is 'SUCCEEDED'.
+        diagnostics : str, optional
+            The application exit message, usually used for diagnosing failures.
+            Can be seen in the YARN Web UI for completed applications under
+            "diagnostics", as well as the ``diagnostic`` field of
+            ``ApplicationReport`` objects. If not provided, a default will be
+            used.
         """
-        status = str(FinalStatus(status))
-        self._call('shutdown', proto.ShutdownRequest(final_status=status))
+        req = proto.ShutdownRequest(final_status=str(FinalStatus(status)),
+                                    diagnostics=diagnostics)
+        self._call('shutdown', req)
         self._shutdown = True
 
     @cached_property

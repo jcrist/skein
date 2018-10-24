@@ -247,6 +247,7 @@ service AppMaster {
 
 message ShutdownRequest {
   FinalStatus.Type final_status = 1;
+  string diagnostics = 2;
 }
 
 

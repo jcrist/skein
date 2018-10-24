@@ -173,6 +173,28 @@ def test_simple_app(client):
     assert app.id in {a.id for a in finished_apps}
 
 
+def test_shutdown_arguments(client):
+    status = 'killed'
+    diagnostics = 'This is a test diagnostic message'
+
+    with run_application(client) as app:
+        app.shutdown(status, diagnostics)
+        wait_for_completion(client, app.id) == 'KILLED'
+
+    # There's a noticeable lag in the YARN resource manager between an
+    # application being marked as finished and its diagnostics message being
+    # updated. Retry up to 5 seconds before failing.
+    timeout = 5
+    while timeout:
+        report = client.application_report(app.id)
+        if report.diagnostics:
+            break
+        time.sleep(0.1)
+        timeout -= 0.1
+    assert report.diagnostics == diagnostics
+    assert report.final_status == status
+
+
 def test_dynamic_containers(client):
     with run_application(client) as app:
         initial = wait_for_containers(app, 1, states=['RUNNING'])
