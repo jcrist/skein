@@ -8,7 +8,6 @@ Skein is a simple tool and library for deploying applications on `Apache YARN
 See `the documentation <https://jcrist.github.io/skein/>`_ for more
 information.
 
-
 LICENSE
 -------
 
