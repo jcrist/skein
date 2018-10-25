@@ -29,7 +29,7 @@
       }
     </style>
 
-    <title>Services - Skein | {{appId}}</title>
+    <title>Services - Skein | {{appId}}{{#progressKnown}} ({{progress}}%){{/progressKnown}}</title>
   </head>
 
   <body>
@@ -63,7 +63,7 @@
           </li>
         </ul>
         <div class="dropdown-divider"></div>
-        <span class="navbar-text" id="application">{{appId}}</span>
+        <span class="navbar-text" id="application">{{appId}}{{#progressKnown}} ({{progress}}%){{/progressKnown}}</span>
       </div>
     </nav>
 

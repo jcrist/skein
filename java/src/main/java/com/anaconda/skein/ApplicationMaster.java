@@ -65,6 +65,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.function.Supplier;
 
 public class ApplicationMaster {
 
@@ -99,7 +100,7 @@ public class ApplicationMaster {
   private final Map<ContainerId, Model.Container> containers =
       new ConcurrentHashMap<ContainerId, Model.Container>();
 
-  private final AtomicDouble progress = new AtomicDouble(0.1);
+  private final AtomicDouble progress = new AtomicDouble(-1.0);
 
   private final TreeMap<Priority, ServiceTracker> priorities =
       new TreeMap<Priority, ServiceTracker>();
@@ -178,6 +179,15 @@ public class ApplicationMaster {
         }
     );
 
+    Supplier<WebUI.ApplicationContext> applicationContext =
+        new Supplier<WebUI.ApplicationContext>() {
+          private final ApplicationTracker tracker =
+              new ApplicationTracker(appId.toString(), progress);
+          public WebUI.ApplicationContext get() {
+            return tracker.toApplicationContext();
+          }
+        };
+
     // Forward restricted set of users to the WebUI if:
     // - ACLs are enabled
     // - The wildcard * is not in the ui acl
@@ -193,7 +203,7 @@ public class ApplicationMaster {
     }
 
     try {
-      ui = new WebUI(0, appId.toString(), keyValueStore, serviceContexts,
+      ui = new WebUI(0, applicationContext, keyValueStore, serviceContexts,
                      allowedUsers, conf, false);
       ui.start();
     } catch (Exception e) {
@@ -327,10 +337,14 @@ public class ApplicationMaster {
   }
 
   private void allocate() throws IOException, YarnException {
-    // Since the application can dynamically allocate containers, we can't
-    // accurately estimate the application progress. Set to started, but not
-    // far along.
-    AllocateResponse resp = rmClient.allocate(progress.floatValue());
+    float currentProgress = progress.floatValue();
+    if (currentProgress < 0.0f) {
+      // Since the application didn't specify it's progress and there is
+      // no way to reliably estimate it, we set it to started, but not
+      // far along.
+      currentProgress = 0.1f;
+    }
+    AllocateResponse resp = rmClient.allocate(currentProgress);
 
     List<Container> allocated = resp.getAllocatedContainers();
     List<ContainerStatus> completed = resp.getCompletedContainersStatuses();
@@ -674,6 +688,24 @@ public class ApplicationMaster {
           req.removeAllWatches();
         }
       }
+    }
+  }
+
+  final class ApplicationTracker {
+    private String appId;
+    private AtomicDouble progress;
+
+    public ApplicationTracker(String appId, AtomicDouble progress) {
+      this.appId = appId;
+      this.progress = progress;
+    }
+
+    public synchronized WebUI.ApplicationContext toApplicationContext() {
+      WebUI.ApplicationContext context = new WebUI.ApplicationContext();
+      context.appId = appId;
+      context.progress = progress.floatValue();
+      context.progressKnown = context.progress >= 0.0f;
+      return context;
     }
   }
 

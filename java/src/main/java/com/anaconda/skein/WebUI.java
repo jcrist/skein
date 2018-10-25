@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -65,7 +66,7 @@ public class WebUI {
   private final Lock readLock;
 
   public WebUI(int port,
-               String appId,
+               Supplier<ApplicationContext> application,
                Map<String, Msg.KeyValue.Builder> keyValueStore,
                List<ServiceContext> services,
                Set<String> users,
@@ -99,7 +100,7 @@ public class WebUI {
 
     // Add application servlets
     final String protocol = WebAppUtils.getHttpSchemePrefix(conf);
-    UIModel uiModel = new UIModel(appId, keyValueStore, services, protocol);
+    UIModel uiModel = new UIModel(application, keyValueStore, services, protocol);
     context.addServlet(
         new ServletHolder(new TemplateServlet(uiModel, "services.mustache.html")),
         "/services");
@@ -352,7 +353,18 @@ public class WebUI {
     services.add(service2);
 
     try {
-      WebUI webui = new WebUI(port, "application_1526497750451_0001", kv,
+      Supplier<ApplicationContext> applicationContext =
+          new Supplier<ApplicationContext>() {
+            public ApplicationContext get() {
+              ApplicationContext applicationContext = new ApplicationContext();
+              applicationContext.appId = "application_1526497750451_0001";
+              applicationContext.progress = -1.0f;
+              applicationContext.progressKnown = false;
+              return applicationContext;
+            }
+          };
+
+      WebUI webui = new WebUI(port, applicationContext, kv,
                               services, null, new YarnConfiguration(), true);
       webui.nameToRoute.put("name1", "page1");
       webui.nameToRoute.put("name2", "page2");
@@ -408,6 +420,14 @@ public class WebUI {
     }
   }
 
+  public static class ApplicationContext {
+    public String appId;
+    public float progress;
+    public boolean progressKnown;
+
+    public ApplicationContext() {}
+  }
+
   public static class ServiceContext {
     public String name;
     public int running;
@@ -421,16 +441,16 @@ public class WebUI {
   }
 
   private class UIModel {
-    public final String appId;
+    public final Supplier<ApplicationContext> applicationContext;
     private final List<ServiceContext> services;
     private final Map<String, Msg.KeyValue.Builder> keyValueStore;
     public final String protocol;
 
-    public UIModel(String appId,
+    public UIModel(Supplier<ApplicationContext> applicationContext,
                    Map<String, Msg.KeyValue.Builder> keyValueStore,
                    List<ServiceContext> services,
                    String protocol) {
-      this.appId = appId;
+      this.applicationContext = applicationContext;
       this.keyValueStore = keyValueStore;
       this.services = services;
       this.protocol = protocol;
@@ -438,6 +458,18 @@ public class WebUI {
 
     public String proxyPrefix() {
       return PROXY_PREFIX;
+    }
+
+    public String appId() {
+      return applicationContext.get().appId;
+    }
+
+    public boolean progressKnown() {
+      return applicationContext.get().progressKnown;
+    }
+
+    public String progress() {
+      return String.format("%.1f", 100 * applicationContext.get().progress);
     }
 
     public List<Map.Entry<String, String>> kv() {
