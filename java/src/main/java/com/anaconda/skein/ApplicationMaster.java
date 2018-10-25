@@ -565,6 +565,8 @@ public class ApplicationMaster {
     WatchRequestStream(StreamObserver<Msg.WatchResponse> resp) {
       super();
       this.resp = resp;
+      LOG.debug("New watch stream created [stream: {}]",
+                System.identityHashCode(this));
     }
 
     private void removeWatch(int watchId) {
@@ -572,7 +574,8 @@ public class ApplicationMaster {
         synchronized (keyValueStore) {
           intervalTree.remove(watchId);
         }
-        LOG.debug("Removed Watcher [id: {}]", watchId);
+        LOG.debug("Removed watcher [stream: {}, watcher: {}]",
+                  System.identityHashCode(this), watchId);
       }
     }
 
@@ -581,7 +584,8 @@ public class ApplicationMaster {
         for (Iterator<Integer> it = registered.iterator(); it.hasNext();) {
           int watchId = it.next();
           intervalTree.remove(watchId);
-          LOG.debug("Removed Watcher [id: {}]", watchId);
+          LOG.debug("Removed watcher [stream: {}, watcher: {}]",
+                    System.identityHashCode(this), watchId);
           it.remove();
         }
       }
@@ -602,8 +606,8 @@ public class ApplicationMaster {
           synchronized (keyValueStore) {
             watchId = intervalTree.add(start, end, new Watcher(resp, this, type));
           }
-          LOG.debug("Created Watcher [id: {}, start: {}, end: {}, type: {}]",
-                    watchId, start, end, type);
+          LOG.debug("Created watcher [stream: {}, watcher: {}, start: '{}', end: '{}', type: {}]",
+                    System.identityHashCode(this), watchId, start, end, type);
           registered.add(watchId);
           builder.setWatchId(watchId);
           builder.setType(Msg.WatchResponse.Type.CREATE);
@@ -620,13 +624,15 @@ public class ApplicationMaster {
 
     @Override
     public void onError(Throwable t) {
-      LOG.info("Watch Stream Canceled");
+      LOG.debug("Watch stream canceled [stream: {}]",
+                System.identityHashCode(this));
       removeAllWatches();
     }
 
     @Override
     public void onCompleted() {
-      LOG.info("Watch Stream Completed");
+      LOG.debug("Watch stream completed [stream: {}]",
+                System.identityHashCode(this));
       removeAllWatches();
       resp.onCompleted();
     }
@@ -1626,7 +1632,6 @@ public class ApplicationMaster {
 
     @Override
     public StreamObserver<Msg.WatchRequest> watch(final StreamObserver<Msg.WatchResponse> resp) {
-      LOG.info("watch called");
       return new WatchRequestStream(resp);
     }
 
