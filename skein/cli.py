@@ -122,13 +122,16 @@ daemon = node(entry_subs, 'daemon', 'Manage the skein daemon')
 
 log = arg("--log", default=False,
           help="If provided, the daemon will write logs here.")
+log_level = arg("--log-level", default=None,
+                help="The daemon log level, default is INFO")
 
 
 @subcommand(daemon.subs,
             'start', 'Start the skein daemon',
-            log)
-def daemon_start(log=False):
-    print(Client.start_global_daemon(log=log))
+            log,
+            log_level)
+def daemon_start(log=False, log_level=None):
+    print(Client.start_global_daemon(log=log, log_level=log_level))
 
 
 @subcommand(daemon.subs,
@@ -149,10 +152,11 @@ def daemon_stop():
 
 @subcommand(daemon.subs,
             'restart', 'Restart the skein daemon',
-            log)
-def daemon_restart(log=False):
+            log,
+            log_level)
+def daemon_restart(log=False, log_level=None):
     daemon_stop()
-    daemon_start(log=log)
+    daemon_start(log=log, log_level=log_level)
 
 
 #####################

@@ -219,6 +219,7 @@ public class Daemon {
 
   private void run() throws Exception {
     // Start the yarn client
+    LOG.debug("Starting Yarn client");
     yarnClient = YarnClient.createYarnClient();
     yarnClient.init(conf);
     yarnClient.start();
@@ -227,6 +228,7 @@ public class Daemon {
     startServer();
 
     // Report back the port we're listening on
+    LOG.debug("Reporting gRPC server port back to the launching process");
     Socket callback = new Socket("127.0.0.1", callbackPort);
     DataOutputStream dos = new DataOutputStream(callback.getOutputStream());
     dos.writeInt(server.getPort());
@@ -238,7 +240,7 @@ public class Daemon {
     } else {
       // Wait until EOF or broken pipe from stdin
       while (System.in.read() != -1) {}
-      LOG.info("Starting process disconnected, shutting down");
+      LOG.debug("Starting process disconnected, shutting down");
     }
   }
 
@@ -294,6 +296,7 @@ public class Daemon {
     // Add security tokens as needed
     ByteBuffer fsTokens = null;
     if (UserGroupInformation.isSecurityEnabled()) {
+      LOG.debug("Collecting credential tokens");
       Credentials credentials = UserGroupInformation.getLoginUser().getCredentials();
       TokenCache.obtainTokensForNamenodes(
               credentials,
@@ -499,10 +502,14 @@ public class Daemon {
   private synchronized void addWatcher(final ApplicationId appId,
       StreamObserver<Msg.ApplicationReport> resp) {
 
+    LOG.debug("New watcher callback requested for application {}", appId);
+
     if (startedCallbacks.get(appId) != null) {
+      LOG.debug("Watcher for {} already exists, adding stream to callback", appId);
       startedCallbacks.get(appId).add(resp);
       return;
     }
+    LOG.debug("No watcher exists for {}, creating one", appId);
 
     final List<StreamObserver<Msg.ApplicationReport>> callbacks =
         new ArrayList<StreamObserver<Msg.ApplicationReport>>();
@@ -520,7 +527,7 @@ public class Daemon {
               report = yarnClient.getApplicationReport(appId);
             } catch (Exception exc) {
               LOG.warn("Failed to get report for {}. Notifying {} callbacks.",
-                       appId.toString(), callbacks.size());
+                       appId, callbacks.size());
               for (StreamObserver<Msg.ApplicationReport> resp : callbacks) {
                 // Send error
                 try {
@@ -531,7 +538,7 @@ public class Daemon {
                 } catch (StatusRuntimeException cbExc) {
                   if (cbExc.getStatus().getCode() != Status.Code.CANCELLED) {
                     LOG.warn("Callback failed for app_id: {}, status: {}",
-                             appId.toString(), cbExc.getStatus());
+                             appId, cbExc.getStatus());
                   }
                 }
               }
@@ -540,7 +547,7 @@ public class Daemon {
 
             if (hasStarted(report)) {
               LOG.debug("Notifying that {} has started. {} callbacks registered.",
-                        appId.toString(), callbacks.size());
+                        appId, callbacks.size());
               for (StreamObserver<Msg.ApplicationReport> resp : callbacks) {
                 // Send report
                 try {
@@ -549,12 +556,14 @@ public class Daemon {
                 } catch (StatusRuntimeException cbExc) {
                   if (cbExc.getStatus().getCode() != Status.Code.CANCELLED) {
                     LOG.warn("Callback failed for app_id: {}, status: {}",
-                             appId.toString(), cbExc.getStatus());
+                             appId, cbExc.getStatus());
                   }
                 }
               }
               break;
             }
+
+            LOG.trace("Waiting for application {} to start", appId);
 
             // Sleep for 1 second
             try {
@@ -563,7 +572,7 @@ public class Daemon {
           }
 
           // Remove callbacks for this appId
-          LOG.debug("Removing callbacks for {}.", appId.toString());
+          LOG.debug("Removing callbacks for {}.", appId);
           synchronized (Daemon.this) {
             startedCallbacks.remove(appId);
           }
