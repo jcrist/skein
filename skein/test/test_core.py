@@ -126,6 +126,30 @@ def test_client_closed_when_reference_dropped(security, kinit):
     assert not pid_exists(pid)
 
 
+def test_client_errors_nicely_if_not_logged_in(security, not_logged_in):
+    appid = 'application_1526134340424_0012'
+
+    spec = skein.ApplicationSpec(
+        name="should_never_get_to_run",
+        queue="default",
+        services={
+            'service': skein.Service(
+                resources=skein.Resources(memory=128, vcores=1),
+                commands=['env'])
+        }
+    )
+
+    with skein.Client(security=security) as client:
+        for func, args in [('get_applications', ()),
+                           ('application_report', (appid,)),
+                           ('connect', (appid,)),
+                           ('kill_application', (appid,)),
+                           ('submit', (spec,))]:
+            with pytest.raises(skein.DaemonError) as exc:
+                getattr(client, func)(*args)
+            assert 'kinit' in str(exc.value)
+
+
 def test_application_client_from_current_errors():
     with pytest.raises(ValueError) as exc:
         skein.ApplicationClient.from_current()

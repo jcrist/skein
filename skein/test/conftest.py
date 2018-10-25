@@ -34,16 +34,32 @@ def security(tmpdir_factory):
 
 @pytest.fixture(scope="session")
 def has_kerberos_enabled():
-    command = ["hdfs", "getconf", "-confKey", "hadoop.security.authentication"]
-    return "kerberos" in subprocess.check_output(command).decode()
+    return HAS_KERBEROS
+
+
+KEYTAB_PATH = "/home/testuser/testuser.keytab"
+HAS_KERBEROS = os.path.exists(KEYTAB_PATH)
+
+
+def do_kinit():
+    subprocess.check_call(["kinit", "-kt", KEYTAB_PATH, "testuser"])
 
 
 @pytest.fixture(scope="session")
 def kinit():
-    keytab = "/home/testuser/testuser.keytab"
-    if os.path.exists(keytab):
-        subprocess.check_call(["kinit", "-kt", keytab, "testuser"])
-    return
+    if HAS_KERBEROS:
+        do_kinit()
+
+
+@pytest.fixture
+def not_logged_in():
+    if not HAS_KERBEROS:
+        pytest.skip("Without kerberos, users are always logged in")
+    try:
+        subprocess.check_call(["kdestroy"])
+        yield
+    finally:
+        do_kinit()
 
 
 @pytest.fixture(scope="session")

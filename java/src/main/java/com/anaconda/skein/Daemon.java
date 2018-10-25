@@ -85,6 +85,8 @@ public class Daemon {
 
   private Configuration conf;
 
+  private boolean loggedIn = false;
+
   private FileSystem defaultFs;
 
   private YarnClient yarnClient;
@@ -184,6 +186,21 @@ public class Daemon {
     certPath = args[1];
     keyPath = args[2];
     daemon = args.length == 4;
+
+    // Ensure user has obtained a kerberos ticket, otherwise the daemon will
+    // lockup (missing kerberos tickets are logged, but no exception is raised
+    // in the caller, which is unfortunate). UserGroupInformation also caches
+    // and can't be reset, so the process must be killed and restarted.  We
+    // keep the daemon running (even though it can't do anything) so that
+    // client processes can get a nice error message, rather than having to
+    // look in the logs.
+    if (UserGroupInformation.isSecurityEnabled()
+        && !UserGroupInformation.getLoginUser().hasKerberosCredentials()) {
+      LOG.warn("Kerberos ticket not found, please kinit and restart");
+      loggedIn = false;
+    } else {
+      loggedIn = true;
+    }
 
     conf = new YarnConfiguration();
     defaultFs = FileSystem.get(conf);
@@ -557,6 +574,17 @@ public class Daemon {
   }
 
   class DaemonImpl extends DaemonGrpc.DaemonImplBase {
+
+    public boolean notLoggedIn(StreamObserver<?> resp) {
+      if (!loggedIn) {
+        resp.onError(Status.UNAUTHENTICATED
+            .withDescription("Kerberos ticket not found, please kinit and restart")
+            .asRuntimeException());
+        return true;
+      }
+      return false;
+    }
+
     @Override
     public void ping(Msg.Empty req, StreamObserver<Msg.Empty> resp) {
       resp.onNext(MsgUtils.EMPTY);
@@ -566,6 +594,10 @@ public class Daemon {
     @Override
     public void getApplications(Msg.ApplicationsRequest req,
         StreamObserver<Msg.ApplicationsResponse> resp) {
+
+      if (notLoggedIn(resp)) {
+        return;
+      }
 
       EnumSet<YarnApplicationState> states;
       if (req.getStatesCount() == 0) {
@@ -632,6 +664,10 @@ public class Daemon {
     public void getStatus(Msg.Application req,
         StreamObserver<Msg.ApplicationReport> resp) {
 
+      if (notLoggedIn(resp)) {
+        return;
+      }
+
       ApplicationReport report = getReport(req, resp);
       if (report != null) {
         resp.onNext(MsgUtils.writeApplicationReport(report));
@@ -642,6 +678,10 @@ public class Daemon {
     @Override
     public void waitForStart(Msg.Application req,
         StreamObserver<Msg.ApplicationReport> resp) {
+
+      if (notLoggedIn(resp)) {
+        return;
+      }
 
       ApplicationReport report = getReport(req, resp);
       if (report == null) {
@@ -659,6 +699,10 @@ public class Daemon {
     @Override
     public void submit(Msg.ApplicationSpec req,
         StreamObserver<Msg.Application> resp) {
+
+      if (notLoggedIn(resp)) {
+        return;
+      }
 
       Model.ApplicationSpec spec = MsgUtils.readApplicationSpec(req);
 
@@ -679,6 +723,11 @@ public class Daemon {
 
     @Override
     public void kill(Msg.Application req, StreamObserver<Msg.Empty> resp) {
+
+      if (notLoggedIn(resp)) {
+        return;
+      }
+
       // Check if the id is a valid skein id
       ApplicationReport report = getReport(req, resp);
       if (report == null) {
