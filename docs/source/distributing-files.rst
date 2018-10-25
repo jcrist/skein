@@ -23,9 +23,9 @@ Specifying Files for a Service
 
 Files for distribution are specified per-service using the :ref:`files field of
 the specification <specification-files>`. This field takes a mapping of
-destination relative paths to :class:`File` or :class:`str` objects describing
-the sources for these paths. Each :class:`File` object takes the following
-fields:
+destination relative paths to :class:`skein.File` or :class:`str` objects
+describing the sources for these paths. Each :class:`skein.File` object takes
+the following fields:
 
 - ``source``
 
@@ -62,7 +62,7 @@ fields:
   The time the resource was last modified. Optional; if not provided will be
   determined by the file system. In most cases the default is what you want.
 
-As a shorthand, values may be the source path instead of a :class:`File`
+As a shorthand, values may be the source path instead of a :class:`skein.File`
 object.
 
 **Example**

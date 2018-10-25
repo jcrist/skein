@@ -22,7 +22,7 @@ from .kv import KeyValueStore
 from .ui import WebUI
 from .model import (ApplicationSpec, ApplicationReport, ApplicationState,
                     ContainerState, Container, FinalStatus, Resources,
-                    container_instance_from_string)
+                    container_instance_from_string, LogLevel)
 from .utils import cached_property
 
 
@@ -254,16 +254,42 @@ def _write_daemon(address, pid):
         json.dump({'address': address, 'pid': pid}, fil)
 
 
-def _start_daemon(security=None, set_global=False, log=None):
+def _start_daemon(security=None, set_global=False, log=None, log_level=None):
     security = security or Security.from_default()
+
+    if log_level is None:
+        log_level = LogLevel(
+            os.environ.get('SKEIN_LOG_LEVEL', LogLevel.INFO)
+        )
+    else:
+        log_level = LogLevel(log_level)
 
     if not os.path.exists(_SKEIN_JAR):
         raise context.FileNotFoundError("Failed to find the skein jar file")
 
-    command = ["yarn", "jar", _SKEIN_JAR, _SKEIN_JAR,
-               security.cert_path, security.key_path]
+    # Compose the command to start the daemon server
+    java_bin = ('%s/bin/java' % os.environ['JAVA_HOME']
+                if 'JAVA_HOME' in os.environ
+                else 'java')
+
+    command = [java_bin,
+               '-Dskein.log.level=%s' % log_level,
+               'com.anaconda.skein.Daemon',
+               _SKEIN_JAR,
+               security.cert_path,
+               security.key_path]
+
     if set_global:
         command.append("--daemon")
+
+    # Update the classpath in the environment
+    env = dict(os.environ)
+    hadoop_bin = ('%s/bin/hadoop' % env['HADOOP_HOME']
+                  if 'HADOOP_HOME' in env
+                  else 'hadoop')
+    classpath = (subprocess.check_output([hadoop_bin, 'classpath', '--glob'])
+                           .decode('utf-8'))
+    env['CLASSPATH'] = '%s:%s' % (_SKEIN_JAR, classpath)
 
     callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     callback.bind(('localhost', 0))
@@ -271,8 +297,6 @@ def _start_daemon(security=None, set_global=False, log=None):
 
     with closing(callback):
         _, callback_port = callback.getsockname()
-
-        env = dict(os.environ)
         env.update({'SKEIN_CALLBACK_PORT': str(callback_port)})
 
         if PY2:
@@ -363,6 +387,10 @@ class Client(_ClientBase):
         Values may be a path for logs to be written to, ``None`` to log to
         stdout/stderr, or ``False`` to turn off logging completely. Default is
         ``None``.
+    log_level : str or skein.model.LogLevel, optional
+        The daemon log level. Sets the ``skein.log.level`` system property. One
+        of {'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL', 'OFF'}
+        (from most to least verbose). Default is 'INFO'.
 
     Examples
     --------
@@ -373,12 +401,13 @@ class Client(_ClientBase):
     _server_name = 'daemon'
     _server_error = DaemonError
 
-    def __init__(self, address=None, security=None, log=None):
+    def __init__(self, address=None, security=None, log=None, log_level=None):
         if security is None:
             security = Security.from_default()
 
         if address is None:
-            address, proc = _start_daemon(security=security, log=log)
+            address, proc = _start_daemon(security=security, log=log,
+                                          log_level=log_level)
         else:
             proc = None
 
@@ -408,7 +437,7 @@ class Client(_ClientBase):
         return Client(address=address, security=security)
 
     @staticmethod
-    def start_global_daemon(log=None):
+    def start_global_daemon(log=None, log_level=None):
         """Start the global daemon.
 
         No-op if the global daemon is already running.
@@ -416,9 +445,13 @@ class Client(_ClientBase):
         Parameters
         ----------
         log : str, bool, or None, optional
-            Sets the logging behavior for the daemon. Values may be a path for logs
-            to be written to, ``None`` to log to stdout/stderr, or ``False`` to
-            turn off logging completely. Default is ``None``.
+            Sets the logging behavior for the daemon. Values may be a path for
+            logs to be written to, ``None`` to log to stdout/stderr, or
+            ``False`` to turn off logging completely. Default is ``None``.
+        log_level : str or skein.model.LogLevel, optional
+            The daemon log level. Sets the ``skein.log.level`` system property.
+            One of {'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL',
+            'OFF'} (from most to least verbose). Default is 'INFO'.
 
         Returns
         -------
@@ -431,7 +464,8 @@ class Client(_ClientBase):
             pass
         else:
             return client.address
-        address, _ = _start_daemon(set_global=True, log=log)
+        address, _ = _start_daemon(set_global=True, log=log,
+                                   log_level=log_level)
         return address
 
     @staticmethod

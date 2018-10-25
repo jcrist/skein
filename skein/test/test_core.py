@@ -150,6 +150,18 @@ def test_client_errors_nicely_if_not_logged_in(security, not_logged_in):
             assert 'kinit' in str(exc.value)
 
 
+def test_client_set_log_level(security, kinit, tmpdir):
+    logpath = str(tmpdir.join("log.txt"))
+
+    with skein.Client(security=security, log=logpath, log_level='debug') as client:
+        # do an operation to ensure everything is working
+        client.get_applications()
+
+    with open(logpath) as fil:
+        data = fil.read()
+        assert 'DEBUG' in data
+
+
 def test_application_client_from_current_errors():
     with pytest.raises(ValueError) as exc:
         skein.ApplicationClient.from_current()
