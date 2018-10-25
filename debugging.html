@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Debugging &#8212; Skein 0.2.0+7.g53f7ca8 documentation</title>
+    <title>Debugging &#8212; Skein 0.2.0+10.g7efbc38 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -106,6 +106,33 @@ information on configuration files.</li>
 </pre></div>
 </div>
 </div>
+<div class="section" id="configuring-logging-in-the-client-daemon">
+<h2>Configuring Logging in the Client Daemon<a class="headerlink" href="#configuring-logging-in-the-client-daemon" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="api.html#skein.Client" title="skein.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">skein.Client</span></code></a> uses a Java daemon process to communicate with
+services like YARN and HDFS. If you find issues in communicating with these
+services (submitting, querying, or killing applications), it may be useful to
+increase logging verbosity for the skein daemon process (<code class="docutils literal notranslate"><span class="pre">debug</span></code> is a good
+option). There are a few ways to do this:</p>
+<ul class="simple">
+<li>Using the <code class="docutils literal notranslate"><span class="pre">log_level</span></code> keyword when creating a <a class="reference internal" href="api.html#skein.Client" title="skein.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">skein.Client</span></code></a>.</li>
+<li>Setting the <code class="docutils literal notranslate"><span class="pre">SKEIN_LOG_LEVEL</span></code> environment variable (e.g.
+<code class="docutils literal notranslate"><span class="pre">SKEIN_LOG_LEVEL=DEBUG</span></code>).</li>
+<li>Using the <code class="docutils literal notranslate"><span class="pre">--log-level</span></code> flag when starting a persistent daemon using the
+<a class="reference external" href="cli.html">CLI</a> (e.g.  <code class="docutils literal notranslate"><span class="pre">skein</span> <span class="pre">daemon</span> <span class="pre">start</span> <span class="pre">--log-level</span> <span class="pre">debug</span></code>).</li>
+</ul>
+<p>Additionally, you may want to log to a file instead of to the terminal. There
+are also a few ways to do this:</p>
+<ul class="simple">
+<li>Using the <code class="docutils literal notranslate"><span class="pre">log</span></code> keyword when creating a <a class="reference internal" href="api.html#skein.Client" title="skein.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">skein.Client</span></code></a>.</li>
+<li>Using the <code class="docutils literal notranslate"><span class="pre">--log</span></code> flag when starting a persistent daemon using the <a class="reference external" href="cli.html">CLI</a>.</li>
+</ul>
+<p><strong>Example</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create a client, logging to `daemon.log` with &quot;debug&quot; log level</span>
+<span class="kn">import</span> <span class="nn">skein</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="n">log_level</span><span class="o">=</span><span class="s1">&#39;debug&#39;</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="s1">&#39;daemon.log&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="start-a-remote-ipython-kernel-on-the-container">
 <h2>Start a Remote IPython Kernel on the Container<a class="headerlink" href="#start-a-remote-ipython-kernel-on-the-container" title="Permalink to this headline">¶</a></h2>
 <p>As a last resort, it can be useful to Skein’s remote <a class="reference external" href="https://ipython.org/">IPython</a> kernel recipe to start an IPython kernel on the
@@ -169,6 +196,7 @@ failing container, and connect to the kernel to debug locally. Refer to the
 <li class="toctree-l2"><a class="reference internal" href="#accessing-the-application-logs">Accessing the Application Logs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#useful-things-to-log">Useful Things to Log</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuring-logging-in-the-application-master">Configuring Logging in the Application Master</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuring-logging-in-the-client-daemon">Configuring Logging in the Client Daemon</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#start-a-remote-ipython-kernel-on-the-container">Start a Remote IPython Kernel on the Container</a></li>
 </ul>
 </li>
