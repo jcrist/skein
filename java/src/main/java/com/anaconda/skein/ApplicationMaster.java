@@ -3,6 +3,7 @@ package com.anaconda.skein;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.AtomicDouble;
 import com.google.protobuf.ByteString;
 
 import io.grpc.Server;
@@ -97,6 +98,8 @@ public class ApplicationMaster {
       new HashMap<String, ServiceTracker>();
   private final Map<ContainerId, Model.Container> containers =
       new ConcurrentHashMap<ContainerId, Model.Container>();
+
+  private final AtomicDouble progress = new AtomicDouble(0.1);
 
   private final TreeMap<Priority, ServiceTracker> priorities =
       new TreeMap<Priority, ServiceTracker>();
@@ -327,7 +330,7 @@ public class ApplicationMaster {
     // Since the application can dynamically allocate containers, we can't
     // accurately estimate the application progress. Set to started, but not
     // far along.
-    AllocateResponse resp = rmClient.allocate(0.1f);
+    AllocateResponse resp = rmClient.allocate(progress.floatValue());
 
     List<Container> allocated = resp.getAllocatedContainers();
     List<ContainerStatus> completed = resp.getCompletedContainersStatuses();
@@ -1251,6 +1254,21 @@ public class ApplicationMaster {
         }
       }
       return builder;
+    }
+
+    @Override
+    public void setProgress(Msg.SetProgressRequest req,
+        StreamObserver<Msg.Empty> resp) {
+      float prog = req.getProgress();
+      if (prog < 0.0f || prog > 1.0f) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("progress must be between 0 and 1, got " + prog)
+            .asRuntimeException());
+      } else {
+        progress.set(prog);
+        resp.onNext(MsgUtils.EMPTY);
+        resp.onCompleted();
+      }
     }
 
     @Override

@@ -235,6 +235,8 @@ service AppMaster {
 
   rpc scale (ScaleRequest) returns (ContainersResponse);
 
+  rpc SetProgress (SetProgressRequest) returns (Empty);
+
   rpc AddProxy (Proxy) returns (Empty);
 
   rpc RemoveProxy (RemoveProxyRequest) returns (Empty);
@@ -424,6 +426,11 @@ message ContainersResponse {
 message ScaleRequest {
   string service_name = 1;
   int32 instances = 2;
+}
+
+
+message SetProgressRequest {
+  float progress = 1;
 }
 
 

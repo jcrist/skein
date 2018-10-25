@@ -742,6 +742,27 @@ class ApplicationClient(_ClientBase):
         resp = self._call('scale', req)
         return [Container.from_protobuf(c) for c in resp.containers]
 
+    def set_progress(self, progress):
+        """Update the progress for this application.
+
+        For applications processing a fixed set of work it may be useful for
+        diagnostics to set the progress as the application processes.
+
+        Progress indicates job progression, and must be a float between 0 and
+        1. By default the progress is set at 0.1 for its duration, which is a
+        good default value for applications that don't know their progress,
+        (e.g. interactive applications).
+
+        Parameters
+        ----------
+        progress : float
+            The application progress, must be a value between 0 and 1.
+        """
+        if not (0 <= progress <= 1.0):
+            raise ValueError("progress must be between 0 and 1, got %.3f"
+                             % progress)
+        self._call('SetProgress', proto.SetProgressRequest(progress=progress))
+
     @classmethod
     def from_current(cls):
         """Create an application client from within a running container.
