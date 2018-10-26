@@ -10,6 +10,10 @@ Upcoming Release
 - Add support for YARN node and rack requirements/suggestions (:pr:`90`,
   :issue:`89`)
 - Allow setting diagnostics message on user-requested shutdown (:pr:`92`)
+- Add ability to set application progress (:pr:`93`, :issue:`88`)
+- Error nicely if user forgets to kinit (:pr:`94`)
+- Improve logging messages in client daemon (:pr:`95`)
+- Support configurable logging for client daemon (:pr:`96`)
 
 Version 0.2.0 (October 11, 2018)
 --------------------------------
