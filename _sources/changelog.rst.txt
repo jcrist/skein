@@ -4,6 +4,9 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.3.0 (October 26, 2018)
+--------------------------------
+
 - Add support for YARN node label expressions (:pr:`44`)
 - Allow memory requirements to be specified with human-readable units
   (:pr:`87`, :issue:`86`)
