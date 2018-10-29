@@ -273,21 +273,25 @@ def _start_daemon(security=None, set_global=False, log=None, log_level=None):
                 else 'java')
 
     command = [java_bin,
-               '-Dskein.log.level=%s' % log_level,
-               'com.anaconda.skein.Daemon',
-               _SKEIN_JAR,
-               security.cert_path,
-               security.key_path]
+               '-Dskein.log.level=%s' % log_level]
+
+    # Configure location of native libs if directory exists
+    if 'HADOOP_HOME' in os.environ:
+        native_path = '%s/lib/native' % os.environ['HADOOP_HOME']
+        if os.path.exists(native_path):
+            command.append('-Djava.library.path=%s' % native_path)
+
+    command.extend(['com.anaconda.skein.Daemon',
+                    _SKEIN_JAR,
+                    security.cert_path,
+                    security.key_path])
 
     if set_global:
         command.append("--daemon")
 
     # Update the classpath in the environment
     env = dict(os.environ)
-    hadoop_bin = ('%s/bin/hadoop' % env['HADOOP_HOME']
-                  if 'HADOOP_HOME' in env
-                  else 'hadoop')
-    classpath = (subprocess.check_output([hadoop_bin, 'classpath', '--glob'])
+    classpath = (subprocess.check_output(['yarn', 'classpath', '--glob'])
                            .decode('utf-8'))
     env['CLASSPATH'] = '%s:%s' % (_SKEIN_JAR, classpath)
 
