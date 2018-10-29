@@ -46,8 +46,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -151,7 +149,7 @@ public class ApplicationMaster {
           }
         });
 
-    LOG.info("gRPC server started, listening on {}", grpcServer.getPort());
+    LOG.info("gRPC server started at {}:{}", hostname, grpcServer.getPort());
   }
 
   private void stopServer() {
@@ -208,7 +206,7 @@ public class ApplicationMaster {
           }
         });
 
-    LOG.info("WebUI server started, listening on {}", ui.getURI().getPort());
+    LOG.info("WebUI server started at {}:{}", hostname, ui.getURI().getPort());
   }
 
   private void stopUI() {
@@ -435,12 +433,6 @@ public class ApplicationMaster {
 
     loadApplicationSpec();
 
-    try {
-      hostname = InetAddress.getLocalHost().getHostAddress();
-    } catch (UnknownHostException exc) {
-      fatal("Couldn't determine hostname for appmaster", exc);
-    }
-
     // Create ugi and add original tokens to it
     String userName = System.getenv(Environment.USER.name());
     LOG.info("Running as user {}", userName);
@@ -476,6 +468,7 @@ public class ApplicationMaster {
         MAX_EXECUTOR_THREADS,
         true);
 
+    hostname = System.getenv(Environment.NM_HOST.name());
     startServer();
     startUI();
 
