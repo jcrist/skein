@@ -4,6 +4,13 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.3.1 (October 29, 2018)
+--------------------------------
+
+- Use ``NM_HOST`` to determine hostname, fixes connection issues on systems
+  with alternate network interfaces (e.g. infiniband) (:pr:`97`)
+- Fix accidental reliance on ``JAVA_HOME`` being defined (:pr:`100`)
+
 Version 0.3.0 (October 26, 2018)
 --------------------------------
 
