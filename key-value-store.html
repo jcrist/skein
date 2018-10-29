@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Key-Value Store &#8212; Skein 0.3.0+3.g46e4e77 documentation</title>
+    <title>Key-Value Store &#8212; Skein 0.3.0+4.g6b8b646 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -248,49 +248,49 @@ of keys, or a key prefix.</p>
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.count" title="skein.kv.KeyValueStore.count"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.count</span></code></a>([end,&nbsp;prefix])</td>
+<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.count" title="skein.kv.KeyValueStore.count"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.count</span></code></a>([start,&nbsp;end,&nbsp;prefix])</td>
 <td>Count keys in the key-value store.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.list_keys" title="skein.kv.KeyValueStore.list_keys"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.list_keys</span></code></a>([end,&nbsp;prefix])</td>
+<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.list_keys" title="skein.kv.KeyValueStore.list_keys"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.list_keys</span></code></a>([start,&nbsp;end,&nbsp;prefix])</td>
 <td>Get a list of keys in the key-value store.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.exists" title="skein.kv.KeyValueStore.exists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.exists</span></code></a>()</td>
+<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.exists" title="skein.kv.KeyValueStore.exists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.exists</span></code></a>(key)</td>
 <td>Check if a key exists in the key-value store.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.missing" title="skein.kv.KeyValueStore.missing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.missing</span></code></a>()</td>
+<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.missing" title="skein.kv.KeyValueStore.missing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.missing</span></code></a>(key)</td>
 <td>Check if a key is not in the key-value store.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.get" title="skein.kv.KeyValueStore.get"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.get</span></code></a>([default,&nbsp;return_owner])</td>
+<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.get" title="skein.kv.KeyValueStore.get"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.get</span></code></a>(key[,&nbsp;default,&nbsp;return_owner])</td>
 <td>Get the value associated with a single key.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.get_prefix" title="skein.kv.KeyValueStore.get_prefix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.get_prefix</span></code></a>([return_owner])</td>
+<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.get_prefix" title="skein.kv.KeyValueStore.get_prefix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.get_prefix</span></code></a>(prefix[,&nbsp;return_owner])</td>
 <td>Get all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.get_range" title="skein.kv.KeyValueStore.get_range"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.get_range</span></code></a>([end,&nbsp;return_owner])</td>
+<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.get_range" title="skein.kv.KeyValueStore.get_range"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.get_range</span></code></a>([start,&nbsp;end,&nbsp;…])</td>
 <td>Get a range of keys.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.pop" title="skein.kv.KeyValueStore.pop"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.pop</span></code></a>([default,&nbsp;return_owner])</td>
+<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.pop" title="skein.kv.KeyValueStore.pop"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.pop</span></code></a>(key[,&nbsp;default,&nbsp;return_owner])</td>
 <td>Remove a single key and return its corresponding value.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.pop_prefix" title="skein.kv.KeyValueStore.pop_prefix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.pop_prefix</span></code></a>([return_owner])</td>
+<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.pop_prefix" title="skein.kv.KeyValueStore.pop_prefix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.pop_prefix</span></code></a>(prefix[,&nbsp;return_owner])</td>
 <td>Remove all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>, and return their corresponding values.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.pop_range" title="skein.kv.KeyValueStore.pop_range"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.pop_range</span></code></a>([end,&nbsp;return_owner])</td>
+<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.pop_range" title="skein.kv.KeyValueStore.pop_range"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.pop_range</span></code></a>([start,&nbsp;end,&nbsp;…])</td>
 <td>Remove a range of keys and return their corresponding values.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.discard" title="skein.kv.KeyValueStore.discard"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.discard</span></code></a>()</td>
+<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.discard" title="skein.kv.KeyValueStore.discard"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.discard</span></code></a>(key)</td>
 <td>Discard a single key.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.discard_prefix" title="skein.kv.KeyValueStore.discard_prefix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.discard_prefix</span></code></a>([return_keys])</td>
+<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.discard_prefix" title="skein.kv.KeyValueStore.discard_prefix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.discard_prefix</span></code></a>(prefix[,&nbsp;…])</td>
 <td>Discard all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.discard_range" title="skein.kv.KeyValueStore.discard_range"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.discard_range</span></code></a>([end,&nbsp;return_keys])</td>
+<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.discard_range" title="skein.kv.KeyValueStore.discard_range"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.discard_range</span></code></a>([start,&nbsp;end,&nbsp;…])</td>
 <td>Discard a range of keys.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.put" title="skein.kv.KeyValueStore.put"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.put</span></code></a>([value,&nbsp;owner])</td>
+<tr class="row-even"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.put" title="skein.kv.KeyValueStore.put"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.put</span></code></a>(key[,&nbsp;value,&nbsp;owner])</td>
 <td>Assign a value and/or owner for a single key.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.swap" title="skein.kv.KeyValueStore.swap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.swap</span></code></a>([value,&nbsp;owner,&nbsp;return_owner])</td>
+<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.kv.KeyValueStore.swap" title="skein.kv.KeyValueStore.swap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyValueStore.swap</span></code></a>(key[,&nbsp;value,&nbsp;owner,&nbsp;…])</td>
 <td>Assign a new value and/or owner for a single key, and return the previous value.</td>
 </tr>
 </tbody>

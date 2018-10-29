@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.3.0+3.g46e4e77 documentation</title>
+    <title>API Docs &#8212; Skein 0.3.0+4.g6b8b646 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -656,7 +656,7 @@ container.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.count">
-<code class="descname">count</code><span class="sig-paren">(</span><em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.count" title="Permalink to this definition">¶</a></dt>
+<code class="descname">count</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.count" title="Permalink to this definition">¶</a></dt>
 <dd><p>Count keys in the key-value store.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -689,7 +689,7 @@ upper bound will be used.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.discard">
-<code class="descname">discard</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard" title="Permalink to this definition">¶</a></dt>
+<code class="descname">discard</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard" title="Permalink to this definition">¶</a></dt>
 <dd><p>Discard a single key.</p>
 <p>Returns true if the key was present, false otherwise.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -715,7 +715,7 @@ upper bound will be used.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.discard_prefix">
-<code class="descname">discard_prefix</code><span class="sig-paren">(</span><em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard_prefix" title="Permalink to this definition">¶</a></dt>
+<code class="descname">discard_prefix</code><span class="sig-paren">(</span><em>prefix</em>, <em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard_prefix" title="Permalink to this definition">¶</a></dt>
 <dd><p>Discard all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</p>
 <p>Returns either the number of keys discarded or a list of those keys,
 depending on the value of <code class="docutils literal notranslate"><span class="pre">return_keys</span></code>.</p>
@@ -746,7 +746,7 @@ Default is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.discard_range">
-<code class="descname">discard_range</code><span class="sig-paren">(</span><em>end=None</em>, <em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard_range" title="Permalink to this definition">¶</a></dt>
+<code class="descname">discard_range</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard_range" title="Permalink to this definition">¶</a></dt>
 <dd><p>Discard a range of keys.</p>
 <p>Returns either the number of keys discarded or a list of those keys,
 depending on the value of <code class="docutils literal notranslate"><span class="pre">return_keys</span></code>.</p>
@@ -859,7 +859,7 @@ may be provided.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.exists">
-<code class="descname">exists</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.exists" title="Permalink to this definition">¶</a></dt>
+<code class="descname">exists</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.exists" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check if a key exists in the key-value store.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -884,7 +884,7 @@ may be provided.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.get">
-<code class="descname">get</code><span class="sig-paren">(</span><em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get</code><span class="sig-paren">(</span><em>key</em>, <em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the value associated with a single key.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -916,7 +916,7 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.get_prefix">
-<code class="descname">get_prefix</code><span class="sig-paren">(</span><em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get_prefix" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_prefix</code><span class="sig-paren">(</span><em>prefix</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get_prefix" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -945,7 +945,7 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.get_range">
-<code class="descname">get_range</code><span class="sig-paren">(</span><em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get_range" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_range</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get_range" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a range of keys.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -989,7 +989,7 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.list_keys">
-<code class="descname">list_keys</code><span class="sig-paren">(</span><em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.list_keys" title="Permalink to this definition">¶</a></dt>
+<code class="descname">list_keys</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.list_keys" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a list of keys in the key-value store.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1022,7 +1022,7 @@ upper bound will be used.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.missing">
-<code class="descname">missing</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.missing" title="Permalink to this definition">¶</a></dt>
+<code class="descname">missing</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.missing" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check if a key is not in the key-value store.</p>
 <p>This is the inverse of <code class="docutils literal notranslate"><span class="pre">exists</span></code>.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1048,7 +1048,7 @@ upper bound will be used.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.pop">
-<code class="descname">pop</code><span class="sig-paren">(</span><em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop" title="Permalink to this definition">¶</a></dt>
+<code class="descname">pop</code><span class="sig-paren">(</span><em>key</em>, <em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove a single key and return its corresponding value.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1080,7 +1080,7 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.pop_prefix">
-<code class="descname">pop_prefix</code><span class="sig-paren">(</span><em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop_prefix" title="Permalink to this definition">¶</a></dt>
+<code class="descname">pop_prefix</code><span class="sig-paren">(</span><em>prefix</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop_prefix" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>, and return
 their corresponding values.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1110,7 +1110,7 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.pop_range">
-<code class="descname">pop_range</code><span class="sig-paren">(</span><em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop_range" title="Permalink to this definition">¶</a></dt>
+<code class="descname">pop_range</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop_range" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove a range of keys and return their corresponding values.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1150,7 +1150,7 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.put">
-<code class="descname">put</code><span class="sig-paren">(</span><em>value=no_change</em>, <em>owner=no_change</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.put" title="Permalink to this definition">¶</a></dt>
+<code class="descname">put</code><span class="sig-paren">(</span><em>key</em>, <em>value=no_change</em>, <em>owner=no_change</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.put" title="Permalink to this definition">¶</a></dt>
 <dd><p>Assign a value and/or owner for a single key.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1207,7 +1207,7 @@ not present.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.swap">
-<code class="descname">swap</code><span class="sig-paren">(</span><em>value=no_change</em>, <em>owner=no_change</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.swap" title="Permalink to this definition">¶</a></dt>
+<code class="descname">swap</code><span class="sig-paren">(</span><em>key</em>, <em>value=no_change</em>, <em>owner=no_change</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.swap" title="Permalink to this definition">¶</a></dt>
 <dd><p>Assign a new value and/or owner for a single key, and return the
 previous value.</p>
 <table class="docutils field-list" frame="void" rules="none">
