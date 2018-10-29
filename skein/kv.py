@@ -803,7 +803,7 @@ def _register_op(return_type=None):
     """Register a key-value store operator"""
 
     def inner(cls):
-        @_wraps(cls)
+        @_wraps(cls.__init__)
         def method(self, *args, **kwargs):
             return self._apply_op(cls(*args, **kwargs))
 
