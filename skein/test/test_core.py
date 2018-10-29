@@ -1,12 +1,14 @@
 from __future__ import print_function, division, absolute_import
 
 import os
+import shutil
 import time
 import weakref
 
 import pytest
 
 import skein
+from skein.core import Properties
 from skein.exceptions import FileNotFoundError, FileExistsError
 from skein.test.conftest import (run_application, wait_for_containers,
                                  wait_for_completion, get_logs)
@@ -162,10 +164,42 @@ def test_client_set_log_level(security, kinit, tmpdir):
         assert 'DEBUG' in data
 
 
-def test_application_client_from_current_errors():
+def test_application_client_from_current(monkeypatch, tmpdir, security):
+    # Not running in a container
     with pytest.raises(ValueError) as exc:
         skein.ApplicationClient.from_current()
     assert str(exc.value) == "Not running inside a container"
+
+    # Patch environment variables so it looks like a container
+    app_id = 'application_1526134340424_0012'
+    container_id = 'container_1526134340424_0012_01_000005'
+    address = 'edge.example.com:8765'
+    bad_dir = str(tmpdir.mkdir("nothing_in_here"))
+
+    for key, val in [('SKEIN_APPLICATION_ID', app_id),
+                     ('CONTAINER_ID', container_id),
+                     ('SKEIN_APPMASTER_ADDRESS', address),
+                     ('LOCAL_DIRS', bad_dir)]:
+        monkeypatch.setenv(key, val)
+
+    monkeypatch.setattr(skein.core, 'properties', Properties())
+
+    # In container, but unable to find security configuration
+    with pytest.raises(FileNotFoundError) as exc:
+        skein.ApplicationClient.from_current()
+    assert str(exc.value) == "Failed to resolve .skein.{crt,pem} in 'LOCAL_DIRS'"
+
+    # Add proper LOCAL_DIRS environment
+    good_dir = tmpdir.mkdir('good_dir')
+    local_dir = good_dir.mkdir(container_id)
+    shutil.copyfile(security.cert_path, str(local_dir.join(".skein.crt")))
+    shutil.copyfile(security.key_path, str(local_dir.join(".skein.pem")))
+    monkeypatch.setenv('LOCAL_DIRS', '%s,%s' % (bad_dir, good_dir))
+
+    # Picks up full configuration from environment variables
+    app = skein.ApplicationClient.from_current()
+    assert app.id == app_id
+    assert app.address == address
 
 
 def test_simple_app(client):
