@@ -26,6 +26,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -37,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.NMClient;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -112,6 +115,7 @@ public class ApplicationMaster {
 
   private AMRMClient<ContainerRequest> rmClient;
   private NMClient nmClient;
+  private YarnClient yarnClient;
   private ThreadPoolExecutor executor;
   private Thread allocatorThread;
   private boolean shouldShutdown = false;
@@ -182,7 +186,7 @@ public class ApplicationMaster {
     Supplier<WebUI.ApplicationContext> applicationContext =
         new Supplier<WebUI.ApplicationContext>() {
           private final ApplicationTracker tracker =
-              new ApplicationTracker(appId.toString(), progress);
+              new ApplicationTracker(appId.toString(), progress, yarnClient, sortedServices);
           public WebUI.ApplicationContext get() {
             return tracker.toApplicationContext();
           }
@@ -484,6 +488,10 @@ public class ApplicationMaster {
     nmClient.init(conf);
     nmClient.start();
 
+    yarnClient = YarnClient.createYarnClient();
+    yarnClient.init(conf);
+    yarnClient.start();
+
     executor = Utils.newThreadPoolExecutor(
         "executor",
         MIN_EXECUTOR_THREADS,
@@ -694,10 +702,17 @@ public class ApplicationMaster {
   final class ApplicationTracker {
     private String appId;
     private AtomicDouble progress;
+    private YarnClient yarnClient;
+    private List<ServiceTracker> services;
 
-    public ApplicationTracker(String appId, AtomicDouble progress) {
+    public ApplicationTracker(String appId,
+        AtomicDouble progress,
+        YarnClient yarnClient,
+        List<ServiceTracker> services) {
       this.appId = appId;
       this.progress = progress;
+      this.yarnClient = yarnClient;
+      this.services = services;
     }
 
     public synchronized WebUI.ApplicationContext toApplicationContext() {
@@ -705,6 +720,25 @@ public class ApplicationMaster {
       context.appId = appId;
       context.progress = progress.floatValue();
       context.progressKnown = context.progress >= 0.0f;
+
+      for (ServiceTracker service : services) {
+        service.updateApplicationContext(context);
+      }
+
+      ApplicationReport report = null;
+      ApplicationResourceUsageReport resourceReport = null;
+      try {
+        report = yarnClient.getApplicationReport(Utils.appIdFromString(appId));
+        resourceReport = report.getApplicationResourceUsageReport();
+      } catch (Throwable exc) {
+        LOG.warn("Failed to get application report for {}", appId, exc);
+      }
+      if (resourceReport != null ) {
+        context.startTime = report.getStartTime();
+        context.memorySeconds = resourceReport.getMemorySeconds();
+        context.vcoreSeconds = resourceReport.getVcoreSeconds();
+        context.numUsedContainers = resourceReport.getNumUsedContainers();
+      }
       return context;
     }
   }
@@ -802,6 +836,13 @@ public class ApplicationMaster {
         return containers.get(instance);
       }
       return null;
+    }
+
+    public synchronized void updateApplicationContext(WebUI.ApplicationContext appContext) {
+      appContext.running += requested.size() + running.size();
+      appContext.succeeded += numSucceeded;
+      appContext.killed += numKilled;
+      appContext.failed += numFailed;
     }
 
     public synchronized WebUI.ServiceContext toServiceContext() {

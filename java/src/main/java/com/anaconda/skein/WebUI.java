@@ -94,7 +94,7 @@ public class WebUI {
         WebUI.class.getResource("/META-INF/resources/favicon.ico").toURI()
                    .toASCIIString().replaceFirst("/favicon.ico$", "/")
     );
-    LOG.debug("Serving resources from {}", baseURI);
+    LOG.info("Serving resources from {}", baseURI);
     context.setBaseResource(Resource.newResource(baseURI));
     context.addServlet(new ServletHolder("default", DefaultServlet.class), "/");
 
@@ -358,8 +358,17 @@ public class WebUI {
             public ApplicationContext get() {
               ApplicationContext applicationContext = new ApplicationContext();
               applicationContext.appId = "application_1526497750451_0001";
-              applicationContext.progress = -1.0f;
-              applicationContext.progressKnown = false;
+              applicationContext.progress = 0.534f;
+              applicationContext.progressKnown = true;
+              applicationContext.running = 3;
+              applicationContext.succeeded = 1;
+              applicationContext.killed = 1;
+              applicationContext.failed = 1;
+              applicationContext.memorySeconds = 12345;
+              applicationContext.vcoreSeconds = 54321;
+              applicationContext.numUsedContainers = 6;
+              applicationContext.startTime =
+                  System.currentTimeMillis() - (60 * 60 * 2 + 125) * 1000;
               return applicationContext;
             }
           };
@@ -372,6 +381,22 @@ public class WebUI {
     } catch (Throwable exc) {
       LOG.error("Error running WebUI", exc);
       System.exit(1);
+    }
+  }
+
+  private static String formatTime(long delta) {
+    long secs = delta / 1000;
+    long hours = secs / (60 * 60);
+    secs = secs % (60 * 60);
+    long mins = secs / 60;
+    secs = secs % 60;
+
+    if (hours > 0) {
+      return String.format("%dh %dm", hours, mins);
+    } else if (mins > 0) {
+      return String.format("%dm %ds", mins, secs);
+    } else {
+      return String.format("%ds", secs);
     }
   }
 
@@ -403,20 +428,7 @@ public class WebUI {
         default:
           delta = finishTime - startTime;
       }
-      long secs = delta / 1000;
-      long hours = secs / (60 * 60);
-      secs = secs % (60 * 60);
-      long mins = secs / 60;
-      secs = secs % 60;
-
-      if (hours > 0) {
-        return String.format("%dh %dm", hours, mins);
-      }
-      else if (mins > 0) {
-        return String.format("%dm %ds", mins, secs);
-      } else {
-        return String.format("%ds", secs);
-      }
+      return formatTime(delta);
     }
   }
 
@@ -424,6 +436,14 @@ public class WebUI {
     public String appId;
     public float progress;
     public boolean progressKnown;
+    public long memorySeconds;
+    public long vcoreSeconds;
+    public int numUsedContainers;
+    public long startTime;
+    public int running = 0;
+    public int succeeded = 0;
+    public int killed = 0;
+    public int failed = 0;
 
     public ApplicationContext() {}
   }
@@ -464,12 +484,21 @@ public class WebUI {
       return applicationContext.get().appId;
     }
 
-    public boolean progressKnown() {
-      return applicationContext.get().progressKnown;
-    }
-
-    public String progress() {
-      return String.format("%.1f", 100 * applicationContext.get().progress);
+    public Map<String, Object> appState() {
+      ApplicationContext context = applicationContext.get();
+      HashMap<String, Object> state = new HashMap<String, Object>();
+      state.put("progress", Math.round(100 * context.progress));
+      state.put("progressLabel", String.format("%.1f", 100 * context.progress));
+      state.put("progressKnown", context.progressKnown);
+      state.put("running", context.running);
+      state.put("succeeded", context.succeeded);
+      state.put("killed", context.killed);
+      state.put("failed", context.failed);
+      state.put("vcoreSeconds", context.vcoreSeconds);
+      state.put("memorySeconds", context.memorySeconds);
+      state.put("numUsedContainers", context.numUsedContainers);
+      state.put("runtime", formatTime(System.currentTimeMillis() - context.startTime));
+      return state;
     }
 
     public List<Map.Entry<String, String>> kv() {
