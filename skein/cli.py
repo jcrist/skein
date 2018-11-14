@@ -389,7 +389,7 @@ def main(args=None):
         fail("Key %s is not set" % str(exc))
     except SkeinError as exc:
         fail(str(exc))
-    except Exception as exc:
+    except Exception:
         fail("Unexpected Error:\n%s" % traceback.format_exc(), prefix=False)
     sys.exit(0)
 
