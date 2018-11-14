@@ -6,14 +6,13 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.3.1+1.gc3b9868 documentation</title>
+    <title>API Docs &#8212; Skein 0.3.1+2.gb9736fd documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="_static/favicon.ico"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -260,7 +259,7 @@ states. Default is <code class="docutils literal notranslate"><span class="pre">
 
 <dl class="method">
 <dt id="skein.Client.kill_application">
-<code class="descname">kill_application</code><span class="sig-paren">(</span><em>app_id</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.kill_application" title="Permalink to this definition">¶</a></dt>
+<code class="descname">kill_application</code><span class="sig-paren">(</span><em>app_id</em>, <em>user=''</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.kill_application" title="Permalink to this definition">¶</a></dt>
 <dd><p>Kill an application.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -269,6 +268,10 @@ states. Default is <code class="docutils literal notranslate"><span class="pre">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
 <dt><strong>app_id</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
 <dd><p class="first last">The id of the application to kill.</p>
+</dd>
+<dt><strong>user</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">The user to kill the application as. Requires the current user to
+have permissions to proxy as <code class="docutils literal notranslate"><span class="pre">user</span></code>. Default is the current user.</p>
 </dd>
 </dl>
 </td>
@@ -2281,7 +2284,7 @@ still proxied but isn’t linked to in the Web UI.</p>
 <h2>Application Specification<a class="headerlink" href="#application-specification" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="skein.ApplicationSpec">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">ApplicationSpec</code><span class="sig-paren">(</span><em>services=required</em>, <em>name='skein'</em>, <em>queue='default'</em>, <em>node_label=''</em>, <em>tags=None</em>, <em>file_systems=None</em>, <em>acls=None</em>, <em>master=None</em>, <em>max_attempts=1</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">ApplicationSpec</code><span class="sig-paren">(</span><em>services=required</em>, <em>name='skein'</em>, <em>queue='default'</em>, <em>user=''</em>, <em>node_label=''</em>, <em>tags=None</em>, <em>file_systems=None</em>, <em>acls=None</em>, <em>master=None</em>, <em>max_attempts=1</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec" title="Permalink to this definition">¶</a></dt>
 <dd><p>A complete description of an application.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2296,6 +2299,11 @@ still proxied but isn’t linked to in the Web UI.</p>
 </dd>
 <dt><strong>queue</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string, optional</span></dt>
 <dd><p class="first last">The queue to submit to. Defaults to the default queue.</p>
+</dd>
+<dt><strong>user</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string, optional</span></dt>
+<dd><p class="first last">The user name to submit the application as. Requires that the
+submitting user have permission to proxy as this user name. Default is
+the submitter’s user name.</p>
 </dd>
 <dt><strong>node_label</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string, optional</span></dt>
 <dd><p class="first last">The node label expression to use when requesting containers for this
