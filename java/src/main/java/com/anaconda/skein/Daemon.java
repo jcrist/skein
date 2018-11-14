@@ -55,6 +55,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -87,9 +88,9 @@ public class Daemon {
 
   private boolean loggedIn = false;
 
-  private FileSystem defaultFs;
-
-  private YarnClient yarnClient;
+  private UserGroupInformation ugi;
+  private FileSystem defaultFileSystem;
+  private YarnClient defaultYarnClient;
 
   private String classpath;
 
@@ -203,7 +204,6 @@ public class Daemon {
     }
 
     conf = new YarnConfiguration();
-    defaultFs = FileSystem.get(conf);
 
     // Build the classpath for running the appmaster
     StringBuilder cpBuilder = new StringBuilder(Environment.CLASSPATH.$$());
@@ -218,11 +218,12 @@ public class Daemon {
   }
 
   private void run() throws Exception {
-    // Start the yarn client
-    LOG.debug("Starting Yarn client");
-    yarnClient = YarnClient.createYarnClient();
-    yarnClient.init(conf);
-    yarnClient.start();
+    // Initialize login
+    ugi = UserGroupInformation.getLoginUser();
+    // Connect to hdfs as *this* user
+    defaultFileSystem = getFs();
+    // Start the yarn client as *this* user
+    defaultYarnClient = getYarnClient();
 
     // Start the server
     startServer();
@@ -244,23 +245,70 @@ public class Daemon {
     }
   }
 
-  /** Kill a running application. **/
-  public boolean killApplication(ApplicationId appId) {
-    try {
-      yarnClient.killApplication(appId);
-    } catch (Throwable exc) {
-      return false;
-    }
-    return true;
+  public FileSystem getFs() throws IOException {
+    return FileSystem.get(conf);
   }
 
-  public Path getAppDir(ApplicationId appId) {
-    return new Path(defaultFs.getHomeDirectory(), ".skein/" + appId.toString());
+  public YarnClient getYarnClient() {
+    YarnClient client = YarnClient.createYarnClient();
+    client.init(conf);
+    client.start();
+    return client;
+  }
+
+  public Path getAppDir(FileSystem fs, ApplicationId appId) {
+    return new Path(fs.getHomeDirectory(), ".skein/" + appId.toString());
+  }
+
+  public void killApplication(final ApplicationId appId, String user)
+      throws IOException, YarnException, InterruptedException {
+    if (user.isEmpty()) {
+      killApplicationInner(defaultYarnClient, defaultFileSystem, appId);
+    } else {
+      UserGroupInformation.createProxyUser(user, ugi).doAs(
+          new PrivilegedExceptionAction<Void>() {
+            public Void run() throws IOException, YarnException {
+              killApplicationInner(getYarnClient(), getFs(), appId);
+              return null;
+            }
+          });
+    }
+  }
+
+  private void killApplicationInner(YarnClient yarnClient, FileSystem fs,
+        ApplicationId appId) throws IOException, YarnException {
+
+    LOG.debug("Killing application {}", appId);
+    yarnClient.killApplication(appId);
+
+    try {
+      Path appDir = getAppDir(fs, appId);
+      LOG.debug("Deleting application directory {}", appDir);
+      if (fs.exists(appDir)) {
+        fs.delete(appDir, true);
+      }
+    } catch (IOException exc) {
+      LOG.warn("Failed to delete application directory for {}", appId, exc);
+    }
   }
 
   /** Start a new application. **/
-  public ApplicationId submitApplication(Model.ApplicationSpec spec)
-      throws IOException, YarnException {
+  public ApplicationId submitApplication(final Model.ApplicationSpec spec)
+      throws IOException, YarnException, InterruptedException {
+    if (spec.getUser().isEmpty()) {
+      return submitApplicationInner(defaultYarnClient, defaultFileSystem, spec);
+    } else {
+      return UserGroupInformation.createProxyUser(spec.getUser(), ugi).doAs(
+        new PrivilegedExceptionAction<ApplicationId>() {
+          public ApplicationId run() throws IOException, YarnException {
+            return submitApplicationInner(getYarnClient(), getFs(), spec);
+          }
+        });
+    }
+  }
+
+  private ApplicationId submitApplicationInner(YarnClient yarnClient,
+      FileSystem fs, Model.ApplicationSpec spec) throws IOException, YarnException {
     // First validate the spec request
     spec.validate();
 
@@ -271,8 +319,8 @@ public class Daemon {
     ApplicationId appId = appContext.getApplicationId();
 
     // Setup the LocalResources for the appmaster and containers
-    Path appDir = getAppDir(appId);
-    Map<String, LocalResource> localResources = setupAppDir(spec, appDir);
+    Path appDir = getAppDir(fs, appId);
+    Map<String, LocalResource> localResources = setupAppDir(fs, spec, appDir);
 
     // Setup the appmaster environment variables
     Map<String, String> env = new HashMap<String, String>();
@@ -297,11 +345,11 @@ public class Daemon {
     ByteBuffer fsTokens = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       LOG.debug("Collecting credential tokens");
-      Credentials credentials = UserGroupInformation.getLoginUser().getCredentials();
+      Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
       TokenCache.obtainTokensForNamenodes(
               credentials,
               ObjectArrays.concat(
-                      new Path(defaultFs.getUri()),
+                      new Path(fs.getUri()),
                       spec.getFileSystems().toArray(new Path[0])),
               conf);
 
@@ -331,12 +379,12 @@ public class Daemon {
     return appId;
   }
 
-  private Map<String, LocalResource> setupAppDir(Model.ApplicationSpec spec,
-        Path appDir) throws IOException {
+  private Map<String, LocalResource> setupAppDir(FileSystem fs,
+        Model.ApplicationSpec spec, Path appDir) throws IOException {
 
     // Make the ~/.skein/app_id dir
     LOG.info("Uploading application resources to {}", appDir);
-    FileSystem.mkdirs(defaultFs, appDir, SKEIN_DIR_PERM);
+    FileSystem.mkdirs(fs, appDir, SKEIN_DIR_PERM);
 
     Map<Path, Path> uploadCache = new HashMap<Path, Path>();
 
@@ -346,7 +394,7 @@ public class Daemon {
 
     // Setup the LocalResources for the services
     for (Map.Entry<String, Model.Service> entry: spec.getServices().entrySet()) {
-      finalizeService(entry.getKey(), entry.getValue(),
+      finalizeService(entry.getKey(), entry.getValue(), fs,
                       uploadCache, appDir, certFile, keyFile);
     }
     spec.validate();
@@ -365,20 +413,20 @@ public class Daemon {
     // Write the application specification to file
     Path specPath = new Path(appDir, ".skein.proto");
     LOG.debug("Writing application specification to {}", specPath);
-    OutputStream out = defaultFs.create(specPath);
+    OutputStream out = fs.create(specPath);
     try {
       MsgUtils.writeApplicationSpec(spec).writeTo(out);
     } finally {
       out.close();
     }
-    LocalResource specFile = Utils.localResource(defaultFs, specPath,
+    LocalResource specFile = Utils.localResource(fs, specPath,
                                                  LocalResourceType.FILE);
     lr.put(".skein.proto", specFile);
     return lr;
   }
 
   private void finalizeService(String serviceName, Model.Service service,
-      Map<Path, Path> uploadCache, Path appDir,
+      FileSystem fs, Map<Path, Path> uploadCache, Path appDir,
       LocalResource certFile, LocalResource keyFile) throws IOException {
 
     // Build the execution script
@@ -393,13 +441,13 @@ public class Daemon {
     final Path scriptPath = new Path(appDir, serviceName + ".sh");
     LOG.debug("Writing script for service '{}' to {}", serviceName, scriptPath);
 
-    OutputStream out = defaultFs.create(scriptPath);
+    OutputStream out = fs.create(scriptPath);
     try {
       out.write(script.toString().getBytes(StandardCharsets.UTF_8));
     } finally {
       out.close();
     }
-    LocalResource scriptFile = Utils.localResource(defaultFs, scriptPath,
+    LocalResource scriptFile = Utils.localResource(fs, scriptPath,
                                                    LocalResourceType.FILE);
 
     // Build command to execute script and set as new commands
@@ -524,7 +572,7 @@ public class Daemon {
           while (!thisThread.isInterrupted()) {
             try {
               // Get report
-              report = yarnClient.getApplicationReport(appId);
+              report = defaultYarnClient.getApplicationReport(appId);
             } catch (Exception exc) {
               LOG.warn("Failed to get report for {}. Notifying {} callbacks.",
                        appId, callbacks.size());
@@ -622,7 +670,7 @@ public class Daemon {
 
       List<ApplicationReport> reports;
       try {
-        reports = yarnClient.getApplications(
+        reports = defaultYarnClient.getApplications(
           new HashSet<String>(Arrays.asList("skein")), states);
       } catch (Exception exc) {
         resp.onError(Status.INTERNAL
@@ -636,31 +684,31 @@ public class Daemon {
       resp.onCompleted();
     }
 
-    private ApplicationReport getReport(Msg.Application req,
+    private ApplicationReport getReport(String appIdString,
         StreamObserver<?> resp) {
 
-      final ApplicationId appId = Utils.appIdFromString(req.getId());
+      ApplicationId appId = Utils.appIdFromString(appIdString);
 
       if (appId == null) {
         resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("Invalid ApplicationId '" + req.getId() + "'")
+            .withDescription("Invalid ApplicationId '" + appIdString + "'")
             .asRuntimeException());
         return null;
       }
 
       ApplicationReport report;
       try {
-        report = yarnClient.getApplicationReport(appId);
+        report = defaultYarnClient.getApplicationReport(appId);
       } catch (Exception exc) {
         resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("Unknown ApplicationId '" + req.getId() + "'")
+            .withDescription("Unknown ApplicationId '" + appIdString + "'")
             .asRuntimeException());
         return null;
       }
 
       if (!report.getApplicationType().equals("skein")) {
         resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("ApplicationId '" + req.getId()
+            .withDescription("ApplicationId '" + appIdString
                              + "' is not a skein application")
             .asRuntimeException());
         return null;
@@ -677,7 +725,7 @@ public class Daemon {
         return;
       }
 
-      ApplicationReport report = getReport(req, resp);
+      ApplicationReport report = getReport(req.getId(), resp);
       if (report != null) {
         resp.onNext(MsgUtils.writeApplicationReport(report));
         resp.onCompleted();
@@ -692,9 +740,9 @@ public class Daemon {
         return;
       }
 
-      ApplicationReport report = getReport(req, resp);
+      ApplicationReport report = getReport(req.getId(), resp);
       if (report == null) {
-        return;  // error message set in getReport
+        return;
       }
 
       if (hasStarted(report)) {
@@ -731,42 +779,28 @@ public class Daemon {
     }
 
     @Override
-    public void kill(Msg.Application req, StreamObserver<Msg.Empty> resp) {
+    public void kill(Msg.KillRequest req, StreamObserver<Msg.Empty> resp) {
 
       if (notLoggedIn(resp)) {
         return;
       }
 
       // Check if the id is a valid skein id
-      ApplicationReport report = getReport(req, resp);
+      ApplicationReport report = getReport(req.getId(), resp);
       if (report == null) {
         return;
       }
 
+      ApplicationId appId = report.getApplicationId();
+      String user = req.getUser();
+
       try {
-        yarnClient.killApplication(report.getApplicationId());
+        killApplication(appId, user);
       } catch (Exception exc) {
         resp.onError(Status.INTERNAL
             .withDescription("Failed to kill application '"
-                             + report.getApplicationId()
-                             + "' , exception:\n"
-                             + exc.getMessage())
-            .asRuntimeException());
-        return;
-      }
-
-      // Delete the application directory
-      Path appDir = getAppDir(report.getApplicationId());
-      try {
-        LOG.debug("Deleting application directory {}", appDir);
-        if (defaultFs.exists(appDir)) {
-          defaultFs.delete(appDir, true);
-        }
-      } catch (IOException exc) {
-        resp.onError(Status.INTERNAL
-            .withDescription("Failed to delete application directory "
-                             + appDir
-                             + "' , exception:\n"
+                             + appId
+                             + "', exception:\n"
                              + exc.getMessage())
             .asRuntimeException());
         return;

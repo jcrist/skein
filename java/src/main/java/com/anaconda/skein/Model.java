@@ -202,6 +202,7 @@ public class Model {
   public static class ApplicationSpec {
     private String name;
     private String queue;
+    private String user;
     private String nodeLabel;
     private int maxAttempts;
     private Set<String> tags;
@@ -212,12 +213,13 @@ public class Model {
 
     public ApplicationSpec() {}
 
-    public ApplicationSpec(String name, String queue, String nodeLabel, int maxAttempts,
-                           Set<String> tags, List<Path> fileSystems,
-                           Acls acls, Master master,
+    public ApplicationSpec(String name, String queue, String user,
+                           String nodeLabel, int maxAttempts, Set<String> tags,
+                           List<Path> fileSystems, Acls acls, Master master,
                            Map<String, Service> services) {
       this.name = name;
       this.queue = queue;
+      this.user = user;
       this.nodeLabel = nodeLabel;
       this.maxAttempts = maxAttempts;
       this.tags = tags;
@@ -243,6 +245,9 @@ public class Model {
 
     public void setQueue(String queue) { this.queue = queue; }
     public String getQueue() { return queue; }
+
+    public void setUser(String user) { this.user = user; }
+    public String getUser() { return user; }
 
     public void setNodeLabel(String nodeLabel) { this.nodeLabel = nodeLabel; }
     public String getNodeLabel() { return nodeLabel; }

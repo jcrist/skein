@@ -650,15 +650,18 @@ class Client(_ClientBase):
         resp = self._call('getStatus', proto.Application(id=app_id))
         return ApplicationReport.from_protobuf(resp)
 
-    def kill_application(self, app_id):
+    def kill_application(self, app_id, user=""):
         """Kill an application.
 
         Parameters
         ----------
         app_id : str
             The id of the application to kill.
+        user : str, optional
+            The user to kill the application as. Requires the current user to
+            have permissions to proxy as ``user``. Default is the current user.
         """
-        self._call('kill', proto.Application(id=app_id))
+        self._call('kill', proto.KillRequest(id=app_id, user=user))
 
 
 class ApplicationClient(_ClientBase):

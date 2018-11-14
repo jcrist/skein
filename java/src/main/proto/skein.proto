@@ -119,13 +119,14 @@ message Master {
 message ApplicationSpec {
   string name = 1;
   string queue = 2;
-  string node_label = 3;
-  int32 max_attempts = 4;
-  repeated string tags = 5;
-  repeated string file_systems = 6;
-  Acls acls = 7;
-  Master master = 8;
-  map<string, Service> services = 9;
+  string user = 3;
+  string node_label = 4;
+  int32 max_attempts = 5;
+  repeated string tags = 6;
+  repeated string file_systems = 7;
+  Acls acls = 8;
+  Master master = 9;
+  map<string, Service> services = 10;
 }
 
 
@@ -192,7 +193,7 @@ service Daemon {
 
   rpc waitForStart (Application) returns (ApplicationReport);
 
-  rpc kill (Application) returns (Empty);
+  rpc kill (KillRequest) returns (Empty);
 }
 
 
@@ -208,6 +209,12 @@ message ApplicationsRequest {
 
 message ApplicationsResponse {
   repeated ApplicationReport reports = 1;
+}
+
+
+message KillRequest {
+  string id = 1;
+  string user = 2;
 }
 
 

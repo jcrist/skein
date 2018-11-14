@@ -31,6 +31,13 @@ The name of the application. Optional, defaults to ``skein``.
 
 The queue to submit the application to. Optional, defaults to ``default``.
 
+``user``
+~~~~~~~~
+
+The username to submit the application as. Requires that the current user
+have permission to proxy as this username. Optional, defaults to the
+current user's username. In most cases the default is what you want.
+
 ``node_label``
 ~~~~~~~~~~~~~~
 

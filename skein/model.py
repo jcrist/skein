@@ -781,6 +781,10 @@ class ApplicationSpec(Specification):
         The name of the application, defaults to 'skein'.
     queue : string, optional
         The queue to submit to. Defaults to the default queue.
+    user : string, optional
+        The user name to submit the application as. Requires that the
+        submitting user have permission to proxy as this user name. Default is
+        the submitter's user name.
     node_label : string, optional
         The node label expression to use when requesting containers for this
         application. Services can override this setting by specifying
@@ -801,16 +805,17 @@ class ApplicationSpec(Specification):
         application as failed. Note that this only considers failures of the
         application master during startup. Default is 1.
     """
-    __slots__ = ('services', 'name', 'queue', 'node_label', 'tags',
+    __slots__ = ('services', 'name', 'queue', 'user', 'node_label', 'tags',
                  'file_systems', 'acls', 'master', 'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
     def __init__(self, services=required, name='skein', queue='default',
-                 node_label='', tags=None, file_systems=None, acls=None, master=None,
-                 max_attempts=1):
+                 user='', node_label='', tags=None, file_systems=None,
+                 acls=None, master=None, max_attempts=1):
         self._assign_required('services', services)
         self.name = name
         self.queue = queue
+        self.user = user
         self.node_label = node_label
         self.tags = set() if tags is None else set(tags)
         self.file_systems = [] if file_systems is None else file_systems
@@ -826,6 +831,7 @@ class ApplicationSpec(Specification):
     def _validate(self):
         self._check_is_type('name', string)
         self._check_is_type('queue', string)
+        self._check_is_type('user', string)
         self._check_is_type('node_label', string)
         self._check_is_set_of('tags', string)
         self._check_is_list_of('file_systems', string)
@@ -880,6 +886,7 @@ class ApplicationSpec(Specification):
                     for k, v in obj.services.items()}
         return cls(name=obj.name,
                    queue=obj.queue,
+                   user=obj.user,
                    node_label=obj.node_label,
                    tags=set(obj.tags),
                    file_systems=list(obj.file_systems),

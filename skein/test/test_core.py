@@ -512,3 +512,48 @@ def test_set_application_progress(client):
             app.set_progress(1.5)
 
         app.shutdown()
+
+
+def test_proxy_user(client):
+    hdfs = pytest.importorskip('pyarrow.hdfs')
+
+    spec = skein.ApplicationSpec(
+        name="test_proxy_user",
+        user="alice",
+        services={
+            "service": skein.Service(
+                resources=skein.Resources(memory=128, vcores=1),
+                commands=['sleep infinity'])
+        }
+    )
+    with run_application(client, spec=spec) as app:
+        spec2 = app.get_specification()
+        client.kill_application(app.id, user="alice")
+
+    # Alice used throughout process
+    assert spec2.user == 'alice'
+    for fil in spec2.services['service'].files.values():
+        assert fil.source.startswith('hdfs://master.example.com:9000/user/alice')
+
+    # Application directory deleted after kill
+    fs = hdfs.connect()
+    assert not fs.exists("/user/testuser/.skein/%s" % app.id)
+
+
+def test_proxy_user_no_permissions(client):
+    spec = skein.ApplicationSpec(
+        name="test_proxy_user_no_permissions",
+        user="bob",
+        services={
+            'service': skein.Service(
+                resources=skein.Resources(memory=128, vcores=1),
+                commands=['env'])
+        }
+    )
+    # No permission to submit as user
+    with pytest.raises(skein.DaemonError) as exc:
+        client.submit(spec)
+
+    exc_msg = str(exc.value)
+    assert 'testuser' in exc_msg
+    assert 'bob' in exc_msg
