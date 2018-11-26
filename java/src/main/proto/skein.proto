@@ -110,9 +110,22 @@ message Log {
 }
 
 
+message Security {
+  oneof cert {
+    File cert_file = 1;
+    bytes cert_bytes = 2;
+  }
+  oneof key {
+    File key_file = 3;
+    bytes key_bytes = 4;
+  }
+}
+
+
 message Master {
   File log_config = 1;
   Log.Level log_level = 2;
+  Security security = 3;
 }
 
 

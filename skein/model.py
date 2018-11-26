@@ -2,19 +2,19 @@ from __future__ import absolute_import, print_function, division
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from getpass import getuser
 
 import yaml
 
 from . import proto as _proto
-from .compatibility import urlparse, string, integer, math_ceil
+from .compatibility import urlparse, string, integer, math_ceil, makedirs
 from .objects import Enum, ProtobufMessage, Specification, required
-from .exceptions import context
-from .utils import implements, format_list, datetime_from_millis, runtime
+from .exceptions import context, FileNotFoundError
+from .utils import implements, format_list, datetime_from_millis, runtime, xor
 
 __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
-           'FileVisibility', 'ACLs', 'Master', 'ApplicationState',
+           'FileVisibility', 'ACLs', 'Master', 'Security', 'ApplicationState',
            'FinalStatus', 'ResourceUsageReport', 'ApplicationReport',
            'ContainerState', 'Container', 'LogLevel')
 
@@ -162,6 +162,253 @@ def _infer_format(path, format='infer'):
     elif format not in {'json', 'yaml'}:
         raise ValueError("Unknown file format: %r" % format)
     return format
+
+
+class Security(Specification):
+    """Security configuration.
+
+    Secrets may be specified either as file paths or raw bytes, but not both.
+
+    Parameters
+    ----------
+    cert_file : string, File, optional
+        The TLS certificate file, in pem format. Either a path or a fully
+        specified File object.
+    key_file : string, File, optional
+        The TLS private key file, in pem format. Either a path or a fully
+        specified File object.
+    cert_bytes : bytes, optional
+        The contents of the TLS certificate file, in pem format.
+    key_bytes : bytes, optional
+        The contents of the TLS private key file, in pem format.
+    """
+    __slots__ = ('_cert_file', '_key_file', '_cert_bytes', '_key_bytes')
+    _params = ('cert_file', 'key_file', 'cert_bytes', 'key_bytes')
+    _protobuf_cls = _proto.Security
+
+    def __init__(self, cert_file=None, key_file=None, cert_bytes=None,
+                 key_bytes=None):
+        self.cert_file = cert_file
+        self.key_file = key_file
+        self.cert_bytes = cert_bytes
+        self.key_bytes = key_bytes
+
+        self._validate()
+
+    def _get_bytes(self, kind):
+        self._validate()
+
+        out = getattr(self, '%s_bytes' % kind)
+        if out is not None:
+            return out
+
+        file = getattr(self, '%s_file' % kind)
+        if not file.source.startswith('file://'):
+            raise context.ValueError(
+                "Cannot read security file %r locally" % file.source
+            )
+        path = file.source[7:]
+        if not os.path.exists(path):
+            raise context.FileNotFoundError(
+                "Security %s file not found at %r" % (kind, path)
+            )
+        with open(path, 'rb') as fil:
+            return fil.read()
+
+    def _validate(self):
+        if not xor(self.cert_file is None, self.cert_bytes is None):
+            raise context.ValueError("Must specify exactly one of "
+                                     "cert_file or cert_bytes")
+        if not xor(self.key_file is None, self.key_bytes is None):
+            raise context.ValueError("Must specify exactly one of "
+                                     "key_file or key_bytes")
+
+    def _assign_file(self, field, value):
+        if isinstance(value, string):
+            value = File(value)
+        elif not (value is None or isinstance(value, File)):
+            raise context.TypeError("%s must be a File or None" % field)
+        setattr(self, '_%s' % field, value)
+
+    def _assign_bytes(self, field, value):
+        if value is not None:
+            if isinstance(value, string):
+                value = value.encode()
+            elif not isinstance(value, bytes):
+                raise context.TypeError("%s must be a bytes or None" % field)
+        setattr(self, '_%s' % field, value)
+
+    @property
+    def cert_file(self):
+        return self._cert_file
+
+    @cert_file.setter
+    def cert_file(self, value):
+        self._assign_file('cert_file', value)
+
+    @property
+    def key_file(self):
+        return self._key_file
+
+    @key_file.setter
+    def key_file(self, value):
+        self._assign_file('key_file', value)
+
+    @property
+    def cert_bytes(self):
+        return self._cert_bytes
+
+    @cert_bytes.setter
+    def cert_bytes(self, value):
+        self._assign_bytes('cert_bytes', value)
+
+    @property
+    def key_bytes(self):
+        return self._key_bytes
+
+    @key_bytes.setter
+    def key_bytes(self, value):
+        self._assign_bytes('key_bytes', value)
+
+    def __repr__(self):
+        return 'Security<...>'
+
+    @classmethod
+    @implements(Specification.from_dict)
+    def from_dict(cls, obj, **kwargs):
+        _origin = _pop_origin(kwargs)
+        cls._check_keys(obj)
+
+        cert_file = obj.pop('cert_file', None)
+        if cert_file is not None:
+            cert_file = File.from_dict(cert_file, _origin=_origin)
+
+        key_file = obj.pop('key_file', None)
+        if key_file is not None:
+            key_file = File.from_dict(key_file, _origin=_origin)
+
+        return cls(cert_file=cert_file, key_file=key_file, **obj)
+
+    @classmethod
+    @implements(Specification.from_protobuf)
+    def from_protobuf(cls, obj):
+        kwargs = {}
+        for name in ['cert', 'key']:
+            which = obj.WhichOneof(name)
+            if which == '%s_bytes' % name:
+                kwargs[which] = getattr(obj, '%s_bytes' % name)
+            elif which == '%s_file' % name:
+                kwargs[which] = File.from_protobuf(getattr(obj, '%s_file' % name))
+        return cls(**kwargs)
+
+    @implements(Specification.to_dict)
+    def to_dict(self, skip_nulls=True):
+        obj = super(Security, self).to_dict(skip_nulls=skip_nulls)
+        return {k: v.decode() if isinstance(v, bytes) else v
+                for k, v in obj.items()}
+
+    @classmethod
+    def from_default(cls):
+        """The default security configuration."""
+        from .core import properties
+        try:
+            return cls.from_directory(properties.config_dir)
+        except FileNotFoundError:
+            pass
+        context.warn("Skein global security credentials not found, writing now "
+                     "to %r." % properties.config_dir)
+        return cls.new_credentials().to_directory(directory=properties.config_dir)
+
+    @classmethod
+    def from_directory(cls, directory):
+        """Create a security object from a directory.
+
+        Relies on standard names for each file (``skein.crt`` and
+        ``skein.pem``)."""
+        cert_path = os.path.join(directory, 'skein.crt')
+        key_path = os.path.join(directory, 'skein.pem')
+        for path, name in [(cert_path, 'cert'), (key_path, 'key')]:
+            if not os.path.exists(path):
+                raise context.FileNotFoundError(
+                    "Security %s file not found at %r" % (name, path)
+                )
+        return Security(cert_file=cert_path, key_file=key_path)
+
+    def to_directory(self, directory, force=False):
+        """Write this security object to a directory.
+
+        Parameters
+        ----------
+        directory : str
+            The directory to write the configuration to.
+        force : bool, optional
+            If security credentials already exist at this location, an error
+            will be raised by default. Set to True to overwrite existing files.
+
+        Returns
+        -------
+        security : Security
+            A new security object backed by the written files.
+        """
+        self._validate()
+
+        # Create directory if it doesn't exist
+        makedirs(directory, exist_ok=True)
+
+        cert_path = os.path.join(directory, 'skein.crt')
+        key_path = os.path.join(directory, 'skein.pem')
+        cert_bytes = self._get_bytes('cert')
+        key_bytes = self._get_bytes('key')
+
+        for path, name in [(cert_path, 'skein.crt'), (key_path, 'skein.pem')]:
+            if os.path.exists(path):
+                if force:
+                    os.unlink(path)
+                else:
+                    msg = ("%r file already exists, use `%s` to overwrite" %
+                           (name, '--force' if context.is_cli else 'force'))
+                    raise context.FileExistsError(msg)
+
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        for path, data in [(cert_path, cert_bytes), (key_path, key_bytes)]:
+            with os.fdopen(os.open(path, flags, 0o600), 'wb') as fil:
+                fil.write(data)
+
+        return Security(cert_file=cert_path, key_file=key_path)
+
+    @classmethod
+    def new_credentials(cls):
+        """Create a new Security object with a new certificate/key pair."""
+        from cryptography import x509
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.x509.oid import NameOID
+
+        key = rsa.generate_private_key(public_exponent=65537,
+                                       key_size=2048,
+                                       backend=default_backend())
+        key_bytes = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption())
+
+        subject = issuer = x509.Name(
+            [x509.NameAttribute(NameOID.COMMON_NAME, u'skein-internal')])
+        now = datetime.utcnow()
+        cert = (x509.CertificateBuilder()
+                    .subject_name(subject)
+                    .issuer_name(issuer)
+                    .public_key(key.public_key())
+                    .serial_number(x509.random_serial_number())
+                    .not_valid_before(now)
+                    .not_valid_after(now + timedelta(days=365))
+                    .sign(key, hashes.SHA256(), default_backend()))
+
+        cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
+
+        return cls(cert_bytes=cert_bytes, key_bytes=key_bytes)
 
 
 class ApplicationState(Enum):
@@ -721,20 +968,27 @@ class Master(Specification):
     log_config : str or File, optional
         A custom ``log4j.properties`` file to use for the application master.
         If not provided, the default logging configuration will be used.
+    security : Security, optional
+        The security credentials to use for the application master. If not
+        provided, these will be the same as those used by the submitting
+        client.
     """
-    __slots__ = ('_log_level', 'log_config')
-    _params = ('log_level', 'log_config')
+    __slots__ = ('_log_level', 'log_config', 'security')
+    _params = ('log_level', 'log_config', 'security')
     _protobuf_cls = _proto.Master
 
-    def __init__(self, log_level=LogLevel.INFO, log_config=None):
+    def __init__(self, log_level=LogLevel.INFO, log_config=None, security=None):
         self.log_level = log_level
         if isinstance(log_config, string):
             log_config = File(log_config)
         self.log_config = log_config
+        self.security = security
+
         self._validate()
 
     def _validate(self):
         self._check_is_type('log_config', File, nullable=True)
+        self._check_is_type('security', Security, nullable=True)
 
     @property
     def log_level(self):
@@ -757,7 +1011,11 @@ class Master(Specification):
         if log_config is not None:
             log_config = File.from_dict(log_config, **kwargs)
 
-        return cls(log_config=log_config, **obj)
+        security = obj.pop('security', None)
+        if security is not None:
+            security = Security.from_dict(security, **kwargs)
+
+        return cls(log_config=log_config, security=security, **obj)
 
     @classmethod
     @implements(Specification.from_protobuf)
@@ -767,7 +1025,11 @@ class Master(Specification):
             log_config = File.from_protobuf(obj.log_config)
         else:
             log_config = None
-        return cls(log_level=log_level, log_config=log_config)
+        security = (Security.from_protobuf(obj.security)
+                    if obj.HasField('security')
+                    else None)
+        return cls(log_level=log_level, log_config=log_config,
+                   security=security)
 
 
 class ApplicationSpec(Specification):

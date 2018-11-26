@@ -1,7 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
 import os
-import shutil
 import time
 import weakref
 
@@ -35,27 +34,53 @@ def test_properties():
 
 def test_security(tmpdir):
     path = str(tmpdir)
-    s1 = skein.Security.from_new_directory(path)
-    s2 = skein.Security.from_directory(path)
-    assert s1 == s2
+    s1 = skein.Security.new_credentials()
+    s2 = s1.to_directory(path)
+    s3 = skein.Security.from_directory(path)
+    assert s1 != s2
+    assert s2 == s3
 
     with pytest.raises(FileExistsError):
-        skein.Security.from_new_directory(path)
+        s1.to_directory(path)
 
-    # Test force=True
-    with open(s1.cert_path) as fil:
-        data = fil.read()
+    s3 = skein.Security.new_credentials()
+    s3.to_directory(path, force=True)
 
-    s1 = skein.Security.from_new_directory(path, force=True)
+    cert_path = os.path.join(path, 'skein.crt')
 
-    with open(s1.cert_path) as fil:
-        data2 = fil.read()
+    with open(cert_path, 'rb') as fil:
+        cert3 = fil.read()
+    assert s3.cert_bytes == cert3
+    assert s3.cert_bytes != s1.cert_bytes
 
-    assert data != data2
-
-    os.remove(s1.cert_path)
+    os.remove(cert_path)
     with pytest.raises(FileNotFoundError):
         skein.Security.from_directory(path)
+
+
+def test_security_get_bytes(tmpdir):
+    path = str(tmpdir)
+    s1 = skein.Security.new_credentials()
+    s2 = s1.to_directory(path)
+
+    for kind in ['cert', 'key']:
+        x1 = s1._get_bytes(kind)
+        x2 = s2._get_bytes(kind)
+        assert isinstance(x1, bytes)
+        assert isinstance(x2, bytes)
+        assert x1 == x2
+
+    not_local = skein.Security(cert_file="hdfs:///some/path",
+                               key_file="hdfs:///some/path")
+    missing = skein.Security(cert_file="definitely/a/missing/path",
+                             key_file="definitely/a/missing/path")
+
+    for kind in ['cert', 'key']:
+        with pytest.raises(ValueError):
+            not_local._get_bytes(kind)
+
+        with pytest.raises(FileNotFoundError):
+            missing._get_bytes(kind)
 
 
 def test_security_auto_inits(skein_config):
@@ -64,8 +89,12 @@ def test_security_auto_inits(skein_config):
 
     assert len(rec) == 1
     assert 'Skein global security credentials not found' in str(rec[0])
-    assert os.path.exists(sec.cert_path)
-    assert os.path.exists(sec.key_path)
+
+    cert_path = os.path.join(skein.properties.config_dir, 'skein.crt')
+    key_path = os.path.join(skein.properties.config_dir, 'skein.crt')
+
+    assert os.path.exists(cert_path)
+    assert os.path.exists(key_path)
 
     with pytest.warns(None) as rec:
         sec2 = skein.Security.from_default()
@@ -207,8 +236,10 @@ def test_application_client_from_current(monkeypatch, tmpdir, security):
     # Add proper LOCAL_DIRS environment
     good_dir = tmpdir.mkdir('good_dir')
     local_dir = good_dir.mkdir(container_id)
-    shutil.copyfile(security.cert_path, str(local_dir.join(".skein.crt")))
-    shutil.copyfile(security.key_path, str(local_dir.join(".skein.pem")))
+    with open(str(local_dir.join(".skein.crt")), 'wb') as fil:
+        fil.write(security._get_bytes('cert'))
+    with open(str(local_dir.join(".skein.pem")), 'wb') as fil:
+        fil.write(security._get_bytes('key'))
     monkeypatch.setenv('LOCAL_DIRS', '%s,%s' % (bad_dir, good_dir))
 
     # Picks up full configuration from environment variables
@@ -557,3 +588,38 @@ def test_proxy_user_no_permissions(client):
     exc_msg = str(exc.value)
     assert 'testuser' in exc_msg
     assert 'bob' in exc_msg
+
+
+def test_security_specified(client):
+    security = skein.Security.new_credentials()
+    spec = skein.ApplicationSpec(
+        name="test_security_specified",
+        master=skein.Master(security=security),
+        services={
+            'sleeper': skein.Service(
+                resources=skein.Resources(memory=128, vcores=1),
+                commands=['sleep infinity'])
+        }
+    )
+    with run_application(client, spec=spec) as app:
+        assert app.security is security
+        assert app.security != client.security
+
+        spec2 = app.get_specification()
+
+        app2 = client.connect(app.id, security=security)
+        # Smoketest, can communicate
+        app2.get_specification()
+
+        app3 = client.connect(app.id)
+        with pytest.raises(skein.ConnectionError):
+            # Improper security credentials
+            app3.get_specification()
+
+        app.shutdown()
+
+    remote_security = spec2.master.security
+    assert remote_security.cert_bytes is None
+    assert remote_security.key_bytes is None
+    assert remote_security.cert_file.source.startswith('hdfs')
+    assert remote_security.key_file.source.startswith('hdfs')

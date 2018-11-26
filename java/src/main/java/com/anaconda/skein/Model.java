@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.google.protobuf.ByteString;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -182,13 +184,71 @@ public class Model {
     public List<String> getUiUsers() { return uiUsers; }
   }
 
+  public static class Security {
+    private LocalResource certFile = null;
+    private ByteString certBytes = null;
+    private LocalResource keyFile = null;
+    private ByteString keyBytes = null;
+
+    public Security() {
+    }
+
+    public void validate() throws IllegalArgumentException {
+      if (certFile != null) {
+        if (certBytes != null) {
+          throw new IllegalArgumentException("Cannot specify both certFile and certBytes");
+        }
+      } else if (certBytes == null) {
+        throw new IllegalArgumentException("Must specify either certFile or certBytes");
+      }
+      if (keyFile != null) {
+        if (keyBytes != null) {
+          throw new IllegalArgumentException("Cannot specify both keyFile and keyBytes");
+        }
+      } else if (keyBytes == null) {
+        throw new IllegalArgumentException("Must specify either keyFile or keyBytes");
+      }
+    }
+
+    public void setCertFile(LocalResource cert) {
+      this.certBytes = null;
+      this.certFile = cert;
+    }
+    public void setCertBytes(ByteString cert) {
+      this.certFile = null;
+      this.certBytes = cert;
+    }
+    public LocalResource getCertFile() { return this.certFile; }
+    public ByteString getCertBytes() { return this.certBytes; }
+
+    public void setKeyFile(LocalResource key) {
+      this.keyBytes = null;
+      this.keyFile = key;
+    }
+    public void setKeyBytes(ByteString key) {
+      this.keyFile = null;
+      this.keyBytes = key;
+    }
+    public LocalResource getKeyFile() { return this.keyFile; }
+    public ByteString getKeyBytes() { return this.keyBytes; }
+  }
+
   public static class Master {
     private LocalResource logConfig;
     private Level logLevel;
+    private Security security;
 
-    public Master(LocalResource logConfig, Level logLevel) {
+    public Master(LocalResource logConfig, Level logLevel, Security security) {
       this.logConfig = logConfig;
       this.logLevel = logLevel;
+      this.security = security;
+    }
+
+    public void validate() throws IllegalArgumentException {
+      throwIfNull(logLevel, "logLevel");
+      if (security != null) {
+        security.validate();
+      }
     }
 
     public void setLogConfig(LocalResource logConfig) { this.logConfig = logConfig; }
@@ -197,6 +257,10 @@ public class Model {
 
     public void setLogLevel(Level logLevel) { this.logLevel = logLevel; }
     public Level getLogLevel() { return this.logLevel; }
+
+    public void setSecurity(Security security) { this.security = security; }
+    public Security getSecurity() { return this.security; }
+    public boolean hasSecurity() { return this.security != null; }
   }
 
   public static class ApplicationSpec {
@@ -278,6 +342,8 @@ public class Model {
       throwIfLessThan(maxAttempts, 1, "maxAttempts");
       throwIfNull(tags, "tags");
       throwIfNull(fileSystems, "fileSystems");
+      throwIfNull(master, "master");
+      master.validate();
       throwIfNull(services, "services");
       if (services.size() == 0) {
         throw new IllegalArgumentException("There must be at least one service");

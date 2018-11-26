@@ -29,7 +29,8 @@ def skein_config(tmpdir_factory):
 
 @pytest.fixture(scope="session")
 def security(tmpdir_factory):
-    return skein.Security.from_new_directory(str(tmpdir_factory.mktemp('security')))
+    path = str(tmpdir_factory.mktemp('security'))
+    return skein.Security.new_credentials().to_directory(path)
 
 
 @pytest.fixture(scope="session")

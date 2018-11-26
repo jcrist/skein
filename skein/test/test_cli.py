@@ -117,11 +117,8 @@ def test_cli_config_gencerts(capsys, skein_config):
     assert not out
 
     security = skein.Security.from_directory(skein_config)
-    with open(security.cert_path) as f:
-        cert = f.read()
-
-    with open(security.key_path) as f:
-        key = f.read()
+    cert = security._get_bytes('cert')
+    key = security._get_bytes('key')
 
     # Running again fails due to missing --force
     run_command('config gencerts', error=True)
@@ -131,11 +128,8 @@ def test_cli_config_gencerts(capsys, skein_config):
     assert 'already exists' in err
 
     # files aren't overwritten on error
-    with open(security.cert_path) as f:
-        cert2 = f.read()
-
-    with open(security.key_path) as f:
-        key2 = f.read()
+    cert2 = security._get_bytes('cert')
+    key2 = security._get_bytes('key')
 
     assert cert == cert2
     assert key == key2
@@ -147,11 +141,8 @@ def test_cli_config_gencerts(capsys, skein_config):
     assert not err
 
     # Files are overwritten
-    with open(security.cert_path) as f:
-        cert2 = f.read()
-
-    with open(security.key_path) as f:
-        key2 = f.read()
+    cert2 = security._get_bytes('cert')
+    key2 = security._get_bytes('key')
 
     assert cert != cert2
     assert key != key2

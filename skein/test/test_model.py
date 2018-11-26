@@ -11,7 +11,7 @@ from skein.compatibility import UTC, math_ceil
 from skein.model import (ApplicationSpec, Service, Resources, File,
                          ApplicationState, FinalStatus, FileType, ACLs, Master,
                          Container, ApplicationReport, ResourceUsageReport,
-                         LogLevel, parse_memory)
+                         LogLevel, parse_memory, Security)
 
 
 def indent(s, n):
@@ -231,8 +231,48 @@ def test_acls_invariants():
         ACLs(view_users="*")
 
 
+def test_security(tmpdir):
+    bytes = Security.new_credentials()
+    file = bytes.to_directory(str(tmpdir))
+    other = Security.new_credentials()
+    check_specification_methods(bytes, other)
+    check_specification_methods(file, other)
+
+
+def test_security_invariants():
+    # relative paths
+    path = 'foo/bar'
+    sol = 'file://%s' % os.path.join(os.getcwd(), path)
+    s = Security(cert_file=path, key_file=path)
+    assert s.cert_file.source == sol
+    assert s.key_file.source == sol
+
+    keywords = ['cert_file', 'cert_bytes', 'key_file', 'key_bytes']
+    for keyword in keywords:
+        kwargs = dict.fromkeys(keywords, 'foo/bar')
+        kwargs[keyword] = 1
+        with pytest.raises(TypeError):
+            Security(**kwargs)
+
+    # Must specify one
+    for keyword in keywords:
+        with pytest.raises(ValueError):
+            Security(**{keyword: 'foo/bar'})
+
+    # Can't specify both
+    with pytest.raises(ValueError):
+        Security(cert_file='/path.crt', cert_bytes=b'foobar',
+                 key_file='/path.pem')
+
+    with pytest.raises(ValueError):
+        Security(key_file='/path.pem', key_bytes=b'foobar',
+                 cert_file='/path.crt')
+
+
 def test_master():
-    m1 = Master(log_level='info', log_config='/test/path.properties')
+    m1 = Master(log_level='info',
+                log_config='/test/path.properties',
+                security=Security.new_credentials())
     m2 = Master(log_level='debug')
     check_specification_methods(m1, m2)
 

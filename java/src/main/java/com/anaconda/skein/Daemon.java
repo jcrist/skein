@@ -2,6 +2,7 @@ package com.anaconda.skein;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ObjectArrays;
+import com.google.protobuf.ByteString;
 
 import io.grpc.Server;
 import io.grpc.Status;
@@ -47,7 +48,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
@@ -95,8 +95,8 @@ public class Daemon {
   private String classpath;
 
   private String jarPath;
-  private String certPath;
-  private String keyPath;
+  private ByteString certBytes;
+  private ByteString keyBytes;
 
   private boolean daemon = false;
 
@@ -115,8 +115,8 @@ public class Daemon {
   private void startServer() throws IOException {
     // Setup and start the server
     SslContext sslContext = GrpcSslContexts
-        .forServer(new File(certPath), new File(keyPath))
-        .trustManager(new File(certPath))
+        .forServer(certBytes.newInput(), keyBytes.newInput())
+        .trustManager(certBytes.newInput())
         .clientAuth(ClientAuth.REQUIRE)
         .sslProvider(SslProvider.OPENSSL)
         .build();
@@ -170,6 +170,16 @@ public class Daemon {
   }
 
   private void init(String[] args) throws IOException {
+    certBytes = ByteString.copyFromUtf8(System.getenv("SKEIN_CERTIFICATE"));
+    if (certBytes == null) {
+      LOG.error("Couldn't find 'SKEIN_CERTIFICATE' envar");
+      System.exit(1);
+    }
+    keyBytes = ByteString.copyFromUtf8(System.getenv("SKEIN_KEY"));
+    if (keyBytes == null) {
+      LOG.error("Couldn't find 'SKEIN_KEY' envar");
+      System.exit(1);
+    }
     String callbackPortEnv = System.getenv("SKEIN_CALLBACK_PORT");
     if (callbackPortEnv == null) {
       LOG.error("Couldn't find 'SKEIN_CALLBACK_PORT' envar");
@@ -178,15 +188,13 @@ public class Daemon {
     callbackPort = Integer.valueOf(callbackPortEnv);
 
     // Parse arguments
-    if (args.length < 3 || args.length > 4
-        || (args.length == 4 && !args[3].equals("--daemon"))) {
-      LOG.error("Usage: COMMAND jarPath certPath keyPath [--daemon]");
+    if (args.length < 1 || args.length > 2
+        || (args.length == 2 && !args[1].equals("--daemon"))) {
+      LOG.error("Usage: COMMAND jarPath [--daemon]");
       System.exit(1);
     }
     jarPath = args[0];
-    certPath = args[1];
-    keyPath = args[2];
-    daemon = args.length == 4;
+    daemon = args.length == 2;
 
     // Ensure user has obtained a kerberos ticket, otherwise the daemon will
     // lockup (missing kerberos tickets are logged, but no exception is raised
@@ -379,6 +387,25 @@ public class Daemon {
     return appId;
   }
 
+  private LocalResource finalizeSecurityFile(
+      FileSystem fs, Map<Path, Path> uploadCache, Path appDir,
+      LocalResource file, ByteString bytes, String filename)
+      throws IOException {
+    if (file != null) {
+      finalizeLocalResource(uploadCache, appDir, file, false);
+    } else {
+      Path uploadPath = new Path(appDir, filename);
+      OutputStream out = fs.create(uploadPath);
+      try {
+        bytes.writeTo(out);
+      } finally {
+        out.close();
+      }
+      file = Utils.localResource(fs, uploadPath, LocalResourceType.FILE);
+    }
+    return file;
+  }
+
   private Map<String, LocalResource> setupAppDir(FileSystem fs,
         Model.ApplicationSpec spec, Path appDir) throws IOException {
 
@@ -388,9 +415,23 @@ public class Daemon {
 
     Map<Path, Path> uploadCache = new HashMap<Path, Path>();
 
-    // Create LocalResources for the crt/pem files
-    LocalResource certFile = newLocalResource(uploadCache, appDir, certPath);
-    LocalResource keyFile = newLocalResource(uploadCache, appDir, keyPath);
+    // Create LocalResources for the crt/pem files, and add them to the
+    // security object.
+    Model.Security security = spec.getMaster().getSecurity();
+    if (security == null) {
+      security = new Model.Security();
+      security.setCertBytes(certBytes);
+      security.setKeyBytes(keyBytes);
+      spec.getMaster().setSecurity(security);
+    }
+    LocalResource certFile = finalizeSecurityFile(
+        fs, uploadCache, appDir, security.getCertFile(), security.getCertBytes(),
+        ".skein.crt");
+    LocalResource keyFile = finalizeSecurityFile(
+        fs, uploadCache, appDir, security.getKeyFile(), security.getKeyBytes(),
+        ".skein.pem");
+    security.setCertFile(certFile);
+    security.setKeyFile(keyFile);
 
     // Setup the LocalResources for the services
     for (Map.Entry<String, Model.Service> entry: spec.getServices().entrySet()) {
