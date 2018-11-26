@@ -1,6 +1,5 @@
 from __future__ import print_function, division, absolute_import
 
-import datetime
 import json
 import os
 import select
@@ -8,7 +7,7 @@ import signal
 import socket
 import struct
 import subprocess
-from collections import namedtuple, Mapping
+from collections import Mapping
 from contextlib import closing
 
 import grpc
@@ -20,13 +19,14 @@ from .exceptions import (context, FileNotFoundError, ConnectionError,
                          ApplicationError, DaemonNotRunningError, DaemonError)
 from .kv import KeyValueStore
 from .ui import WebUI
-from .model import (ApplicationSpec, ApplicationReport, ApplicationState,
-                    ContainerState, Container, FinalStatus, Resources,
-                    container_instance_from_string, LogLevel)
-from .utils import cached_property
+from .model import (Security, ApplicationSpec, ApplicationReport,
+                    ApplicationState, ContainerState, Container,
+                    FinalStatus, Resources, container_instance_from_string,
+                    LogLevel)
+from .utils import cached_property, grpc_fork_support_disabled
 
 
-__all__ = ('Client', 'ApplicationClient', 'Security', 'properties')
+__all__ = ('Client', 'ApplicationClient', 'properties')
 
 
 _SKEIN_DIR = os.path.abspath(os.path.dirname(os.path.relpath(__file__)))
@@ -110,126 +110,11 @@ class Properties(Mapping):
 properties = Properties()
 
 
-class Security(namedtuple('Security', ['cert_path', 'key_path'])):
-    """Security configuration.
+def secure_channel(address, security):
+    cert_bytes = security._get_bytes('cert')
+    key_bytes = security._get_bytes('key')
 
-    Parameters
-    ----------
-    cert_path : str
-        Path to the certificate file in pem format.
-    key_path : str
-        Path to the key file in pem format.
-    """
-    def __new__(cls, cert_path=None, key_path=None):
-        paths = [os.path.abspath(p) for p in (cert_path, key_path)]
-        for path in paths:
-            if not os.path.exists(path):
-                raise FileNotFoundError(path)
-        return super(Security, cls).__new__(cls, *paths)
-
-    @classmethod
-    def from_default(cls):
-        """The default security configuration."""
-        try:
-            return cls.from_directory(properties.config_dir)
-        except FileNotFoundError:
-            pass
-        context.warn("Skein global security credentials not found, writing now "
-                     "to %r." % properties.config_dir)
-        return cls.from_new_directory(directory=properties.config_dir)
-
-    @classmethod
-    def from_directory(cls, directory):
-        """Create a security object from a directory.
-
-        Relies on standard names for each file (``skein.crt`` and
-        ``skein.pem``)."""
-        cert_path = os.path.join(directory, 'skein.crt')
-        key_path = os.path.join(directory, 'skein.pem')
-        return Security(cert_path, key_path)
-
-    @classmethod
-    def from_new_directory(cls, directory=None, force=False):
-        """Create a Security object from a new certificate/key pair.
-
-        This is equivalent to the cli command ``skein config gencerts`` with
-        the option to specify an alternate directory *if needed*. Should only
-        need to be called once per user upon install. Call again with
-        ``force=True`` to generate new TLS keys and certificates.
-
-        Parameters
-        ----------
-        directory : str, optional
-            The directory to write the configuration to. Defaults to the global
-            skein configuration directory at ``~/.skein/``.
-        force : bool, optional
-            If True, will overwrite existing configuration. Otherwise will
-            error if already configured. Default is False.
-        """
-        from cryptography import x509
-        from cryptography.hazmat.backends import default_backend
-        from cryptography.hazmat.primitives import hashes
-        from cryptography.hazmat.primitives import serialization
-        from cryptography.hazmat.primitives.asymmetric import rsa
-        from cryptography.x509.oid import NameOID
-
-        directory = directory or properties.config_dir
-
-        # Create directory if it doesn't exist
-        makedirs(directory, exist_ok=True)
-
-        key = rsa.generate_private_key(public_exponent=65537,
-                                       key_size=2048,
-                                       backend=default_backend())
-        key_bytes = key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption())
-
-        subject = issuer = x509.Name(
-            [x509.NameAttribute(NameOID.COMMON_NAME, u'skein-internal')])
-        now = datetime.datetime.utcnow()
-        cert = (x509.CertificateBuilder()
-                    .subject_name(subject)
-                    .issuer_name(issuer)
-                    .public_key(key.public_key())
-                    .serial_number(x509.random_serial_number())
-                    .not_valid_before(now)
-                    .not_valid_after(now + datetime.timedelta(days=365))
-                    .sign(key, hashes.SHA256(), default_backend()))
-
-        cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
-
-        cert_path = os.path.join(directory, 'skein.crt')
-        key_path = os.path.join(directory, 'skein.pem')
-
-        for path, name in [(cert_path, 'skein.crt'), (key_path, 'skein.pem')]:
-            if os.path.exists(path):
-                if force:
-                    os.unlink(path)
-                else:
-                    msg = ("%r file already exists, use `%s` to overwrite" %
-                           (name, '--force' if context.is_cli else 'force'))
-                    raise context.FileExistsError(msg)
-
-        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-        for path, data in [(cert_path, cert_bytes), (key_path, key_bytes)]:
-            with os.fdopen(os.open(path, flags, 0o600), 'wb') as fil:
-                fil.write(data)
-
-        return cls(cert_path, key_path)
-
-
-def secure_channel(address, security=None):
-    security = security or Security.from_default()
-
-    with open(security.cert_path, 'rb') as fil:
-        cert = fil.read()
-
-    with open(security.key_path, 'rb') as fil:
-        key = fil.read()
-
-    creds = grpc.ssl_channel_credentials(cert, key, cert)
+    creds = grpc.ssl_channel_credentials(cert_bytes, key_bytes, cert_bytes)
     options = [('grpc.ssl_target_name_override', 'skein-internal'),
                ('grpc.default_authority', 'skein-internal')]
     return grpc.secure_channel(address, creds, options)
@@ -255,7 +140,8 @@ def _write_daemon(address, pid):
 
 
 def _start_daemon(security=None, set_global=False, log=None, log_level=None):
-    security = security or Security.from_default()
+    if security is None:
+        security = Security.from_default()
 
     if log_level is None:
         log_level = LogLevel(
@@ -281,16 +167,15 @@ def _start_daemon(security=None, set_global=False, log=None, log_level=None):
         if os.path.exists(native_path):
             command.append('-Djava.library.path=%s' % native_path)
 
-    command.extend(['com.anaconda.skein.Daemon',
-                    _SKEIN_JAR,
-                    security.cert_path,
-                    security.key_path])
+    command.extend(['com.anaconda.skein.Daemon', _SKEIN_JAR])
 
     if set_global:
         command.append("--daemon")
 
-    # Update the classpath in the environment
     env = dict(os.environ)
+    env['SKEIN_CERTIFICATE'] = security._get_bytes('cert')
+    env['SKEIN_KEY'] = security._get_bytes('key')
+    # Update the classpath in the environment
     classpath = (subprocess.check_output(['yarn', 'classpath', '--glob'])
                            .decode('utf-8'))
     env['CLASSPATH'] = '%s:%s' % (_SKEIN_JAR, classpath)
@@ -301,7 +186,7 @@ def _start_daemon(security=None, set_global=False, log=None, log_level=None):
 
     with closing(callback):
         _, callback_port = callback.getsockname()
-        env.update({'SKEIN_CALLBACK_PORT': str(callback_port)})
+        env['SKEIN_CALLBACK_PORT'] = str(callback_port)
 
         if PY2:
             popen_kwargs = dict(preexec_fn=os.setsid)
@@ -415,7 +300,8 @@ class Client(_ClientBase):
         else:
             proc = None
 
-        self._stub = proto.DaemonStub(secure_channel(address, security))
+        with grpc_fork_support_disabled():
+            self._stub = proto.DaemonStub(secure_channel(address, security))
         self.address = address
         self.security = security
         self._proc = proc
@@ -556,12 +442,12 @@ class Client(_ClientBase):
         """
         app_id = self.submit(spec)
         try:
-            return self.connect(app_id)
+            return self.connect(app_id, security=spec.master.security)
         except BaseException:
             self.kill_application(app_id)
             raise
 
-    def connect(self, app_id, wait=True):
+    def connect(self, app_id, wait=True, security=None):
         """Connect to a running application.
 
         Parameters
@@ -572,6 +458,9 @@ class Client(_ClientBase):
             If true [default], blocks until the application starts. If False,
             will raise a ``ApplicationNotRunningError`` immediately if the
             application isn't running.
+        security : Security, optional
+            The security configuration to use to communicate with the
+            application master. Defaults to the global configuration.
 
         Returns
         -------
@@ -592,9 +481,12 @@ class Client(_ClientBase):
                 "%s is not running. Application state: "
                 "%s" % (app_id, report.state))
 
+        if security is None:
+            security = self.security
+
         return ApplicationClient('%s:%d' % (report.host, report.port),
                                  app_id,
-                                 security=self.security)
+                                 security=security)
 
     def get_applications(self, states=None):
         """Get the status of current skein applications.
@@ -676,17 +568,18 @@ class ApplicationClient(_ClientBase):
     app_id : str
         The application id
     security : Security, optional
-        The security configuration to use to communicate with the daemon.
-        Defaults to the global configuration.
+        The security configuration to use to communicate with the
+        application master.  Defaults to the global configuration.
     """
     _server_name = 'application'
     _server_error = ApplicationError
 
     def __init__(self, address, app_id, security=None):
         self.address = address
+        self.security = security or Security.from_default()
         self.id = app_id
-        self._stub = proto.AppMasterStub(secure_channel(address, security))
-        self._shutdown = False
+        with grpc_fork_support_disabled():
+            self._stub = proto.AppMasterStub(secure_channel(address, self.security))
 
     def __repr__(self):
         return 'ApplicationClient<%s, %s>' % (self.id, self.address)
@@ -710,7 +603,6 @@ class ApplicationClient(_ClientBase):
         req = proto.ShutdownRequest(final_status=str(FinalStatus(status)),
                                     diagnostics=diagnostics)
         self._call('shutdown', req)
-        self._shutdown = True
 
     @cached_property
     def kv(self):
@@ -825,7 +717,8 @@ class ApplicationClient(_ClientBase):
             crt_path = os.path.join(container_dir, '.skein.crt')
             pem_path = os.path.join(container_dir, '.skein.pem')
             if os.path.exists(crt_path) and os.path.exists(pem_path):
-                return cls(address, app_id, security=Security(crt_path, pem_path))
+                security = Security(cert_file=crt_path, key_file=pem_path)
+                return cls(address, app_id, security=security)
 
         raise FileNotFoundError(
             "Failed to resolve .skein.{crt,pem} in 'LOCAL_DIRS'")

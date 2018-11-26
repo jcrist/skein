@@ -1,8 +1,30 @@
 from __future__ import print_function, division, absolute_import
 
+import os
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 from .compatibility import unicode, UTC
+
+
+@contextmanager
+def grpc_fork_support_disabled():
+    """Temporarily disable fork support in gRPC.
+
+    Fork + exec has always been supported, but the recent fork handling code in
+    gRPC (>= 1.15) results in extraneous error logs currently. For now we
+    explicitly disable fork support for gRPC clients we create.
+    """
+    key = 'GRPC_ENABLE_FORK_SUPPORT'
+    try:
+        os.environ[key] = '0'
+        yield
+    finally:
+        del os.environ[key]
+
+
+def xor(a, b):
+    return bool(a) != bool(b)
 
 
 def ensure_unicode(x):

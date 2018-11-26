@@ -6,10 +6,10 @@ import sys
 import traceback
 
 from . import __version__
-from .core import Client, ApplicationClient, Security
+from .core import Client, ApplicationClient, properties
 from .compatibility import read_stdin_bytes, write_stdout_bytes
 from .exceptions import context, SkeinError, DaemonNotRunningError
-from .model import ApplicationSpec, ContainerState, ApplicationState
+from .model import ApplicationSpec, ContainerState, ApplicationState, Security
 from .utils import format_table, humanize_timedelta
 
 
@@ -375,7 +375,8 @@ config = node(entry_subs, 'config', 'Manage skein configuration')
             arg('--force', '-f', action='store_true',
                 help='Overwrite existing configuration'))
 def config_gencerts(force=False):
-    Security.from_new_directory(force=force)
+    sec = Security.new_credentials()
+    sec.to_directory(directory=properties.config_dir, force=force)
 
 
 def main(args=None):

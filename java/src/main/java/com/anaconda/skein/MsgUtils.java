@@ -373,13 +373,63 @@ public class MsgUtils {
     return null; // appease the compiler, but can't get here
   }
 
+  public static Msg.Security writeSecurity(Model.Security security) {
+    Msg.Security.Builder builder = Msg.Security.newBuilder();
+
+    if (security.getCertBytes() != null) {
+      builder.setCertBytes(security.getCertBytes());
+    } else if (security.getCertFile() != null) {
+      builder.setCertFile(writeFile(security.getCertFile()));
+    }
+
+    if (security.getKeyBytes() != null) {
+      builder.setKeyBytes(security.getKeyBytes());
+    } else if (security.getKeyFile() != null) {
+      builder.setKeyFile(writeFile(security.getKeyFile()));
+    }
+
+    return builder.build();
+  }
+
+  public static Model.Security readSecurity(Msg.Security security) {
+    Model.Security result = new Model.Security();
+
+    switch (security.getCertCase()) {
+      case CERT_BYTES:
+        result.setCertBytes(security.getCertBytes());
+        break;
+      case CERT_FILE:
+        result.setCertFile(readFile(security.getCertFile()));
+        break;
+      case CERT_NOT_SET:
+        break;
+    }
+
+    switch (security.getKeyCase()) {
+      case KEY_BYTES:
+        result.setKeyBytes(security.getKeyBytes());
+        break;
+      case KEY_FILE:
+        result.setKeyFile(readFile(security.getKeyFile()));
+        break;
+      case KEY_NOT_SET:
+        break;
+    }
+    return result;
+  }
+
   public static Msg.Master writeMaster(Model.Master master) {
     Msg.Master.Builder builder = Msg.Master.newBuilder()
         .setLogLevel(writeLogLevel(master.getLogLevel()));
 
+    if (master.hasSecurity()) {
+      builder.setSecurity(writeSecurity(master.getSecurity()));
+    }
+
     if (master.hasLogConfig()) {
       builder.setLogConfig(writeFile(master.getLogConfig()));
     }
+
     return builder.build();
   }
 
@@ -388,8 +438,12 @@ public class MsgUtils {
     if (master.hasLogConfig()) {
       logConfig = readFile(master.getLogConfig());
     }
+    Model.Security security = null;
+    if (master.hasSecurity()) {
+      security = readSecurity(master.getSecurity());
+    }
     Level logLevel = readLogLevel(master.getLogLevel());
-    return new Model.Master(logConfig, logLevel);
+    return new Model.Master(logConfig, logLevel, security);
   }
 
   public static Msg.ApplicationSpec writeApplicationSpec(Model.ApplicationSpec spec) {
