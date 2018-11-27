@@ -1,6 +1,7 @@
 package com.anaconda.skein;
 
 import com.google.common.base.Functions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 
 import org.apache.hadoop.fs.Path;
@@ -235,7 +236,7 @@ public class MsgUtils {
   public static URL readUrl(Msg.Url url) {
     return URL.newInstance(
         url.getScheme(),
-        url.getHost(),
+        Strings.emptyToNull(url.getHost()),
         url.getPort() == 0 ? -1 : url.getPort(),
         url.getFile());
   }
@@ -243,7 +244,7 @@ public class MsgUtils {
   public static Msg.Url writeUrl(URL url) {
     return Msg.Url.newBuilder()
         .setScheme(url.getScheme())
-        .setHost(url.getHost())
+        .setHost(Strings.nullToEmpty(url.getHost()))
         .setPort(url.getPort())
         .setFile(url.getFile())
         .build();
