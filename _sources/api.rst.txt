@@ -4,13 +4,6 @@ API Docs
 .. currentmodule:: skein
 
 
-Security
---------
-
-.. autoclass:: Security
-    :members:
-
-
 Client
 -------
 
@@ -159,6 +152,10 @@ Application Specification
     :inherited-members:
 
 .. autoclass:: Master
+    :members:
+    :inherited-members:
+
+.. autoclass:: Security
     :members:
     :inherited-members:
 

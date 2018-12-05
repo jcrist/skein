@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.3.1+3.g6e17fe3 documentation</title>
+    <title>API Docs &#8212; Skein 0.3.1+6.g4f96243 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -36,73 +36,6 @@
             
   <div class="section" id="api-docs">
 <h1>API Docs<a class="headerlink" href="#api-docs" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="security">
-<h2>Security<a class="headerlink" href="#security" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="skein.Security">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Security</code><a class="headerlink" href="#skein.Security" title="Permalink to this definition">¶</a></dt>
-<dd><p>Security configuration.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>cert_path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Path to the certificate file in pem format.</p>
-</dd>
-<dt><strong>key_path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Path to the key file in pem format.</p>
-</dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-<dl class="classmethod">
-<dt id="skein.Security.from_default">
-<em class="property">classmethod </em><code class="descname">from_default</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_default" title="Permalink to this definition">¶</a></dt>
-<dd><p>The default security configuration.</p>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="skein.Security.from_directory">
-<em class="property">classmethod </em><code class="descname">from_directory</code><span class="sig-paren">(</span><em>directory</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_directory" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a security object from a directory.</p>
-<p>Relies on standard names for each file (<code class="docutils literal notranslate"><span class="pre">skein.crt</span></code> and
-<code class="docutils literal notranslate"><span class="pre">skein.pem</span></code>).</p>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="skein.Security.from_new_directory">
-<em class="property">classmethod </em><code class="descname">from_new_directory</code><span class="sig-paren">(</span><em>directory=None</em>, <em>force=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_new_directory" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a Security object from a new certificate/key pair.</p>
-<p>This is equivalent to the cli command <code class="docutils literal notranslate"><span class="pre">skein</span> <span class="pre">config</span> <span class="pre">gencerts</span></code> with
-the option to specify an alternate directory <em>if needed</em>. Should only
-need to be called once per user upon install. Call again with
-<code class="docutils literal notranslate"><span class="pre">force=True</span></code> to generate new TLS keys and certificates.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>directory</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">The directory to write the configuration to. Defaults to the global
-skein configuration directory at <code class="docutils literal notranslate"><span class="pre">~/.skein/</span></code>.</p>
-</dd>
-<dt><strong>force</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
-<dd><p class="first last">If True, will overwrite existing configuration. Otherwise will
-error if already configured. Default is False.</p>
-</dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
-</div>
 <div class="section" id="client">
 <h2>Client<a class="headerlink" href="#client" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
@@ -182,7 +115,7 @@ of {‘ALL’, ‘TRACE’, ‘DEBUG’, ‘INFO’, ‘WARN’, ‘ERROR’, �
 
 <dl class="method">
 <dt id="skein.Client.connect">
-<code class="descname">connect</code><span class="sig-paren">(</span><em>app_id</em>, <em>wait=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.connect" title="Permalink to this definition">¶</a></dt>
+<code class="descname">connect</code><span class="sig-paren">(</span><em>app_id</em>, <em>wait=True</em>, <em>security=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.connect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connect to a running application.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -196,6 +129,10 @@ of {‘ALL’, ‘TRACE’, ‘DEBUG’, ‘INFO’, ‘WARN’, ‘ERROR’, �
 <dd><p class="first last">If true [default], blocks until the application starts. If False,
 will raise a <code class="docutils literal notranslate"><span class="pre">ApplicationNotRunningError</span></code> immediately if the
 application isn’t running.</p>
+</dd>
+<dt><strong>security</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Security, optional</span></dt>
+<dd><p class="first last">The security configuration to use to communicate with the
+application master. Defaults to the global configuration.</p>
 </dd>
 </dl>
 </td>
@@ -400,8 +337,8 @@ dictionary description of an application specification.</p>
 <dd><p class="first last">The application id</p>
 </dd>
 <dt><strong>security</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Security, optional</span></dt>
-<dd><p class="first last">The security configuration to use to communicate with the daemon.
-Defaults to the global configuration.</p>
+<dd><p class="first last">The security configuration to use to communicate with the
+application master.  Defaults to the global configuration.</p>
 </dd>
 </dl>
 </td>
@@ -2910,7 +2847,7 @@ Here we give view access to all users:</p>
 
 <dl class="class">
 <dt id="skein.Master">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Master</code><span class="sig-paren">(</span><em>log_level=LogLevel.INFO</em>, <em>log_config=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Master</code><span class="sig-paren">(</span><em>log_level=LogLevel.INFO</em>, <em>log_config=None</em>, <em>security=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master" title="Permalink to this definition">¶</a></dt>
 <dd><p>Configuration for the Application Master.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2925,6 +2862,11 @@ property. One of {‘ALL’, ‘TRACE’, ‘DEBUG’, ‘INFO’, ‘WARN’, �
 <dt><strong>log_config</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str or File, optional</span></dt>
 <dd><p class="first last">A custom <code class="docutils literal notranslate"><span class="pre">log4j.properties</span></code> file to use for the application master.
 If not provided, the default logging configuration will be used.</p>
+</dd>
+<dt><strong>security</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Security, optional</span></dt>
+<dd><p class="first last">The security credentials to use for the application master. If not
+provided, these will be the same as those used by the submitting
+client.</p>
 </dd>
 </dl>
 </td>
@@ -2978,6 +2920,137 @@ If not provided, the default logging configuration will be used.</p>
 <dl class="method">
 <dt id="skein.Master.to_yaml">
 <code class="descname">to_yaml</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a yaml string</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.Security">
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Security</code><span class="sig-paren">(</span><em>cert_file=None</em>, <em>key_file=None</em>, <em>cert_bytes=None</em>, <em>key_bytes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security" title="Permalink to this definition">¶</a></dt>
+<dd><p>Security configuration.</p>
+<p>Secrets may be specified either as file paths or raw bytes, but not both.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>cert_file</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string, File, optional</span></dt>
+<dd><p class="first last">The TLS certificate file, in pem format. Either a path or a fully
+specified File object.</p>
+</dd>
+<dt><strong>key_file</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string, File, optional</span></dt>
+<dd><p class="first last">The TLS private key file, in pem format. Either a path or a fully
+specified File object.</p>
+</dd>
+<dt><strong>cert_bytes</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes, optional</span></dt>
+<dd><p class="first last">The contents of the TLS certificate file, in pem format.</p>
+</dd>
+<dt><strong>key_bytes</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bytes, optional</span></dt>
+<dd><p class="first last">The contents of the TLS private key file, in pem format.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="skein.Security.from_default">
+<em class="property">classmethod </em><code class="descname">from_default</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_default" title="Permalink to this definition">¶</a></dt>
+<dd><p>The default security configuration.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Security.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a dict.</p>
+<p>Keys in the dict should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Security.from_directory">
+<em class="property">classmethod </em><code class="descname">from_directory</code><span class="sig-paren">(</span><em>directory</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a security object from a directory.</p>
+<p>Relies on standard names for each file (<code class="docutils literal notranslate"><span class="pre">skein.crt</span></code> and
+<code class="docutils literal notranslate"><span class="pre">skein.pem</span></code>).</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Security.from_json">
+<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a json string.</p>
+<p>Keys in the json object should match parameter names</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Security.from_protobuf">
+<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a protobuf message.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Security.from_yaml">
+<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a yaml string.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="skein.Security.new_credentials">
+<em class="property">classmethod </em><code class="descname">new_credentials</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.new_credentials" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new Security object with a new certificate/key pair.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Security.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Security.to_directory">
+<code class="descname">to_directory</code><span class="sig-paren">(</span><em>directory</em>, <em>force=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write this security object to a directory.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>directory</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">The directory to write the configuration to.</p>
+</dd>
+<dt><strong>force</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If security credentials already exist at this location, an error
+will be raised by default. Set to True to overwrite existing files.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>security</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Security</span></dt>
+<dd><p class="first last">A new security object backed by the written files.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Security.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a json string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Security.to_protobuf">
+<code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a protobuf message</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Security.to_yaml">
+<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a yaml string</p>
 </dd></dl>
 
@@ -3293,7 +3366,6 @@ number of seconds the application has been running.</p>
 <li class="toctree-l1"><a class="reference internal" href="recipes.html">Recipes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="debugging.html">Debugging</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API Docs</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#security">Security</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#client">Client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#application-client">Application Client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#runtime-properties">Runtime Properties</a></li>
