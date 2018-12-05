@@ -7,8 +7,6 @@ import threading as _threading
 import weakref as _weakref
 from collections import (namedtuple as _namedtuple,
                          deque as _deque,
-                         MutableMapping as _MutableMapping,
-                         Mapping as _Mapping,
                          OrderedDict as _OrderedDict)
 from functools import wraps as _wraps
 
@@ -17,7 +15,9 @@ import grpc as _grpc
 from . import proto as _proto
 from .compatibility import (bind_method as _bind_method,
                             Queue as _Queue,
-                            string as _string)
+                            string as _string,
+                            Mapping as _Mapping,
+                            MutableMapping as _MutableMapping)
 from .exceptions import (ApplicationError as _ApplicationError,
                          ConnectionError as _ConnectionError)
 from .model import (
