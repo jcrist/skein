@@ -4,6 +4,19 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.4.0 (December 5, 2018)
+--------------------------------
+
+- Add support for proxying user credentials, allowing submitted applications to
+  run as a different user than the submitter (:pr:`101`)
+- Support running on MapR provided clusters (:pr:`105`)
+- Allow TLS credentials to be configured per-application (:pr:`107`)
+- Silence extraneous gRPC logged warning ("Fork support only compatible with
+  epoll1 and poll polling strategies").This warning doesn't apply to our use
+  case, and will not be raised in a future release of gRPC. (:pr:`107`)
+- Upgrade gRPC version to 1.16 (:pr:`107`)
+- Silence deprecation warnings in Python 3.7 (:pr:`108`)
+
 Version 0.3.1 (October 29, 2018)
 --------------------------------
 

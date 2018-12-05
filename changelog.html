@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Changelog &#8212; Skein 0.3.1+7.ga5d3f5d documentation</title>
+    <title>Changelog &#8212; Skein 0.3.1+8.g9d83609 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -38,6 +38,20 @@
 <h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="upcoming-release">
 <h2>Upcoming Release<a class="headerlink" href="#upcoming-release" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="version-0-4-0-december-5-2018">
+<h2>Version 0.4.0 (December 5, 2018)<a class="headerlink" href="#version-0-4-0-december-5-2018" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Add support for proxying user credentials, allowing submitted applications to
+run as a different user than the submitter (<a class="reference external" href="https://github.com/jcrist/skein/pull/101">PR #101</a>)</li>
+<li>Support running on MapR provided clusters (<a class="reference external" href="https://github.com/jcrist/skein/pull/105">PR #105</a>)</li>
+<li>Allow TLS credentials to be configured per-application (<a class="reference external" href="https://github.com/jcrist/skein/pull/107">PR #107</a>)</li>
+<li>Silence extraneous gRPC logged warning (“Fork support only compatible with
+epoll1 and poll polling strategies”).This warning doesn’t apply to our use
+case, and will not be raised in a future release of gRPC. (<a class="reference external" href="https://github.com/jcrist/skein/pull/107">PR #107</a>)</li>
+<li>Upgrade gRPC version to 1.16 (<a class="reference external" href="https://github.com/jcrist/skein/pull/107">PR #107</a>)</li>
+<li>Silence deprecation warnings in Python 3.7 (<a class="reference external" href="https://github.com/jcrist/skein/pull/108">PR #108</a>)</li>
+</ul>
 </div>
 <div class="section" id="version-0-3-1-october-29-2018">
 <h2>Version 0.3.1 (October 29, 2018)<a class="headerlink" href="#version-0-3-1-october-29-2018" title="Permalink to this headline">¶</a></h2>
@@ -162,6 +176,7 @@ containers via environment variables (<a class="reference external" href="https:
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Changelog</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#upcoming-release">Upcoming Release</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version-0-4-0-december-5-2018">Version 0.4.0 (December 5, 2018)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-3-1-october-29-2018">Version 0.3.1 (October 29, 2018)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-3-0-october-26-2018">Version 0.3.0 (October 26, 2018)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-2-0-october-11-2018">Version 0.2.0 (October 11, 2018)</a></li>
