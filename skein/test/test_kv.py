@@ -6,11 +6,12 @@ import sys
 import threading
 import time
 import weakref
-from collections import MutableMapping, OrderedDict
+from collections import OrderedDict
 
 import pytest
 
 from skein import kv
+from skein.compatibility import MutableMapping
 from skein.exceptions import ConnectionError
 from skein.test.conftest import run_application
 

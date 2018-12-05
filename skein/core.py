@@ -7,13 +7,12 @@ import signal
 import socket
 import struct
 import subprocess
-from collections import Mapping
 from contextlib import closing
 
 import grpc
 
 from . import proto
-from .compatibility import PY2, makedirs, isidentifier
+from .compatibility import PY2, makedirs, isidentifier, Mapping
 from .exceptions import (context, FileNotFoundError, ConnectionError,
                          TimeoutError, ApplicationNotRunningError,
                          ApplicationError, DaemonNotRunningError, DaemonError)

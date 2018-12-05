@@ -13,6 +13,7 @@ if PY2:
     from math import ceil as _ceil
     from urlparse import urlparse, urlsplit  # noqa
     from Queue import Queue  # noqa
+    from collections import Mapping, MutableMapping  # noqa
     unicode = unicode  # noqa
     string = basestring  # noqa
     integer = (int, long)  # noqa
@@ -53,6 +54,7 @@ else:
     from urllib.parse import urlparse, urlsplit  # noqa
     from os import makedirs  # noqa
     from queue import Queue  # noqa
+    from collections.abc import Mapping, MutableMapping  # noqa
     unicode = str
     string = str
     integer = int
