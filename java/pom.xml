@@ -94,10 +94,6 @@
 
               <relocations>
                 <relocation>
-                  <pattern>javax.*</pattern>
-                  <shadedPattern>com.anaconda.skein.shaded.javax</shadedPattern>
-                </relocation>
-                <relocation>
                   <pattern>com.google</pattern>
                   <shadedPattern>com.anaconda.skein.shaded.com.google</shadedPattern>
                 </relocation>
