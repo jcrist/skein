@@ -94,8 +94,12 @@
 
               <relocations>
                 <relocation>
-                  <pattern>javax.*</pattern>
-                  <shadedPattern>com.anaconda.skein.shaded.javax</shadedPattern>
+                  <pattern>javax.annotation</pattern>
+                  <shadedPattern>com.anaconda.skein.shaded.javax.annotation</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>javax.servlet</pattern>
+                  <shadedPattern>com.anaconda.skein.shaded.javax.servlet</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>com.google</pattern>
