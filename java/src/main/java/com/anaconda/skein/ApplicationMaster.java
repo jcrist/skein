@@ -1244,7 +1244,7 @@ public class ApplicationMaster {
               break;
             case KEYS:
               for (String key : selection.keySet()) {
-                builder.addResultBuilder().setKey(key);
+                builder.addResult(Msg.KeyValue.newBuilder().setKey(key));
               }
               break;
             case NONE:
@@ -1304,7 +1304,7 @@ public class ApplicationMaster {
               break;
             case KEYS:
               for (String key : selection.keySet()) {
-                builder.addResultBuilder().setKey(key);
+                builder.addResult(Msg.KeyValue.newBuilder().setKey(key));
               }
               break;
             case NONE:
@@ -1333,7 +1333,7 @@ public class ApplicationMaster {
                               iEnd == null || iEnd.compareTo(lastKey) >= 0);
 
               for (String key : iSelection.keySet()) {
-                wrBuilder.addEventBuilder().setKey(key);
+                wrBuilder.addEvent(Msg.KeyValue.newBuilder().setKey(key));
               }
               item.getValue().sendMsg(watchId, wrBuilder.build());
             }
@@ -1601,16 +1601,16 @@ public class ApplicationMaster {
         for (Msg.OpRequest op : ops) {
           switch (op.getRequestCase()) {
             case PUT_KEY:
-              builder.addResultBuilder()
-                     .setPutKey(evalPutKey(op.getPutKey()));
+              builder.addResult(Msg.OpResponse.newBuilder()
+                     .setPutKey(evalPutKey(op.getPutKey())));
               break;
             case GET_RANGE:
-              builder.addResultBuilder()
-                     .setGetRange(evalGetRange(op.getGetRange()));
+              builder.addResult(Msg.OpResponse.newBuilder()
+                     .setGetRange(evalGetRange(op.getGetRange())));
               break;
             case DELETE_RANGE:
-              builder.addResultBuilder()
-                     .setDeleteRange(evalDeleteRange(op.getDeleteRange()));
+              builder.addResult(Msg.OpResponse.newBuilder()
+                     .setDeleteRange(evalDeleteRange(op.getDeleteRange())));
               break;
             default:
               break;
