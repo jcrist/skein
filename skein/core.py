@@ -411,14 +411,7 @@ class Client(_ClientBase):
         app_id : str
             The id of the submitted application.
         """
-        if isinstance(spec, str):
-            spec = ApplicationSpec.from_file(spec)
-        elif isinstance(spec, dict):
-            spec = ApplicationSpec.from_dict(spec)
-        elif not isinstance(spec, ApplicationSpec):
-            raise context.TypeError("spec must be either an ApplicationSpec, "
-                                    "path, or dict, got "
-                                    "%s" % type(spec).__name__)
+        spec = ApplicationSpec._from_any(spec)
         resp = self._call('submit', spec.to_protobuf())
         return resp.id
 
@@ -439,6 +432,7 @@ class Client(_ClientBase):
         -------
         app_client : ApplicationClient
         """
+        spec = ApplicationSpec._from_any(spec)
         app_id = self.submit(spec)
         try:
             return self.connect(app_id, security=spec.master.security)

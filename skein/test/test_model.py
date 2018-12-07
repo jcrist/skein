@@ -475,6 +475,20 @@ def test_to_file_from_file(tmpdir):
         assert not os.path.exists(path)
 
 
+def test_application_spec_from_any(tmpdir):
+    spec = ApplicationSpec.from_yaml(app_spec)
+    spec_path = os.path.join(str(tmpdir), 'test.yaml')
+    spec.to_file(spec_path)
+    spec_dict = spec.to_dict()
+
+    for obj in [spec, spec_path, spec_dict]:
+        spec2 = ApplicationSpec._from_any(obj)
+        assert spec == spec2
+
+    with pytest.raises(TypeError):
+        ApplicationSpec._from_any(None)
+
+
 def test_enums():
     assert type(ApplicationState.RUNNING) is ApplicationState
     assert ApplicationState.RUNNING is ApplicationState('RUNNING')

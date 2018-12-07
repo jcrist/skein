@@ -1119,6 +1119,19 @@ class ApplicationSpec(Specification):
         check_no_cycles(dependencies)
 
     @classmethod
+    def _from_any(cls, spec):
+        """Generic creation method for all types accepted as ``spec``"""
+        if isinstance(spec, str):
+            spec = cls.from_file(spec)
+        elif isinstance(spec, dict):
+            spec = cls.from_dict(spec)
+        elif not isinstance(spec, cls):
+            raise context.TypeError("spec must be either an ApplicationSpec, "
+                                    "path, or dict, got "
+                                    "%s" % type(spec).__name__)
+        return spec
+
+    @classmethod
     @implements(Specification.from_dict)
     def from_dict(cls, obj, **kwargs):
         _origin = _pop_origin(kwargs)
