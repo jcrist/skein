@@ -94,8 +94,16 @@
 
               <relocations>
                 <relocation>
+                  <pattern>javax.*</pattern>
+                  <shadedPattern>com.anaconda.skein.shaded.javax</shadedPattern>
+                </relocation>
+                <relocation>
                   <pattern>com.google</pattern>
                   <shadedPattern>com.anaconda.skein.shaded.com.google</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.checkerframework</pattern>
+                  <shadedPattern>com.anaconda.skein.shaded.org.checkerframework</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>io.netty</pattern>
@@ -112,6 +120,14 @@
                 <relocation>
                   <pattern>io.grpc</pattern>
                   <shadedPattern>com.anaconda.skein.shaded.io.grpc</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>io.opencensus</pattern>
+                  <shadedPattern>com.anaconda.skein.shaded.io.opencensus</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.codehaus</pattern>
+                  <shadedPattern>com.anaconda.skein.shaded.org.codehaus</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>META-INF/native/libnetty</pattern>
