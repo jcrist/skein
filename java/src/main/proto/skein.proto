@@ -2,6 +2,7 @@ syntax = "proto3";
 
 option java_package = "com.anaconda.skein";
 option java_outer_classname = "Msg";
+option optimize_for = LITE_RUNTIME;
 
 
 package skein;
