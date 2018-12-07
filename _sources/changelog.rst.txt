@@ -4,6 +4,14 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.4.1 (December 7, 2018)
+--------------------------------
+
+- Reduce size of Skein's JAR by selectively culling unnecessary resources (:pr:`109`)
+- Use Protobuf Lite to further reduce JAR size (:pr:`111`)
+- Normalize application specification consistently between ``Client.submit``
+  and ``Client.submit_and_connect`` (:pr:`114`, :issue:`110`).
+
 Version 0.4.0 (December 5, 2018)
 --------------------------------
 
