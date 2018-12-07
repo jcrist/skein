@@ -47,11 +47,51 @@
             </goals>
             <configuration>
               <minimizeJar>true</minimizeJar>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>com.anaconda.skein.Daemon</mainClass>
-                </transformer>
-              </transformers>
+
+              <artifactSet>
+                <excludes>
+                  <exclude>org.webjars:popper.js</exclude>
+                </excludes>
+              </artifactSet>
+
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/maven/**</exclude>
+                    <exclude>google/**</exclude>
+                    <exclude>skein.proto</exclude>
+                  </excludes>
+                </filter>
+                <filter>
+                  <artifact>org.webjars.bower:open-iconic</artifact>
+                  <includes>
+                    <include>META-INF/resources/webjars/open-iconic/1.1.1/font/fonts/*</include>
+                    <include>META-INF/resources/webjars/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css</include>
+                  </includes>
+                </filter>
+                <filter>
+                  <artifact>org.webjars:jquery</artifact>
+                  <includes>
+                    <include>META-INF/resources/webjars/jquery/3.0.0/jquery.min.js</include>
+                  </includes>
+                </filter>
+                <filter>
+                  <artifact>org.webjars:bootstrap</artifact>
+                  <includes>
+                    <include>META-INF/resources/webjars/bootstrap/4.1.1/css/bootstrap.min.css</include>
+                    <include>META-INF/resources/webjars/bootstrap/4.1.1/js/bootstrap.bundle.min.js</include>
+                  </includes>
+                </filter>
+                <filter>
+                  <artifact>io.netty:netty-tcnative-boringssl-static</artifact>
+                  <excludes>
+                    <exclude>META-INF/native/*.dll</exclude>
+                    <exclude>META-INF/native/*.jnilib</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+
               <relocations>
                 <relocation>
                   <pattern>com.google</pattern>
@@ -225,6 +265,7 @@
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <version>1.2.17</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
