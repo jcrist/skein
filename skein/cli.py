@@ -120,6 +120,13 @@ def application_client_from_app_id(app_id):
 
 daemon = node(entry_subs, 'daemon', 'Manage the skein daemon')
 
+keytab = arg('--keytab', default=None, metavar='PATH',
+             help=("Path to a keytab file to use when starting the daemon. "
+                   "If not provided, the daemon will login using the ticket "
+                   "cache instead."))
+principal = arg('--principal', default=None,
+                help=("The principal to use when starting the daemon with a "
+                      "keytab."))
 log = arg("--log", default=False,
           help="If provided, the daemon will write logs here.")
 log_level = arg("--log-level", default=None,
@@ -128,10 +135,13 @@ log_level = arg("--log-level", default=None,
 
 @subcommand(daemon.subs,
             'start', 'Start the skein daemon',
+            keytab,
+            principal,
             log,
             log_level)
-def daemon_start(log=False, log_level=None):
-    print(Client.start_global_daemon(log=log, log_level=log_level))
+def daemon_start(keytab=None, principal=None, log=False, log_level=None):
+    print(Client.start_global_daemon(keytab=keytab, principal=principal,
+                                     log=log, log_level=log_level))
 
 
 @subcommand(daemon.subs,
@@ -152,11 +162,14 @@ def daemon_stop():
 
 @subcommand(daemon.subs,
             'restart', 'Restart the skein daemon',
+            keytab,
+            principal,
             log,
             log_level)
-def daemon_restart(log=False, log_level=None):
+def daemon_restart(keytab=None, principal=None, log=False, log_level=None):
     daemon_stop()
-    daemon_start(log=log, log_level=log_level)
+    daemon_start(keytab=keytab, principal=principal,
+                 log=log, log_level=log_level)
 
 
 #####################
