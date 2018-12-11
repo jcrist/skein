@@ -10,6 +10,7 @@ Client
 .. autoclass:: Client
     :members:
     :inherited-members:
+    :exclude-members: start_global_daemon, stop_global_daemon
 
 
 Application Client

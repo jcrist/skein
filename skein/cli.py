@@ -114,11 +114,19 @@ def application_client_from_app_id(app_id):
     return get_driver().connect(app_id)
 
 
+# Nodes, in order they should be in docs
+application = node(entry_subs, 'application', 'Manage applications')
+container = node(entry_subs, 'container', 'Manage application containers')
+kv = node(entry_subs, 'kv', 'Manage the key-value store')
+driver = node(entry_subs, 'driver', 'Manage the global driver')
+config = node(entry_subs, 'config', 'Manage configuration')
+daemon = node(entry_subs, 'daemon', 'DEPRECATED')
+
 ###################
 # DAEMON COMMANDS #
 ###################
 
-driver = node(entry_subs, 'driver', 'Manage the skein driver')
+# TODO: daemon commands are deprecated, cleanup after next release cycle
 
 keytab = arg('--keytab', default=None, metavar='PATH',
              help=("Path to a keytab file to use when starting the driver. "
@@ -133,19 +141,32 @@ log_level = arg("--log-level", default=None,
                 help="The driver log level, default is INFO")
 
 
-@subcommand(driver.subs,
-            'start', 'Start the skein driver',
-            keytab,
-            principal,
-            log,
-            log_level)
+def deprecate_daemon(name, func):
+    def inner(*args, **kwargs):
+        context.warn("`skein daemon %s` is deprecated, use `skein driver %s` instead"
+                     % (name, name))
+        return func(*args, **kwargs)
+    return inner
+
+
+def driver_and_daemon(name, help, *args):
+    def caller(func):
+        subcommand(daemon.subs,
+                   name,
+                   'DEPRECATED, use ``skein driver %s`` instead' % name,
+                   *args)(deprecate_daemon(name, func))
+        return subcommand(driver.subs, name, help, *args)(func)
+    return caller
+
+
+@driver_and_daemon('start', 'Start the skein driver',
+                   keytab, principal, log, log_level)
 def driver_start(keytab=None, principal=None, log=False, log_level=None):
     print(Client.start_global_driver(keytab=keytab, principal=principal,
                                      log=log, log_level=log_level))
 
 
-@subcommand(driver.subs,
-            'address', 'The address of the running driver')
+@driver_and_daemon('address', 'The address of the running driver')
 def driver_address():
     try:
         client = Client.from_global_driver()
@@ -154,18 +175,13 @@ def driver_address():
         fail("No skein driver is running")
 
 
-@subcommand(driver.subs,
-            'stop', 'Stop the skein driver')
+@driver_and_daemon('stop', 'Stop the skein driver')
 def driver_stop():
     Client.stop_global_driver()
 
 
-@subcommand(driver.subs,
-            'restart', 'Restart the skein driver',
-            keytab,
-            principal,
-            log,
-            log_level)
+@driver_and_daemon('restart', 'Restart the skein driver',
+                   keytab, principal, log, log_level)
 def driver_restart(keytab=None, principal=None, log=False, log_level=None):
     driver_stop()
     driver_start(keytab=keytab, principal=principal,
@@ -175,9 +191,6 @@ def driver_restart(keytab=None, principal=None, log=False, log_level=None):
 #####################
 # KEYSTORE COMMANDS #
 #####################
-
-kv = node(entry_subs, 'kv', 'Manage the skein key-value store')
-
 
 @subcommand(kv.subs,
             'get', 'Get a value from the key-value store',
@@ -236,9 +249,6 @@ def kv_ls(app_id):
 ########################
 # APPLICATION COMMANDS #
 ########################
-
-application = node(entry_subs, 'application', 'Manage applications')
-
 
 def _print_application_status(apps):
     header = ['application_id', 'name', 'state', 'status', 'containers',
@@ -326,9 +336,6 @@ def application_specification(app_id):
 # CONTAINER COMMANDS #
 ######################
 
-container = node(entry_subs, 'container', 'Manage containers')
-
-
 def _print_container_status(containers):
     header = ['service', 'id', 'state', 'runtime']
     data = [(c.service_name, c.id, c.state, humanize_timedelta(c.runtime))
@@ -376,9 +383,6 @@ def container_scale(app_id, service, number):
 ##################
 # CONFIG COMMAND #
 ##################
-
-config = node(entry_subs, 'config', 'Manage skein configuration')
-
 
 @subcommand(config.subs,
             'gencerts',
