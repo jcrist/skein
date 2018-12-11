@@ -138,7 +138,8 @@ def _write_daemon(address, pid):
         json.dump({'address': address, 'pid': pid}, fil)
 
 
-def _start_daemon(security=None, set_global=False, log=None, log_level=None):
+def _start_daemon(security=None, set_global=False, keytab=None, principal=None,
+                  log=None, log_level=None):
     if security is None:
         security = Security.from_default()
 
@@ -151,6 +152,15 @@ def _start_daemon(security=None, set_global=False, log=None, log_level=None):
 
     if not os.path.exists(_SKEIN_JAR):
         raise context.FileNotFoundError("Failed to find the skein jar file")
+
+    if keytab is not None:
+        keytab = os.path.abspath(keytab)
+        if not os.path.exists(keytab):
+            raise context.FileNotFoundError("keytab doesn't exist at %r" % keytab)
+        if principal is None:
+            raise context.ValueError("Principal must be specified for keytab login")
+    elif principal is not None:
+        raise context.ValueError("Keytab must be specified for keytab login")
 
     # Compose the command to start the daemon server
     java_bin = ('%s/bin/java' % os.environ['JAVA_HOME']
@@ -166,7 +176,10 @@ def _start_daemon(security=None, set_global=False, log=None, log_level=None):
         if os.path.exists(native_path):
             command.append('-Djava.library.path=%s' % native_path)
 
-    command.extend(['com.anaconda.skein.Daemon', _SKEIN_JAR])
+    command.extend(['com.anaconda.skein.Daemon', '--jar', _SKEIN_JAR])
+
+    if keytab is not None:
+        command.extend(['--keytab', keytab, '--principal', principal])
 
     if set_global:
         command.append("--daemon")
@@ -270,6 +283,11 @@ class Client(_ClientBase):
     security : Security, optional
         The security configuration to use to communicate with the daemon.
         Defaults to the global configuration.
+    keytab : str, optional
+        Path to a keytab file to use when starting the daemon. If not provided,
+        the daemon will login using the ticket cache instead.
+    principal : str, optional
+        The principal to use when starting the daemon with a keytab.
     log : str, bool, or None, optional
         When starting a new daemon, sets the logging behavior for the daemon.
         Values may be a path for logs to be written to, ``None`` to log to
@@ -289,12 +307,16 @@ class Client(_ClientBase):
     _server_name = 'daemon'
     _server_error = DaemonError
 
-    def __init__(self, address=None, security=None, log=None, log_level=None):
+    def __init__(self, address=None, security=None, keytab=None,
+                 principal=None, log=None, log_level=None):
         if security is None:
             security = Security.from_default()
 
         if address is None:
-            address, proc = _start_daemon(security=security, log=log,
+            address, proc = _start_daemon(security=security,
+                                          keytab=keytab,
+                                          principal=principal,
+                                          log=log,
                                           log_level=log_level)
         else:
             proc = None
@@ -326,13 +348,18 @@ class Client(_ClientBase):
         return Client(address=address, security=security)
 
     @staticmethod
-    def start_global_daemon(log=None, log_level=None):
+    def start_global_daemon(keytab=None, principal=None, log=None, log_level=None):
         """Start the global daemon.
 
         No-op if the global daemon is already running.
 
         Parameters
         ----------
+        keytab : str, optional
+            Path to a keytab file to use when starting the daemon. If not
+            provided, the daemon will login using the ticket cache instead.
+        principal : str, optional
+            The principal to use when starting the daemon with a keytab.
         log : str, bool, or None, optional
             Sets the logging behavior for the daemon. Values may be a path for
             logs to be written to, ``None`` to log to stdout/stderr, or
@@ -353,7 +380,10 @@ class Client(_ClientBase):
             pass
         else:
             return client.address
-        address, _ = _start_daemon(set_global=True, log=log,
+        address, _ = _start_daemon(set_global=True,
+                                   keytab=keytab,
+                                   principal=principal,
+                                   log=log,
                                    log_level=log_level)
         return address
 

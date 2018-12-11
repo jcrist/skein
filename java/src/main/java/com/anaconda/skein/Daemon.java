@@ -77,6 +77,10 @@ public class Daemon {
   private static final int MIN_GRPC_EXECUTOR_THREADS = 2;
   private static final int MAX_GRPC_EXECUTOR_THREADS = 10;
 
+  // Application Master container limits
+  private static final int AM_MEMORY = 512;
+  private static final int AM_VCORES = 1;
+
   // Owner rwx (700)
   private static final FsPermission SKEIN_DIR_PERM =
       FsPermission.createImmutable((short)448);
@@ -94,18 +98,16 @@ public class Daemon {
 
   private String classpath;
 
-  private String jarPath;
+  // Initialization arguments
+  // -- environment variables
+  private int callbackPort;
   private ByteString certBytes;
   private ByteString keyBytes;
-
+  // -- commandline flags
+  private String jarPath = null;
+  private String keytabPath = null;
+  private String principal = null;
   private boolean daemon = false;
-
-  private int amMemory = 512;
-  private int amVCores = 1;
-
-  private int callbackPort;
-
-  private String secret;
 
   private Server server;
 
@@ -169,7 +171,13 @@ public class Daemon {
     }
   }
 
+  private void usageError() {
+    LOG.error("Usage: COMMAND --jar PATH [--keytab PATH, --principal NAME] [--daemon]");
+    System.exit(1);
+  }
+
   private void init(String[] args) throws IOException {
+    // Parse environment variables
     certBytes = ByteString.copyFromUtf8(System.getenv("SKEIN_CERTIFICATE"));
     if (certBytes == null) {
       LOG.error("Couldn't find 'SKEIN_CERTIFICATE' envar");
@@ -188,23 +196,55 @@ public class Daemon {
     callbackPort = Integer.valueOf(callbackPortEnv);
 
     // Parse arguments
-    if (args.length < 1 || args.length > 2
-        || (args.length == 2 && !args[1].equals("--daemon"))) {
-      LOG.error("Usage: COMMAND jarPath [--daemon]");
-      System.exit(1);
+    int i = 0;
+    while (i < args.length) {
+      String value = (i + 1 < args.length) ? args[i + 1] : null;
+      switch (args[i]) {
+        case "--jar":
+          jarPath = value;
+          i += 2;
+          break;
+        case "--keytab":
+          keytabPath = value;
+          i += 2;
+          break;
+        case "--principal":
+          principal = value;
+          i += 2;
+          break;
+        case "--daemon":
+          daemon = true;
+          i += 1;
+          break;
+        default:
+          usageError();
+          break;
+      }
     }
-    jarPath = args[0];
-    daemon = args.length == 2;
+    if (jarPath == null || ((keytabPath == null) != (principal == null))) {
+      usageError();
+    }
 
-    // Ensure user has obtained a kerberos ticket, otherwise the daemon will
-    // lockup (missing kerberos tickets are logged, but no exception is raised
-    // in the caller, which is unfortunate). UserGroupInformation also caches
-    // and can't be reset, so the process must be killed and restarted.  We
-    // keep the daemon running (even though it can't do anything) so that
-    // client processes can get a nice error message, rather than having to
-    // look in the logs.
-    if (UserGroupInformation.isSecurityEnabled()
-        && !UserGroupInformation.getLoginUser().hasKerberosCredentials()) {
+    // Login using the appropriate method. We don't need to start a thread to
+    // do periodic logins, as we're only making use of normal Hadoop RPC apis,
+    // and these automatically handle relogin on failure. See
+    // https://stackoverflow.com/q/34616676/1667287
+    if (keytabPath != null) {
+      LOG.debug("Logging in using keytab: {}, principal: {}", keytabPath, principal);
+      UserGroupInformation.loginUserFromKeytab(principal, keytabPath);
+      ugi = UserGroupInformation.getLoginUser();
+    } else {
+      LOG.debug("Logging in using ticket cache");
+      ugi = UserGroupInformation.getLoginUser();
+    }
+    // If needed, ensure user has obtained a kerberos ticket, otherwise the
+    // daemon will lockup (missing kerberos tickets are logged, but no
+    // exception is raised in the caller, which is unfortunate).
+    // UserGroupInformation also caches and can't be reset, so the process must
+    // be killed and restarted.  We keep the daemon running (even though it
+    // can't do anything) so that client processes can get a nice error
+    // message, rather than having to look in the logs.
+    if (UserGroupInformation.isSecurityEnabled() && !ugi.hasKerberosCredentials()) {
       LOG.warn("Kerberos ticket not found, please kinit and restart");
       loggedIn = false;
     } else {
@@ -226,8 +266,6 @@ public class Daemon {
   }
 
   private void run() throws Exception {
-    // Initialize login
-    ugi = UserGroupInformation.getLoginUser();
     // Connect to hdfs as *this* user
     defaultFileSystem = getFs();
     // Start the yarn client as *this* user
@@ -374,7 +412,7 @@ public class Daemon {
     appContext.setApplicationType("skein");
     appContext.setAMContainerSpec(amContext);
     appContext.setApplicationName(spec.getName());
-    appContext.setResource(Resource.newInstance(amMemory, amVCores));
+    appContext.setResource(Resource.newInstance(AM_MEMORY, AM_VCORES));
     appContext.setPriority(Priority.newInstance(0));
     appContext.setQueue(spec.getQueue());
     appContext.setMaxAppAttempts(spec.getMaxAttempts());

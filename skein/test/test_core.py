@@ -10,7 +10,7 @@ import skein
 from skein.core import Properties
 from skein.exceptions import FileNotFoundError, FileExistsError
 from skein.test.conftest import (run_application, wait_for_containers,
-                                 wait_for_completion, get_logs)
+                                 wait_for_completion, get_logs, KEYTAB_PATH)
 
 
 def test_properties():
@@ -206,6 +206,30 @@ def test_client_set_log_level(security, kinit, tmpdir):
     with open(logpath) as fil:
         data = fil.read()
         assert 'DEBUG' in data
+
+
+def test_client_login_from_keytab(security, not_logged_in):
+    with skein.Client(principal='testuser', keytab=KEYTAB_PATH,
+                      security=security) as client:
+        # login worked
+        client.get_applications()
+
+    # Improper principal/keytab pair
+    with pytest.raises(skein.DaemonError):
+        skein.Client(principal='not_the_right_user', keytab=KEYTAB_PATH,
+                     security=security)
+
+    # Keytab file missing
+    with pytest.raises(FileNotFoundError):
+        skein.Client(principal='testuser', keytab='/not/a/real/path',
+                     security=security)
+
+    # Must specify both principal and keytab
+    with pytest.raises(ValueError):
+        skein.Client(principal='testuser', security=security)
+
+    with pytest.raises(ValueError):
+        skein.Client(keytab=KEYTAB_PATH, security=security)
 
 
 def test_application_client_from_current(monkeypatch, tmpdir, security):
