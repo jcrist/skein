@@ -86,13 +86,13 @@ information. This can be accomplished two different ways:
       log_config: path/to/my/log4j.properties
 
 
-Configuring Logging in the Client Daemon
+Configuring Logging in the Client Driver
 ----------------------------------------
 
-The :class:`skein.Client` uses a Java daemon process to communicate with
+The :class:`skein.Client` uses a Java driver process to communicate with
 services like YARN and HDFS. If you find issues in communicating with these
 services (submitting, querying, or killing applications), it may be useful to
-increase logging verbosity for the skein daemon process (``debug`` is a good
+increase logging verbosity for the skein driver process (``debug`` is a good
 option). There are a few ways to do this:
 
 - Using the ``log_level`` keyword when creating a :class:`skein.Client`.
@@ -100,24 +100,24 @@ option). There are a few ways to do this:
 - Setting the ``SKEIN_LOG_LEVEL`` environment variable (e.g.
   ``SKEIN_LOG_LEVEL=DEBUG``).
 
-- Using the ``--log-level`` flag when starting a persistent daemon using the
-  `CLI <cli.html>`__ (e.g.  ``skein daemon start --log-level debug``).
+- Using the ``--log-level`` flag when starting a persistent driver using the
+  `CLI <cli.html>`__ (e.g.  ``skein driver start --log-level debug``).
 
 Additionally, you may want to log to a file instead of to the terminal. There
 are also a few ways to do this:
 
 - Using the ``log`` keyword when creating a :class:`skein.Client`.
 
-- Using the ``--log`` flag when starting a persistent daemon using the `CLI
+- Using the ``--log`` flag when starting a persistent driver using the `CLI
   <cli.html>`__.
 
 **Example**
 
 .. code-block:: python
 
-    # Create a client, logging to `daemon.log` with "debug" log level
+    # Create a client, logging to `driver.log` with "debug" log level
     import skein
-    client = skein.Client(log_level='debug', log='daemon.log')
+    client = skein.Client(log_level='debug', log='driver.log')
 
 
 Start a Remote IPython Kernel on the Container

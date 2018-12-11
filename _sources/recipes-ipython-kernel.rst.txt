@@ -35,10 +35,10 @@ Kinit (optional)
 See :ref:`quickstart-kinit`.
 
 
-Start the Skein Daemon (optional)
+Start the Skein Driver (optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-See :ref:`quickstart-skein-daemon`.
+See :ref:`quickstart-skein-driver`.
 
 
 Package the Python Environment
