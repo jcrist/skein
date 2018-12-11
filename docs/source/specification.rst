@@ -160,7 +160,7 @@ Supported subfields are:
   is used. See the `Log4j documentation <https://logging.apache.org/log4j/1.2/>`__
   for more information.
 - ``security``: security configuration for the application master. By default
-  the application master will use the same security credentials as the daemon
+  the application master will use the same security credentials as the driver
   that launched it. To override, provide a mapping of specifying the locations
   of ``cert_file`` and ``key_file``. See the :class:`Security` docstring for
   more information.

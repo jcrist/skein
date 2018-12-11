@@ -40,11 +40,11 @@ def run_command(command, error=False):
 
 
 @contextmanager
-def stop_global_daemon():
+def stop_global_driver():
     try:
         yield
     finally:
-        run_command('daemon stop')
+        run_command('driver stop')
 
 
 @pytest.fixture(scope='module')
@@ -52,21 +52,21 @@ def global_client(kinit, tmpdir_factory):
     with set_skein_config(tmpdir_factory.mktemp('config')):
         run_command('config gencerts')
         try:
-            run_command('daemon start')
-            yield skein.Client.from_global_daemon()
+            run_command('driver start')
+            yield skein.Client.from_global_driver()
         finally:
-            run_command('daemon stop')
+            run_command('driver stop')
 
 
 @pytest.mark.parametrize('command',
                          ['',
                           'config',
                           'config gencerts',
-                          'daemon',
-                          'daemon start',
-                          'daemon stop',
-                          'daemon restart',
-                          'daemon address',
+                          'driver',
+                          'driver start',
+                          'driver stop',
+                          'driver restart',
+                          'driver address',
                           'application',
                           'application submit',
                           'application status',
@@ -92,7 +92,7 @@ def test_cli_help(command, capsys):
 
 
 @pytest.mark.parametrize('group',
-                         ['', 'daemon', 'application', 'container', 'kv'])
+                         ['', 'driver', 'application', 'container', 'kv'])
 def test_cli_call_command_group(group, capsys):
     run_command(group, error=True)
 
@@ -148,53 +148,53 @@ def test_cli_config_gencerts(capsys, skein_config):
     assert key != key2
 
 
-def test_works_if_cli_daemon_not_running(capfd, skein_config):
+def test_works_if_cli_driver_not_running(capfd, skein_config):
     run_command('application ls')
     out, err = capfd.readouterr()
     assert 'APPLICATION_ID' in out
-    assert 'INFO' in err  # daemon logs go to stderr
+    assert 'INFO' in err  # driver logs go to stderr
 
 
-def test_cli_daemon(capsys, skein_config):
-    with stop_global_daemon():
-        # Errors if no daemon currently running
-        run_command('daemon address', error=True)
+def test_cli_driver(capsys, skein_config):
+    with stop_global_driver():
+        # Errors if no driver currently running
+        run_command('driver address', error=True)
         out, err = capsys.readouterr()
         assert not out
-        assert 'No skein daemon is running' in err
+        assert 'No skein driver is running' in err
 
-        # Start daemon without generating certificates
-        run_command('daemon start')
+        # Start driver without generating certificates
+        run_command('driver start')
         out, err = capsys.readouterr()
         assert "Skein global security credentials not found" in err
         assert 'localhost' in out
 
         # Daemon start is idempotent
-        run_command('daemon start')
+        run_command('driver start')
         out2, err = capsys.readouterr()
         assert not err
         assert out2 == out
 
         # Get address
-        run_command('daemon address')
+        run_command('driver address')
         out2, err = capsys.readouterr()
         assert not err
         assert out2 == out
 
-        # Restart daemon
-        run_command('daemon restart')
+        # Restart driver
+        run_command('driver restart')
         out2, err = capsys.readouterr()
         assert not err
         assert out2 != out
 
-        # Stop daemon
-        run_command('daemon stop')
+        # Stop driver
+        run_command('driver stop')
         out, err = capsys.readouterr()
         assert not out
         assert not err
 
         # Stop is idempotent
-        run_command('daemon stop')
+        run_command('driver stop')
         out, err = capsys.readouterr()
         assert not out
         assert not err

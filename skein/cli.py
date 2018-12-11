@@ -8,7 +8,7 @@ import traceback
 from . import __version__
 from .core import Client, ApplicationClient, properties
 from .compatibility import read_stdin_bytes, write_stdout_bytes
-from .exceptions import context, SkeinError, DaemonNotRunningError
+from .exceptions import context, SkeinError, DriverNotRunningError
 from .model import ApplicationSpec, ContainerState, ApplicationState, Security
 from .utils import format_table, humanize_timedelta
 
@@ -101,74 +101,74 @@ container_id = arg('--id', required=True,
                    help='The container id', metavar='CONTAINER_ID')
 
 
-def get_daemon():
+def get_driver():
     try:
-        return Client.from_global_daemon()
-    except DaemonNotRunningError:
+        return Client.from_global_driver()
+    except DriverNotRunningError:
         return Client()
 
 
 def application_client_from_app_id(app_id):
     if app_id == 'current':
         return ApplicationClient.from_current()
-    return get_daemon().connect(app_id)
+    return get_driver().connect(app_id)
 
 
 ###################
 # DAEMON COMMANDS #
 ###################
 
-daemon = node(entry_subs, 'daemon', 'Manage the skein daemon')
+driver = node(entry_subs, 'driver', 'Manage the skein driver')
 
 keytab = arg('--keytab', default=None, metavar='PATH',
-             help=("Path to a keytab file to use when starting the daemon. "
-                   "If not provided, the daemon will login using the ticket "
+             help=("Path to a keytab file to use when starting the driver. "
+                   "If not provided, the driver will login using the ticket "
                    "cache instead."))
 principal = arg('--principal', default=None,
-                help=("The principal to use when starting the daemon with a "
+                help=("The principal to use when starting the driver with a "
                       "keytab."))
 log = arg("--log", default=False,
-          help="If provided, the daemon will write logs here.")
+          help="If provided, the driver will write logs here.")
 log_level = arg("--log-level", default=None,
-                help="The daemon log level, default is INFO")
+                help="The driver log level, default is INFO")
 
 
-@subcommand(daemon.subs,
-            'start', 'Start the skein daemon',
+@subcommand(driver.subs,
+            'start', 'Start the skein driver',
             keytab,
             principal,
             log,
             log_level)
-def daemon_start(keytab=None, principal=None, log=False, log_level=None):
-    print(Client.start_global_daemon(keytab=keytab, principal=principal,
+def driver_start(keytab=None, principal=None, log=False, log_level=None):
+    print(Client.start_global_driver(keytab=keytab, principal=principal,
                                      log=log, log_level=log_level))
 
 
-@subcommand(daemon.subs,
-            'address', 'The address of the running daemon')
-def daemon_address():
+@subcommand(driver.subs,
+            'address', 'The address of the running driver')
+def driver_address():
     try:
-        client = Client.from_global_daemon()
+        client = Client.from_global_driver()
         print(client.address)
-    except DaemonNotRunningError:
-        fail("No skein daemon is running")
+    except DriverNotRunningError:
+        fail("No skein driver is running")
 
 
-@subcommand(daemon.subs,
-            'stop', 'Stop the skein daemon')
-def daemon_stop():
-    Client.stop_global_daemon()
+@subcommand(driver.subs,
+            'stop', 'Stop the skein driver')
+def driver_stop():
+    Client.stop_global_driver()
 
 
-@subcommand(daemon.subs,
-            'restart', 'Restart the skein daemon',
+@subcommand(driver.subs,
+            'restart', 'Restart the skein driver',
             keytab,
             principal,
             log,
             log_level)
-def daemon_restart(keytab=None, principal=None, log=False, log_level=None):
-    daemon_stop()
-    daemon_start(keytab=keytab, principal=principal,
+def driver_restart(keytab=None, principal=None, log=False, log_level=None):
+    driver_stop()
+    driver_start(keytab=keytab, principal=principal,
                  log=log, log_level=log_level)
 
 
@@ -264,7 +264,7 @@ def application_submit(spec):
         # Prettify expected errors, let rest bubble up
         fail('In file %r, %s' % (spec, exc))
 
-    print(get_daemon().submit(spec))
+    print(get_driver().submit(spec))
 
 
 @subcommand(application.subs,
@@ -278,7 +278,7 @@ def application_submit(spec):
 def application_ls(all=False, state=None):
     if all and state is None:
         state = tuple(ApplicationState)
-    apps = get_daemon().get_applications(states=state)
+    apps = get_driver().get_applications(states=state)
     _print_application_status(apps)
 
 
@@ -286,7 +286,7 @@ def application_ls(all=False, state=None):
             'status', 'Status of a Skein application',
             app_id)
 def application_status(app_id):
-    apps = get_daemon().application_report(app_id)
+    apps = get_driver().application_report(app_id)
     _print_application_status([apps])
 
 
@@ -298,7 +298,7 @@ def application_status(app_id):
                       'current user to have permissions to proxy as ``user``. '
                       'Default is the current user.')))
 def application_kill(app_id, user):
-    get_daemon().kill_application(app_id, user=user)
+    get_driver().kill_application(app_id, user=user)
 
 
 @subcommand(application.subs,

@@ -141,7 +141,7 @@ def test_client(security, kinit, tmpdir):
     with pytest.raises(skein.ConnectionError):
         client2.get_applications()
 
-    # Connection error on connecting to missing daemon
+    # Connection error on connecting to missing driver
     with pytest.raises(skein.ConnectionError):
         skein.Client(address=client.address, security=security)
 
@@ -176,7 +176,7 @@ def test_client_errors_nicely_if_not_logged_in(security, not_logged_in):
                            ('connect', (appid,)),
                            ('kill_application', (appid,)),
                            ('submit', (spec,))]:
-            with pytest.raises(skein.DaemonError) as exc:
+            with pytest.raises(skein.DriverError) as exc:
                 getattr(client, func)(*args)
             assert 'kinit' in str(exc.value)
 
@@ -215,7 +215,7 @@ def test_client_login_from_keytab(security, not_logged_in):
         client.get_applications()
 
     # Improper principal/keytab pair
-    with pytest.raises(skein.DaemonError):
+    with pytest.raises(skein.DriverError):
         skein.Client(principal='not_the_right_user', keytab=KEYTAB_PATH,
                      security=security)
 
@@ -606,7 +606,7 @@ def test_proxy_user_no_permissions(client):
         }
     )
     # No permission to submit as user
-    with pytest.raises(skein.DaemonError) as exc:
+    with pytest.raises(skein.DriverError) as exc:
         client.submit(spec)
 
     exc_msg = str(exc.value)

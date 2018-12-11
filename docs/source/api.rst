@@ -189,13 +189,13 @@ Exceptions
 .. autoexception:: ConnectionError
     :show-inheritance:
 
-.. autoexception:: DaemonNotRunningError
+.. autoexception:: DriverNotRunningError
     :show-inheritance:
 
 .. autoexception:: ApplicationNotRunningError
     :show-inheritance:
 
-.. autoexception:: DaemonError
+.. autoexception:: DriverError
     :show-inheritance:
 
 .. autoexception:: ApplicationError

@@ -11,9 +11,9 @@ __all__ = ('FileExistsError',    # py2 compat
            'SkeinError',
            'ConnectionError',
            'TimeoutError',
-           'DaemonNotRunningError',
+           'DriverNotRunningError',
            'ApplicationNotRunningError',
-           'DaemonError',
+           'DriverError',
            'ApplicationError')
 
 
@@ -42,23 +42,23 @@ class SkeinError(Exception):
 
 
 class ConnectionError(SkeinError, _ConnectionError):
-    """Failed to connect to the daemon or application master"""
+    """Failed to connect to the driver or application master"""
 
 
 class TimeoutError(SkeinError, _TimeoutError):
-    """Request to daemon or application master timed out"""
+    """Request to driver or application master timed out"""
 
 
-class DaemonNotRunningError(ConnectionError):
-    """The daemon process is not currently running"""
+class DriverNotRunningError(ConnectionError):
+    """The driver process is not currently running"""
 
 
 class ApplicationNotRunningError(ConnectionError):
     """The application master is not currently running"""
 
 
-class DaemonError(SkeinError):
-    """Internal exceptions from the daemon"""
+class DriverError(SkeinError):
+    """Internal exceptions from the driver"""
 
 
 class ApplicationError(SkeinError):

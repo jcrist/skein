@@ -65,9 +65,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
-public class Daemon {
+public class Driver {
 
-  private static final Logger LOG = LoggerFactory.getLogger(Daemon.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Driver.class);
 
   // One for the boss, one for the worker. Should be fine under normal loads.
   private static final int NUM_EVENT_LOOP_GROUP_THREADS = 2;
@@ -132,20 +132,20 @@ public class Daemon {
 
     server = NettyServerBuilder.forPort(0)
         .sslContext(sslContext)
-        .addService(new DaemonImpl())
+        .addService(new DriverImpl())
         .workerEventLoopGroup(eg)
         .bossEventLoopGroup(eg)
         .executor(executor)
         .build()
         .start();
 
-    LOG.info("Daemon started, listening on {}", server.getPort());
+    LOG.info("Driver started, listening on {}", server.getPort());
 
     Runtime.getRuntime().addShutdownHook(
         new Thread() {
           @Override
           public void run() {
-            Daemon.this.stopServer();
+            Driver.this.stopServer();
           }
         });
   }
@@ -153,7 +153,7 @@ public class Daemon {
   private void stopServer() {
     if (server != null) {
       server.shutdown();
-      LOG.info("Daemon shut down");
+      LOG.info("Driver shut down");
     }
   }
 
@@ -161,12 +161,12 @@ public class Daemon {
   public static void main(String[] args) {
     boolean result = false;
     try {
-      Daemon daemon = new Daemon();
-      daemon.init(args);
-      daemon.run();
+      Driver driver = new Driver();
+      driver.init(args);
+      driver.run();
       System.exit(0);
     } catch (Throwable exc) {
-      LOG.error("Error running Daemon", exc);
+      LOG.error("Error running Driver", exc);
       System.exit(1);
     }
   }
@@ -238,10 +238,10 @@ public class Daemon {
       ugi = UserGroupInformation.getLoginUser();
     }
     // If needed, ensure user has obtained a kerberos ticket, otherwise the
-    // daemon will lockup (missing kerberos tickets are logged, but no
+    // driver will lockup (missing kerberos tickets are logged, but no
     // exception is raised in the caller, which is unfortunate).
     // UserGroupInformation also caches and can't be reset, so the process must
-    // be killed and restarted.  We keep the daemon running (even though it
+    // be killed and restarted.  We keep the driver running (even though it
     // can't do anything) so that client processes can get a nice error
     // message, rather than having to look in the logs.
     if (UserGroupInformation.isSecurityEnabled() && !ugi.hasKerberosCredentials()) {
@@ -700,7 +700,7 @@ public class Daemon {
 
           // Remove callbacks for this appId
           LOG.debug("Removing callbacks for {}.", appId);
-          synchronized (Daemon.this) {
+          synchronized (Driver.this) {
             startedCallbacks.remove(appId);
           }
         }
@@ -709,7 +709,7 @@ public class Daemon {
     watcher.start();
   }
 
-  class DaemonImpl extends DaemonGrpc.DaemonImplBase {
+  class DriverImpl extends DriverGrpc.DriverImplBase {
 
     public boolean notLoggedIn(StreamObserver<?> resp) {
       if (!loggedIn) {
