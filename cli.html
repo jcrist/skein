@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>CLI Docs &#8212; Skein 0.4.1 documentation</title>
+    <title>CLI Docs &#8212; Skein 0.4.1+1.ge035f15 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -375,9 +375,22 @@
 <div class="section" id="skein-daemon-restart">
 <h3>skein daemon restart<a class="headerlink" href="#skein-daemon-restart" title="Permalink to this headline">¶</a></h3>
 <p>Restart the skein daemon</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein daemon restart [--log LOG] [--log-level LOG_LEVEL] [--help]</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein daemon restart [--keytab PATH] [--principal PRINCIPAL]</span>
+<span class="go">                            [--log LOG] [--log-level LOG_LEVEL] [--help]</span>
 </pre></div>
 </div>
+<dl class="option">
+<dt id="cmdoption-skein-daemon-restart-keytab">
+<code class="descname">--keytab</code><code class="descclassname"> &lt;path&gt;</code><a class="headerlink" href="#cmdoption-skein-daemon-restart-keytab" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to a keytab file to use when starting the daemon. If not provided, the daemon will login using the ticket cache instead.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-daemon-restart-principal">
+<code class="descname">--principal</code><code class="descclassname"> &lt;principal&gt;</code><a class="headerlink" href="#cmdoption-skein-daemon-restart-principal" title="Permalink to this definition">¶</a></dt>
+<dd><p>The principal to use when starting the daemon with a keytab.</p>
+</dd></dl>
+
 <dl class="option">
 <dt id="cmdoption-skein-daemon-restart-log">
 <code class="descname">--log</code><code class="descclassname"> &lt;log&gt;</code><a class="headerlink" href="#cmdoption-skein-daemon-restart-log" title="Permalink to this definition">¶</a></dt>
@@ -400,9 +413,22 @@
 <div class="section" id="skein-daemon-start">
 <h3>skein daemon start<a class="headerlink" href="#skein-daemon-start" title="Permalink to this headline">¶</a></h3>
 <p>Start the skein daemon</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein daemon start [--log LOG] [--log-level LOG_LEVEL] [--help]</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein daemon start [--keytab PATH] [--principal PRINCIPAL] [--log LOG]</span>
+<span class="go">                          [--log-level LOG_LEVEL] [--help]</span>
 </pre></div>
 </div>
+<dl class="option">
+<dt id="cmdoption-skein-daemon-start-keytab">
+<code class="descname">--keytab</code><code class="descclassname"> &lt;path&gt;</code><a class="headerlink" href="#cmdoption-skein-daemon-start-keytab" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to a keytab file to use when starting the daemon. If not provided, the daemon will login using the ticket cache instead.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-skein-daemon-start-principal">
+<code class="descname">--principal</code><code class="descclassname"> &lt;principal&gt;</code><a class="headerlink" href="#cmdoption-skein-daemon-start-principal" title="Permalink to this definition">¶</a></dt>
+<dd><p>The principal to use when starting the daemon with a keytab.</p>
+</dd></dl>
+
 <dl class="option">
 <dt id="cmdoption-skein-daemon-start-log">
 <code class="descname">--log</code><code class="descclassname"> &lt;log&gt;</code><a class="headerlink" href="#cmdoption-skein-daemon-start-log" title="Permalink to this definition">¶</a></dt>
