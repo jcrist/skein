@@ -193,10 +193,10 @@ message ApplicationReport {
 }
 
 
-// Daemon only definitions
+// Driver only definitions
 
 
-service Daemon {
+service Driver {
   rpc ping (Empty) returns (Empty);
 
   rpc getStatus (Application) returns (ApplicationReport);

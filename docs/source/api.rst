@@ -10,6 +10,7 @@ Client
 .. autoclass:: Client
     :members:
     :inherited-members:
+    :exclude-members: start_global_daemon, stop_global_daemon
 
 
 Application Client
@@ -189,13 +190,13 @@ Exceptions
 .. autoexception:: ConnectionError
     :show-inheritance:
 
-.. autoexception:: DaemonNotRunningError
+.. autoexception:: DriverNotRunningError
     :show-inheritance:
 
 .. autoexception:: ApplicationNotRunningError
     :show-inheritance:
 
-.. autoexception:: DaemonError
+.. autoexception:: DriverError
     :show-inheritance:
 
 .. autoexception:: ApplicationError

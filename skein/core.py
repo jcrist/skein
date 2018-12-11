@@ -7,6 +7,7 @@ import signal
 import socket
 import struct
 import subprocess
+import warnings
 from contextlib import closing
 
 import grpc
@@ -15,7 +16,7 @@ from . import proto
 from .compatibility import PY2, makedirs, isidentifier, Mapping
 from .exceptions import (context, FileNotFoundError, ConnectionError,
                          TimeoutError, ApplicationNotRunningError,
-                         ApplicationError, DaemonNotRunningError, DaemonError)
+                         ApplicationError, DriverNotRunningError, DriverError)
 from .kv import KeyValueStore
 from .ui import WebUI
 from .model import (Security, ApplicationSpec, ApplicationReport,
@@ -119,9 +120,9 @@ def secure_channel(address, security):
     return grpc.secure_channel(address, creds, options)
 
 
-def _read_daemon():
+def _read_driver():
     try:
-        with open(os.path.join(properties.config_dir, 'daemon'), 'r') as fil:
+        with open(os.path.join(properties.config_dir, 'driver'), 'r') as fil:
             data = json.load(fil)
             address = data['address']
             pid = data['pid']
@@ -130,15 +131,15 @@ def _read_daemon():
     return address, pid
 
 
-def _write_daemon(address, pid):
+def _write_driver(address, pid):
     # Ensure the config dir exists
     makedirs(properties.config_dir, exist_ok=True)
-    # Write to the daemon file
-    with open(os.path.join(properties.config_dir, 'daemon'), 'w') as fil:
+    # Write to the driver file
+    with open(os.path.join(properties.config_dir, 'driver'), 'w') as fil:
         json.dump({'address': address, 'pid': pid}, fil)
 
 
-def _start_daemon(security=None, set_global=False, keytab=None, principal=None,
+def _start_driver(security=None, set_global=False, keytab=None, principal=None,
                   log=None, log_level=None):
     if security is None:
         security = Security.from_default()
@@ -162,7 +163,7 @@ def _start_daemon(security=None, set_global=False, keytab=None, principal=None,
     elif principal is not None:
         raise context.ValueError("Keytab must be specified for keytab login")
 
-    # Compose the command to start the daemon server
+    # Compose the command to start the driver server
     java_bin = ('%s/bin/java' % os.environ['JAVA_HOME']
                 if 'JAVA_HOME' in os.environ
                 else 'java')
@@ -176,7 +177,7 @@ def _start_daemon(security=None, set_global=False, keytab=None, principal=None,
         if os.path.exists(native_path):
             command.append('-Djava.library.path=%s' % native_path)
 
-    command.extend(['com.anaconda.skein.Daemon', '--jar', _SKEIN_JAR])
+    command.extend(['com.anaconda.skein.Driver', '--jar', _SKEIN_JAR])
 
     if keytab is not None:
         command.extend(['--keytab', keytab, '--principal', principal])
@@ -231,17 +232,17 @@ def _start_daemon(security=None, set_global=False, keytab=None, principal=None,
                     stream = connection.makefile(mode="rb")
                     msg = stream.read(4)
                     if not msg:
-                        raise DaemonError("Failed to read in client port")
+                        raise DriverError("Failed to read in client port")
                     port = struct.unpack("!i", msg)[0]
                     break
         else:
-            raise DaemonError("Failed to start java process")
+            raise DriverError("Failed to start java process")
 
     address = 'localhost:%d' % port
 
     if set_global:
-        Client.stop_global_daemon()
-        _write_daemon(address, proc.pid)
+        Client.stop_global_driver()
+        _write_driver(address, proc.pid)
         proc = None
 
     return address, proc
@@ -277,24 +278,24 @@ class Client(_ClientBase):
     Parameters
     ----------
     address : str, optional
-        The address for the daemon. By default will create a new daemon
-        process.  Pass in address explicitly to connect to a different daemon.
-        To connect to the global daemon see ``Client.from_global_daemon``.
+        The address for the driver. By default will create a new driver
+        process.  Pass in address explicitly to connect to a different driver.
+        To connect to the global driver see ``Client.from_global_driver``.
     security : Security, optional
-        The security configuration to use to communicate with the daemon.
+        The security configuration to use to communicate with the driver.
         Defaults to the global configuration.
     keytab : str, optional
-        Path to a keytab file to use when starting the daemon. If not provided,
-        the daemon will login using the ticket cache instead.
+        Path to a keytab file to use when starting the driver. If not provided,
+        the driver will login using the ticket cache instead.
     principal : str, optional
-        The principal to use when starting the daemon with a keytab.
+        The principal to use when starting the driver with a keytab.
     log : str, bool, or None, optional
-        When starting a new daemon, sets the logging behavior for the daemon.
+        When starting a new driver, sets the logging behavior for the driver.
         Values may be a path for logs to be written to, ``None`` to log to
         stdout/stderr, or ``False`` to turn off logging completely. Default is
         ``None``.
     log_level : str or skein.model.LogLevel, optional
-        The daemon log level. Sets the ``skein.log.level`` system property. One
+        The driver log level. Sets the ``skein.log.level`` system property. One
         of {'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL', 'OFF'}
         (from most to least verbose). Default is 'INFO'.
 
@@ -304,8 +305,8 @@ class Client(_ClientBase):
     ...     app_id = client.submit('spec.yaml')
     """
     __slots__ = ('address', 'security', '_stub', '_proc')
-    _server_name = 'daemon'
-    _server_error = DaemonError
+    _server_name = 'driver'
+    _server_error = DriverError
 
     def __init__(self, address=None, security=None, keytab=None,
                  principal=None, log=None, log_level=None):
@@ -313,7 +314,7 @@ class Client(_ClientBase):
             security = Security.from_default()
 
         if address is None:
-            address, proc = _start_daemon(security=security,
+            address, proc = _start_driver(security=security,
                                           keytab=keytab,
                                           principal=principal,
                                           log=log,
@@ -322,7 +323,7 @@ class Client(_ClientBase):
             proc = None
 
         with grpc_fork_support_disabled():
-            self._stub = proto.DaemonStub(secure_channel(address, security))
+            self._stub = proto.DriverStub(secure_channel(address, security))
         self.address = address
         self.security = security
         self._proc = proc
@@ -332,55 +333,55 @@ class Client(_ClientBase):
             self._call('ping', proto.Empty())
         except Exception:
             if proc is not None:
-                proc.stdin.close()  # kill the daemon on error
+                proc.stdin.close()  # kill the driver on error
                 proc.wait()
             raise
 
     @classmethod
-    def from_global_daemon(self):
-        """Connect to the global daemon."""
-        address, _ = _read_daemon()
+    def from_global_driver(self):
+        """Connect to the global driver."""
+        address, _ = _read_driver()
 
         if address is None:
-            raise DaemonNotRunningError("No daemon currently running")
+            raise DriverNotRunningError("No driver currently running")
 
         security = Security.from_default()
         return Client(address=address, security=security)
 
     @staticmethod
-    def start_global_daemon(keytab=None, principal=None, log=None, log_level=None):
-        """Start the global daemon.
+    def start_global_driver(keytab=None, principal=None, log=None, log_level=None):
+        """Start the global driver.
 
-        No-op if the global daemon is already running.
+        No-op if the global driver is already running.
 
         Parameters
         ----------
         keytab : str, optional
-            Path to a keytab file to use when starting the daemon. If not
-            provided, the daemon will login using the ticket cache instead.
+            Path to a keytab file to use when starting the driver. If not
+            provided, the driver will login using the ticket cache instead.
         principal : str, optional
-            The principal to use when starting the daemon with a keytab.
+            The principal to use when starting the driver with a keytab.
         log : str, bool, or None, optional
-            Sets the logging behavior for the daemon. Values may be a path for
+            Sets the logging behavior for the driver. Values may be a path for
             logs to be written to, ``None`` to log to stdout/stderr, or
             ``False`` to turn off logging completely. Default is ``None``.
         log_level : str or skein.model.LogLevel, optional
-            The daemon log level. Sets the ``skein.log.level`` system property.
+            The driver log level. Sets the ``skein.log.level`` system property.
             One of {'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL',
             'OFF'} (from most to least verbose). Default is 'INFO'.
 
         Returns
         -------
         address : str
-            The address of the daemon
+            The address of the driver
         """
         try:
-            client = Client.from_global_daemon()
-        except DaemonNotRunningError:
+            client = Client.from_global_driver()
+        except DriverNotRunningError:
             pass
         else:
             return client.address
-        address, _ = _start_daemon(set_global=True,
+        address, _ = _start_driver(set_global=True,
                                    keytab=keytab,
                                    principal=principal,
                                    log=log,
@@ -388,31 +389,43 @@ class Client(_ClientBase):
         return address
 
     @staticmethod
-    def stop_global_daemon():
-        """Stops the global daemon if running.
+    def stop_global_driver():
+        """Stops the global driver if running.
 
-        No-op if no global daemon is running."""
-        address, pid = _read_daemon()
+        No-op if no global driver is running."""
+        address, pid = _read_driver()
         if address is None:
             return
 
         try:
             Client(address=address)
-        except DaemonNotRunningError:
+        except DriverNotRunningError:
             pass
         else:
             os.kill(pid, signal.SIGTERM)
 
         try:
-            os.remove(os.path.join(properties.config_dir, 'daemon'))
+            os.remove(os.path.join(properties.config_dir, 'driver'))
         except OSError:
             pass
+
+    # TODO: deprecated, remove after next release cycle
+    @staticmethod
+    def start_global_daemon():  # pragma: no cover
+        warnings.warn("start_global_daemon is deprecated, use start_global_driver "
+                      "instead")
+        Client.start_global_driver()
+
+    @staticmethod
+    def stop_global_daemon():  # pragma: no cover
+        warnings.warn("stop_global_daemon is deprecated, use stop_global_driver instead")
+        Client.stop_global_driver()
 
     def __repr__(self):
         return 'Client<%s>' % self.address
 
     def close(self):
-        """Closes the java daemon if started by this client. No-op otherwise."""
+        """Closes the java driver if started by this client. No-op otherwise."""
         if self._proc is not None:
             self._proc.stdin.close()
             self._proc.wait()

@@ -22,30 +22,30 @@ make sure you have an active ticket-granting-ticket before continuing:
     $ kinit
 
 
-.. _quickstart-skein-daemon:
+.. _quickstart-skein-driver:
 
 
-Start the Skein Daemon (optional)
+Start the Skein Driver (optional)
 ---------------------------------
 
-To communicate with the YARN Resource manager, Skein uses a background daemon
+To communicate with the YARN Resource manager, Skein uses a background driver
 process written in Java. Since this process can be slow to start, sometimes it
 can be nice to start it once and have it persist through all CLI calls. This
 may look like:
 
-1. Start the Skein daemon
+1. Start the Skein driver
 2. Run yarn application/applications
-3. Shut down the Skein daemon
+3. Shut down the Skein driver
 
-To do this from the command-line, use `skein daemon start
-<cli.html#skein-daemon-start>`__:
+To do this from the command-line, use `skein driver start
+<cli.html#skein-driver-start>`__:
 
 .. code::
 
-    $ skein daemon start
+    $ skein driver start
     localhost:12345
 
-Note that if you don't start the daemon process, one will be started for you,
+Note that if you don't start the driver process, one will be started for you,
 but not persisted between calls.
 
 
@@ -196,17 +196,17 @@ use the `skein application kill <cli.html#skein-application-kill>`__ command:
     application_1526497750451_0009    hello_world    KILLED    KILLED    0             0         0
 
 
-Stop the Skein Daemon (optional)
+Stop the Skein Driver (optional)
 --------------------------------
 
-If you started the Daemon process (see `Start the Skein Daemon (optional)`_
+If you started the Driver process (see `Start the Skein Driver (optional)`_
 above), you'll probably want to shut it down when you're done.  This isn't
-strictly necessary (the daemon can run for long periods), but helps keep
+strictly necessary (the driver can run for long periods), but helps keep
 resource usage on the edge node low.
 
-To do this from the command-line, use `skein daemon stop
-<cli.html#skein-daemon-stop>`__.
+To do this from the command-line, use `skein driver stop
+<cli.html#skein-driver-stop>`__.
 
 .. code::
 
-    $ skein daemon stop
+    $ skein driver stop

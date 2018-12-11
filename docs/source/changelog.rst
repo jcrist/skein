@@ -6,6 +6,8 @@ Upcoming Release
 
 - Support login via keytab, allowing for long-running services (:pr:`115`,
   :issue:`103`)
+- Rename ``daemon`` to ``driver`` everywhere, deprecating old methods/classes
+  (:pr:`116`)
 
 Version 0.4.1 (December 7, 2018)
 --------------------------------
