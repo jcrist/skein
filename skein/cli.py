@@ -139,6 +139,8 @@ log = arg("--log", default=False,
           help="If provided, the driver will write logs here.")
 log_level = arg("--log-level", default=None,
                 help="The driver log level, default is INFO")
+java_options = arg("--java-option", dest="java_options", default=None, action='append',
+                   help="Additional options for the driver")
 
 
 def deprecate_daemon(name, func):
@@ -160,10 +162,12 @@ def driver_and_daemon(name, help, *args):
 
 
 @driver_and_daemon('start', 'Start the skein driver',
-                   keytab, principal, log, log_level)
-def driver_start(keytab=None, principal=None, log=False, log_level=None):
+                   keytab, principal, log, log_level, java_options)
+def driver_start(keytab=None, principal=None, log=False,
+                 log_level=None, java_options=None):
     print(Client.start_global_driver(keytab=keytab, principal=principal,
-                                     log=log, log_level=log_level))
+                                     log=log, log_level=log_level,
+                                     java_options=java_options))
 
 
 @driver_and_daemon('address', 'The address of the running driver')
