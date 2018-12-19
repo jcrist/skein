@@ -252,7 +252,7 @@ def test_client_login_from_keytab(security, not_logged_in):
         skein.Client(keytab=KEYTAB_PATH, security=security)
 
 
-def test_application_client_from_current(monkeypatch, tmpdir, security):
+def test_appclient_and_security_in_container(monkeypatch, tmpdir, security):
     # Not running in a container
     with pytest.raises(ValueError) as exc:
         skein.ApplicationClient.from_current()
@@ -277,6 +277,10 @@ def test_application_client_from_current(monkeypatch, tmpdir, security):
         skein.ApplicationClient.from_current()
     assert str(exc.value) == "Failed to resolve .skein.{crt,pem} in 'LOCAL_DIRS'"
 
+    with pytest.raises(FileNotFoundError) as exc:
+        skein.Security.from_default()
+    assert str(exc.value) == "Failed to resolve .skein.{crt,pem} in 'LOCAL_DIRS'"
+
     # Add proper LOCAL_DIRS environment
     good_dir = tmpdir.mkdir('good_dir')
     local_dir = good_dir.mkdir(container_id)
@@ -290,6 +294,10 @@ def test_application_client_from_current(monkeypatch, tmpdir, security):
     app = skein.ApplicationClient.from_current()
     assert app.id == app_id
     assert app.address == address
+
+    security2 = skein.Security.from_default()
+    assert security._get_bytes('key') == security2._get_bytes('key')
+    assert security._get_bytes('cert') == security2._get_bytes('cert')
 
 
 def test_simple_app(client):
