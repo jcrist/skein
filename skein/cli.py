@@ -139,8 +139,9 @@ log = arg("--log", default=False,
           help="If provided, the driver will write logs here.")
 log_level = arg("--log-level", default=None,
                 help="The driver log level, default is INFO")
-java_options = arg("--java-option", dest="java_options", default=None, action='append',
-                   help="Additional options for the driver")
+java_options = arg("--java-option", dest="java_options", action='append',
+                   help=("Forward a Java option to the driver, can be used "
+                         "multiple times."))
 
 
 def deprecate_daemon(name, func):
@@ -185,8 +186,9 @@ def driver_stop():
 
 
 @driver_and_daemon('restart', 'Restart the skein driver',
-                   keytab, principal, log, log_level)
-def driver_restart(keytab=None, principal=None, log=False, log_level=None):
+                   keytab, principal, log, log_level, java_options)
+def driver_restart(keytab=None, principal=None, log=False, log_level=None,
+                   java_options=None):
     driver_stop()
     driver_start(keytab=keytab, principal=principal,
                  log=log, log_level=log_level)

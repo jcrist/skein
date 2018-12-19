@@ -177,8 +177,11 @@ def _start_driver(security=None, set_global=False, keytab=None, principal=None,
         if os.path.exists(native_path):
             command.append('-Djava.library.path=%s' % native_path)
 
-    if java_options:
-        command.extend(java_options)
+    if java_options is None:
+        java_options = os.environ.get('SKEIN_DRIVER_JAVA_OPTIONS', '')
+    if isinstance(java_options, str):
+        java_options = java_options.split()
+    command.extend(java_options)
 
     command.extend(['com.anaconda.skein.Driver', '--jar', _SKEIN_JAR])
 
@@ -301,8 +304,10 @@ class Client(_ClientBase):
         The driver log level. Sets the ``skein.log.level`` system property. One
         of {'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL', 'OFF'}
         (from most to least verbose). Default is 'INFO'.
-    java_options : List[str], optional
-        Additional java options for the driver
+    java_options : str or list of str, optional
+        Additional Java options to forward to the driver. Can also be
+        configured by setting the environment variable
+        ``SKEIN_DRIVER_JAVA_OPTIONS``.
 
     Examples
     --------
@@ -376,8 +381,10 @@ class Client(_ClientBase):
             The driver log level. Sets the ``skein.log.level`` system property.
             One of {'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL',
             'OFF'} (from most to least verbose). Default is 'INFO'.
-        java_options : List[str], optional
-            Additional java options for the driver
+        java_options : str or list of str, optional
+            Additional Java options to forward to the driver. Can also be
+            configured by setting the environment variable
+            ``SKEIN_DRIVER_JAVA_OPTIONS``.
 
         Returns
         -------
