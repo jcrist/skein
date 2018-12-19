@@ -86,6 +86,20 @@ public class Utils {
         new CustomThreadFactory(name, isDaemon));
   }
 
+  public static void configureNettyNativeWorkDir() {
+    final String property = "io.netty.native.workdir";
+
+    // Already set by user, do nothing
+    if (System.getProperty(property) != null) {
+      return;
+    }
+
+    // Set to current directory if we're in a container
+    if (System.getenv("CONTAINER_ID") != null) {
+      System.setProperty(property, "./");
+    }
+  }
+
   public static String formatAcl(List<String> users, List<String> groups) {
     // "*" in either groups or users -> "*"
     if (users.contains("*") || groups.contains("*")) {
