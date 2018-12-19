@@ -208,6 +208,26 @@ def test_client_set_log_level(security, kinit, tmpdir):
         assert 'DEBUG' in data
 
 
+@pytest.mark.parametrize('use_env', [True, False])
+def test_client_forward_java_options(use_env, security, kinit, tmpdir, monkeypatch):
+    logpath = str(tmpdir.join("log.txt"))
+
+    if use_env:
+        monkeypatch.setenv('SKEIN_DRIVER_JAVA_OPTIONS',
+                           '-Dskein.log.level=debug')
+        kwargs = {}
+    else:
+        kwargs = {'java_options': ['-Dskein.log.level=debug']}
+
+    with skein.Client(security=security, log=logpath, **kwargs) as client:
+        # do an operation to ensure everything is working
+        client.get_applications()
+
+    with open(logpath) as fil:
+        data = fil.read()
+        assert 'DEBUG' in data
+
+
 def test_client_login_from_keytab(security, not_logged_in):
     with skein.Client(principal='testuser', keytab=KEYTAB_PATH,
                       security=security) as client:

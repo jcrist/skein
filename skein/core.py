@@ -140,7 +140,7 @@ def _write_driver(address, pid):
 
 
 def _start_driver(security=None, set_global=False, keytab=None, principal=None,
-                  log=None, log_level=None):
+                  log=None, log_level=None, java_options=None):
     if security is None:
         security = Security.from_default()
 
@@ -176,6 +176,12 @@ def _start_driver(security=None, set_global=False, keytab=None, principal=None,
         native_path = '%s/lib/native' % os.environ['HADOOP_HOME']
         if os.path.exists(native_path):
             command.append('-Djava.library.path=%s' % native_path)
+
+    if java_options is None:
+        java_options = os.environ.get('SKEIN_DRIVER_JAVA_OPTIONS', '')
+    if isinstance(java_options, str):
+        java_options = java_options.split()
+    command.extend(java_options)
 
     command.extend(['com.anaconda.skein.Driver', '--jar', _SKEIN_JAR])
 
@@ -298,6 +304,10 @@ class Client(_ClientBase):
         The driver log level. Sets the ``skein.log.level`` system property. One
         of {'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL', 'OFF'}
         (from most to least verbose). Default is 'INFO'.
+    java_options : str or list of str, optional
+        Additional Java options to forward to the driver. Can also be
+        configured by setting the environment variable
+        ``SKEIN_DRIVER_JAVA_OPTIONS``.
 
     Examples
     --------
@@ -309,7 +319,7 @@ class Client(_ClientBase):
     _server_error = DriverError
 
     def __init__(self, address=None, security=None, keytab=None,
-                 principal=None, log=None, log_level=None):
+                 principal=None, log=None, log_level=None, java_options=None):
         if security is None:
             security = Security.from_default()
 
@@ -318,7 +328,8 @@ class Client(_ClientBase):
                                           keytab=keytab,
                                           principal=principal,
                                           log=log,
-                                          log_level=log_level)
+                                          log_level=log_level,
+                                          java_options=java_options)
         else:
             proc = None
 
@@ -349,7 +360,8 @@ class Client(_ClientBase):
         return Client(address=address, security=security)
 
     @staticmethod
-    def start_global_driver(keytab=None, principal=None, log=None, log_level=None):
+    def start_global_driver(keytab=None, principal=None, log=None,
+                            log_level=None, java_options=None):
         """Start the global driver.
 
         No-op if the global driver is already running.
@@ -369,6 +381,10 @@ class Client(_ClientBase):
             The driver log level. Sets the ``skein.log.level`` system property.
             One of {'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL',
             'OFF'} (from most to least verbose). Default is 'INFO'.
+        java_options : str or list of str, optional
+            Additional Java options to forward to the driver. Can also be
+            configured by setting the environment variable
+            ``SKEIN_DRIVER_JAVA_OPTIONS``.
 
         Returns
         -------
@@ -385,7 +401,8 @@ class Client(_ClientBase):
                                    keytab=keytab,
                                    principal=principal,
                                    log=log,
-                                   log_level=log_level)
+                                   log_level=log_level,
+                                   java_options=java_options)
         return address
 
     @staticmethod
