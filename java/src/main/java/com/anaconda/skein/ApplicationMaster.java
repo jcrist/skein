@@ -538,7 +538,7 @@ public class ApplicationMaster {
   public static void main(String[] args) {
     // Specify the netty native workdir. This is necessary for systems where
     // `/tmp` is not executable.
-    System.setProperty("io.netty.native.workdir", "./");
+    Utils.configureNettyNativeWorkDir();
 
     ApplicationMaster appMaster = new ApplicationMaster();
 

@@ -159,7 +159,10 @@ public class Driver {
 
   /** Main Entry Point. **/
   public static void main(String[] args) {
-    boolean result = false;
+    // Maybe specify the netty native workdir. This is necessary for systems
+    // where `/tmp` is not executable.
+    Utils.configureNettyNativeWorkDir();
+
     try {
       Driver driver = new Driver();
       driver.init(args);
