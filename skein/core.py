@@ -14,9 +14,10 @@ import grpc
 
 from . import proto
 from .compatibility import PY2, makedirs, isidentifier, Mapping
-from .exceptions import (context, FileNotFoundError, ConnectionError,
-                         TimeoutError, ApplicationNotRunningError,
-                         ApplicationError, DriverNotRunningError, DriverError)
+
+from .exceptions import (context, ConnectionError, TimeoutError,
+                         ApplicationNotRunningError, ApplicationError,
+                         DriverNotRunningError, DriverError)
 from .kv import KeyValueStore
 from .ui import WebUI
 from .model import (Security, ApplicationSpec, ApplicationReport,
@@ -756,25 +757,12 @@ class ApplicationClient(_ClientBase):
         Useful for connecting to the application master from a running
         container in a application.
         """
-        address = properties.appmaster_address
-        app_id = properties.application_id
-        yarn_container_id = properties.yarn_container_id
-        local_dirs = os.environ.get('LOCAL_DIRS')
-
-        if any(p is None for p in [address, app_id, yarn_container_id,
-                                   local_dirs]):
+        if properties.application_id is None:
             raise context.ValueError("Not running inside a container")
 
-        for local_dir in local_dirs.split(','):
-            container_dir = os.path.join(local_dir, yarn_container_id)
-            crt_path = os.path.join(container_dir, '.skein.crt')
-            pem_path = os.path.join(container_dir, '.skein.pem')
-            if os.path.exists(crt_path) and os.path.exists(pem_path):
-                security = Security(cert_file=crt_path, key_file=pem_path)
-                return cls(address, app_id, security=security)
-
-        raise FileNotFoundError(
-            "Failed to resolve .skein.{crt,pem} in 'LOCAL_DIRS'")
+        return cls(properties.appmaster_address,
+                   properties.application_id,
+                   security=Security.from_default())
 
     def get_containers(self, services=None, states=None):
         """Get information on containers in this application.

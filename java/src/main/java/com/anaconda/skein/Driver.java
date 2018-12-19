@@ -483,7 +483,7 @@ public class Driver {
 
     // Setup the LocalResources for the application master
     Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
-    lr.put("skein.jar", newLocalResource(uploadCache, appDir, jarPath));
+    lr.put(".skein.jar", newLocalResource(uploadCache, appDir, jarPath));
     if (spec.getMaster().hasLogConfig()) {
       LocalResource logConfig = spec.getMaster().getLogConfig();
       finalizeLocalResource(uploadCache, appDir, logConfig, false);
