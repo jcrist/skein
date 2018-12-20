@@ -128,6 +128,10 @@ Application Specification
     :members:
     :inherited-members:
 
+.. autoclass:: Master
+    :members:
+    :inherited-members:
+
 .. autoclass:: Service
     :members:
     :inherited-members:
@@ -149,10 +153,6 @@ Application Specification
     :inherited-members:
 
 .. autoclass:: ACLs
-    :members:
-    :inherited-members:
-
-.. autoclass:: Master
     :members:
     :inherited-members:
 
