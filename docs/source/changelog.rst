@@ -8,6 +8,12 @@ Upcoming Release
   :issue:`103`)
 - Rename ``daemon`` to ``driver`` everywhere, deprecating old methods/classes
   (:pr:`116`)
+- Allow forwarding java options to the Skein ``driver`` (:pr:`117`)
+- Fix bugs preventing the Skein driver from running inside a YARN container
+  (:pr:`119`)
+- Add support for running a single user process on the same node as the
+  Application Master, allowing for faster application startup for
+  single-container services (:pr:`120`, :issue:`118`)
 
 Version 0.4.1 (December 7, 2018)
 --------------------------------
