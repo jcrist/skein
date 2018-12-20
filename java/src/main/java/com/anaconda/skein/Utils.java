@@ -13,10 +13,12 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -131,6 +133,21 @@ public class Utils {
     long timestamp = Long.valueOf(parts[1]);
     int id = Integer.valueOf(parts[2]);
     return ApplicationId.newInstance(timestamp, id);
+  }
+
+  public static void writeScript(List<String> commands, OutputStream out)
+      throws IOException {
+    final StringBuilder script = new StringBuilder();
+    script.append("set -e -x");
+    for (String c : commands) {
+      script.append("\n");
+      script.append(c);
+    }
+    try {
+      out.write(script.toString().getBytes(StandardCharsets.UTF_8));
+    } finally {
+      out.close();
+    }
   }
 
   public static LocalResource localResource(FileSystem fs, Path path,

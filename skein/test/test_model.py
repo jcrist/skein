@@ -270,11 +270,16 @@ def test_security_invariants():
 
 
 def test_master():
-    m1 = Master(log_level='info',
+    m1 = Master(log_level='debug',
                 log_config='/test/path.properties',
                 security=Security.new_credentials())
-    m2 = Master(log_level='debug')
-    check_specification_methods(m1, m2)
+    m2 = Master(resources=Resources(memory='1 GiB', vcores=2),
+                commands=['commands'],
+                env={'FOO': 'BAR'},
+                files={'file': '/test/path'})
+    m3 = Master()
+    check_specification_methods(m1, m3)
+    check_specification_methods(m2, m3)
 
 
 def test_master_invariants():
@@ -295,6 +300,24 @@ def test_master_invariants():
     assert f.log_level == LogLevel.DEBUG
     f.log_level = 'info'
     assert f.log_level == LogLevel.INFO
+
+    with pytest.raises(TypeError):
+        Master(commands='foo')
+
+    with pytest.raises(TypeError):
+        Master(env={'a': 1})
+
+    # Mutable defaults properly set
+    m = Master()
+    assert isinstance(m.env, dict)
+    assert isinstance(m.files, dict)
+    assert isinstance(m.commands, list)
+
+    # Strings are converted to File objects
+    m = Master(files={'target': '/source.zip',
+                      'target2': '/source2.txt'})
+    assert m.files['target'].type == 'archive'
+    assert m.files['target2'].type == 'file'
 
 
 def test_service():
@@ -362,8 +385,10 @@ def test_application_spec():
                             queue='testqueue',
                             node_label='testlabel',
                             services={'service': s1})
-    spec2 = ApplicationSpec(services={'service': s2})
-    check_specification_methods(spec1, spec2)
+    spec2 = ApplicationSpec(master=Master(commands=c, resources=r))
+    spec3 = ApplicationSpec(services={'service': s2})
+    check_specification_methods(spec1, spec3)
+    check_specification_methods(spec2, spec3)
 
 
 def test_application_spec_invariants():
@@ -372,7 +397,12 @@ def test_application_spec_invariants():
 
     # No services
     with pytest.raises(ValueError):
-        ApplicationSpec(name='dask', queue='default', services={})
+        ApplicationSpec(name='dask', queue='default')
+
+    # No master commands
+    with pytest.raises(ValueError):
+        ApplicationSpec(name='dask', queue='default',
+                        master=Master())
 
     for k, v in [('name', 1), ('queue', 1), ('tags', 1),
                  ('tags', {1, 2, 3}), ('max_attempts', 'foo')]:

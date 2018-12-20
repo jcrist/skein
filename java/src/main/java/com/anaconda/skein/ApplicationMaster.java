@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
@@ -111,7 +112,8 @@ public class ApplicationMaster {
   private NMClient nmClient;
   private ThreadPoolExecutor executor;
   private Thread allocatorThread;
-  private boolean shouldShutdown = false;
+  private Process driverProcess;
+  private Thread driverThread;
 
   private UserGroupInformation ugi;
   private ByteBuffer tokens;
@@ -220,7 +222,7 @@ public class ApplicationMaster {
     allocatorThread =
       new Thread() {
         public void run() {
-          while (!shouldShutdown) {
+          while (true) {
             try {
               long start = System.currentTimeMillis();
               allocate();
@@ -243,9 +245,77 @@ public class ApplicationMaster {
   }
 
   private void stopAllocator() {
-    shouldShutdown = true;
     if (!Thread.currentThread().equals(allocatorThread)) {
       allocatorThread.interrupt();
+    }
+  }
+
+  private void startMasterDriver() throws IOException {
+    Model.Master master = spec.getMaster();
+    if (master.getCommands().isEmpty()) {
+      // Nothing to do
+      return;
+    }
+    LOG.debug("Writing driver script...");
+    Utils.writeScript(master.getCommands(), new FileOutputStream(".skein.script.sh"));
+    String logdir = System.getProperty("skein.log.directory");
+    ProcessBuilder pb = new ProcessBuilder()
+        .command("bash", ".skein.script.sh")
+        .redirectErrorStream(true)
+        .redirectOutput(new File(logdir, "application.driver.log"));
+    updateServiceEnvironment(pb.environment(), master.getResources(), null);
+
+    // Start the driver process
+    LOG.info("Starting application driver");
+    driverProcess = pb.start();
+
+    // Set up a thread to manage the driver process
+    driverThread =
+      new Thread() {
+        public void run() {
+          // Wait for it to finish
+          int exitValue;
+          try {
+            exitValue = driverProcess.waitFor();
+          } catch (InterruptedException exc) {
+            // Interrupted during some other shutdown process, ignore
+            return;
+          }
+          if (exitValue == 0) {
+            shutdown(FinalApplicationStatus.SUCCEEDED,
+                     "Application driver completed successfully.");
+          } else {
+            shutdown(FinalApplicationStatus.FAILED,
+                     "Application driver failed with exit code "
+                     + exitValue + ", see logs for more information.");
+          }
+        }
+      };
+    driverThread.setDaemon(true);
+    driverThread.start();
+  }
+
+  private void stopMasterDriver() {
+    if (driverThread == null) {
+      return;
+    }
+    if (!Thread.currentThread().equals(driverThread)) {
+      driverThread.interrupt();
+    }
+    // Sanity check
+    if (driverProcess != null) {
+      driverProcess.destroy();
+    }
+  }
+
+  private void updateServiceEnvironment(Map<String, String> env, Resource resource,
+      String containerId) {
+    env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + grpcServer.getPort());
+    env.put("SKEIN_APPLICATION_ID", appId.toString());
+    env.put("SKEIN_RESOURCE_VCORES", String.valueOf(resource.getVirtualCores()));
+    env.put("SKEIN_RESOURCE_MEMORY", String.valueOf(resource.getMemory()));
+    if (containerId != null) {
+      env.put("SKEIN_CONTAINER_ID", containerId);
     }
   }
 
@@ -420,12 +490,17 @@ public class ApplicationMaster {
   }
 
   public void init(String[] args) {
-    if (args.length == 0 || args.length > 2) {
-      LOG.error("Usage: <command> applicationDirectory applicationId");
+    if (args.length != 1) {
+      LOG.error("Usage: <command> applicationDirectory");
       System.exit(1);
     }
     appDir = new Path(args[0]);
-    appId = Utils.appIdFromString(args[1]);
+    String appIdEnv = System.getenv("SKEIN_APPLICATION_ID");
+    if (appIdEnv == null) {
+      LOG.error("Couldn't find 'SKEIN_APPLICATION_ID' envar");
+      System.exit(1);
+    }
+    appId = Utils.appIdFromString(appIdEnv);
   }
 
   public void run() throws Exception {
@@ -476,6 +551,9 @@ public class ApplicationMaster {
 
     startAllocator();
 
+    // Start master driver (if applicable)
+    startMasterDriver();
+
     // Start services
     for (ServiceTracker tracker: services.values()) {
       tracker.initialize();
@@ -486,14 +564,14 @@ public class ApplicationMaster {
 
   private void maybeShutdown() {
     // Fail if any service is failed
-    // Succeed if all services are finished and none failed
-    boolean finished = true;
+    // Succeed if no driver, all services are finished, and none failed
+    boolean finished = (driverProcess == null);
     for (ServiceTracker tracker : services.values()) {
       finished &= tracker.isFinished();
       if (tracker.isFailed()) {
         shutdown(FinalApplicationStatus.FAILED,
                  "Failure in service " + tracker.getName()
-                 + ", see logs for details.");
+                 + ", see logs for more information.");
         return;
       }
     }
@@ -517,6 +595,7 @@ public class ApplicationMaster {
       LOG.error("Failed to unregister application", ex);
     }
     stopAllocator();
+    stopMasterDriver();
 
     // Delete the app directory
     ugi.doAs(
@@ -903,11 +982,7 @@ public class ApplicationMaster {
 
         // Update container environment variables
         Map<String, String> env = new HashMap<String, String>(service.getEnv());
-        env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + grpcServer.getPort());
-        env.put("SKEIN_APPLICATION_ID", appId.toString());
-        env.put("SKEIN_CONTAINER_ID", out.getId());
-        env.put("SKEIN_RESOURCE_VCORES", String.valueOf(resource.getVirtualCores()));
-        env.put("SKEIN_RESOURCE_MEMORY", String.valueOf(resource.getMemory()));
+        updateServiceEnvironment(env, resource, out.getId());
         if (!ugi.isSecurityEnabled()) {
           // Add HADOOP_USER_NAME to environment for *simple* authentication only
           env.put("HADOOP_USER_NAME", ugi.getUserName());

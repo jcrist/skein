@@ -120,7 +120,7 @@ public class Model {
 
     public void validate() throws IllegalArgumentException {
       throwIfLessThan(instances, 0, "instances");
-      throwIfLessThan(instances, -1, "maxRestarts");
+      throwIfLessThan(maxRestarts, -1, "maxRestarts");
       throwIfNull(resources, "resources");
       throwIfLessThan(resources.getMemory(), 1, "resources.memory");
       throwIfLessThan(resources.getVirtualCores(), 1, "resources.vcores");
@@ -131,6 +131,9 @@ public class Model {
         throw new IllegalArgumentException("There must be at least one command");
       }
       throwIfNull(depends, "depends");
+      throwIfNull(nodes, "nodes");
+      throwIfNull(racks, "racks");
+      throwIfNull(nodeLabel, "nodeLabel");
     }
   }
 
@@ -234,22 +237,29 @@ public class Model {
   }
 
   public static class Master {
+    private Resource resources;
+    private Map<String, LocalResource> localResources;
+    private Map<String, String> env;
+    private List<String> commands;
+
     private LocalResource logConfig;
     private Level logLevel;
     private Security security;
 
-    public Master(LocalResource logConfig, Level logLevel, Security security) {
-      this.logConfig = logConfig;
-      this.logLevel = logLevel;
-      this.security = security;
+    public Master() {
     }
 
-    public void validate() throws IllegalArgumentException {
-      throwIfNull(logLevel, "logLevel");
-      if (security != null) {
-        security.validate();
-      }
-    }
+    public void setResources(Resource resources) { this.resources = resources; }
+    public Resource getResources() { return resources; }
+
+    public void setLocalResources(Map<String, LocalResource> r) { this.localResources = r; }
+    public Map<String, LocalResource> getLocalResources() { return localResources; }
+
+    public void setEnv(Map<String, String> env) { this.env = env; }
+    public Map<String, String> getEnv() { return env; }
+
+    public void setCommands(List<String> commands) { this.commands = commands; }
+    public List<String> getCommands() { return commands; }
 
     public void setLogConfig(LocalResource logConfig) { this.logConfig = logConfig; }
     public LocalResource getLogConfig() { return this.logConfig; }
@@ -261,6 +271,19 @@ public class Model {
     public void setSecurity(Security security) { this.security = security; }
     public Security getSecurity() { return this.security; }
     public boolean hasSecurity() { return this.security != null; }
+
+    public void validate() throws IllegalArgumentException {
+      throwIfNull(resources, "resources");
+      throwIfLessThan(resources.getMemory(), 1, "resources.memory");
+      throwIfLessThan(resources.getVirtualCores(), 1, "resources.vcores");
+      throwIfNull(localResources, "localResources");
+      throwIfNull(env, "env");
+      throwIfNull(commands, "commands");
+      throwIfNull(logLevel, "logLevel");
+      if (security != null) {
+        security.validate();
+      }
+    }
   }
 
   public static class ApplicationSpec {
@@ -345,8 +368,10 @@ public class Model {
       throwIfNull(master, "master");
       master.validate();
       throwIfNull(services, "services");
-      if (services.size() == 0) {
-        throw new IllegalArgumentException("There must be at least one service");
+      if (services.size() == 0 && master.getCommands().size() == 0) {
+        throw new IllegalArgumentException(
+            "There must be either at least one service or additional commands "
+            + "to run on the application master");
       }
       for (Service s: services.values()) {
         s.validate();

@@ -420,7 +420,14 @@ public class MsgUtils {
 
   public static Msg.Master writeMaster(Model.Master master) {
     Msg.Master.Builder builder = Msg.Master.newBuilder()
+        .setResources(writeResources(master.getResources()))
+        .putAllEnv(master.getEnv())
+        .addAllCommands(master.getCommands())
         .setLogLevel(writeLogLevel(master.getLogLevel()));
+
+    for (Map.Entry<String, LocalResource> entry : master.getLocalResources().entrySet()) {
+      builder.putFiles(entry.getKey(), writeFile(entry.getValue()));
+    }
 
     if (master.hasSecurity()) {
       builder.setSecurity(writeSecurity(master.getSecurity()));
@@ -434,16 +441,25 @@ public class MsgUtils {
   }
 
   public static Model.Master readMaster(Msg.Master master) {
-    LocalResource logConfig = null;
+    Model.Master out = new Model.Master();
+
+    Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
+    for (Map.Entry<String, Msg.File> entry : master.getFilesMap().entrySet()) {
+      localResources.put(entry.getKey(), readFile(entry.getValue()));
+    }
+    out.setLocalResources(localResources);
+    out.setResources(readResources(master.getResources()));
+    out.setEnv(new HashMap<String, String>(master.getEnvMap()));
+    out.setCommands(new ArrayList<String>(master.getCommandsList()));
+
     if (master.hasLogConfig()) {
-      logConfig = readFile(master.getLogConfig());
+      out.setLogConfig(readFile(master.getLogConfig()));
     }
-    Model.Security security = null;
     if (master.hasSecurity()) {
-      security = readSecurity(master.getSecurity());
+      out.setSecurity(readSecurity(master.getSecurity()));
     }
-    Level logLevel = readLogLevel(master.getLogLevel());
-    return new Model.Master(logConfig, logLevel, security);
+    out.setLogLevel(readLogLevel(master.getLogLevel()));
+    return out;
   }
 
   public static Msg.ApplicationSpec writeApplicationSpec(Model.ApplicationSpec spec) {
