@@ -64,24 +64,13 @@ Here we create a simple "Hello World" application as a YAML file:
     name: hello_world
     queue: default
 
-    services:
-      my_service:
-        resources:
-          vcores: 1
-          memory: 128 MiB
-        files:
-          payload.txt: payload.txt
-        commands:
-          - echo "Sleeping for 60 seconds"
-          - sleep 60
-          - cat payload.txt
-          - echo "Stopping service"
-
-Where the contents of ``payload.txt`` is:
-
-.. code-block:: text
-
-    Hello World!
+    master:
+      resources:
+        vcores: 1
+        memory: 512 MiB
+      commands:
+        - sleep 60
+        - echo "Hello World!"
 
 Walking through this specification:
 
@@ -93,38 +82,27 @@ Walking through this specification:
      name: hello_world
      queue: default
 
-- The application starts a single service ``my_service`` on a container using 1
-  virtual core and 128 MiB of memory.
-
-  .. code-block:: yaml
-
-     services:
-       my_service:
-         resources:
-           vcores: 1
-           memory: 128 MiB
-
-
-- The file ``payload.txt`` is distributed with the application, and is named
-  ``payload.txt`` both locally and on the running container.
+- The application requests a single container for the *Application Master* with
+  1 virtual core and 512 MiB of memory.
 
   .. code-block:: yaml
 
      ...
-         files:
-           payload.txt: payload.txt
+     master:
+      resources:
+        vcores: 1
+        memory: 512 MiB
 
-- The service runs a few Shell commands. These will be run in order, stopping
-  on the first failure, and all outputs logged in the container logs.
+- The Application Master then runs a few Shell commands. These will be run in
+  order, stopping on the first failure, and all outputs logged in the container
+  logs.
 
   .. code-block:: yaml
 
      ...
-         commands:
-           - echo "Sleeping for 60 seconds"
-           - sleep 60
-           - cat payload.txt
-           - echo "Stopping service"
+      commands:
+        - sleep 60
+        - echo "Hello World!"
 
 
 Submit the Application
@@ -157,7 +135,7 @@ applications that are either ``SUBMITTED``, ``ACCEPTED``, or ``RUNNING``.
 
     $ skein application ls
     APPLICATION_ID                    NAME           STATE      STATUS       CONTAINERS    VCORES    MEMORY
-    application_1526497750451_0009    hello_world    RUNNING    UNDEFINED    2             2         640
+    application_1526497750451_0009    hello_world    RUNNING    UNDEFINED    1             1         512
 
 You can also filter by application state. Here we show all ``KILLED`` and ``FAILED`` applications:
 
@@ -176,15 +154,16 @@ To get the status of a specific application, use the `skein application status
 
     $ skein application status application_1526497750451_0009
     APPLICATION_ID                    NAME           STATE      STATUS       CONTAINERS    VCORES    MEMORY
-    application_1526497750451_0009    hello_world    RUNNING    UNDEFINED    2             2         640
+    application_1526497750451_0009    hello_world    RUNNING    UNDEFINED    1             1         512
 
 
 Kill a running application
 --------------------------
 
-By default, applications shutdown once all of their services have exited *or*
-any service exits with a non-zero exit code. To explicitly kill an application,
-use the `skein application kill <cli.html#skein-application-kill>`__ command:
+By default, applications shutdown once all of their containers have exited *or*
+any containers exits with a non-zero exit code. To explicitly kill an
+application, use the `skein application kill
+<cli.html#skein-application-kill>`__ command:
 
 .. code::
 

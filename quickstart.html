@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Quickstart &#8212; Skein 0.4.1+5.g8dd2982 documentation</title>
+    <title>Quickstart &#8212; Skein 0.4.1+6.gcf6e9a5 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -77,22 +77,13 @@ information, see the <a class="reference external" href="specification.html">spe
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hello_world</span>
 <span class="nt">queue</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">default</span>
 
-<span class="nt">services</span><span class="p">:</span>
-  <span class="nt">my_service</span><span class="p">:</span>
-    <span class="nt">resources</span><span class="p">:</span>
-      <span class="nt">vcores</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
-      <span class="nt">memory</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">128 MiB</span>
-    <span class="nt">files</span><span class="p">:</span>
-      <span class="nt">payload.txt</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">payload.txt</span>
-    <span class="nt">commands</span><span class="p">:</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">echo &quot;Sleeping for 60 seconds&quot;</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sleep 60</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">cat payload.txt</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">echo &quot;Stopping service&quot;</span>
-</pre></div>
-</div>
-<p>Where the contents of <code class="docutils literal notranslate"><span class="pre">payload.txt</span></code> is:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Hello World!
+<span class="nt">master</span><span class="p">:</span>
+  <span class="nt">resources</span><span class="p">:</span>
+    <span class="nt">vcores</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+    <span class="nt">memory</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">512 MiB</span>
+  <span class="nt">commands</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sleep 60</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">echo &quot;Hello World!&quot;</span>
 </pre></div>
 </div>
 <p>Walking through this specification:</p>
@@ -104,32 +95,23 @@ the YARN queue <code class="docutils literal notranslate"><span class="pre">defa
 </pre></div>
 </div>
 </li>
-<li><p class="first">The application starts a single service <code class="docutils literal notranslate"><span class="pre">my_service</span></code> on a container using 1
-virtual core and 128 MiB of memory.</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">services</span><span class="p">:</span>
-  <span class="nt">my_service</span><span class="p">:</span>
-    <span class="nt">resources</span><span class="p">:</span>
-      <span class="nt">vcores</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
-      <span class="nt">memory</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">128 MiB</span>
+<li><p class="first">The application requests a single container for the <em>Application Master</em> with
+1 virtual core and 512 MiB of memory.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nn">...</span>
+<span class="nt">master</span><span class="p">:</span>
+ <span class="nt">resources</span><span class="p">:</span>
+   <span class="nt">vcores</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+   <span class="nt">memory</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">512 MiB</span>
 </pre></div>
 </div>
 </li>
-<li><p class="first">The file <code class="docutils literal notranslate"><span class="pre">payload.txt</span></code> is distributed with the application, and is named
-<code class="docutils literal notranslate"><span class="pre">payload.txt</span></code> both locally and on the running container.</p>
+<li><p class="first">The Application Master then runs a few Shell commands. These will be run in
+order, stopping on the first failure, and all outputs logged in the container
+logs.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nn">...</span>
-    <span class="nt">files</span><span class="p">:</span>
-      <span class="nt">payload.txt</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">payload.txt</span>
-</pre></div>
-</div>
-</li>
-<li><p class="first">The service runs a few Shell commands. These will be run in order, stopping
-on the first failure, and all outputs logged in the container logs.</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nn">...</span>
-    <span class="nt">commands</span><span class="p">:</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">echo &quot;Sleeping for 60 seconds&quot;</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sleep 60</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">cat payload.txt</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">echo &quot;Stopping service&quot;</span>
+ <span class="nt">commands</span><span class="p">:</span>
+   <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sleep 60</span>
+   <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">echo &quot;Hello World!&quot;</span>
 </pre></div>
 </div>
 </li>
@@ -156,7 +138,7 @@ can be queried using the <a class="reference external" href="cli.html#skein-appl
 applications that are either <code class="docutils literal notranslate"><span class="pre">SUBMITTED</span></code>, <code class="docutils literal notranslate"><span class="pre">ACCEPTED</span></code>, or <code class="docutils literal notranslate"><span class="pre">RUNNING</span></code>.</p>
 <div class="code highlight-default notranslate"><div class="highlight"><pre><span></span>$ skein application ls
 APPLICATION_ID                    NAME           STATE      STATUS       CONTAINERS    VCORES    MEMORY
-application_1526497750451_0009    hello_world    RUNNING    UNDEFINED    2             2         640
+application_1526497750451_0009    hello_world    RUNNING    UNDEFINED    1             1         512
 </pre></div>
 </div>
 <p>You can also filter by application state. Here we show all <code class="docutils literal notranslate"><span class="pre">KILLED</span></code> and <code class="docutils literal notranslate"><span class="pre">FAILED</span></code> applications:</p>
@@ -170,15 +152,15 @@ application_1526497750451_0005    hello_world    FAILED    FAILED    0          
 <p>To get the status of a specific application, use the <a class="reference external" href="cli.html#skein-application-status">skein application status</a> command:</p>
 <div class="code highlight-default notranslate"><div class="highlight"><pre><span></span>$ skein application status application_1526497750451_0009
 APPLICATION_ID                    NAME           STATE      STATUS       CONTAINERS    VCORES    MEMORY
-application_1526497750451_0009    hello_world    RUNNING    UNDEFINED    2             2         640
+application_1526497750451_0009    hello_world    RUNNING    UNDEFINED    1             1         512
 </pre></div>
 </div>
 </div>
 <div class="section" id="kill-a-running-application">
 <h2>Kill a running application<a class="headerlink" href="#kill-a-running-application" title="Permalink to this headline">¶</a></h2>
-<p>By default, applications shutdown once all of their services have exited <em>or</em>
-any service exits with a non-zero exit code. To explicitly kill an application,
-use the <a class="reference external" href="cli.html#skein-application-kill">skein application kill</a> command:</p>
+<p>By default, applications shutdown once all of their containers have exited <em>or</em>
+any containers exits with a non-zero exit code. To explicitly kill an
+application, use the <a class="reference external" href="cli.html#skein-application-kill">skein application kill</a> command:</p>
 <div class="code highlight-default notranslate"><div class="highlight"><pre><span></span>$ skein application kill application_1526497750451_0009
 
 # See that the application was killed
