@@ -124,9 +124,16 @@ message Security {
 
 
 message Master {
+  // Application-master configuration
   File log_config = 1;
   Log.Level log_level = 2;
   Security security = 3;
+
+  // Master service configuration parameters
+  Resources resources = 4;
+  map<string, File> files = 5;
+  map<string, string> env = 6;
+  repeated string commands = 7;
 }
 
 

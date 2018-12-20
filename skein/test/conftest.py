@@ -120,9 +120,13 @@ def ensure_shutdown(client, app_id, status=None):
 
 
 @contextmanager
-def run_application(client, spec=sleep_until_killed):
-    app = client.submit_and_connect(spec)
-    with ensure_shutdown(client, app.id):
+def run_application(client, spec=sleep_until_killed, connect=True):
+    if connect:
+        app = client.submit_and_connect(spec)
+        app_id = app.id
+    else:
+        app_id = app = client.submit(spec)
+    with ensure_shutdown(client, app_id):
         yield app
 
 

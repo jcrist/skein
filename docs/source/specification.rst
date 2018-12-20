@@ -50,7 +50,7 @@ value by setting ``node_label`` on the service directly. Default is no label.
 ~~~~~~~~~~~~~~~~
 
 The maximum number of submission attempts before marking the application as
-failed. Note that this only considers failures of the application master
+failed. Note that this only considers failures of the Application Master
 during startup. Optional, default is 1 (recommended).
 
 ``tags``
@@ -81,6 +81,7 @@ always acquired for the default filesystem (``fs.defaultFS`` in
     - hdfs://nn1.com:8032
     - hdfs://nn2.com:8032
     - webhdfs://nn3.com:50070
+
 
 .. _specification-acls:
 
@@ -144,38 +145,14 @@ For more information on ACLs see:
 ``master``
 ~~~~~~~~~~
 
-Additional configuration tuning for the Application Master. Optional. Under
-common use the defaults should be sufficient.
-
-Supported subfields are:
-
-- ``log_level``: The application master log level. Possible values are (from
-  most to least verbose): ``all``, ``trace``, ``debug``, ``info``, ``warn``,
-  ``error``, ``fatal`` or ``off``. Default is ``info``. Note that this sets
-  the ``skein.log.level`` system property, which is used in the default
-  ``log4j.properties`` file - if you provide your own ``log4j.properties`` file
-  this field may have no effect.
-- ``log_config``: a path to a custom ``log4j.properties`` file. Could be local
-  or on a remote filesystem. If not provided, a default logging configuration
-  is used. See the `Log4j documentation <https://logging.apache.org/log4j/1.2/>`__
-  for more information.
-- ``security``: security configuration for the application master. By default
-  the application master will use the same security credentials as the driver
-  that launched it. To override, provide a mapping of specifying the locations
-  of ``cert_file`` and ``key_file``. See the :class:`Security` docstring for
-  more information.
-
-**Example**
-
-.. code-block:: none
-
-  master:
-    log_config: path/to/my/log4j.properties
+A :class:`Master` object, configuring the Application Master. Optional, see
+specification-master_ for more information.
 
 ``services``
 ~~~~~~~~~~~~
 
-A dict of service-name to :class:`Service`. At least one service is required.
+A dict of service-name to :class:`Service`. Optional, see Service_ for more
+information.
 
 **Example**
 
@@ -185,20 +162,33 @@ A dict of service-name to :class:`Service`. At least one service is required.
       my_service:
         ...
 
-Service
-^^^^^^^
+.. _specification-master:
 
-The basic of unit of an application is a :class:`Service`. Services describe
-how to launch an executable, as well as how that executable should be managed
-over the course of the application. A service may also have multiple instances,
-each running in their own YARN container. A service description takes the
-following fields:
+Master
+^^^^^^
+
+All applications start with a single process called an *Application Master*.
+This process is responsible for starting and managing any additional containers
+during the lifetime of the application.
+
+In Skein, the Application Master is the Java process that interprets the
+specification, and manages any additional services that specification contains.
+It also allows for *optionally* running a single user-defined process, referred
+to in Skein as the *application driver*. If an application driver is specified,
+the application will terminate when that process exits, regardless if other
+services have yet to complete.
+
+The :class:`Master` object allows for configuring the Application Master Java
+process, as well as the optional user-defined application driver. Supported
+subfields are:
+
+.. _specification-resources:
 
 ``resources``
 ~~~~~~~~~~~~~
 
-The memory and cpu requirements to a single instance of the service. Takes the
-following fields:
+The memory and cpu requirements for the Application Master. Takes the following
+fields:
 
 - ``memory``
 
@@ -220,59 +210,37 @@ following fields:
   of a core. Requests larger than the maximum allocation will error on
   application submission.
 
-
-**Example**
-
 .. code-block:: none
 
-    services:
-      my_service:
+    master:
+      resources:
         memory: 2 GiB
         vcores: 2
 
 ``commands``
 ~~~~~~~~~~~~
 
-Shell commands to startup the service. Commands are run in the order provided,
-with subsequent commands only run if the prior commands succeeded. At least one
-command must be provided.
+Shell commands to run the *application driver*. Commands are run in the order
+provided, with subsequent commands only run if the prior commands succeeded. At
+least one command must be provided.
 
 .. code-block:: none
 
-    services:
-      my_service:
-        commands:
-          - echo "This is a single command"
-          - |
-            if [[ "$SOME_CONDITION" == "true" ]]; then
-                echo "You can use multi-line strings "
-                echo "to handle more complicated behavior"
-            fi
+    master:
+      commands:
+        - echo "Run this first"
+        - echo "Run this next"
 
-``instances``
-~~~~~~~~~~~~~
-
-The number of instances to create on startup. Must be >= 0. After startup
-additional instances may be created by the :class:`ApplicationClient`.
-Optional, default is 1.
-
-**Example**
-
-.. code-block:: none
-
-    services:
-      my_service:
-        instances: 4  # Start 4 instances
 
 .. _specification-files:
 
 ``files``
 ~~~~~~~~~
 
-Any files or archives needed to run the service. A mapping of destination
-relative paths to :class:`File` or :class:`str` objects describing the sources
-for these paths. :class:`File` objects are described in more detail below.
-Each :class:`File` object takes the following fields:
+Any files or archives needed to distribute to this container. A mapping of
+destination relative paths to :class:`File` or :class:`str` objects describing
+the sources for these paths. :class:`File` objects are described in more detail
+below.  Each :class:`File` object takes the following fields:
 
 - ``source``
 
@@ -318,6 +286,140 @@ For more information see :doc:`distributing-files`.
 
 .. code-block:: none
 
+    master:
+      files:
+        # /local/path/to/file.zip will be uploaded to hdfs, and extracted
+        # into the directory path_on_container
+        path_on_container:
+          source: /local/path/to/file.zip
+          type: archive
+
+        # Can also specify only the source path - missing fields are inferred
+        script_path.py: /path/to/script.py
+
+        # Files on remote filesystems can be used by specifying the scheme.
+        script2_path.py: hdfs:///remote/path/to/script2.py
+
+``env``
+~~~~~~~
+
+A mapping of environment variables to set in this container. Optional.
+
+**Example**
+
+.. code-block:: none
+
+    master:
+      env:
+        ENV1: VAL1
+        ENV2: VAL2
+
+``log_level``
+~~~~~~~~~~~~~
+
+The Application Master log level. Possible values are (from most to least
+verbose): ``all``, ``trace``, ``debug``, ``info``, ``warn``, ``error``,
+``fatal`` or ``off``. Note that this sets the ``skein.log.level`` system
+property, which is used in the default ``log4j.properties`` file - if you
+provide your own ``log4j.properties`` file this field may have no effect.
+Optional, the default is ``info``.
+
+**Example**
+
+.. code-block:: none
+
+  master:
+    log_level: debug
+
+``log_config``
+~~~~~~~~~~~~~~
+
+A path to a custom ``log4j.properties`` file. Could be local or on a remote
+filesystem. If not provided, a default logging configuration is used. See the
+`Log4j documentation <https://logging.apache.org/log4j/1.2/>`__ for more
+information. Optional.
+
+**Example**
+
+.. code-block:: none
+
+  master:
+    log_config: path/to/my/log4j.properties
+
+``security``
+~~~~~~~~~~~~
+
+Security configuration for the Application Master. By default the application
+master will use the same security credentials as the driver that launched it.
+To override, provide a mapping of specifying the locations of ``cert_file`` and
+``key_file``. See the :class:`Security` docstring for more information.
+Optional, the default is usually sufficient.
+
+**Example**
+
+.. code-block:: none
+
+  master:
+    security:
+      cert_file: path/to/my/cert_file.crt
+      key_file: path/to/my/key_file.pem
+
+
+Service
+^^^^^^^
+
+Any additional containers needed by an application can be described a
+:class:`Service`.  Services specify how to launch an executable, as well as how
+that executable should be managed over the course of the application. A service
+may also have multiple instances, each running in their own YARN container. A
+service description takes the following fields:
+
+``resources``
+~~~~~~~~~~~~~
+
+The memory and cpu requirements for a single instance of the service. Same as
+the ``resources`` field in ``master`` :ref:`described above
+<specification-resources>`.
+
+**Example**
+
+.. code-block:: none
+
+    services:
+      my_service:
+        resources:
+          memory: 2 GiB
+          vcores: 2
+
+``commands``
+~~~~~~~~~~~~
+
+Shell commands to startup the service. Commands are run in the order provided,
+with subsequent commands only run if the prior commands succeeded. At least one
+command must be provided.
+
+.. code-block:: none
+
+    services:
+      my_service:
+        commands:
+          - echo "This is a single command"
+          - |
+            if [[ "$SOME_CONDITION" == "true" ]]; then
+                echo "You can use multi-line strings "
+                echo "to handle more complicated behavior"
+            fi
+
+``files``
+~~~~~~~~~
+
+Any files or archives needed to run the service. Same as the ``files`` field in
+``master`` :ref:`described above <specification-files>`.
+
+**Example**
+
+.. code-block:: none
+
     services:
       my_service:
         files:
@@ -347,6 +449,21 @@ A mapping of environment variables needed to run the service. Optional.
         env:
           ENV1: VAL1
           ENV2: VAL2
+
+``instances``
+~~~~~~~~~~~~~
+
+The number of instances to create on startup. Must be >= 0. After startup
+additional instances may be created by the :class:`ApplicationClient`.
+Optional, default is 1.
+
+**Example**
+
+.. code-block:: none
+
+    services:
+      my_service:
+        instances: 4  # Start 4 instances
 
 ``depends``
 ~~~~~~~~~~~
@@ -469,24 +586,24 @@ applications are free to package files any way they see fit.
     name: dask-with-jupyter
     queue: default
 
-    services:
-      jupyter:
-        resources:
-          memory: 1 GiB
-          vcores: 1
-        files:
-          conda_env: env.zip
-          data.csv: hdfs:///path/to/some/data.csv
-        commands:
-          - source conda_env/bin/activate
-          - start-jupyter-notebook-and-register-address  # pseudocode
+    master:
+      resources:
+        memory: 2 GiB
+        vcores: 1
+      files:
+        conda_env: env.tar.gz
+        data.csv: hdfs:///path/to/some/data.csv
+      commands:
+        - source conda_env/bin/activate
+        - start-jupyter-notebook-and-register-address  # pseudocode
 
+    services:
       dask.scheduler:
         resources:
           memory: 2 GiB
           vcores: 1
         files:
-          conda_env: env.zip
+          conda_env: env.tar.gz
         commands:
           - source conda_env/bin/activate
           - start-dask-scheduler-and-register-address  # pseudocode
@@ -494,11 +611,11 @@ applications are free to package files any way they see fit.
       dask.worker:
         instances: 4
         resources:
-          memory: 2 GiB
+          memory: 4 GiB
           vcores: 4
         max_restarts: 8  # Restart workers a maximum of 8 times
         files:
-          conda_env: env.zip
+          conda_env: env.tar.gz
         depends:
           - dask.scheduler  # Ensure scheduler is started before workers
         commands:
@@ -522,27 +639,27 @@ described above. They can be read from a file, or created directly:
     spec = skein.ApplicationSpec.from_file('spec.yaml')
 
     # Create directly
-    jupyter = skein.Service(resources=skein.Resources(memory=1024, vcores=1),
-                            files={'conda_env': 'env.zip',
-                                   'data.csv': 'hdfs:///path/to/some/data.csv'},
-                            commands=['source conda_env/bin/activate',
-                                      'start-jupyter-notebook-and-register-address'])
+    jupyter = skein.Master(resources=skein.Resources(memory='2 GiB', vcores=1),
+                           files={'conda_env': 'env.tar.gz',
+                                  'data.csv': 'hdfs:///path/to/some/data.csv'},
+                           commands=['source conda_env/bin/activate',
+                                     'start-jupyter-notebook-and-register-address'])
 
-    scheduler = skein.Service(resources=skein.Resources(memory=2048, vcores=1),
-                              files={'conda_env': 'env.zip'},
+    scheduler = skein.Service(resources=skein.Resources(memory='2 GiB', vcores=1),
+                              files={'conda_env': 'env.tar.gz'},
                               commands=['source conda_env/bin/activate',
                                         'start-dask-scheduler-and-register-address'])
 
     worker = skein.Service(instances=4,
                            max_restarts=8,
-                           resources=skein.Resources(memory=2048, vcores=4),
-                           files={'conda_env': 'env.zip'},
+                           resources=skein.Resources(memory='4 GiB', vcores=4),
+                           files={'conda_env': 'env.tar.gz'},
                            depends=['dask.scheduler'],
                            commands=['source conda_env/bin/activate',
                                      'get-dask-scheduler-address-and-start-worker'])
 
     spec = skein.ApplicationSpec(name="dask-with-jupyter",
                                  queue="default",
-                                 services={'jupyter': jupyter,
-                                           'dask.scheduler': scheduler,
+                                 master=jupyter,
+                                 services={'dask.scheduler': scheduler,
                                            'dask.worker': worker})

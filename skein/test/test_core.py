@@ -436,25 +436,34 @@ def test_dynamic_containers(client):
         app.shutdown()
 
 
-def test_container_environment(client, has_kerberos_enabled):
+@pytest.mark.parametrize('runon', ['service', 'master'])
+def test_container_environment(runon, client, has_kerberos_enabled):
     commands = ['env',
                 'echo "LOGIN_ID=[$(whoami)]"',
                 'hdfs dfs -touchz /user/testuser/test_container_permissions']
-    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
-                            commands=commands)
-    spec = skein.ApplicationSpec(name="test_container_permissions",
+    kwargs = dict(resources=skein.Resources(memory=512, vcores=1),
+                  commands=commands)
+    services = master = None
+    if runon == 'service':
+        services = {'service': skein.Service(**kwargs)}
+    else:
+        master = skein.Master(**kwargs)
+
+    spec = skein.ApplicationSpec(name="test_container_permissions_%s" % runon,
                                  queue="default",
-                                 services={'service': service})
+                                 services=services,
+                                 master=master)
 
-    with run_application(client, spec=spec) as app:
-        assert wait_for_completion(client, app.id) == 'SUCCEEDED'
+    with run_application(client, spec=spec, connect=False) as app_id:
+        assert wait_for_completion(client, app_id) == 'SUCCEEDED'
 
-    logs = get_logs(app.id)
+    logs = get_logs(app_id)
     assert "USER=testuser" in logs
     assert 'SKEIN_APPMASTER_ADDRESS=' in logs
-    assert 'SKEIN_APPLICATION_ID=%s' % app.id in logs
-    assert 'SKEIN_CONTAINER_ID=service_0' in logs
-    assert 'SKEIN_RESOURCE_MEMORY=128' in logs
+    assert 'SKEIN_APPLICATION_ID=%s' % app_id in logs
+    if runon == 'service':
+        assert 'SKEIN_CONTAINER_ID=service_0' in logs
+    assert 'SKEIN_RESOURCE_MEMORY=512' in logs
     assert 'SKEIN_RESOURCE_VCORES=1' in logs
 
     if has_kerberos_enabled:
@@ -646,12 +655,8 @@ def test_security_specified(client):
     security = skein.Security.new_credentials()
     spec = skein.ApplicationSpec(
         name="test_security_specified",
-        master=skein.Master(security=security),
-        services={
-            'sleeper': skein.Service(
-                resources=skein.Resources(memory=128, vcores=1),
-                commands=['sleep infinity'])
-        }
+        master=skein.Master(security=security,
+                            commands=['sleep infinity'])
     )
     with run_application(client, spec=spec) as app:
         assert app.security is security
@@ -688,3 +693,62 @@ def test_daemon_errors_deprecated():
                           skein.DaemonNotRunningError)
     with pytest.warns(UserWarning):
         assert not isinstance(skein.SkeinError(), skein.DaemonNotRunningError)
+
+
+def test_master_driver_foo(client, tmpdir):
+    filpath = str(tmpdir.join("dummy-file"))
+    with open(filpath, 'w') as fil:
+        fil.write('foobar')
+
+    spec = skein.ApplicationSpec(
+        name="test_master_driver",
+        master=skein.Master(
+            commands=['ls', 'env'],
+            env={'FOO': 'BAR'},
+            files={'myfile': filpath}
+        )
+    )
+    with run_application(client, spec=spec, connect=False) as app_id:
+        assert wait_for_completion(client, app_id) == 'SUCCEEDED'
+
+    logs = get_logs(app_id)
+    assert 'FOO=BAR' in logs
+    assert 'myfile' in logs
+
+
+@pytest.mark.parametrize('kind, master_cmd, service_cmd', [
+    ('service_succeeds', 'sleep infinity', 'exit 0'),
+    ('service_fails', 'sleep infinity', 'exit 1'),
+    ('driver_succeeds', 'exit 0', 'sleep infinity'),
+    ('driver_fails', 'exit 1', 'sleep infinity')
+])
+def test_master_driver_shutdown_sequence(kind, master_cmd, service_cmd,
+                                         client, tmpdir):
+    spec = skein.ApplicationSpec(
+        name="test_master_driver_shutdown_sequence_%s" % kind,
+        master=skein.Master(
+            commands=[master_cmd]
+        ),
+        services={
+            'service': skein.Service(
+                resources=skein.Resources(memory=128, vcores=1),
+                commands=[service_cmd]
+            )
+        }
+    )
+
+    state = 'SUCCEEDED' if kind.endswith('succeeds') else 'FAILED'
+
+    if kind == 'service_succeeds':
+        with run_application(client, spec=spec) as app:
+            wait_for_containers(app, 1, states=['SUCCEEDED'])
+            assert len(app.get_containers()) == 0
+            # App hangs around until driver completes
+            app.shutdown()
+            wait_for_completion(client, app.id) == state
+    else:
+        with run_application(client, spec=spec, connect=False) as app_id:
+            # service_fails results in immediate failure
+            # driver_succeeds results in immediate success
+            # driver_fails results in immediate failure
+            wait_for_completion(client, app_id) == state

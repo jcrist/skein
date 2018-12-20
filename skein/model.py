@@ -983,6 +983,21 @@ class Master(Specification):
 
     Parameters
     ----------
+    resources : Resources, optional
+        Describes the resources needed to run the application master. Default
+        is 512 MiB, 1 virtual core.
+    commands : list, optional
+        Shell commands to run after starting the application master. Commands
+        are run in the order provided, with subsequent commands only run if the
+        prior commands succeeded. If provided, the application will terminate
+        once all commands have completed.
+    files : dict, optional
+        Describes any additional files needed to run the application master. A
+        mapping of destination relative paths to ``File`` or ``str`` objects
+        describing the sources for these paths. If a ``str``, the file type is
+        inferred from the extension.
+    env : dict, optional
+        A mapping of environment variables to set on the application master.
     log_level : str or LogLevel, optional
         The application master log level. Sets the ``skein.log.level`` system
         property. One of {'ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR',
@@ -995,22 +1010,46 @@ class Master(Specification):
         provided, these will be the same as those used by the submitting
         client.
     """
-    __slots__ = ('_log_level', 'log_config', 'security')
-    _params = ('log_level', 'log_config', 'security')
+    __slots__ = ('resources', 'commands', 'files', 'env',
+                 '_log_level', 'log_config', 'security')
+    _params = ('resources', 'commands', 'files', 'env',
+               'log_level', 'log_config', 'security')
     _protobuf_cls = _proto.Master
 
-    def __init__(self, log_level=LogLevel.INFO, log_config=None, security=None):
+    def __init__(self, resources=None, commands=None, files=None, env=None,
+                 log_level=LogLevel.INFO, log_config=None, security=None):
+        self.resources = (Resources(memory='512 MiB', vcores=1)
+                          if resources is None else resources)
+        self.commands = [] if commands is None else commands
+        self.files = ({k: v if isinstance(v, File) else File(v)
+                       for (k, v) in files.items()}
+                      if files is not None else {})
+        self.env = {} if env is None else env
         self.log_level = log_level
-        if isinstance(log_config, string):
-            log_config = File(log_config)
-        self.log_config = log_config
+        self.log_config = (File(log_config) if isinstance(log_config, string)
+                           else log_config)
         self.security = security
 
         self._validate()
 
     def _validate(self):
-        self._check_is_type('log_config', File, nullable=True)
-        self._check_is_type('security', Security, nullable=True)
+        self._check_is_type('resources', Resources)
+        self.resources._validate(is_request=True)
+
+        self._check_is_dict_of('files', string, File)
+        for f in self.files.values():
+            f._validate()
+
+        self._check_is_dict_of('env', string, string)
+        self._check_is_list_of('commands', string)
+
+        if self.log_config is not None:
+            self._check_is_type('log_config', File)
+            self.log_config._validate()
+
+        if self.security is not None:
+            self._check_is_type('security', Security)
+            self.security._validate()
 
     @property
     def log_level(self):
@@ -1021,7 +1060,7 @@ class Master(Specification):
         self._log_level = LogLevel(log_level)
 
     def __repr__(self):
-        return 'Master<log_level=%r>' % self.log_level
+        return 'Master<...>'
 
     @classmethod
     @implements(Specification.from_dict)
@@ -1037,20 +1076,38 @@ class Master(Specification):
         if security is not None:
             security = Security.from_dict(security, **kwargs)
 
-        return cls(log_config=log_config, security=security, **obj)
+        resources = obj.pop('resources', None)
+        if resources is not None:
+            resources = Resources.from_dict(resources)
+
+        files = obj.pop('files', None)
+        if files is not None:
+            files = {k: File.from_dict(v, **kwargs) for k, v in files.items()}
+
+        return cls(log_config=log_config,
+                   security=security,
+                   resources=resources,
+                   files=files,
+                   **obj)
 
     @classmethod
     @implements(Specification.from_protobuf)
     def from_protobuf(cls, obj):
+        resources = Resources.from_protobuf(obj.resources)
+        files = {k: File.from_protobuf(v) for k, v in obj.files.items()}
         log_level = _proto.Log.Level.Name(obj.log_level)
-        if obj.HasField('log_config'):
-            log_config = File.from_protobuf(obj.log_config)
-        else:
-            log_config = None
+        log_config = (File.from_protobuf(obj.log_config)
+                      if obj.HasField('log_config')
+                      else None)
         security = (Security.from_protobuf(obj.security)
                     if obj.HasField('security')
                     else None)
-        return cls(log_level=log_level, log_config=log_config,
+        return cls(resources=resources,
+                   files=files,
+                   commands=list(obj.commands),
+                   env=dict(obj.env),
+                   log_level=log_level,
+                   log_config=log_config,
                    security=security)
 
 
@@ -1059,8 +1116,13 @@ class ApplicationSpec(Specification):
 
     Parameters
     ----------
-    services : dict
-        A mapping of service-name to services. At least one service is required.
+    services : dict, optional
+        A mapping of service-name to services. Applications must either specify
+        at least one service, or commands for the application master to run
+        (see ``skein.Master`` for more information).
+    master : Master, optional
+        Additional configuration for the application master service. See
+        ``skein.Master`` for more information.
     name : string, optional
         The name of the application, defaults to 'skein'.
     queue : string, optional
@@ -1081,22 +1143,20 @@ class ApplicationSpec(Specification):
     acls : ACLs, optional
         Allows restricting users/groups to subsets of application access. See
         ``skein.ACLs`` for more information.
-    master : Master, optional
-        Additional configuration for the application master service. See
-        ``skein.Master`` for more information.
     max_attempts : int, optional
         The maximum number of submission attempts before marking the
         application as failed. Note that this only considers failures of the
         application master during startup. Default is 1.
     """
-    __slots__ = ('services', 'name', 'queue', 'user', 'node_label', 'tags',
-                 'file_systems', 'acls', 'master', 'max_attempts')
+    __slots__ = ('services', 'master', 'name', 'queue', 'user', 'node_label',
+                 'tags', 'file_systems', 'acls', 'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
-    def __init__(self, services=required, name='skein', queue='default',
-                 user='', node_label='', tags=None, file_systems=None,
-                 acls=None, master=None, max_attempts=1):
-        self._assign_required('services', services)
+    def __init__(self, services=None, master=None, name='skein',
+                 queue='default', user='', node_label='', tags=None,
+                 file_systems=None, acls=None, max_attempts=1):
+        self.services = {} if services is None else services
+        self.master = Master() if master is None else master
         self.name = name
         self.queue = queue
         self.user = user
@@ -1104,7 +1164,6 @@ class ApplicationSpec(Specification):
         self.tags = set() if tags is None else set(tags)
         self.file_systems = [] if file_systems is None else file_systems
         self.acls = ACLs() if acls is None else acls
-        self.master = Master() if master is None else master
         self.max_attempts = max_attempts
         self._validate()
 
@@ -1125,7 +1184,8 @@ class ApplicationSpec(Specification):
         self._check_is_type('master', Master)
         self.master._validate()
         self._check_is_dict_of('services', string, Service)
-        if not self.services:
+
+        if not self.services and not self.master.commands:
             raise context.ValueError("There must be at least one service")
 
         for name, service in self.services.items():

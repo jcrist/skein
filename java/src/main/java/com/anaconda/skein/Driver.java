@@ -35,7 +35,6 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
@@ -52,7 +51,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
@@ -76,10 +74,6 @@ public class Driver {
   // level, we can only get so much parallelism in *handling* requests.
   private static final int MIN_GRPC_EXECUTOR_THREADS = 2;
   private static final int MAX_GRPC_EXECUTOR_THREADS = 10;
-
-  // Application Master container limits
-  private static final int AM_MEMORY = 512;
-  private static final int AM_VCORES = 1;
 
   // Owner rwx (700)
   private static final FsPermission SKEIN_DIR_PERM =
@@ -367,27 +361,41 @@ public class Driver {
     ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
 
+    // Start building the appmaster request
+    Model.Master master = spec.getMaster();
+
     // Setup the LocalResources for the appmaster and containers
     Path appDir = getAppDir(fs, appId);
     Map<String, LocalResource> localResources = setupAppDir(fs, spec, appDir);
 
     // Setup the appmaster environment variables
     Map<String, String> env = new HashMap<String, String>();
+    env.putAll(master.getEnv());
     env.put("CLASSPATH", classpath);
+    env.put("SKEIN_APPLICATION_ID", appId.toString());
+    String lang = System.getenv("LANG");
+    if (lang != null) {
+      env.put("LANG", lang);
+    }
+    if (!ugi.isSecurityEnabled()) {
+      // Add HADOOP_USER_NAME to environment for *simple* authentication only
+      env.put("HADOOP_USER_NAME", UserGroupInformation.getCurrentUser().getUserName());
+    }
 
     // Setup the appmaster commands
     String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
-    String log4jConfig = (spec.getMaster().hasLogConfig()
-                          ? "-Dlog4j.configuration=file:./log4j.properties "
+    String log4jConfig = (master.hasLogConfig()
+                          ? "-Dlog4j.configuration=file:./.skein.log4j.properties "
                           : "");
-    Level logLevel = spec.getMaster().getLogLevel();
+    Level logLevel = master.getLogLevel();
     List<String> commands = Arrays.asList(
         (Environment.JAVA_HOME.$$() + "/bin/java "
          + "-Xmx128M "
          + log4jConfig
          + "-Dskein.log.level=" + logLevel
+         + " -Dskein.log.directory=" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
          + " com.anaconda.skein.ApplicationMaster "
-         + appDir + " " + appId.toString()
+         + appDir
          + " >" + logdir + "/appmaster.log 2>&1"));
 
     // Add security tokens as needed
@@ -415,7 +423,7 @@ public class Driver {
     appContext.setApplicationType("skein");
     appContext.setAMContainerSpec(amContext);
     appContext.setApplicationName(spec.getName());
-    appContext.setResource(Resource.newInstance(AM_MEMORY, AM_VCORES));
+    appContext.setResource(master.getResources());
     appContext.setPriority(Priority.newInstance(0));
     appContext.setQueue(spec.getQueue());
     appContext.setMaxAppAttempts(spec.getMaxAttempts());
@@ -458,12 +466,13 @@ public class Driver {
 
     // Create LocalResources for the crt/pem files, and add them to the
     // security object.
-    Model.Security security = spec.getMaster().getSecurity();
+    Model.Master master = spec.getMaster();
+    Model.Security security = master.getSecurity();
     if (security == null) {
       security = new Model.Security();
       security.setCertBytes(certBytes);
       security.setKeyBytes(keyBytes);
-      spec.getMaster().setSecurity(security);
+      master.setSecurity(security);
     }
     LocalResource certFile = finalizeSecurityFile(
         fs, uploadCache, appDir, security.getCertFile(), security.getCertBytes(),
@@ -482,12 +491,15 @@ public class Driver {
     spec.validate();
 
     // Setup the LocalResources for the application master
-    Map<String, LocalResource> lr = new HashMap<String, LocalResource>();
+    Map<String, LocalResource> lr = master.getLocalResources();
+    for (LocalResource resource : lr.values()) {
+      finalizeLocalResource(uploadCache, appDir, resource, true);
+    }
     lr.put(".skein.jar", newLocalResource(uploadCache, appDir, jarPath));
-    if (spec.getMaster().hasLogConfig()) {
-      LocalResource logConfig = spec.getMaster().getLogConfig();
+    if (master.hasLogConfig()) {
+      LocalResource logConfig = master.getLogConfig();
       finalizeLocalResource(uploadCache, appDir, logConfig, false);
-      lr.put("log4j.properties", logConfig);
+      lr.put(".skein.log4j.properties", logConfig);
     }
     lr.put(".skein.crt", certFile);
     lr.put(".skein.pem", keyFile);
@@ -511,24 +523,10 @@ public class Driver {
       FileSystem fs, Map<Path, Path> uploadCache, Path appDir,
       LocalResource certFile, LocalResource keyFile) throws IOException {
 
-    // Build the execution script
-    final StringBuilder script = new StringBuilder();
-    script.append("set -e -x");
-    for (String c : service.getCommands()) {
-      script.append("\n");
-      script.append(c);
-    }
-
     // Write the service script to file
     final Path scriptPath = new Path(appDir, serviceName + ".sh");
     LOG.debug("Writing script for service '{}' to {}", serviceName, scriptPath);
-
-    OutputStream out = fs.create(scriptPath);
-    try {
-      out.write(script.toString().getBytes(StandardCharsets.UTF_8));
-    } finally {
-      out.close();
-    }
+    Utils.writeScript(service.getCommands(), fs.create(scriptPath));
     LocalResource scriptFile = Utils.localResource(fs, scriptPath,
                                                    LocalResourceType.FILE);
 
