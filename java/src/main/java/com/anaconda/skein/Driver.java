@@ -326,9 +326,8 @@ public class Driver {
 
     try {
       Path appDir = getAppDir(fs, appId);
-      LOG.debug("Deleting application directory {}", appDir);
-      if (fs.exists(appDir)) {
-        fs.delete(appDir, true);
+      if (fs.delete(appDir, true)) {
+        LOG.debug("Deleted application directory {}", appDir);
       }
     } catch (IOException exc) {
       LOG.warn("Failed to delete application directory for {}", appId, exc);
