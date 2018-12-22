@@ -566,13 +566,13 @@ def test_memory_limit_exceeded(kind, client):
                                  queue="default",
                                  master=master,
                                  services=services)
-    with run_application(client, spec=spec) as app:
-        assert wait_for_completion(client, app.id) == "FAILED"
-    logs = get_logs(app.id)
+    with run_application(client, spec=spec, connect=False) as app_id:
+        assert wait_for_completion(client, app_id) == "FAILED"
+    logs = get_logs(app_id)
     assert search_txt in logs
 
     if kind == 'master':
-        report = client.application_report(app.id)
+        report = client.application_report(app_id)
         assert 'memory limit' in report.diagnostics
 
 
