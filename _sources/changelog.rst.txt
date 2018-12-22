@@ -14,6 +14,9 @@ Upcoming Release
 - Add support for running a single user process on the same node as the
   Application Master, allowing for faster application startup for
   single-container services (:pr:`120`, :issue:`118`)
+- Ensure application directory is cleaned up, even during application master
+  failure or if killed by other tools (:pr:`122`)
+- Fix support for application retries (:pr:`122`)
 
 Version 0.4.1 (December 7, 2018)
 --------------------------------
