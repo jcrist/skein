@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import os
+import subprocess
 import time
 import weakref
 
@@ -347,7 +348,7 @@ def test_shutdown_arguments(client):
 
     with run_application(client) as app:
         app.shutdown(status, diagnostics)
-        wait_for_completion(client, app.id) == 'KILLED'
+        assert wait_for_completion(client, app.id) == 'KILLED'
 
     # There's a noticeable lag in the YARN resource manager between an
     # application being marked as finished and its diagnostics message being
@@ -487,11 +488,15 @@ def test_file_systems(client):
         assert wait_for_completion(client, app.id) == 'SUCCEEDED'
 
 
-def test_kill_application_removes_appdir(client):
+@pytest.mark.parametrize('use_skein', [True, False])
+def test_kill_application_removes_appdir(use_skein, client):
     hdfs = pytest.importorskip('pyarrow.hdfs')
 
     with run_application(client) as app:
-        client.kill_application(app.id)
+        if use_skein:
+            client.kill_application(app.id)
+        else:
+            subprocess.check_call(["yarn", "application", "-kill", app.id])
 
     fs = hdfs.connect()
     assert not fs.exists("/user/testuser/.skein/%s" % app.id)
@@ -542,19 +547,33 @@ def test_set_log_level(client):
     assert 'DEBUG' in logs
 
 
-def test_memory_limit_exceeded(client):
+@pytest.mark.parametrize('kind', ['master', 'service'])
+def test_memory_limit_exceeded(kind, client):
+    resources = skein.Resources(memory=128, vcores=1)
     # Allocate noticeably more memory than the 128 MB limit
-    service = skein.Service(
-        resources=skein.Resources(memory=128, vcores=1),
-        commands=['python -c "b = bytearray(int(256e6)); import time; time.sleep(10)"']
-    )
-    spec = skein.ApplicationSpec(name="test_memory_limit_exceeded",
+    commands = ['python -c "b = bytearray(int(256e6)); import time; time.sleep(10)"']
+
+    master = services = None
+    if kind == 'master':
+        master = skein.Master(resources=resources, commands=commands)
+        search_txt = "memory limit"
+    else:
+        services = {
+            'service': skein.Service(resources=resources, commands=commands)
+        }
+        search_txt = "memory used"
+    spec = skein.ApplicationSpec(name="test_memory_limit_exceeded_%s" % kind,
                                  queue="default",
-                                 services={"service": service})
-    with run_application(client, spec=spec) as app:
-        assert wait_for_completion(client, app.id) == "FAILED"
-    logs = get_logs(app.id)
-    assert "memory used" in logs
+                                 master=master,
+                                 services=services)
+    with run_application(client, spec=spec, connect=False) as app_id:
+        assert wait_for_completion(client, app_id) == "FAILED"
+    logs = get_logs(app_id)
+    assert search_txt in logs
+
+    if kind == 'master':
+        report = client.application_report(app_id)
+        assert 'memory limit' in report.diagnostics
 
 
 @pytest.mark.parametrize('strict', [False, True])
@@ -745,10 +764,70 @@ def test_master_driver_shutdown_sequence(kind, master_cmd, service_cmd,
             assert len(app.get_containers()) == 0
             # App hangs around until driver completes
             app.shutdown()
-            wait_for_completion(client, app.id) == state
+            assert wait_for_completion(client, app.id) == state
     else:
         with run_application(client, spec=spec, connect=False) as app_id:
             # service_fails results in immediate failure
             # driver_succeeds results in immediate success
             # driver_fails results in immediate failure
-            wait_for_completion(client, app_id) == state
+            assert wait_for_completion(client, app_id) == state
+
+
+test_retries_script_template = """
+set +x +e
+if [[ $CONTAINER_ID =~ container_[0-9]+_[0-9]+_{succeed_on}_[0-9]+ ]]; then
+  echo "Succeeding on attempt {succeed_on}"
+  exit 0
+else
+  echo "Failing on other attempts"
+  exit 1
+fi
+"""
+
+
+def test_retries_succeeds(client):
+    hdfs = pytest.importorskip('pyarrow.hdfs')
+
+    spec = skein.ApplicationSpec(
+        name="test_application_retries_succeeds",
+        max_attempts=2,
+        master=skein.Master(
+            commands=[
+                test_retries_script_template.format(succeed_on='02')
+            ]
+        )
+    )
+    with run_application(client, spec=spec, connect=False) as app_id:
+        assert wait_for_completion(client, app_id) == 'SUCCEEDED'
+    logs = get_logs(app_id)
+    assert 'Failing on other attempts' in logs
+    assert 'Application attempt 1 out of 2 failed, will retry' in logs
+    assert 'Succeeding on attempt 02' in logs
+
+    fs = hdfs.connect()
+    assert not fs.exists("/user/testuser/.skein/%s" % app_id)
+
+
+def test_retries_fails(client):
+    hdfs = pytest.importorskip('pyarrow.hdfs')
+
+    # Global maximum is 2, checks that appmaster uses 2 instead of 10
+    max_attempts = 10
+
+    spec = skein.ApplicationSpec(
+        name="test_application_retries_fails",
+        max_attempts=max_attempts,
+        master=skein.Master(
+            commands=[
+                test_retries_script_template.format(succeed_on='03')
+            ]
+        )
+    )
+    with run_application(client, spec=spec, connect=False) as app_id:
+        assert wait_for_completion(client, app_id) == 'FAILED'
+    logs = get_logs(app_id)
+    assert logs.count('Failing on other attempts') == 2
+    assert 'Application attempt 1 out of 2 failed' in logs
+
+    fs = hdfs.connect()
+    assert not fs.exists("/user/testuser/.skein/%s" % app_id)

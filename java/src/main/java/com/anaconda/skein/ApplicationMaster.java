@@ -23,6 +23,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -34,12 +35,13 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +50,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -108,12 +109,21 @@ public class ApplicationMaster {
   private WebUI ui;
   private String hostname;
 
+  private FileSystem fs;
   private AMRMClient<ContainerRequest> rmClient;
   private NMClient nmClient;
   private ThreadPoolExecutor executor;
   private Thread allocatorThread;
   private Process driverProcess;
   private Thread driverThread;
+
+  // Flags to communicate with exit hook
+  // - The defaults will only be used in the case of an unexpected shutdown
+  //   of the application master.
+  boolean currentlyRegistered = false;
+  FinalApplicationStatus finalStatus = FinalApplicationStatus.FAILED;
+  String finalMessage = ("Application master failed unexpectedly. See the "
+                         + "logs for more information.");
 
   private UserGroupInformation ugi;
   private ByteBuffer tokens;
@@ -142,14 +152,6 @@ public class ApplicationMaster {
         .executor(executor)
         .build()
         .start();
-
-    Runtime.getRuntime().addShutdownHook(
-        new Thread() {
-          @Override
-          public void run() {
-            ApplicationMaster.this.stopServer();
-          }
-        });
 
     LOG.info("gRPC server started at {}:{}", hostname, grpcServer.getPort());
   }
@@ -200,14 +202,6 @@ public class ApplicationMaster {
       fatal("Failed to start WebUI server", e);
     }
 
-    Runtime.getRuntime().addShutdownHook(
-        new Thread() {
-          @Override
-          public void run() {
-            ApplicationMaster.this.stopUI();
-          }
-        });
-
     LOG.info("WebUI server started at {}:{}", hostname, ui.getURI().getPort());
   }
 
@@ -250,7 +244,7 @@ public class ApplicationMaster {
     }
   }
 
-  private void startMasterDriver() throws IOException {
+  private void startApplicationDriver() throws IOException {
     Model.Master master = spec.getMaster();
     if (master.getCommands().isEmpty()) {
       // Nothing to do
@@ -284,6 +278,13 @@ public class ApplicationMaster {
           if (exitValue == 0) {
             shutdown(FinalApplicationStatus.SUCCEEDED,
                      "Application driver completed successfully.");
+          } else if (exitValue == 143) {
+            // SIGTERM results in exit code 143
+            shutdown(FinalApplicationStatus.FAILED,
+                     "Application driver failed with exit code 143. "
+                     + "This is often due to the application master "
+                     + "memory limit being exceeded. See the "
+                     + "diagnostics for more information.");
           } else {
             shutdown(FinalApplicationStatus.FAILED,
                      "Application driver failed with exit code "
@@ -295,15 +296,10 @@ public class ApplicationMaster {
     driverThread.start();
   }
 
-  private void stopMasterDriver() {
-    if (driverThread == null) {
-      return;
-    }
-    if (!Thread.currentThread().equals(driverThread)) {
+  private void stopApplicationDriver() {
+    if (driverThread != null && driverThread.isAlive()) {
+      LOG.info("Stopping application driver");
       driverThread.interrupt();
-    }
-    // Sanity check
-    if (driverProcess != null) {
       driverProcess.destroy();
     }
   }
@@ -506,6 +502,21 @@ public class ApplicationMaster {
   public void run() throws Exception {
     conf = new YarnConfiguration();
 
+    // Initialize HDFS client
+    fs = FileSystem.get(conf);
+
+    // Register this hook early so it always gets run
+    // - We register with a higher priority than FileSystem
+    //   to ensure that the hdfs client is still active
+    ShutdownHookManager.get().addShutdownHook(
+        new Runnable() {
+          @Override
+          public void run() {
+            runOnExit();
+          }
+        },
+        FileSystem.SHUTDOWN_HOOK_PRIORITY + 30);
+
     loadApplicationSpec();
 
     // Create ugi and add original tokens to it
@@ -547,12 +558,17 @@ public class ApplicationMaster {
     startServer();
     startUI();
 
-    rmClient.registerApplicationMaster(hostname, grpcServer.getPort(), ui.getURI().toString());
+    synchronized (this) {
+      rmClient.registerApplicationMaster(
+          hostname, grpcServer.getPort(), ui.getURI().toString()
+      );
+      currentlyRegistered = true;
+    }
 
     startAllocator();
 
-    // Start master driver (if applicable)
-    startMasterDriver();
+    // Start application driver (if applicable)
+    startApplicationDriver();
 
     // Start services
     for (ServiceTracker tracker: services.values()) {
@@ -588,29 +604,64 @@ public class ApplicationMaster {
 
   private void preshutdown(FinalApplicationStatus status, String msg) {
     LOG.info("Shutting down: {}", msg);
+    finalStatus = status;
+    finalMessage = msg;
+  }
 
-    try {
-      rmClient.unregisterApplicationMaster(status, msg, null);
-    } catch (Exception ex) {
-      LOG.error("Failed to unregister application", ex);
+  private int getMaxAttempts() {
+    int maxAttempts = spec.getMaxAttempts();
+    int yarnMaxAttempts = conf.getInt(
+        YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS
+    );
+    if (yarnMaxAttempts < maxAttempts) {
+      maxAttempts = yarnMaxAttempts;
     }
-    stopAllocator();
-    stopMasterDriver();
+    return maxAttempts;
+  }
 
-    // Delete the app directory
-    ugi.doAs(
-        new PrivilegedAction<Void>() {
-          public Void run() {
-            try {
-              FileSystem fs = FileSystem.get(conf);
-              fs.delete(appDir, true);
-              LOG.info("Deleted application directory {}", appDir);
-            } catch (IOException exc) {
-              LOG.warn("Failed to delete application directory {}", appDir, exc);
-            }
-            return null;
+  private int getCurrentAttempt() {
+    ContainerId containerId = ConverterUtils.toContainerId(
+        System.getenv(Environment.CONTAINER_ID.name())
+    );
+    return containerId.getApplicationAttemptId().getAttemptId();
+  }
+
+  private void runOnExit() {
+    int maxAttempts = getMaxAttempts();
+    int currentAttempt = getCurrentAttempt();
+    boolean isLastAttempt = currentAttempt >= maxAttempts;
+
+    if (finalStatus == FinalApplicationStatus.SUCCEEDED || isLastAttempt) {
+      // Unregister the application
+      synchronized (this) {
+        if (currentlyRegistered) {
+          try {
+            LOG.info("Unregistering application with status {}", finalStatus);
+            rmClient.unregisterApplicationMaster(finalStatus, finalMessage, null);
+            currentlyRegistered = false;
+          } catch (Exception ex) {
+            LOG.error("Failed to unregister application", ex);
           }
-        });
+        }
+      }
+      // Delete the app directory
+      try {
+        if (fs.delete(appDir, true)) {
+          LOG.info("Deleted application directory {}", appDir);
+        }
+      } catch (IOException exc) {
+        LOG.warn("Failed to delete application directory {}", appDir, exc);
+      }
+    } else {
+      LOG.info("Application attempt {} out of {} failed, will retry",
+               currentAttempt, maxAttempts);
+    }
+
+    stopApplicationDriver();
+    stopAllocator();
+    stopUI();
+    stopServer();
   }
 
   /** Main entrypoint for the ApplicationMaster. **/
