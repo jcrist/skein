@@ -210,6 +210,8 @@ fields:
   of a core. Requests larger than the maximum allocation will error on
   application submission.
 
+**Example**
+
 .. code-block:: none
 
     master:
@@ -217,19 +219,19 @@ fields:
         memory: 2 GiB
         vcores: 2
 
-``commands``
+``script``
 ~~~~~~~~~~~~
 
-Shell commands to run the *application driver*. Commands are run in the order
-provided, with subsequent commands only run if the prior commands succeeded. At
-least one command must be provided.
+A bash script to run the *application driver*. Optional.
+
+**Example**
 
 .. code-block:: none
 
     master:
-      commands:
-        - echo "Run this first"
-        - echo "Run this next"
+      script: |
+        echo "Run this first"
+        echo "Run this next"
 
 
 .. _specification-files:
@@ -391,24 +393,20 @@ the ``resources`` field in ``master`` :ref:`described above
           memory: 2 GiB
           vcores: 2
 
-``commands``
+``script``
 ~~~~~~~~~~~~
 
-Shell commands to startup the service. Commands are run in the order provided,
-with subsequent commands only run if the prior commands succeeded. At least one
-command must be provided.
+A bash script to run the service. Required.
+
+**Example**
 
 .. code-block:: none
 
     services:
       my_service:
-        commands:
-          - echo "This is a single command"
-          - |
-            if [[ "$SOME_CONDITION" == "true" ]]; then
-                echo "You can use multi-line strings "
-                echo "to handle more complicated behavior"
-            fi
+        script: |
+          echo "Run this first"
+          echo "Run this next"
 
 ``files``
 ~~~~~~~~~
@@ -593,9 +591,9 @@ applications are free to package files any way they see fit.
       files:
         conda_env: env.tar.gz
         data.csv: hdfs:///path/to/some/data.csv
-      commands:
-        - source conda_env/bin/activate
-        - start-jupyter-notebook-and-register-address  # pseudocode
+      script: |
+        source conda_env/bin/activate
+        start-jupyter-notebook-and-register-address  # pseudocode
 
     services:
       dask.scheduler:
@@ -604,9 +602,9 @@ applications are free to package files any way they see fit.
           vcores: 1
         files:
           conda_env: env.tar.gz
-        commands:
-          - source conda_env/bin/activate
-          - start-dask-scheduler-and-register-address  # pseudocode
+        script: |
+          source conda_env/bin/activate
+          start-dask-scheduler-and-register-address  # pseudocode
 
       dask.worker:
         instances: 4
@@ -618,9 +616,9 @@ applications are free to package files any way they see fit.
           conda_env: env.tar.gz
         depends:
           - dask.scheduler  # Ensure scheduler is started before workers
-        commands:
-          - source conda_env/bin/activate
-          - get-dask-scheduler-address-and-start-worker  # pseudocode
+        script: |
+          source conda_env/bin/activate
+          get-dask-scheduler-address-and-start-worker  # pseudocode
 
 
 Python API Example
@@ -642,21 +640,21 @@ described above. They can be read from a file, or created directly:
     jupyter = skein.Master(resources=skein.Resources(memory='2 GiB', vcores=1),
                            files={'conda_env': 'env.tar.gz',
                                   'data.csv': 'hdfs:///path/to/some/data.csv'},
-                           commands=['source conda_env/bin/activate',
-                                     'start-jupyter-notebook-and-register-address'])
+                           script=('source conda_env/bin/activate\n'
+                                   'start-jupyter-notebook-and-register-address'))
 
     scheduler = skein.Service(resources=skein.Resources(memory='2 GiB', vcores=1),
                               files={'conda_env': 'env.tar.gz'},
-                              commands=['source conda_env/bin/activate',
-                                        'start-dask-scheduler-and-register-address'])
+                              script=('source conda_env/bin/activate\n'
+                                      'start-dask-scheduler-and-register-address'))
 
     worker = skein.Service(instances=4,
                            max_restarts=8,
                            resources=skein.Resources(memory='4 GiB', vcores=4),
                            files={'conda_env': 'env.tar.gz'},
                            depends=['dask.scheduler'],
-                           commands=['source conda_env/bin/activate',
-                                     'get-dask-scheduler-address-and-start-worker'])
+                           script=('source conda_env/bin/activate\n'
+                                   'get-dask-scheduler-address-and-start-worker'))
 
     spec = skein.ApplicationSpec(name="dask-with-jupyter",
                                  queue="default",

@@ -6,13 +6,14 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.4.1+8.g1a9ff0d documentation</title>
+    <title>API Docs &#8212; Skein 0.4.1+9.g9acaedd documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="shortcut icon" href="_static/favicon.ico"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -2254,7 +2255,7 @@ still proxied but isn’t linked to in the Web UI.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
 <dt><strong>services</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
 <dd><p class="first last">A mapping of service-name to services. Applications must either specify
-at least one service, or commands for the application master to run
+at least one service, or a script for the application master to run
 (see <code class="docutils literal notranslate"><span class="pre">skein.Master</span></code> for more information).</p>
 </dd>
 <dt><strong>master</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Master, optional</span></dt>
@@ -2402,7 +2403,7 @@ output all fields.</p>
 
 <dl class="class">
 <dt id="skein.Master">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Master</code><span class="sig-paren">(</span><em>resources=None</em>, <em>commands=None</em>, <em>files=None</em>, <em>env=None</em>, <em>log_level=LogLevel.INFO</em>, <em>log_config=None</em>, <em>security=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Master</code><span class="sig-paren">(</span><em>resources=None</em>, <em>script=''</em>, <em>files=None</em>, <em>env=None</em>, <em>log_level=LogLevel.INFO</em>, <em>log_config=None</em>, <em>security=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master" title="Permalink to this definition">¶</a></dt>
 <dd><p>Configuration for the Application Master.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2413,11 +2414,10 @@ output all fields.</p>
 <dd><p class="first last">Describes the resources needed to run the application master. Default
 is 512 MiB, 1 virtual core.</p>
 </dd>
-<dt><strong>commands</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list, optional</span></dt>
-<dd><p class="first last">Shell commands to run after starting the application master. Commands
-are run in the order provided, with subsequent commands only run if the
-prior commands succeeded. If provided, the application will terminate
-once all commands have completed.</p>
+<dt><strong>script</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">An optional bash script to run after starting the application master.
+If provided, the application will terminate once the script has
+completed.</p>
 </dd>
 <dt><strong>files</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
 <dd><p class="first last">Describes any additional files needed to run the application master. A
@@ -2501,7 +2501,7 @@ client.</p>
 
 <dl class="class">
 <dt id="skein.Service">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Service</code><span class="sig-paren">(</span><em>resources=required</em>, <em>commands=required</em>, <em>instances=1</em>, <em>files=None</em>, <em>env=None</em>, <em>depends=None</em>, <em>max_restarts=0</em>, <em>node_label=''</em>, <em>nodes=None</em>, <em>racks=None</em>, <em>relax_locality=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Service</code><span class="sig-paren">(</span><em>resources=required</em>, <em>script=required</em>, <em>instances=1</em>, <em>files=None</em>, <em>env=None</em>, <em>depends=None</em>, <em>max_restarts=0</em>, <em>node_label=''</em>, <em>nodes=None</em>, <em>racks=None</em>, <em>relax_locality=False</em>, <em>commands=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service" title="Permalink to this definition">¶</a></dt>
 <dd><p>Description of a Skein service.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2511,10 +2511,8 @@ client.</p>
 <dt><strong>resources</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Resources</span></dt>
 <dd><p class="first last">Describes the resources needed to run the service.</p>
 </dd>
-<dt><strong>commands</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
-<dd><p class="first last">Shell commands to startup the service. Commands are run in the order
-provided, with subsequent commands only run if the prior commands
-succeeded. At least one command must be provided</p>
+<dt><strong>script</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">A bash script to run the service.</p>
 </dd>
 <dt><strong>instances</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
 <dd><p class="first last">The number of instances to create on startup. Default is 1.</p>

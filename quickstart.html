@@ -6,13 +6,14 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Quickstart &#8212; Skein 0.4.1+8.g1a9ff0d documentation</title>
+    <title>Quickstart &#8212; Skein 0.4.1+9.g9acaedd documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="shortcut icon" href="_static/favicon.ico"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -81,9 +82,9 @@ information, see the <a class="reference external" href="specification.html">spe
   <span class="nt">resources</span><span class="p">:</span>
     <span class="nt">vcores</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
     <span class="nt">memory</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">512 MiB</span>
-  <span class="nt">commands</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sleep 60</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">echo &quot;Hello World!&quot;</span>
+  <span class="nt">script</span><span class="p">:</span> <span class="p p-Indicator">|</span>
+    <span class="no">sleep 60</span>
+    <span class="no">echo &quot;Hello World!&quot;</span>
 </pre></div>
 </div>
 <p>Walking through this specification:</p>
@@ -99,19 +100,18 @@ the YARN queue <code class="docutils literal notranslate"><span class="pre">defa
 1 virtual core and 512 MiB of memory.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nn">...</span>
 <span class="nt">master</span><span class="p">:</span>
- <span class="nt">resources</span><span class="p">:</span>
-   <span class="nt">vcores</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
-   <span class="nt">memory</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">512 MiB</span>
+  <span class="nt">resources</span><span class="p">:</span>
+    <span class="nt">vcores</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+    <span class="nt">memory</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">512 MiB</span>
 </pre></div>
 </div>
 </li>
-<li><p class="first">The Application Master then runs a few Shell commands. These will be run in
-order, stopping on the first failure, and all outputs logged in the container
-logs.</p>
+<li><p class="first">The Application Master then runs a bash script. Both <code class="docutils literal notranslate"><span class="pre">stdout</span></code> and
+<code class="docutils literal notranslate"><span class="pre">stderr</span></code> of this script will be written to the container logs.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nn">...</span>
- <span class="nt">commands</span><span class="p">:</span>
-   <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sleep 60</span>
-   <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">echo &quot;Hello World!&quot;</span>
+  <span class="nt">script</span><span class="p">:</span> <span class="p p-Indicator">|</span>
+    <span class="no">sleep 60</span>
+    <span class="no">echo &quot;Hello World!&quot;</span>
 </pre></div>
 </div>
 </li>

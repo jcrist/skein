@@ -6,13 +6,14 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Specification &#8212; Skein 0.4.1+8.g1a9ff0d documentation</title>
+    <title>Specification &#8212; Skein 0.4.1+9.g9acaedd documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="shortcut icon" href="_static/favicon.ico"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -57,7 +58,7 @@ application specification in detail.</p>
 </li>
 <li><a class="reference internal" href="#specification-master" id="id19">Master</a><ul>
 <li><a class="reference internal" href="#resources" id="id20"><code class="docutils literal notranslate"><span class="pre">resources</span></code></a></li>
-<li><a class="reference internal" href="#commands" id="id21"><code class="docutils literal notranslate"><span class="pre">commands</span></code></a></li>
+<li><a class="reference internal" href="#script" id="id21"><code class="docutils literal notranslate"><span class="pre">script</span></code></a></li>
 <li><a class="reference internal" href="#files" id="id22"><code class="docutils literal notranslate"><span class="pre">files</span></code></a></li>
 <li><a class="reference internal" href="#env" id="id23"><code class="docutils literal notranslate"><span class="pre">env</span></code></a></li>
 <li><a class="reference internal" href="#log-level" id="id24"><code class="docutils literal notranslate"><span class="pre">log_level</span></code></a></li>
@@ -67,7 +68,7 @@ application specification in detail.</p>
 </li>
 <li><a class="reference internal" href="#service" id="id27">Service</a><ul>
 <li><a class="reference internal" href="#id2" id="id28"><code class="docutils literal notranslate"><span class="pre">resources</span></code></a></li>
-<li><a class="reference internal" href="#id3" id="id29"><code class="docutils literal notranslate"><span class="pre">commands</span></code></a></li>
+<li><a class="reference internal" href="#id3" id="id29"><code class="docutils literal notranslate"><span class="pre">script</span></code></a></li>
 <li><a class="reference internal" href="#id4" id="id30"><code class="docutils literal notranslate"><span class="pre">files</span></code></a></li>
 <li><a class="reference internal" href="#id5" id="id31"><code class="docutils literal notranslate"><span class="pre">env</span></code></a></li>
 <li><a class="reference internal" href="#instances" id="id32"><code class="docutils literal notranslate"><span class="pre">instances</span></code></a></li>
@@ -245,6 +246,7 @@ of a core. Requests larger than the maximum allocation will error on
 application submission.</p>
 </li>
 </ul>
+<p><strong>Example</strong></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>master:
   resources:
     memory: 2 GiB
@@ -252,15 +254,14 @@ application submission.</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="commands">
-<h4><a class="toc-backref" href="#id21"><code class="docutils literal notranslate"><span class="pre">commands</span></code></a><a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h4>
-<p>Shell commands to run the <em>application driver</em>. Commands are run in the order
-provided, with subsequent commands only run if the prior commands succeeded. At
-least one command must be provided.</p>
+<div class="section" id="script">
+<h4><a class="toc-backref" href="#id21"><code class="docutils literal notranslate"><span class="pre">script</span></code></a><a class="headerlink" href="#script" title="Permalink to this headline">¶</a></h4>
+<p>A bash script to run the <em>application driver</em>. Optional.</p>
+<p><strong>Example</strong></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>master:
-  commands:
-    - echo &quot;Run this first&quot;
-    - echo &quot;Run this next&quot;
+  script: |
+    echo &quot;Run this first&quot;
+    echo &quot;Run this next&quot;
 </pre></div>
 </div>
 </div>
@@ -396,19 +397,14 @@ the <code class="docutils literal notranslate"><span class="pre">resources</span
 </div>
 </div>
 <div class="section" id="id3">
-<h4><a class="toc-backref" href="#id29"><code class="docutils literal notranslate"><span class="pre">commands</span></code></a><a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
-<p>Shell commands to startup the service. Commands are run in the order provided,
-with subsequent commands only run if the prior commands succeeded. At least one
-command must be provided.</p>
+<h4><a class="toc-backref" href="#id29"><code class="docutils literal notranslate"><span class="pre">script</span></code></a><a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
+<p>A bash script to run the service. Required.</p>
+<p><strong>Example</strong></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>services:
   my_service:
-    commands:
-      - echo &quot;This is a single command&quot;
-      - |
-        if [[ &quot;$SOME_CONDITION&quot; == &quot;true&quot; ]]; then
-            echo &quot;You can use multi-line strings &quot;
-            echo &quot;to handle more complicated behavior&quot;
-        fi
+    script: |
+      echo &quot;Run this first&quot;
+      echo &quot;Run this next&quot;
 </pre></div>
 </div>
 </div>
@@ -569,9 +565,9 @@ master:
   files:
     conda_env: env.tar.gz
     data.csv: hdfs:///path/to/some/data.csv
-  commands:
-    - source conda_env/bin/activate
-    - start-jupyter-notebook-and-register-address  # pseudocode
+  script: |
+    source conda_env/bin/activate
+    start-jupyter-notebook-and-register-address  # pseudocode
 
 services:
   dask.scheduler:
@@ -580,9 +576,9 @@ services:
       vcores: 1
     files:
       conda_env: env.tar.gz
-    commands:
-      - source conda_env/bin/activate
-      - start-dask-scheduler-and-register-address  # pseudocode
+    script: |
+      source conda_env/bin/activate
+      start-dask-scheduler-and-register-address  # pseudocode
 
   dask.worker:
     instances: 4
@@ -594,9 +590,9 @@ services:
       conda_env: env.tar.gz
     depends:
       - dask.scheduler  # Ensure scheduler is started before workers
-    commands:
-      - source conda_env/bin/activate
-      - get-dask-scheduler-address-and-start-worker  # pseudocode
+    script: |
+      source conda_env/bin/activate
+      get-dask-scheduler-address-and-start-worker  # pseudocode
 </pre></div>
 </div>
 </div>
@@ -614,21 +610,21 @@ described above. They can be read from a file, or created directly:</p>
 <span class="n">jupyter</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Master</span><span class="p">(</span><span class="n">resources</span><span class="o">=</span><span class="n">skein</span><span class="o">.</span><span class="n">Resources</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="s1">&#39;2 GiB&#39;</span><span class="p">,</span> <span class="n">vcores</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
                        <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;conda_env&#39;</span><span class="p">:</span> <span class="s1">&#39;env.tar.gz&#39;</span><span class="p">,</span>
                               <span class="s1">&#39;data.csv&#39;</span><span class="p">:</span> <span class="s1">&#39;hdfs:///path/to/some/data.csv&#39;</span><span class="p">},</span>
-                       <span class="n">commands</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;source conda_env/bin/activate&#39;</span><span class="p">,</span>
-                                 <span class="s1">&#39;start-jupyter-notebook-and-register-address&#39;</span><span class="p">])</span>
+                       <span class="n">script</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;source conda_env/bin/activate</span><span class="se">\n</span><span class="s1">&#39;</span>
+                               <span class="s1">&#39;start-jupyter-notebook-and-register-address&#39;</span><span class="p">))</span>
 
 <span class="n">scheduler</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">resources</span><span class="o">=</span><span class="n">skein</span><span class="o">.</span><span class="n">Resources</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="s1">&#39;2 GiB&#39;</span><span class="p">,</span> <span class="n">vcores</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
                           <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;conda_env&#39;</span><span class="p">:</span> <span class="s1">&#39;env.tar.gz&#39;</span><span class="p">},</span>
-                          <span class="n">commands</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;source conda_env/bin/activate&#39;</span><span class="p">,</span>
-                                    <span class="s1">&#39;start-dask-scheduler-and-register-address&#39;</span><span class="p">])</span>
+                          <span class="n">script</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;source conda_env/bin/activate</span><span class="se">\n</span><span class="s1">&#39;</span>
+                                  <span class="s1">&#39;start-dask-scheduler-and-register-address&#39;</span><span class="p">))</span>
 
 <span class="n">worker</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">instances</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
                        <span class="n">max_restarts</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
                        <span class="n">resources</span><span class="o">=</span><span class="n">skein</span><span class="o">.</span><span class="n">Resources</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="s1">&#39;4 GiB&#39;</span><span class="p">,</span> <span class="n">vcores</span><span class="o">=</span><span class="mi">4</span><span class="p">),</span>
                        <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;conda_env&#39;</span><span class="p">:</span> <span class="s1">&#39;env.tar.gz&#39;</span><span class="p">},</span>
                        <span class="n">depends</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;dask.scheduler&#39;</span><span class="p">],</span>
-                       <span class="n">commands</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;source conda_env/bin/activate&#39;</span><span class="p">,</span>
-                                 <span class="s1">&#39;get-dask-scheduler-address-and-start-worker&#39;</span><span class="p">])</span>
+                       <span class="n">script</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;source conda_env/bin/activate</span><span class="se">\n</span><span class="s1">&#39;</span>
+                               <span class="s1">&#39;get-dask-scheduler-address-and-start-worker&#39;</span><span class="p">))</span>
 
 <span class="n">spec</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ApplicationSpec</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;dask-with-jupyter&quot;</span><span class="p">,</span>
                              <span class="n">queue</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span>

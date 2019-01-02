@@ -6,13 +6,14 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Distributing Files &#8212; Skein 0.4.1+8.g1a9ff0d documentation</title>
+    <title>Distributing Files &#8212; Skein 0.4.1+9.g9acaedd documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="shortcut icon" href="_static/favicon.ico"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -206,8 +207,8 @@ Packing environment at <span class="s1">&#39;/home/jcrist/environments/example&#
 <div class="section" id="using-the-packaged-environment">
 <h3>Using the Packaged Environment<a class="headerlink" href="#using-the-packaged-environment" title="Permalink to this headline">¶</a></h3>
 <p>To use the packaged environment in a service specification, you need to include
-the archive in <code class="docutils literal notranslate"><span class="pre">files</span></code>, and activate the environment in the <code class="docutils literal notranslate"><span class="pre">commands</span></code>
-list. This looks the same for environments packaged using either tool.</p>
+the archive in <code class="docutils literal notranslate"><span class="pre">files</span></code>, and activate the environment in the <code class="docutils literal notranslate"><span class="pre">script</span></code>. This
+looks the same for environments packaged using either tool.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">services</span><span class="p">:</span>
   <span class="nt">my_service</span><span class="p">:</span>
     <span class="nt">files</span><span class="p">:</span>
@@ -215,13 +216,13 @@ list. This looks the same for environments packaged using either tool.</p>
       <span class="c1"># into a directory named ``environment`` in each container.</span>
       <span class="nt">environment</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">environment.tar.gz</span>
 
-    <span class="nt">commands</span><span class="p">:</span>
-      <span class="c1"># Activate the environment</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">source environment/bin/activate</span>
+    <span class="nt">script</span><span class="p">:</span> <span class="p p-Indicator">|</span>
+      <span class="no"># Activate the environment</span>
+      <span class="no">source environment/bin/activate</span>
 
-      <span class="c1"># Run commands inside the environment. All executables or imported</span>
-      <span class="c1"># python libraries will be from within the packaged environment.</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">my-cool-application</span>
+      <span class="no"># Run commands inside the environment. All executables or imported</span>
+      <span class="no"># python libraries will be from within the packaged environment.</span>
+      <span class="no">my-cool-application</span>
 </pre></div>
 </div>
 </div>

@@ -35,31 +35,6 @@ application master. This is a good first place to look when encountering an
 unexpected failure or bug.
 
 
-Useful Things to Log
---------------------
-
-Since you often don't have access to the worker nodes, it can be useful to log
-the full container environment before executing any application specific
-commands. This includes all localized paths, and all environment variables.
-Since ``skein`` accepts multiple commands for each service, this is easy to do.
-
-.. code-block:: none
-
-    services:
-      my_service:
-        commands:
-          # List all local files, including file types
-          - ls -l
-          # List all environment variables and their values
-          - env
-          # Application specific commands...
-
-
-It's also useful to log application logic as your application progresses. This
-could as simple as periodic ``print`` statements, or using the standard
-library's `logging module <https://docs.python.org/3/library/logging.html>`_.
-
-
 Configuring Logging in the Application Master
 ---------------------------------------------
 
@@ -118,12 +93,3 @@ are also a few ways to do this:
     # Create a client, logging to `driver.log` with "debug" log level
     import skein
     client = skein.Client(log_level='debug', log='driver.log')
-
-
-Start a Remote IPython Kernel on the Container
-----------------------------------------------
-
-As a last resort, it can be useful to Skein's remote `IPython
-<https://ipython.org/>`_ kernel recipe to start an IPython kernel on the
-failing container, and connect to the kernel to debug locally. Refer to the
-:doc:`recipe documentation <recipes-ipython-kernel>` for more information.

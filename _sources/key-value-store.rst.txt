@@ -51,8 +51,8 @@ forever.
     ...     resources:
     ...       memory: 128 MiB
     ...       vcores: 1
-    ...     commands:
-    ...       - sleep infinity
+    ...     script: |
+    ...       sleep infinity
     ... """)
     >>> client = skein.Client()
     >>> app = client.submit_and_connect(spec)
