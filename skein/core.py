@@ -1,5 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
+import errno
 import json
 import os
 import select
@@ -407,24 +408,37 @@ class Client(_ClientBase):
         return address
 
     @staticmethod
-    def stop_global_driver():
+    def stop_global_driver(force=False):
         """Stops the global driver if running.
 
-        No-op if no global driver is running."""
+        No-op if no global driver is running.
+
+        Parameters
+        ----------
+        force : bool, optional
+            By default skein will check that the process associated with the
+            driver PID is actually a skein driver. Setting ``force`` to
+            ``True`` will kill the process in all cases.
+        """
         address, pid = _read_driver()
         if address is None:
             return
 
-        try:
+        if not force:
+            # Attempt to connect first, errors on failure
             Client(address=address)
-        except DriverNotRunningError:
-            pass
-        else:
+        try:
             os.kill(pid, signal.SIGTERM)
+        except OSError as exc:
+            # If we're forcing a kill, ignore EPERM as well, as we're not sure
+            # if the process is a driver.
+            ignore = (errno.ESRCH, errno.EPERM) if force else (errno.ESRCH,)
+            if exc.errno not in ignore:  # pragma: no cover
+                raise
 
         try:
             os.remove(os.path.join(properties.config_dir, 'driver'))
-        except OSError:
+        except OSError:  # pragma: no cover
             pass
 
     # TODO: deprecated, remove after next release cycle

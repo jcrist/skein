@@ -6,7 +6,7 @@ import sys
 import traceback
 
 from . import __version__
-from .core import Client, ApplicationClient, properties
+from .core import Client, ApplicationClient, properties, _read_driver
 from .compatibility import read_stdin_bytes, write_stdout_bytes
 from .exceptions import context, SkeinError, DriverNotRunningError
 from .model import ApplicationSpec, ContainerState, ApplicationState, Security
@@ -173,16 +173,31 @@ def driver_start(keytab=None, principal=None, log=False,
 
 @driver_and_daemon('address', 'The address of the running driver')
 def driver_address():
-    try:
-        client = Client.from_global_driver()
-        print(client.address)
-    except DriverNotRunningError:
+    address, _ = _read_driver()
+    if address is None:
         fail("No skein driver is running")
+    else:
+        print(address)
 
 
-@driver_and_daemon('stop', 'Stop the skein driver')
-def driver_stop():
-    Client.stop_global_driver()
+@subcommand(driver.subs,
+            'pid',
+            'The pid of the running driver')
+def driver_pid():
+    _, pid = _read_driver()
+    if pid is None:
+        fail("No skein driver is running")
+    else:
+        print(pid)
+
+
+@driver_and_daemon('stop', 'Stop the skein driver',
+                   arg('--force', '-f', action='store_true',
+                       help=("Stop the process associated with the driver PID, "
+                             "even if unable to verify it corresponds to a "
+                             "skein driver")))
+def driver_stop(force=False):
+    Client.stop_global_driver(force=force)
 
 
 @driver_and_daemon('restart', 'Restart the skein driver',

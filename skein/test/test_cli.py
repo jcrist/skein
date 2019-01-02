@@ -2,8 +2,10 @@ from __future__ import absolute_import, print_function, division
 
 import io
 import os
+import socket
+import subprocess
 import sys
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 
 import pytest
 
@@ -11,9 +13,11 @@ import skein
 from skein.compatibility import PY2
 from skein.exceptions import context
 from skein.cli import main
+from skein.core import _write_driver
 from skein.test.conftest import (run_application, sleep_until_killed,
                                  check_is_shutdown, wait_for_containers,
-                                 set_skein_config, ensure_shutdown)
+                                 set_skein_config, ensure_shutdown,
+                                 pid_exists)
 
 
 bad_spec_yaml = """
@@ -66,6 +70,7 @@ def global_client(kinit, tmpdir_factory):
                           'driver stop',
                           'driver restart',
                           'driver address',
+                          'driver pid',
                           'application',
                           'application submit',
                           'application status',
@@ -180,6 +185,12 @@ def test_cli_driver(capsys, skein_config):
         assert not err
         assert out2 == out
 
+        # Get pid
+        run_command('driver pid')
+        out2, err = capsys.readouterr()
+        assert not err
+        int(out2)  # smoketest is integer
+
         # Restart driver
         run_command('driver restart')
         out2, err = capsys.readouterr()
@@ -197,6 +208,49 @@ def test_cli_driver(capsys, skein_config):
         out, err = capsys.readouterr()
         assert not out
         assert not err
+
+
+def test_cli_driver_force_stop(tmpdir, capsys):
+    with set_skein_config(str(tmpdir)):
+        run_command('config gencerts')
+        driver_file = os.path.join(skein.properties.config_dir, 'driver')
+
+        proc = subprocess.Popen(
+            [sys.executable, '-c', '"import time;time.sleep(10)"']
+        )
+        sock = socket.socket()
+        sock.bind(('', 0))
+        address = 'localhost:%d' % sock.getsockname()[1]
+        with closing(sock):
+            # PID is not a skein driver
+            _write_driver(address, proc.pid)
+            assert os.path.exists(driver_file)
+
+            run_command('driver stop', error=True)
+            out, err = capsys.readouterr()
+            assert not out
+            assert err
+            assert os.path.exists(driver_file)
+
+            run_command('driver stop --force')
+            out, err = capsys.readouterr()
+            assert not out
+            assert not err
+            assert not os.path.exists(driver_file)
+            assert proc.wait() is not None
+
+            # Find a PID that doesn't exist
+            pid = 1234
+            while pid_exists(pid):
+                pid += 1
+            _write_driver(address, pid)
+            assert os.path.exists(driver_file)
+
+            run_command('driver stop --force')
+            out, err = capsys.readouterr()
+            assert not out
+            assert not err
+            assert not os.path.exists(driver_file)
 
 
 def test_cli_application_submit_errors(tmpdir, capsys, global_client):

@@ -11,7 +11,8 @@ import skein
 from skein.core import Properties
 from skein.exceptions import FileNotFoundError, FileExistsError
 from skein.test.conftest import (run_application, wait_for_containers,
-                                 wait_for_completion, get_logs, KEYTAB_PATH)
+                                 wait_for_completion, get_logs, KEYTAB_PATH,
+                                 pid_exists)
 
 
 def test_properties():
@@ -102,14 +103,6 @@ def test_security_auto_inits(skein_config):
 
     assert not rec
     assert sec == sec2
-
-
-def pid_exists(pid):
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
 
 
 def test_client(security, kinit, tmpdir):
