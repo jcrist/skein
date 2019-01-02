@@ -525,15 +525,13 @@ public class Driver {
     // Write the service script to file
     final Path scriptPath = new Path(appDir, serviceName + ".sh");
     LOG.debug("Writing script for service '{}' to {}", serviceName, scriptPath);
-    Utils.writeScript(service.getCommands(), fs.create(scriptPath));
+    Utils.stringToFile(service.getScript(), fs.create(scriptPath));
     LocalResource scriptFile = Utils.localResource(fs, scriptPath,
                                                    LocalResourceType.FILE);
 
-    // Build command to execute script and set as new commands
-    ArrayList<String> commands = new ArrayList<String>();
+    // Build command to execute script and set as new script
     String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
-    commands.add("bash .script.sh >" + logdir + "/" + serviceName + ".log 2>&1");
-    service.setCommands(commands);
+    service.setScript("bash .skein.sh >" + logdir + "/" + serviceName + ".log 2>&1");
 
     // Upload files/archives as necessary
     Map<String, LocalResource> lr = service.getLocalResources();
@@ -542,7 +540,7 @@ public class Driver {
     }
 
     // Add script/crt/pem files
-    lr.put(".script.sh", scriptFile);
+    lr.put(".skein.sh", scriptFile);
     lr.put(".skein.crt", certFile);
     lr.put(".skein.pem", keyFile);
 

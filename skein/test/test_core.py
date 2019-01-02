@@ -167,7 +167,7 @@ def test_client_errors_nicely_if_not_logged_in(security, not_logged_in):
         services={
             'service': skein.Service(
                 resources=skein.Resources(memory=128, vcores=1),
-                commands=['env'])
+                script='env')
         }
     )
 
@@ -439,11 +439,11 @@ def test_dynamic_containers(client):
 
 @pytest.mark.parametrize('runon', ['service', 'master'])
 def test_container_environment(runon, client, has_kerberos_enabled):
-    commands = ['env',
-                'echo "LOGIN_ID=[$(whoami)]"',
-                'hdfs dfs -touchz /user/testuser/test_container_permissions']
+    script = ('env\n'
+              'echo "LOGIN_ID=[$(whoami)]"\n'
+              'hdfs dfs -touchz /user/testuser/test_container_permissions')
     kwargs = dict(resources=skein.Resources(memory=512, vcores=1),
-                  commands=commands)
+                  script=script)
     services = master = None
     if runon == 'service':
         services = {'service': skein.Service(**kwargs)}
@@ -476,9 +476,9 @@ def test_container_environment(runon, client, has_kerberos_enabled):
 
 
 def test_file_systems(client):
-    commands = ['hdfs dfs -touchz /user/testuser/test_file_systems']
+    script = 'hdfs dfs -touchz /user/testuser/test_file_systems'
     service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
-                            commands=commands)
+                            script=script)
     spec = skein.ApplicationSpec(name="test_file_systems",
                                  queue="default",
                                  services={'service': service},
@@ -517,7 +517,7 @@ log4j.appender.console.layout.ConversionPattern=CUSTOM-LOG4J-SUCCEEDED %m
 def test_custom_log4j_properties(client, tmpdir):
     configpath = str(tmpdir.join("log4j.properties"))
     service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
-                            commands=['ls'])
+                            script='ls')
     spec = skein.ApplicationSpec(name="test_custom_log4j_properties",
                                  queue="default",
                                  master=skein.Master(log_config=configpath),
@@ -534,7 +534,7 @@ def test_custom_log4j_properties(client, tmpdir):
 
 def test_set_log_level(client):
     service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
-                            commands=['ls'])
+                            script='ls')
     spec = skein.ApplicationSpec(name="test_custom_log4j_properties",
                                  queue="default",
                                  master=skein.Master(log_level='debug'),
@@ -551,15 +551,15 @@ def test_set_log_level(client):
 def test_memory_limit_exceeded(kind, client):
     resources = skein.Resources(memory=128, vcores=1)
     # Allocate noticeably more memory than the 128 MB limit
-    commands = ['python -c "b = bytearray(int(256e6)); import time; time.sleep(10)"']
+    script = 'python -c "b = bytearray(int(256e6)); import time; time.sleep(10)"'
 
     master = services = None
     if kind == 'master':
-        master = skein.Master(resources=resources, commands=commands)
+        master = skein.Master(resources=resources, script=script)
         search_txt = "memory limit"
     else:
         services = {
-            'service': skein.Service(resources=resources, commands=commands)
+            'service': skein.Service(resources=resources, script=script)
         }
         search_txt = "memory used"
     spec = skein.ApplicationSpec(name="test_memory_limit_exceeded_%s" % kind,
@@ -589,7 +589,7 @@ def test_node_locality(client, strict):
 
     service = skein.Service(
         resources=skein.Resources(memory=128, vcores=1),
-        commands=['sleep infinity'],
+        script='sleep infinity',
         nodes=nodes,
         racks=racks,
         relax_locality=relax_locality
@@ -634,7 +634,7 @@ def test_proxy_user(client):
         services={
             "service": skein.Service(
                 resources=skein.Resources(memory=128, vcores=1),
-                commands=['sleep infinity'])
+                script='sleep infinity')
         }
     )
     with run_application(client, spec=spec) as app:
@@ -658,7 +658,7 @@ def test_proxy_user_no_permissions(client):
         services={
             'service': skein.Service(
                 resources=skein.Resources(memory=128, vcores=1),
-                commands=['env'])
+                script='env')
         }
     )
     # No permission to submit as user
@@ -675,7 +675,7 @@ def test_security_specified(client):
     spec = skein.ApplicationSpec(
         name="test_security_specified",
         master=skein.Master(security=security,
-                            commands=['sleep infinity'])
+                            script='sleep infinity')
     )
     with run_application(client, spec=spec) as app:
         assert app.security is security
@@ -722,7 +722,7 @@ def test_master_driver_foo(client, tmpdir):
     spec = skein.ApplicationSpec(
         name="test_master_driver",
         master=skein.Master(
-            commands=['ls', 'env'],
+            script='ls\nenv',
             env={'FOO': 'BAR'},
             files={'myfile': filpath}
         )
@@ -745,13 +745,11 @@ def test_master_driver_shutdown_sequence(kind, master_cmd, service_cmd,
                                          client, tmpdir):
     spec = skein.ApplicationSpec(
         name="test_master_driver_shutdown_sequence_%s" % kind,
-        master=skein.Master(
-            commands=[master_cmd]
-        ),
+        master=skein.Master(script=master_cmd),
         services={
             'service': skein.Service(
                 resources=skein.Resources(memory=128, vcores=1),
-                commands=[service_cmd]
+                script=service_cmd
             )
         }
     )
@@ -774,7 +772,6 @@ def test_master_driver_shutdown_sequence(kind, master_cmd, service_cmd,
 
 
 test_retries_script_template = """
-set +x +e
 if [[ $CONTAINER_ID =~ container_[0-9]+_[0-9]+_{succeed_on}_[0-9]+ ]]; then
   echo "Succeeding on attempt {succeed_on}"
   exit 0
@@ -792,9 +789,7 @@ def test_retries_succeeds(client):
         name="test_application_retries_succeeds",
         max_attempts=2,
         master=skein.Master(
-            commands=[
-                test_retries_script_template.format(succeed_on='02')
-            ]
+            script=test_retries_script_template.format(succeed_on='02')
         )
     )
     with run_application(client, spec=spec, connect=False) as app_id:
@@ -818,9 +813,7 @@ def test_retries_fails(client):
         name="test_application_retries_fails",
         max_attempts=max_attempts,
         master=skein.Master(
-            commands=[
-                test_retries_script_template.format(succeed_on='03')
-            ]
+            script=test_retries_script_template.format(succeed_on='03')
         )
     )
     with run_application(client, spec=spec, connect=False) as app_id:

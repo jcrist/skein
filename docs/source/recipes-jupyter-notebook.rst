@@ -147,11 +147,11 @@ the `specification docs <specification.html>`__.
           # This will be automatically extracted by YARN to the directory
           # ``environment`` during resource localization.
           environment: environment.tar.gz
-        commands:
+        script: |
           # Activate our environment
-          - source environment/bin/activate
+          source environment/bin/activate
           # Start the jupyter notebook server
-          - python -m skein.recipes.jupyter_notebook
+          python -m skein.recipes.jupyter_notebook
 
 
 Start the Jupyter Notebook Server

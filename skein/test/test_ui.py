@@ -8,7 +8,7 @@ requests = pytest.importorskip('requests')
 
 
 simplehttp = skein.Service(resources=skein.Resources(memory=128, vcores=1),
-                           commands=['/usr/bin/python -m SimpleHTTPServer 8888'])
+                           script='/usr/bin/python -m SimpleHTTPServer 8888')
 spec = skein.ApplicationSpec(name="test_webui",
                              queue="default",
                              services={'simplehttp': simplehttp})
@@ -231,7 +231,7 @@ def test_webui_acls(client, has_kerberos_enabled, ui_users, checks):
         pytest.skip("Testing only implemented for simple authentication")
 
     service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
-                            commands=['sleep infinity'])
+                            script='sleep infinity')
     spec = skein.ApplicationSpec(name="test_webui_acls",
                                  queue="default",
                                  acls=skein.ACLs(enable=True, ui_users=ui_users),

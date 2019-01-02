@@ -82,7 +82,7 @@ message Service {
   Resources resources = 7;
   map<string, File> files = 8;
   map<string, string> env = 9;
-  repeated string commands = 10;
+  string script = 10;
   repeated string depends = 11;
 }
 
@@ -133,7 +133,7 @@ message Master {
   Resources resources = 4;
   map<string, File> files = 5;
   map<string, string> env = 6;
-  repeated string commands = 7;
+  string script = 7;
 }
 
 

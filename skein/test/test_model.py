@@ -33,9 +33,9 @@ files:
 env:
     key1: val1
     key2: val2
-commands:
-    - command 1
-    - command 2
+script: |-
+    command 1
+    command 2
 nodes:
     - worker.example.com
 relax_locality: true
@@ -274,7 +274,7 @@ def test_master():
                 log_config='/test/path.properties',
                 security=Security.new_credentials())
     m2 = Master(resources=Resources(memory='1 GiB', vcores=2),
-                commands=['commands'],
+                script='script',
                 env={'FOO': 'BAR'},
                 files={'file': '/test/path'})
     m3 = Master()
@@ -302,7 +302,7 @@ def test_master_invariants():
     assert f.log_level == LogLevel.INFO
 
     with pytest.raises(TypeError):
-        Master(commands='foo')
+        Master(script=1)
 
     with pytest.raises(TypeError):
         Master(env={'a': 1})
@@ -311,7 +311,6 @@ def test_master_invariants():
     m = Master()
     assert isinstance(m.env, dict)
     assert isinstance(m.files, dict)
-    assert isinstance(m.commands, list)
 
     # Strings are converted to File objects
     m = Master(files={'target': '/source.zip',
@@ -322,52 +321,52 @@ def test_master_invariants():
 
 def test_service():
     r = Resources(memory=1024, vcores=1)
-    c = ['commands']
-    s1 = Service(resources=r, commands=c,
+    s1 = Service(resources=r,
+                 script='script',
                  node_label="testlabel",
                  files={'file': File(source='/test/path')},
                  nodes=['worker.example.com'],
                  racks=['rack1', 'rack2'],
                  relax_locality=True)
-    s2 = Service(resources=r, commands=c,
+    s2 = Service(resources=r,
+                 script='script',
                  files={'file': File(source='/test/path', size=1024)})
     check_specification_methods(s1, s2)
 
 
 def test_service_invariants():
     r = Resources(memory=1024, vcores=1)
-    c = ['command']
 
     with pytest.raises(TypeError):
         Service()
 
-    # No commands provided
+    # Empty script
     with pytest.raises(ValueError):
-        Service(commands=[], resources=r)
+        Service(script="", resources=r)
 
     with pytest.raises(TypeError):
-        Service(commands='foo', resources=r)
+        Service(script=1, resources=r)
 
     with pytest.raises(ValueError):
-        Service(commands=c, resources=r, instances=-1)
+        Service(script="script", resources=r, instances=-1)
 
     with pytest.raises(ValueError):
-        Service(commands=c, resources=r, max_restarts=-2)
+        Service(script="script", resources=r, max_restarts=-2)
 
     with pytest.raises(TypeError):
-        Service(commands=c, resources=r, env={'a': 1})
+        Service(script="script", resources=r, env={'a': 1})
 
     with pytest.raises(TypeError):
-        Service(commands=c, resources=r, depends=[1])
+        Service(script="script", resources=r, depends=[1])
 
     # Mutable defaults properly set
-    s = Service(commands=c, resources=r)
+    s = Service(script="script", resources=r)
     assert isinstance(s.env, dict)
     assert isinstance(s.files, dict)
     assert isinstance(s.depends, set)
 
     # Strings are converted to File objects
-    s = Service(commands=c, resources=r,
+    s = Service(script="script", resources=r,
                 files={'target': '/source.zip',
                        'target2': '/source2.txt'})
     assert s.files['target'].type == 'archive'
@@ -376,30 +375,29 @@ def test_service_invariants():
 
 def test_application_spec():
     r = Resources(memory=1024, vcores=1)
-    c = ['commands']
-    s1 = Service(resources=r, commands=c,
+    s1 = Service(resources=r, script="script",
                  files={'file': File(source='/test/path')})
-    s2 = Service(resources=r, commands=c,
+    s2 = Service(resources=r, script="script",
                  files={'file': File(source='/test/path', size=1024)})
     spec1 = ApplicationSpec(name='test',
                             queue='testqueue',
                             node_label='testlabel',
                             services={'service': s1})
-    spec2 = ApplicationSpec(master=Master(commands=c, resources=r))
+    spec2 = ApplicationSpec(master=Master(script='script', resources=r))
     spec3 = ApplicationSpec(services={'service': s2})
     check_specification_methods(spec1, spec3)
     check_specification_methods(spec2, spec3)
 
 
 def test_application_spec_invariants():
-    s = Service(commands=['command'],
+    s = Service(script="script",
                 resources=Resources(memory=1024, vcores=1))
 
     # No services
     with pytest.raises(ValueError):
         ApplicationSpec(name='dask', queue='default')
 
-    # No master commands
+    # No master script
     with pytest.raises(ValueError):
         ApplicationSpec(name='dask', queue='default',
                         master=Master())
@@ -413,21 +411,20 @@ def test_application_spec_invariants():
         ApplicationSpec(max_attempts=0, services={'service': s})
 
     r = Resources(memory=1024, vcores=1)
-    c = ['commands']
 
     # Unknown dependency name
     with pytest.raises(ValueError):
         ApplicationSpec(services={'a': s,
-                                  'b': Service(resources=r, commands=c,
+                                  'b': Service(resources=r, script="script",
                                                depends=['c', 'd'])})
 
     # Cyclical dependencies
     with pytest.raises(ValueError):
-        ApplicationSpec(services={'a': Service(resources=r, commands=c,
+        ApplicationSpec(services={'a': Service(resources=r, script="script",
                                                depends=['c']),
-                                  'b': Service(resources=r, commands=c,
+                                  'b': Service(resources=r, script="script",
                                                depends=['a']),
-                                  'c': Service(resources=r, commands=c,
+                                  'c': Service(resources=r, script="script",
                                                depends=['b'])})
 
 
@@ -453,7 +450,8 @@ def test_service_from_yaml():
     assert other.type == 'FILE'
 
     assert s.env == {'key1': 'val1', 'key2': 'val2'}
-    assert s.commands == ['command 1', 'command 2']
+    assert s.script == ('command 1\n'
+                        'command 2')
     assert s.depends == set()
 
 
@@ -461,6 +459,23 @@ def test_service_roundtrip():
     s = Service.from_yaml(service_spec)
     s2 = Service.from_yaml(s.to_yaml())
     assert s == s2
+
+
+def test_service_commands_deprecated():
+    script = ('set -x -e\n'
+              'command 1\n'
+              'command 2')
+
+    with pytest.warns(UserWarning):
+        s = Service(commands=['command 1', 'command 2'],
+                    resources=Resources(memory=1024, vcores=1))
+    assert s.script == script
+
+    with pytest.warns(UserWarning):
+        s = Service.from_dict({'resources': {'memory': 1024,
+                                             'vcores': 1},
+                               'commands': ['command 1', 'command 2']})
+    assert s.script == script
 
 
 def test_application_spec_from_yaml():

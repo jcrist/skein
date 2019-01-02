@@ -44,7 +44,7 @@ public class Model {
     private Resource resources;
     private Map<String, LocalResource> localResources;
     private Map<String, String> env;
-    private List<String> commands;
+    private String script;
     private Set<String> depends;
 
     public Service() {}
@@ -58,7 +58,7 @@ public class Model {
                    Resource resources,
                    Map<String, LocalResource> localResources,
                    Map<String, String> env,
-                   List<String> commands,
+                   String script,
                    Set<String> depends) {
       this.instances = instances;
       this.nodeLabel = nodeLabel;
@@ -69,7 +69,7 @@ public class Model {
       this.resources = resources;
       this.localResources = localResources;
       this.env = env;
-      this.commands = commands;
+      this.script = script;
       this.depends = depends;
     }
 
@@ -81,7 +81,7 @@ public class Model {
               + "resources: " + resources + "\n"
               + "localResources: " + localResources + "\n"
               + "env: " + env + "\n"
-              + "commands: " + commands + "\n"
+              + "script: " + script + "\n"
               + "depends: " + depends);
     }
 
@@ -112,8 +112,8 @@ public class Model {
     public void setEnv(Map<String, String> env) { this.env = env; }
     public Map<String, String> getEnv() { return env; }
 
-    public void setCommands(List<String> commands) { this.commands = commands; }
-    public List<String> getCommands() { return commands; }
+    public void setScript(String script) { this.script = script; }
+    public String getScript() { return script; }
 
     public void setDepends(Set<String> depends) { this.depends = depends; }
     public Set<String> getDepends() { return depends; }
@@ -126,9 +126,9 @@ public class Model {
       throwIfLessThan(resources.getVirtualCores(), 1, "resources.vcores");
       throwIfNull(localResources, "localResources");
       throwIfNull(env, "env");
-      throwIfNull(commands, "commands");
-      if (commands.size() == 0) {
-        throw new IllegalArgumentException("There must be at least one command");
+      throwIfNull(script, "script");
+      if (script.isEmpty()) {
+        throw new IllegalArgumentException("Script must be provided.");
       }
       throwIfNull(depends, "depends");
       throwIfNull(nodes, "nodes");
@@ -240,7 +240,7 @@ public class Model {
     private Resource resources;
     private Map<String, LocalResource> localResources;
     private Map<String, String> env;
-    private List<String> commands;
+    private String script;
 
     private LocalResource logConfig;
     private Level logLevel;
@@ -258,8 +258,8 @@ public class Model {
     public void setEnv(Map<String, String> env) { this.env = env; }
     public Map<String, String> getEnv() { return env; }
 
-    public void setCommands(List<String> commands) { this.commands = commands; }
-    public List<String> getCommands() { return commands; }
+    public void setScript(String script) { this.script = script; }
+    public String getScript() { return script; }
 
     public void setLogConfig(LocalResource logConfig) { this.logConfig = logConfig; }
     public LocalResource getLogConfig() { return this.logConfig; }
@@ -278,7 +278,7 @@ public class Model {
       throwIfLessThan(resources.getVirtualCores(), 1, "resources.vcores");
       throwIfNull(localResources, "localResources");
       throwIfNull(env, "env");
-      throwIfNull(commands, "commands");
+      throwIfNull(script, "script");
       throwIfNull(logLevel, "logLevel");
       if (security != null) {
         security.validate();
@@ -368,9 +368,9 @@ public class Model {
       throwIfNull(master, "master");
       master.validate();
       throwIfNull(services, "services");
-      if (services.size() == 0 && master.getCommands().size() == 0) {
+      if (services.size() == 0 && master.getScript().length() == 0) {
         throw new IllegalArgumentException(
-            "There must be either at least one service or additional commands "
+            "There must be either at least one service or a script "
             + "to run on the application master");
       }
       for (Service s: services.values()) {

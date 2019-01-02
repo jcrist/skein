@@ -68,9 +68,9 @@ Here we create a simple "Hello World" application as a YAML file:
       resources:
         vcores: 1
         memory: 512 MiB
-      commands:
-        - sleep 60
-        - echo "Hello World!"
+      script: |
+        sleep 60
+        echo "Hello World!"
 
 Walking through this specification:
 
@@ -89,20 +89,19 @@ Walking through this specification:
 
      ...
      master:
-      resources:
-        vcores: 1
-        memory: 512 MiB
+       resources:
+         vcores: 1
+         memory: 512 MiB
 
-- The Application Master then runs a few Shell commands. These will be run in
-  order, stopping on the first failure, and all outputs logged in the container
-  logs.
+- The Application Master then runs a bash script. Both ``stdout`` and
+  ``stderr`` of this script will be written to the container logs.
 
   .. code-block:: yaml
 
      ...
-      commands:
-        - sleep 60
-        - echo "Hello World!"
+       script: |
+         sleep 60
+         echo "Hello World!"
 
 
 Submit the Application

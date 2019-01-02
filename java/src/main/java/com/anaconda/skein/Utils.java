@@ -135,16 +135,10 @@ public class Utils {
     return ApplicationId.newInstance(timestamp, id);
   }
 
-  public static void writeScript(List<String> commands, OutputStream out)
+  public static void stringToFile(String data, OutputStream out)
       throws IOException {
-    final StringBuilder script = new StringBuilder();
-    script.append("set -e -x");
-    for (String c : commands) {
-      script.append("\n");
-      script.append(c);
-    }
     try {
-      out.write(script.toString().getBytes(StandardCharsets.UTF_8));
+      out.write(data.getBytes(StandardCharsets.UTF_8));
     } finally {
       out.close();
     }
