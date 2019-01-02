@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.4.1+9.g9acaedd documentation</title>
+    <title>API Docs &#8212; Skein 0.4.1+10.g726b28c documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -278,9 +278,24 @@ configured by setting the environment variable
 
 <dl class="staticmethod">
 <dt id="skein.Client.stop_global_driver">
-<em class="property">static </em><code class="descname">stop_global_driver</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.stop_global_driver" title="Permalink to this definition">¶</a></dt>
+<em class="property">static </em><code class="descname">stop_global_driver</code><span class="sig-paren">(</span><em>force=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.stop_global_driver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Stops the global driver if running.</p>
 <p>No-op if no global driver is running.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>force</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">By default skein will check that the process associated with the
+driver PID is actually a skein driver. Setting <code class="docutils literal notranslate"><span class="pre">force</span></code> to
+<code class="docutils literal notranslate"><span class="pre">True</span></code> will kill the process in all cases.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
