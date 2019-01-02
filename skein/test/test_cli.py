@@ -24,8 +24,7 @@ tags:
 
 services:
     sleeper:
-        commands:
-            - sleep infinity
+        script: sleep infinity
 """
 
 

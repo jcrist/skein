@@ -707,10 +707,8 @@ class Service(Specification):
     ----------
     resources : Resources
         Describes the resources needed to run the service.
-    commands : list
-        Shell commands to startup the service. Commands are run in the order
-        provided, with subsequent commands only run if the prior commands
-        succeeded. At least one command must be provided
+    script : str
+        A bash script to run the service.
     instances : int, optional
         The number of instances to create on startup. Default is 1.
     files : dict, optional
@@ -744,16 +742,23 @@ class Service(Specification):
         other than the ones explicitly requested. If False, those restrictions
         are strictly enforced. Default is False.
     """
-    __slots__ = ('resources', 'commands', 'instances', 'files', 'env',
+    __slots__ = ('resources', 'script', 'instances', 'files', 'env',
                  'depends', 'max_restarts', 'node_label', 'nodes', 'racks',
                  'relax_locality')
     _protobuf_cls = _proto.Service
 
-    def __init__(self, resources=required, commands=required, instances=1,
+    def __init__(self, resources=required, script=required, instances=1,
                  files=None, env=None, depends=None, max_restarts=0,
-                 node_label='', nodes=None, racks=None, relax_locality=False):
+                 node_label='', nodes=None, racks=None, relax_locality=False,
+                 commands=None):
+
+        if script is required and commands is not None:
+            context.warn("The ``commands`` field for services is deprecated, "
+                         "use ``script`` instead")
+            script = '\n'.join(["set -x -e"] + commands)
+
         self._assign_required('resources', resources)
-        self._assign_required('commands', commands)
+        self._assign_required('script', script)
         self.instances = instances
         self.files = ({k: v if isinstance(v, File) else File(v)
                        for (k, v) in files.items()}
@@ -787,9 +792,9 @@ class Service(Specification):
 
         self._check_is_dict_of('env', string, string)
 
-        self._check_is_list_of('commands', string)
-        if not self.commands:
-            raise context.ValueError("There must be at least one command")
+        self._check_is_type('script', string)
+        if not self.script:
+            raise context.ValueError("A script must be provided")
 
         self._check_is_set_of('depends', string)
 
@@ -797,22 +802,26 @@ class Service(Specification):
     @implements(Specification.from_dict)
     def from_dict(cls, obj, **kwargs):
         _origin = _pop_origin(kwargs)
+        obj = obj.copy()
+
+        # deprecated
+        commands = obj.pop('commands', None)
+
         cls._check_keys(obj, cls.__slots__)
 
-        resources = obj.get('resources')
+        resources = obj.pop('resources', None)
         if resources is not None:
             resources = Resources.from_dict(resources)
 
-        files = obj.get('files')
+        files = obj.pop('files', None)
         if files is not None:
             files = {k: File.from_dict(v, _origin=_origin)
                      for k, v in files.items()}
 
-        kwargs = obj.copy()
-        kwargs['resources'] = resources
-        kwargs['files'] = files
-
-        return cls(**kwargs)
+        return cls(resources=resources,
+                   files=files,
+                   commands=commands,
+                   **obj)
 
     @classmethod
     @implements(Specification.from_protobuf)
@@ -828,7 +837,7 @@ class Service(Specification):
                   'resources': resources,
                   'files': files,
                   'env': dict(obj.env),
-                  'commands': list(obj.commands),
+                  'script': obj.script,
                   'depends': set(obj.depends)}
         return cls(**kwargs)
 
@@ -986,11 +995,10 @@ class Master(Specification):
     resources : Resources, optional
         Describes the resources needed to run the application master. Default
         is 512 MiB, 1 virtual core.
-    commands : list, optional
-        Shell commands to run after starting the application master. Commands
-        are run in the order provided, with subsequent commands only run if the
-        prior commands succeeded. If provided, the application will terminate
-        once all commands have completed.
+    script : str, optional
+        An optional bash script to run after starting the application master.
+        If provided, the application will terminate once the script has
+        completed.
     files : dict, optional
         Describes any additional files needed to run the application master. A
         mapping of destination relative paths to ``File`` or ``str`` objects
@@ -1010,17 +1018,17 @@ class Master(Specification):
         provided, these will be the same as those used by the submitting
         client.
     """
-    __slots__ = ('resources', 'commands', 'files', 'env',
+    __slots__ = ('resources', 'script', 'files', 'env',
                  '_log_level', 'log_config', 'security')
-    _params = ('resources', 'commands', 'files', 'env',
+    _params = ('resources', 'script', 'files', 'env',
                'log_level', 'log_config', 'security')
     _protobuf_cls = _proto.Master
 
-    def __init__(self, resources=None, commands=None, files=None, env=None,
+    def __init__(self, resources=None, script="", files=None, env=None,
                  log_level=LogLevel.INFO, log_config=None, security=None):
         self.resources = (Resources(memory='512 MiB', vcores=1)
                           if resources is None else resources)
-        self.commands = [] if commands is None else commands
+        self.script = script
         self.files = ({k: v if isinstance(v, File) else File(v)
                        for (k, v) in files.items()}
                       if files is not None else {})
@@ -1041,7 +1049,7 @@ class Master(Specification):
             f._validate()
 
         self._check_is_dict_of('env', string, string)
-        self._check_is_list_of('commands', string)
+        self._check_is_type('script', string)
 
         if self.log_config is not None:
             self._check_is_type('log_config', File)
@@ -1104,7 +1112,7 @@ class Master(Specification):
                     else None)
         return cls(resources=resources,
                    files=files,
-                   commands=list(obj.commands),
+                   script=obj.script,
                    env=dict(obj.env),
                    log_level=log_level,
                    log_config=log_config,
@@ -1118,7 +1126,7 @@ class ApplicationSpec(Specification):
     ----------
     services : dict, optional
         A mapping of service-name to services. Applications must either specify
-        at least one service, or commands for the application master to run
+        at least one service, or a script for the application master to run
         (see ``skein.Master`` for more information).
     master : Master, optional
         Additional configuration for the application master service. See
@@ -1185,7 +1193,7 @@ class ApplicationSpec(Specification):
         self.master._validate()
         self._check_is_dict_of('services', string, Service)
 
-        if not self.services and not self.master.commands:
+        if not self.services and not self.master.script:
             raise context.ValueError("There must be at least one service")
 
         for name, service in self.services.items():

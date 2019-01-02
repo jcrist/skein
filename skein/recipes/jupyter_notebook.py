@@ -28,8 +28,8 @@ class SkeinNotebookApp(NotebookApp):
     >>> from skein import Client, ApplicationSpec, Service, Resources
     >>> notebook = Service(resources=Resources(memory=2048, vcores=1),
     ...                    files={'environment': 'environment.tar.gz'},
-    ...                    commands=['source environment/bin/activate',
-    ...                              'python -m skein.recipes.jupyter_notebook'])
+    ...                    script=('source environment/bin/activate\n'
+    ...                            'python -m skein.recipes.jupyter_notebook'))
     >>> spec = ApplicationSpec(name='jupyter-notebook',
     ...                        services={'notebook': notebook})
 

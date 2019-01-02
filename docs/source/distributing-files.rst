@@ -198,8 +198,8 @@ Using the Packaged Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To use the packaged environment in a service specification, you need to include
-the archive in ``files``, and activate the environment in the ``commands``
-list. This looks the same for environments packaged using either tool.
+the archive in ``files``, and activate the environment in the ``script``. This
+looks the same for environments packaged using either tool.
 
 .. code-block:: yaml
 
@@ -210,13 +210,13 @@ list. This looks the same for environments packaged using either tool.
           # into a directory named ``environment`` in each container.
           environment: environment.tar.gz
 
-        commands:
+        script: |
           # Activate the environment
-          - source environment/bin/activate
+          source environment/bin/activate
 
           # Run commands inside the environment. All executables or imported
           # python libraries will be from within the packaged environment.
-          - my-cool-application
+          my-cool-application
 
 
 .. _conda-pack: https://conda.github.io/conda-pack/

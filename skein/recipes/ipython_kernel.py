@@ -28,8 +28,8 @@ class SkeinIPKernelApp(IPKernelApp):
     >>> from skein import Client, ApplicationSpec, Service, Resources
     >>> ipykernel = Service(resources=Resources(memory=2048, vcores=1),
     ...                     files={'environment': 'environment.tar.gz'},
-    ...                     commands=['source environment/bin/activate',
-    ...                               'python -m skein.recipes.ipython_kernel'])
+    ...                     script=('source environment/bin/activate\n'
+    ...                             'python -m skein.recipes.ipython_kernel'))
     >>> spec = ApplicationSpec(name='ipython-kernel',
     ...                        services={'ipykernel': ipykernel})
 

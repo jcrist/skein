@@ -279,7 +279,7 @@ public class MsgUtils {
         .setMaxRestarts(service.getMaxRestarts())
         .setResources(writeResources(service.getResources()))
         .putAllEnv(service.getEnv())
-        .addAllCommands(service.getCommands())
+        .setScript(service.getScript())
         .addAllDepends(service.getDepends());
 
     for (Map.Entry<String, LocalResource> entry : service.getLocalResources().entrySet()) {
@@ -303,7 +303,7 @@ public class MsgUtils {
         readResources(service.getResources()),
         localResources,
         new HashMap<String, String>(service.getEnvMap()),
-        new ArrayList<String>(service.getCommandsList()),
+        service.getScript(),
         new HashSet<String>(service.getDependsList()));
   }
 
@@ -422,7 +422,7 @@ public class MsgUtils {
     Msg.Master.Builder builder = Msg.Master.newBuilder()
         .setResources(writeResources(master.getResources()))
         .putAllEnv(master.getEnv())
-        .addAllCommands(master.getCommands())
+        .setScript(master.getScript())
         .setLogLevel(writeLogLevel(master.getLogLevel()));
 
     for (Map.Entry<String, LocalResource> entry : master.getLocalResources().entrySet()) {
@@ -450,7 +450,7 @@ public class MsgUtils {
     out.setLocalResources(localResources);
     out.setResources(readResources(master.getResources()));
     out.setEnv(new HashMap<String, String>(master.getEnvMap()));
-    out.setCommands(new ArrayList<String>(master.getCommandsList()));
+    out.setScript(master.getScript());
 
     if (master.hasLogConfig()) {
       out.setLogConfig(readFile(master.getLogConfig()));

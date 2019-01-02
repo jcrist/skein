@@ -51,6 +51,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -246,15 +247,15 @@ public class ApplicationMaster {
 
   private void startApplicationDriver() throws IOException {
     Model.Master master = spec.getMaster();
-    if (master.getCommands().isEmpty()) {
+    if (master.getScript().isEmpty()) {
       // Nothing to do
       return;
     }
     LOG.debug("Writing driver script...");
-    Utils.writeScript(master.getCommands(), new FileOutputStream(".skein.script.sh"));
+    Utils.stringToFile(master.getScript(), new FileOutputStream(".skein.sh"));
     String logdir = System.getProperty("skein.log.directory");
     ProcessBuilder pb = new ProcessBuilder()
-        .command("bash", ".skein.script.sh")
+        .command("bash", ".skein.sh")
         .redirectErrorStream(true)
         .redirectOutput(new File(logdir, "application.driver.log"));
     updateServiceEnvironment(pb.environment(), master.getResources(), null);
@@ -1043,7 +1044,7 @@ public class ApplicationMaster {
             ContainerLaunchContext.newInstance(
                 service.getLocalResources(),
                 env,
-                service.getCommands(),
+                Arrays.asList(service.getScript()),
                 null,
                 tokens,
                 spec.getAcls().getYarnAcls());

@@ -70,7 +70,7 @@ def client(security, kinit):
 
 
 sleeper = skein.Service(resources=skein.Resources(memory=128, vcores=1),
-                        commands=['sleep infinity'])
+                        script='sleep infinity')
 
 
 sleep_until_killed = skein.ApplicationSpec(name="sleep_until_killed",
