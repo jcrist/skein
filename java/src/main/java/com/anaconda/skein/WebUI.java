@@ -331,49 +331,55 @@ public class WebUI {
     // Create a dummy services map
     String url = "https://dummyurl.html";
     List<ServiceContext> services = Lists.newArrayList();
+    long now = System.currentTimeMillis();
     ServiceContext service1 = new ServiceContext();
-    service1.name = "Service 1";
-    service1.running = 3;
-    service1.succeeded = 1;
-    service1.killed = 1;
-    service1.failed = 1;
-    service1.active = Lists.newArrayList(
-        new ContainerInfo(1, 0, 0, Model.Container.State.WAITING, ""),
-        new ContainerInfo(2, 0, 0, Model.Container.State.REQUESTED, ""),
-        new ContainerInfo(4, System.currentTimeMillis() - (3 * 60 + 24) * 1000, 0,
+    service1.name = "my-first-service";
+    service1.numPending = 1;
+    service1.pending = Lists.newArrayList(
+        new ContainerInfo(5, 0, 0, Model.Container.State.REQUESTED, "")
+    );
+    service1.numRunning = 2;
+    service1.running = Lists.newArrayList(
+        new ContainerInfo(3, now - (3 * 60 + 24) * 1000, 0,
+                          Model.Container.State.RUNNING, url),
+        new ContainerInfo(4, now - (2 * 60 + 45) * 1000, 0,
                           Model.Container.State.RUNNING, url)
     );
+    service1.numSucceeded = 1;
+    service1.numKilled = 1;
+    service1.numFailed = 1;
     service1.completed = Lists.newArrayList(
-        new ContainerInfo(0, 0, 30 * 1000, Model.Container.State.SUCCEEDED, url),
-        new ContainerInfo(3, 0, 90 * 1000, Model.Container.State.KILLED, url),
-        new ContainerInfo(5, 0, (60 * 60 * 2 + 90) * 1000,
-                          Model.Container.State.FAILED, url)
+        new ContainerInfo(0, 0, (60 * 60 * 2 + 90) * 1000,
+                          Model.Container.State.FAILED, url),
+        new ContainerInfo(1, 0, 90 * 1000, Model.Container.State.KILLED, url),
+        new ContainerInfo(2, 0, 30 * 1000, Model.Container.State.SUCCEEDED, url)
     );
     services.add(service1);
     ServiceContext service2 = new ServiceContext();
-    service2.name = "Service 2";
-    service2.running = 1;
-    service2.succeeded = 0;
-    service2.killed = 0;
-    service2.failed = 0;
-    service2.active = Lists.newArrayList(
-        new ContainerInfo(0, (System.currentTimeMillis() - (24 * 1000)), 0,
-                          Model.Container.State.RUNNING, url)
+    service2.name = "my-second-service";
+    service2.numPending = 0;
+    service2.pending = Lists.newArrayList();
+    service2.numRunning = 1;
+    service2.running = Lists.newArrayList(
+        new ContainerInfo(0, now - (24 * 1000), 0, Model.Container.State.RUNNING, url)
     );
+    service2.numSucceeded = 0;
+    service2.numKilled = 0;
+    service2.numFailed = 0;
     service2.completed = Lists.newArrayList();
     services.add(service2);
 
     try {
       WebUI webui = new WebUI(port,
-                              "application_1526497750451_0001",
+                              "application_1539033277709_0001",
                               "Demo Application",
-                              "testuser",
+                              "alice",
                               url,
-                              true,
+                              false,
                               new AtomicDouble(0.35),
-                              new AtomicDouble(2560.0),
+                              new AtomicDouble(2 * 2048 + 512 + 256),
                               new AtomicInteger(5),
-                              System.currentTimeMillis(),
+                              now - (60 * 60 * 2 + 120) * 1000,
                               kv,
                               services,
                               null,
@@ -422,11 +428,13 @@ public class WebUI {
 
   public static class ServiceContext {
     public String name;
-    public int running;
-    public int succeeded;
-    public int killed;
-    public int failed;
-    public List<ContainerInfo> active;
+    public int numPending;
+    public int numRunning;
+    public int numSucceeded;
+    public int numKilled;
+    public int numFailed;
+    public List<ContainerInfo> pending;
+    public List<ContainerInfo> running;
     public List<ContainerInfo> completed;
 
     public ServiceContext() {}

@@ -67,8 +67,8 @@
       </div>
     </nav>
 
-    <div class="container-fluid p-2">
-      <div class="row">
+    <div class="container-fluid">
+      <div class="row my-2">
         <div class="col-md-4">
           <div class="row">
             <div class="col my-1"><span><b>Name:</b> {{appName}}</span></div>
@@ -123,23 +123,23 @@
               </button>
             </div>
             <div class="col-sm-1">
-              <span class="oi oi-loop text-dark" title="Running" aria-hidden="true"></span> {{running}}
+              <span class="oi oi-loop text-dark" title="Running" aria-hidden="true"></span> {{numRunning}}
             </div>
             <div class="col-sm-1">
-              <span class="oi oi-circle-check text-success" title="Succeeded" aria-hidden="true"></span> {{succeeded}}
+              <span class="oi oi-circle-check text-success" title="Succeeded" aria-hidden="true"></span> {{numSucceeded}}
             </div>
             <div class="col-sm-1">
-              <span class="oi oi-warning text-warning" title="Killed" aria-hidden="true"></span> {{killed}}
+              <span class="oi oi-warning text-warning" title="Killed" aria-hidden="true"></span> {{numKilled}}
             </div>
             <div class="col-sm-1">
-              <span class="oi oi-circle-x text-danger" title="Failed" aria-hidden="true"></span> {{failed}}
+              <span class="oi oi-circle-x text-danger" title="Failed" aria-hidden="true"></span> {{numFailed}}
             </div>
           </div>
         </div>
 
         <div id="cardCollapse{{index}}" class="services-card collapse" aria-labelledby="cardHeader{{index}}">
           <div class="card-body">
-            <h4>Active</h4>
+            <h4>Pending</h4>
 
             <table class="table table-striped table-bordered table-sm auto-index">
               <colgroup>
@@ -158,7 +158,38 @@
                 </tr>
               </thead>
               <tbody>
-                {{#active}}
+                {{#pending}}
+                <tr>
+                  <th scope="row"></th>
+                  <td>{{name}}_{{instance}}</td>
+                  <td>{{state}}</td>
+                  <td>N/A</td>
+                  <td>N/A</td>
+                </tr>
+                {{/pending}}
+              </tbody>
+            </table>
+
+            <h4>Running</h4>
+
+            <table class="table table-striped table-bordered table-sm auto-index">
+              <colgroup>
+                <col style="width: 5%;">
+                <col style="width: 35%;">
+                <col style="width: 25%;">
+                <col style="width: 15%;">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Container ID</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Runtime</th>
+                  <th scope="col">Logs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#running}}
                 <tr>
                   <th scope="row"></th>
                   <td>{{name}}_{{instance}}</td>
@@ -173,7 +204,7 @@
                     {{/logsAddress}}
                   </td>
                 </tr>
-                {{/active}}
+                {{/running}}
               </tbody>
             </table>
 
