@@ -395,7 +395,7 @@ public class Driver {
          + " -Dskein.log.directory=" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
          + " com.anaconda.skein.ApplicationMaster "
          + appDir
-         + " >" + logdir + "/appmaster.log 2>&1"));
+         + " >" + logdir + "/application.master.log 2>&1"));
 
     // Add security tokens as needed
     ByteBuffer fsTokens = null;

@@ -61,6 +61,33 @@ public class Utils {
             "Container killed by YARN for exceeding memory limits");
   }
 
+  public static String formatMemory(double mem) {
+    if (mem < 1024) {
+      return String.format("%.1f MiB", mem);
+    } else if (mem < 1024 * 1024) {
+      return String.format("%.1f GiB", mem / 1024);
+    } else {
+      return String.format("%.1f TiB", mem / (1024 * 1024));
+    }
+  }
+
+  public static String formatRuntime(long delta) {
+    long secs = delta / 1000;
+    long hours = secs / (60 * 60);
+    secs = secs % (60 * 60);
+    long mins = secs / 60;
+    secs = secs % 60;
+
+    if (hours > 0) {
+      return String.format("%dh %dm", hours, mins);
+    }
+    else if (mins > 0) {
+      return String.format("%dm %ds", mins, secs);
+    } else {
+      return String.format("%ds", secs);
+    }
+  }
+
   public static final class CustomThreadFactory implements ThreadFactory {
     private String baseName;
     private boolean isDaemon;

@@ -38,10 +38,12 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.NMClient;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +68,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ApplicationMaster {
 
@@ -90,6 +93,9 @@ public class ApplicationMaster {
   private Path appDir;
 
   private ApplicationId appId;
+  private String userName;
+  private ContainerId containerId;
+  private Resource amResources;
 
   private final TreeMap<String, Msg.KeyValue.Builder> keyValueStore =
       new TreeMap<String, Msg.KeyValue.Builder>();
@@ -100,7 +106,11 @@ public class ApplicationMaster {
   private final Map<ContainerId, Model.Container> containers =
       new ConcurrentHashMap<ContainerId, Model.Container>();
 
-  private final AtomicDouble progress = new AtomicDouble(0.1);
+  // Set to negative to indicate hasn't been set by user
+  private final AtomicDouble progress = new AtomicDouble(-1);
+  private final AtomicDouble totalMemory = new AtomicDouble(0);
+  private final AtomicInteger totalVcores = new AtomicInteger(0);
+  private final long startTimeMillis = System.currentTimeMillis();
 
   private final TreeMap<Priority, ServiceTracker> priorities =
       new TreeMap<Priority, ServiceTracker>();
@@ -195,9 +205,19 @@ public class ApplicationMaster {
       }
     }
 
+
     try {
-      ui = new WebUI(0, appId.toString(), keyValueStore, serviceContexts,
-                     allowedUsers, conf, false);
+      boolean hasDriver = !spec.getMaster().getScript().isEmpty();
+      String amLogAddress = WebAppUtils.getRunningLogURL(
+          hostname + ":" + System.getenv(Environment.NM_HTTP_PORT.name()),
+          containerId.toString(),
+          System.getenv(Environment.USER.name())
+      );
+      ui = new WebUI(0, appId.toString(), spec.getName(), userName,
+                     amLogAddress, hasDriver, progress, totalMemory,
+                     totalVcores, startTimeMillis, keyValueStore,
+                     serviceContexts, allowedUsers, conf, false);
+
       ui.start();
     } catch (Exception e) {
       fatal("Failed to start WebUI server", e);
@@ -258,7 +278,7 @@ public class ApplicationMaster {
         .command("bash", ".skein.sh")
         .redirectErrorStream(true)
         .redirectOutput(new File(logdir, "application.driver.log"));
-    updateServiceEnvironment(pb.environment(), master.getResources(), null);
+    updateServiceEnvironment(pb.environment(), amResources, null);
 
     // Start the driver process
     LOG.info("Starting application driver");
@@ -392,10 +412,9 @@ public class ApplicationMaster {
   }
 
   private void allocate() throws IOException, YarnException {
-    // Since the application can dynamically allocate containers, we can't
-    // accurately estimate the application progress. Set to started, but not
-    // far along.
-    AllocateResponse resp = rmClient.allocate(progress.floatValue());
+    // If the user hasn't set the progress, set it to started but not far along.
+    float prog = progress.floatValue();
+    AllocateResponse resp = rmClient.allocate(prog < 0 ? 0.1f : prog);
 
     List<Container> allocated = resp.getAllocatedContainers();
     List<ContainerStatus> completed = resp.getCompletedContainersStatuses();
@@ -498,6 +517,10 @@ public class ApplicationMaster {
       System.exit(1);
     }
     appId = Utils.appIdFromString(appIdEnv);
+
+    containerId = ConverterUtils.toContainerId(
+        System.getenv(Environment.CONTAINER_ID.name())
+    );
   }
 
   public void run() throws Exception {
@@ -521,7 +544,7 @@ public class ApplicationMaster {
     loadApplicationSpec();
 
     // Create ugi and add original tokens to it
-    String userName = System.getenv(Environment.USER.name());
+    userName = System.getenv(Environment.USER.name());
     LOG.info("Running as user {}", userName);
 
     ugi = UserGroupInformation.createRemoteUser(userName);
@@ -568,6 +591,12 @@ public class ApplicationMaster {
 
     startAllocator();
 
+    // Determine the actual memory/vcores allocated to *this* container. We
+    // need to do this here, after the application is already registered
+    loadAppMasterResources();
+    totalMemory.addAndGet(amResources.getMemory());
+    totalVcores.addAndGet(amResources.getVirtualCores());
+
     // Start application driver (if applicable)
     startApplicationDriver();
 
@@ -609,6 +638,18 @@ public class ApplicationMaster {
     finalMessage = msg;
   }
 
+  private void loadAppMasterResources() throws IOException, YarnException {
+    LOG.debug("Determining resources available for application master");
+    YarnClient yarnClient = YarnClient.createYarnClient();
+    yarnClient.init(conf);
+    yarnClient.start();
+    amResources = yarnClient
+      .getApplicationReport(appId)
+      .getApplicationResourceUsageReport()
+      .getUsedResources();
+    yarnClient.stop();
+  }
+
   private int getMaxAttempts() {
     int maxAttempts = spec.getMaxAttempts();
     int yarnMaxAttempts = conf.getInt(
@@ -622,9 +663,6 @@ public class ApplicationMaster {
   }
 
   private int getCurrentAttempt() {
-    ContainerId containerId = ConverterUtils.toContainerId(
-        System.getenv(Environment.CONTAINER_ID.name())
-    );
     return containerId.getApplicationAttemptId().getAttemptId();
   }
 
@@ -934,7 +972,7 @@ public class ApplicationMaster {
     public List<Model.Container> scale(int instances) {
       List<Model.Container> out =  new ArrayList<Model.Container>();
 
-      // Any function that may remove containers, needs to lock the kv store
+      // Any function that may remove containers needs to lock the kv store
       // outside the tracker to prevent deadlocks.
       synchronized (keyValueStore) {
         synchronized (this) {
@@ -1028,6 +1066,7 @@ public class ApplicationMaster {
         out.setYarnContainerId(container.getId());
         out.setYarnNodeId(container.getNodeId());
         out.setYarnNodeHttpAddress(container.getNodeHttpAddress());
+        out.setResources(resource);
 
         ApplicationMaster.this.containers.put(container.getId(), out);
         running.add(instance);
@@ -1048,6 +1087,9 @@ public class ApplicationMaster {
                 null,
                 tokens,
                 spec.getAcls().getYarnAcls());
+
+        totalMemory.addAndGet(resource.getMemory());
+        totalVcores.addAndGet(resource.getVirtualCores());
 
         executor.execute(
             new Runnable() {
@@ -1098,6 +1140,9 @@ public class ApplicationMaster {
               rmClient.releaseAssignedContainer(container.getYarnContainerId());
               running.remove(instance);
               container.setFinishTime(System.currentTimeMillis());
+              Resource resource = container.getResources();
+              totalMemory.getAndAdd(-resource.getMemory());
+              totalVcores.getAndAdd(-resource.getVirtualCores());
               break;
             default:
               return;  // Already finished, should never get here

@@ -4,6 +4,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.AtomicDouble;
 import com.google.protobuf.ByteString;
 
 import com.github.mustachejava.DefaultMustacheFactory;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.servlet.DispatcherType;
@@ -66,6 +68,14 @@ public class WebUI {
 
   public WebUI(int port,
                String appId,
+               String appName,
+               String user,
+               String amLogsAddress,
+               boolean hasDriver,
+               AtomicDouble progress,
+               AtomicDouble totalMemory,
+               AtomicInteger totalVcores,
+               long startTimeMillis,
                Map<String, Msg.KeyValue.Builder> keyValueStore,
                List<ServiceContext> services,
                Set<String> users,
@@ -99,10 +109,12 @@ public class WebUI {
 
     // Add application servlets
     final String protocol = WebAppUtils.getHttpSchemePrefix(conf);
-    UIModel uiModel = new UIModel(appId, keyValueStore, services, protocol);
+    UIModel uiModel = new UIModel(appId, appName, user, amLogsAddress, hasDriver,
+                                  progress, totalMemory, totalVcores, startTimeMillis,
+                                  keyValueStore, services, protocol);
     context.addServlet(
-        new ServletHolder(new TemplateServlet(uiModel, "services.mustache.html")),
-        "/services");
+        new ServletHolder(new TemplateServlet(uiModel, "overview.mustache.html")),
+        "/overview");
     context.addServlet(
         new ServletHolder(new TemplateServlet(uiModel, "kv.mustache.html")),
         "/kv");
@@ -152,11 +164,11 @@ public class WebUI {
       uiAddresses = Lists.newArrayList();
     }
 
-    // Issue a 302 redirect to services from homepage
+    // Issue a 302 redirect to overview from homepage
     RewriteHandler rewrite = new RewriteHandler();
     RedirectPatternRule redirect = new RedirectPatternRule();
     redirect.setPattern("");
-    redirect.setLocation("/services");
+    redirect.setLocation("/overview");
     rewrite.addRule(redirect);
     context.insertHandler(rewrite);
 
@@ -352,8 +364,21 @@ public class WebUI {
     services.add(service2);
 
     try {
-      WebUI webui = new WebUI(port, "application_1526497750451_0001", kv,
-                              services, null, new YarnConfiguration(), true);
+      WebUI webui = new WebUI(port,
+                              "application_1526497750451_0001",
+                              "Demo Application",
+                              "testuser",
+                              url,
+                              true,
+                              new AtomicDouble(0.35),
+                              new AtomicDouble(2560.0),
+                              new AtomicInteger(5),
+                              System.currentTimeMillis(),
+                              kv,
+                              services,
+                              null,
+                              new YarnConfiguration(),
+                              true);
       webui.nameToRoute.put("name1", "page1");
       webui.nameToRoute.put("name2", "page2");
       webui.start();
@@ -391,20 +416,7 @@ public class WebUI {
         default:
           delta = finishTime - startTime;
       }
-      long secs = delta / 1000;
-      long hours = secs / (60 * 60);
-      secs = secs % (60 * 60);
-      long mins = secs / 60;
-      secs = secs % 60;
-
-      if (hours > 0) {
-        return String.format("%dh %dm", hours, mins);
-      }
-      else if (mins > 0) {
-        return String.format("%dm %ds", mins, secs);
-      } else {
-        return String.format("%ds", secs);
-      }
+      return Utils.formatRuntime(delta);
     }
   }
 
@@ -422,18 +434,59 @@ public class WebUI {
 
   private class UIModel {
     public final String appId;
+    public final String appName;
+    public final String user;
+    public final String amLogsAddress;
+    public final boolean hasDriver;
+    private final AtomicDouble progress;
+    private final AtomicDouble totalMemory;
+    private final AtomicInteger totalVcores;
+    private final long startTimeMillis;
     private final List<ServiceContext> services;
     private final Map<String, Msg.KeyValue.Builder> keyValueStore;
     public final String protocol;
 
     public UIModel(String appId,
+                   String appName,
+                   String user,
+                   String amLogsAddress,
+                   boolean hasDriver,
+                   AtomicDouble progress,
+                   AtomicDouble totalMemory,
+                   AtomicInteger totalVcores,
+                   long startTimeMillis,
                    Map<String, Msg.KeyValue.Builder> keyValueStore,
                    List<ServiceContext> services,
                    String protocol) {
       this.appId = appId;
+      this.appName = appName;
+      this.user = user;
+      this.amLogsAddress = amLogsAddress;
+      this.hasDriver = hasDriver;
+      this.progress = progress;
+      this.totalMemory = totalMemory;
+      this.totalVcores = totalVcores;
+      this.startTimeMillis = startTimeMillis;
       this.keyValueStore = keyValueStore;
       this.services = services;
       this.protocol = protocol;
+    }
+
+    public String progress() {
+      double val = progress.get();
+      return (val < 0) ? "N/A" : String.format("%.1f%%", val * 100);
+    }
+
+    public String totalMemory() {
+      return Utils.formatMemory(totalMemory.get());
+    }
+
+    public int totalVcores() {
+      return totalVcores.get();
+    }
+
+    public String runtime() {
+      return Utils.formatRuntime(System.currentTimeMillis() - startTimeMillis);
     }
 
     public String proxyPrefix() {

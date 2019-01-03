@@ -392,6 +392,7 @@ public class Model {
     private String serviceName;
     private int instance;
     private State state;
+    private Resource resources;
     private ContainerId yarnContainerId;
     private NodeId yarnNodeId;
     private String yarnNodeHttpAddress;
@@ -440,6 +441,9 @@ public class Model {
           return true;
       }
     }
+
+    public void setResources(Resource resources) { this.resources = resources; }
+    public Resource getResources() { return resources; }
 
     public void setYarnContainerId(ContainerId yarnContainerId) {
       this.yarnContainerId = yarnContainerId;
