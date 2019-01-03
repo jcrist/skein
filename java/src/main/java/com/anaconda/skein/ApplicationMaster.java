@@ -943,13 +943,15 @@ public class ApplicationMaster {
     public synchronized WebUI.ServiceContext toServiceContext() {
       WebUI.ServiceContext context = new WebUI.ServiceContext();
       context.name = name;
-      context.running = requested.size() + running.size();
-      context.succeeded = numSucceeded;
-      context.killed = numKilled;
-      context.failed = numFailed;
-      context.active = Lists.newArrayListWithCapacity(context.running);
+      context.numPending = waiting.size() + requested.size();
+      context.numRunning = running.size();
+      context.numSucceeded = numSucceeded;
+      context.numKilled = numKilled;
+      context.numFailed = numFailed;
+      context.pending = Lists.newArrayListWithCapacity(context.numPending);
+      context.running = Lists.newArrayListWithCapacity(context.numRunning);
       context.completed = Lists.newArrayListWithCapacity(
-          context.succeeded + context.killed + context.failed);
+          context.numSucceeded + context.numKilled + context.numFailed);
       for (Model.Container container : containers) {
         WebUI.ContainerInfo info =
             new WebUI.ContainerInfo(container.getInstance(),
@@ -958,9 +960,12 @@ public class ApplicationMaster {
                                     container.getState(),
                                     container.getLogsAddress());
         switch (info.state) {
+          case WAITING:
           case REQUESTED:
+            context.pending.add(info);
+            break;
           case RUNNING:
-            context.active.add(info);
+            context.running.add(info);
             break;
           default:
             context.completed.add(info);
