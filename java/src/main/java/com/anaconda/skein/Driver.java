@@ -21,9 +21,12 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -37,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -241,7 +245,8 @@ public class Driver {
     // be killed and restarted.  We keep the driver running (even though it
     // can't do anything) so that client processes can get a nice error
     // message, rather than having to look in the logs.
-    if (UserGroupInformation.isSecurityEnabled() && !ugi.hasKerberosCredentials()) {
+    if (UserGroupInformation.isSecurityEnabled()
+        && !(ugi.hasKerberosCredentials() || ugi.getCredentials().numberOfTokens() > 0)) {
       LOG.warn("Kerberos ticket not found, please kinit and restart");
       loggedIn = false;
     } else {
@@ -400,7 +405,7 @@ public class Driver {
     // Add security tokens as needed
     ByteBuffer fsTokens = null;
     if (UserGroupInformation.isSecurityEnabled()) {
-      LOG.debug("Collecting credential tokens");
+      LOG.debug("Collecting filesystem delegation tokens");
       Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
       TokenCache.obtainTokensForNamenodes(
               credentials,
@@ -408,6 +413,16 @@ public class Driver {
                       new Path(fs.getUri()),
                       spec.getFileSystems().toArray(new Path[0])),
               conf);
+
+      LOG.debug("Adding RM delegation token");
+      Text rmDelegationTokenService = ClientRMProxy.getRMDelegationTokenService(conf);
+      String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
+      org.apache.hadoop.yarn.api.records.Token rmDelegationToken =
+          yarnClient.getRMDelegationToken(new Text(tokenRenewer));
+      Token<TokenIdentifier> rmToken = ConverterUtils.convertFromYarn(
+          rmDelegationToken, rmDelegationTokenService
+      );
+      credentials.addToken(rmDelegationTokenService, rmToken);
 
       DataOutputBuffer dob = new DataOutputBuffer();
       credentials.writeTokenStorageToStream(dob);

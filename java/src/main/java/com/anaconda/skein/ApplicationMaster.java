@@ -543,16 +543,12 @@ public class ApplicationMaster {
 
     loadApplicationSpec();
 
-    // Create ugi and add original tokens to it
+    // Determine application username
     userName = System.getenv(Environment.USER.name());
     LOG.info("Running as user {}", userName);
 
-    ugi = UserGroupInformation.createRemoteUser(userName);
-
-    Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
-    DataOutputBuffer dob = new DataOutputBuffer();
-    credentials.writeTokenStorageToStream(dob);
     // Remove the AM->RM token
+    Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
     Iterator<Token<?>> iter = credentials.getAllTokens().iterator();
     while (iter.hasNext()) {
       Token<?> token = iter.next();
@@ -560,8 +556,12 @@ public class ApplicationMaster {
         iter.remove();
       }
     }
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
     tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 
+    // Create ugi and add original tokens to it
+    ugi = UserGroupInformation.createRemoteUser(userName);
     ugi.addCredentials(credentials);
 
     rmClient = AMRMClient.createAMRMClient();

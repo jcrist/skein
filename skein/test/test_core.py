@@ -439,9 +439,11 @@ def test_dynamic_containers(client):
 
 @pytest.mark.parametrize('runon', ['service', 'master'])
 def test_container_environment(runon, client, has_kerberos_enabled):
-    script = ('env\n'
+    script = ('set -e\n'
+              'env\n'
               'echo "LOGIN_ID=[$(whoami)]"\n'
-              'hdfs dfs -touchz /user/testuser/test_container_permissions')
+              'hdfs dfs -touchz /user/testuser/test_container_permissions\n'
+              'yarn application -list')
     kwargs = dict(resources=skein.Resources(memory=512, vcores=1),
                   script=script)
     services = master = None
