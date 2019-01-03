@@ -13,3 +13,7 @@ pre {
 .contents li {
     margin: 0 0 0 0;
 }
+
+.light-bordered-image {
+    border: 1px solid whitesmoke;
+}
