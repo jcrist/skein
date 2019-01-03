@@ -9,8 +9,11 @@ requests = pytest.importorskip('requests')
 
 simplehttp = skein.Service(resources=skein.Resources(memory=128, vcores=1),
                            script='/usr/bin/python -m SimpleHTTPServer 8888')
+master = skein.Master(resources=skein.Resources(memory=512, vcores=1),
+                      script="sleep infinity")
 spec = skein.ApplicationSpec(name="test_webui",
                              queue="default",
+                             master=master,
                              services={'simplehttp': simplehttp})
 
 LOGIN = '?user.name=testuser'
@@ -91,13 +94,21 @@ def test_webui_authentication(ui_test_app):
     assert resp.ok
 
 
-def test_webui_home_and_services(ui_test_app):
-    # / and /services are the same
-    for suffix in ['', 'services']:
+def test_webui_home_and_overview(ui_test_app):
+    # / and /overview are the same
+    for suffix in ['', 'overview']:
         resp = get_page(ui_test_app.ui.address + suffix + LOGIN)
         assert resp.ok
+        # Application Metrics
+        assert "Memory:</b> 640.0 MiB" in resp.text
+        assert "Cores:</b> 2" in resp.text
+        assert "Progress:</b> N/A" in resp.text
+        # Logs
+        assert "testuser/application.master.log" in resp.text  # master
+        assert "testuser/application.driver.log" in resp.text  # driver
+        assert '/testuser/simplehttp.log' in resp.text  # service
+        # Services
         assert 'simplehttp_0' in resp.text  # list of containers
-        assert '/testuser/simplehttp.log' in resp.text  # link to logs
 
 
 def test_webui_kv(ui_test_app):

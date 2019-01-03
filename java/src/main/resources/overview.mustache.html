@@ -29,7 +29,7 @@
       }
     </style>
 
-    <title>Services - Skein | {{appId}}</title>
+    <title>Overview - Skein | {{appId}}</title>
   </head>
 
   <body>
@@ -46,7 +46,7 @@
       <div class="collapse navbar-collapse" id="navbarToggler">
         <ul class="navbar-nav mr-auto">
           <li class="nav-item active">
-            <a class="nav-link" href="./services">Services</a>
+            <a class="nav-link" href="./overview">Overview</a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="./kv">Key/Value</a>
@@ -66,6 +66,49 @@
         <span class="navbar-text" id="application">{{appId}}</span>
       </div>
     </nav>
+
+    <div class="container-fluid p-2">
+      <div class="row">
+        <div class="col-md-4">
+          <div class="row">
+            <div class="col my-1"><span><b>Name:</b> {{appName}}</span></div>
+          </div>
+          <div class="row">
+            <div class="col my-1"><span><b>User:</b> {{user}}</span></div>
+          </div>
+          <div class="row">
+            <div class="col my-1"><span><b>Application Master:</b>
+            <a href="{{protocol}}{{amLogsAddress}}/application.master.log?start=-4096">logs</a>
+            </span></div>
+          </div>
+          <div class="row">
+            <div class="col my-1"><span><b>Application Driver:</b>
+            {{#hasDriver}}
+            <a href="{{protocol}}{{amLogsAddress}}/application.driver.log?start=-4096">logs</a>
+            {{/hasDriver}}
+            {{^hasDriver}}
+            N/A
+            {{/hasDriver}}
+            </span></div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="row">
+            <div class="col my-1"><span><b>Memory:</b> {{totalMemory}}</span></div>
+          </div>
+          <div class="row">
+            <div class="col my-1"><span><b>Cores:</b> {{totalVcores}}</span></div>
+          </div>
+          <div class="row">
+            <div class="col my-1"><span><b>Runtime:</b> {{runtime}}</span></div>
+          </div>
+          <div class="row">
+            <div class="col my-1"><span><b>Progress:</b> {{progress}}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="accordion" id="servicesList">
 
@@ -123,7 +166,7 @@
                   <td>{{runtime}}</td>
                   <td>
                     {{#logsAddress}}
-                    <a href="{{protocol}}{{logsAddress}}/{{name}}.log?start=0">{{name}}.log</a>
+                    <a href="{{protocol}}{{logsAddress}}/{{name}}.log?start=-4096">{{name}}.log</a>
                     {{/logsAddress}}
                     {{^logsAddress}}
                     N/A
