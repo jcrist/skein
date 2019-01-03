@@ -18,6 +18,7 @@ The Skein Web UI is usually accessed through the YARN Resource Manager Web UI.
 
 .. image:: /_images/yarn-resourcemanager-webui-link.png
     :width: 90 %
+    :class: light-bordered-image
     :align: center
     :alt: Link to the Skein Web UI from the YARN Resource Manager Web UI.
 
@@ -30,17 +31,24 @@ The address can also be obtained programatically through the
   'http://master.example.com:8088/proxy/application_1539033277709_0001/'
 
 
-The Services Page
+The Overview Page
 -----------------
 
-The Services page contains information on all services in the application, as
-well as the status of current and past containers. At the top level, the
-services are summarized in alphabetical order.
+The Overview page presents a summary view of the application and its contained
+services. Information contained here includes:
 
-.. image:: /_images/webui-services-closed.png
+- The application name, ID, and user
+- Links to the Application Master and Application Driver logs (if relevant)
+- Total memory and cores allocated for this application
+- Total runtime
+- Application progress (if set by the application)
+- A summary of the application services
+
+.. image:: /_images/webui-overview-closed.png
     :width: 90 %
+    :class: light-bordered-image
     :align: center
-    :alt: Services page, accordion closed
+    :alt: Overview page, accordion closed
 
 Here we have two services - ``my-first-service`` and ``my-second-service``. The
 icons in each row indicate for each service (in order):
@@ -50,16 +58,17 @@ icons in each row indicate for each service (in order):
 - How many containers were killed (stopped by the user)
 - How many containers have failed (non-zero exit code)
 
-In this case, ``my-second-service`` has 3 containers running, and 2 containers
-killed.
+In this case, ``my-first-service`` has 2 containers running, 1 container
+succeeded, 1 container killed, and 1 container failed.
 
-Opening the accordion for the service displays two tables - one of all
-currently active containers, and one of all completed containers.
+Opening the accordion for the service displays three tables, summarizing all
+pending, running, and completed containers.
 
-.. image:: /_images/webui-services-open.png
+.. image:: /_images/webui-overview-open.png
     :width: 90 %
+    :class: light-bordered-image
     :align: center
-    :alt: Services page, accordion open
+    :alt: Overview page, accordion open
 
 If applicable, links to the live logs for each container are provided, as well
 as their current status and total runtime.
@@ -75,6 +84,7 @@ displayed as ``<binary value>``.
 
 .. image:: /_images/webui-key-value.png
     :width: 90 %
+    :class: light-bordered-image
     :align: center
     :alt: Key/Value page
 
@@ -151,6 +161,7 @@ The deployed page looks like:
 
 .. image:: /_images/pricing-dashboard.gif
     :width: 90 %
+    :class: light-bordered-image
     :align: center
     :alt: An example bokeh dashboard deployed using Skein
 
