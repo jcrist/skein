@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.slf4j.Logger;
@@ -381,10 +382,6 @@ public class Driver {
     if (lang != null) {
       env.put("LANG", lang);
     }
-    if (!ugi.isSecurityEnabled()) {
-      // Add HADOOP_USER_NAME to environment for *simple* authentication only
-      env.put("HADOOP_USER_NAME", UserGroupInformation.getCurrentUser().getUserName());
-    }
 
     // Setup the appmaster commands
     String logdir = ApplicationConstants.LOG_DIR_EXPANSION_VAR;
@@ -402,9 +399,10 @@ public class Driver {
          + appDir
          + " >" + logdir + "/application.master.log 2>&1"));
 
-    // Add security tokens as needed
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     ByteBuffer fsTokens = null;
     if (UserGroupInformation.isSecurityEnabled()) {
+      // Collect security tokens as needed
       LOG.debug("Collecting filesystem delegation tokens");
       Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
       TokenCache.obtainTokensForNamenodes(
@@ -414,19 +412,31 @@ public class Driver {
                       spec.getFileSystems().toArray(new Path[0])),
               conf);
 
-      LOG.debug("Adding RM delegation token");
-      Text rmDelegationTokenService = ClientRMProxy.getRMDelegationTokenService(conf);
-      String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
-      org.apache.hadoop.yarn.api.records.Token rmDelegationToken =
-          yarnClient.getRMDelegationToken(new Text(tokenRenewer));
-      Token<TokenIdentifier> rmToken = ConverterUtils.convertFromYarn(
-          rmDelegationToken, rmDelegationTokenService
-      );
-      credentials.addToken(rmDelegationTokenService, rmToken);
+      boolean hasRMToken = false;
+      for (Token<?> token: credentials.getAllTokens()) {
+        if (token.getKind().equals(RMDelegationTokenIdentifier.KIND_NAME)) {
+          LOG.debug("RM delegation token already acquired");
+          hasRMToken = true;
+          break;
+        }
+      }
+      if (!hasRMToken) {
+        LOG.debug("Adding RM delegation token");
+        Text rmDelegationTokenService = ClientRMProxy.getRMDelegationTokenService(conf);
+        String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
+        org.apache.hadoop.yarn.api.records.Token rmDelegationToken =
+            yarnClient.getRMDelegationToken(new Text(tokenRenewer));
+        Token<TokenIdentifier> rmToken = ConverterUtils.convertFromYarn(
+            rmDelegationToken, rmDelegationTokenService
+        );
+        credentials.addToken(rmDelegationTokenService, rmToken);
+      }
 
       DataOutputBuffer dob = new DataOutputBuffer();
       credentials.writeTokenStorageToStream(dob);
       fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    } else {
+      env.put("HADOOP_USER_NAME", ugi.getUserName());
     }
 
     Map<ApplicationAccessType, String> acls = spec.getAcls().getYarnAcls();

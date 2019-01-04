@@ -279,6 +279,7 @@ public class ApplicationMaster {
         .redirectErrorStream(true)
         .redirectOutput(new File(logdir, "application.driver.log"));
     updateServiceEnvironment(pb.environment(), amResources, null);
+    pb.environment().remove("CLASSPATH");
 
     // Start the driver process
     LOG.info("Starting application driver");

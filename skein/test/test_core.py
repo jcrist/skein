@@ -461,6 +461,7 @@ def test_container_environment(runon, client, has_kerberos_enabled):
         assert 'SKEIN_CONTAINER_ID=service_0' in logs
     assert 'SKEIN_RESOURCE_MEMORY=512' in logs
     assert 'SKEIN_RESOURCE_VCORES=1' in logs
+    assert 'CLASSPATH' not in logs
 
     if has_kerberos_enabled:
         assert "LOGIN_ID=[testuser]" in logs
