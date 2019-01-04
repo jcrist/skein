@@ -1,8 +1,8 @@
 ./_images/jupyter_demo.png
 ./_images/pricing-dashboard.gif
 ./_images/webui-key-value.png
-./_images/webui-services-closed.png
-./_images/webui-services-open.png
+./_images/webui-overview-closed.png
+./_images/webui-overview-open.png
 ./_images/yarn-resourcemanager-webui-link.png
 ./_images/yarn.jpg
 ./_sources/api.rst.txt
