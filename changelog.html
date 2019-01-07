@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Changelog &#8212; Skein 0.4.1+16.ga5bc3f6 documentation</title>
+    <title>Changelog &#8212; Skein 0.5.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -39,6 +39,9 @@
 <h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="upcoming-release">
 <h2>Upcoming Release<a class="headerlink" href="#upcoming-release" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="version-0-5-0-january-7-2019">
+<h2>Version 0.5.0 (January 7, 2019)<a class="headerlink" href="#version-0-5-0-january-7-2019" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li>Support login via keytab, allowing for long-running services (<a class="reference external" href="https://github.com/jcrist/skein/pull/115">PR #115</a>,
 <a class="reference external" href="https://github.com/jcrist/skein/issues/103">Issue #103</a>)</li>
@@ -53,6 +56,12 @@ single-container services (<a class="reference external" href="https://github.co
 <li>Ensure application directory is cleaned up, even during application master
 failure or if killed by other tools (<a class="reference external" href="https://github.com/jcrist/skein/pull/122">PR #122</a>)</li>
 <li>Fix support for application retries (<a class="reference external" href="https://github.com/jcrist/skein/pull/122">PR #122</a>)</li>
+<li>Deprecate <code class="docutils literal notranslate"><span class="pre">commands</span></code> field in favor of <code class="docutils literal notranslate"><span class="pre">script</span></code> (<a class="reference external" href="https://github.com/jcrist/skein/pull/125">PR #125</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/121">Issue #121</a>)</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">--force</span></code> option to <code class="docutils literal notranslate"><span class="pre">skein</span> <span class="pre">driver</span> <span class="pre">stop</span></code> (<a class="reference external" href="https://github.com/jcrist/skein/pull/126">PR #126</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/124">Issue #124</a>)</li>
+<li>Update Web UI to display new features (progress reports, application
+master/driver logs, etc…) (<a class="reference external" href="https://github.com/jcrist/skein/pull/127">PR #127</a>, <a class="reference external" href="https://github.com/jcrist/skein/pull/95">PR #95</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/123">Issue #123</a>)</li>
+<li>Obtain a resource manager delegation token for all applications. Allows for
+applications to submit additional applications as needed (<a class="reference external" href="https://github.com/jcrist/skein/pull/127">PR #127</a>)</li>
 </ul>
 </div>
 <div class="section" id="version-0-4-1-december-7-2018">
@@ -201,6 +210,7 @@ containers via environment variables (<a class="reference external" href="https:
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Changelog</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#upcoming-release">Upcoming Release</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version-0-5-0-january-7-2019">Version 0.5.0 (January 7, 2019)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-4-1-december-7-2018">Version 0.4.1 (December 7, 2018)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-4-0-december-5-2018">Version 0.4.0 (December 5, 2018)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-3-1-october-29-2018">Version 0.3.1 (October 29, 2018)</a></li>

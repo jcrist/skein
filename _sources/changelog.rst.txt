@@ -4,6 +4,9 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.5.0 (January 7, 2019)
+-------------------------------
+
 - Support login via keytab, allowing for long-running services (:pr:`115`,
   :issue:`103`)
 - Rename ``daemon`` to ``driver`` everywhere, deprecating old methods/classes
@@ -17,6 +20,12 @@ Upcoming Release
 - Ensure application directory is cleaned up, even during application master
   failure or if killed by other tools (:pr:`122`)
 - Fix support for application retries (:pr:`122`)
+- Deprecate ``commands`` field in favor of ``script`` (:pr:`125`, :issue:`121`)
+- Add ``--force`` option to ``skein driver stop`` (:pr:`126`, :issue:`124`)
+- Update Web UI to display new features (progress reports, application
+  master/driver logs, etc...) (:pr:`127`, :pr:`95`, :issue:`123`)
+- Obtain a resource manager delegation token for all applications. Allows for
+  applications to submit additional applications as needed (:pr:`127`)
 
 Version 0.4.1 (December 7, 2018)
 --------------------------------
