@@ -565,6 +565,8 @@ def test_memory_limit_exceeded(kind, client):
     with run_application(client, spec=spec, connect=False) as app_id:
         assert wait_for_completion(client, app_id) == "FAILED"
     logs = get_logs(app_id)
+    if search_txt not in logs:
+        print(logs)
     assert search_txt in logs
 
     if kind == 'master':
