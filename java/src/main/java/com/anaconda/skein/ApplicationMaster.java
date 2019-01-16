@@ -439,15 +439,17 @@ public class ApplicationMaster {
     for (Container c : newContainers) {
       Priority priority = c.getPriority();
       Resource resource = c.getResource();
-
       ServiceTracker tracker = trackerFromPriority(priority);
-      if (tracker != null && tracker.matches(resource)) {
-        tracker.startContainer(c, resource);
-      } else {
-        LOG.warn("No matching service found for resource {}, priority {}, releasing {}",
-                 resource, priority, c.getId());
-        rmClient.releaseAssignedContainer(c.getId());
+      if (tracker != null) {
+        Resource matched = tracker.matchResource(resource);
+        if (matched != null) {
+          tracker.startContainer(c, matched);
+          return;
+        }
       }
+      LOG.warn("No matching service found for resource {}, priority {}, releasing {}",
+               resource, priority, c.getId());
+      rmClient.releaseAssignedContainer(c.getId());
     }
   }
 
@@ -872,8 +874,21 @@ public class ApplicationMaster {
       this.numTarget = service.getInstances();
     }
 
-    public boolean matches(Resource r) {
-      return service.getResources().compareTo(r) <= 0;
+    public Resource matchResource(Resource resource) {
+      // Some YARN configurations return resources on allocate that have
+      // vcores always set to 1 (even though the allocated container gets the
+      // correct number of vcores). Here we create a new resource with the same
+      // memory returned, but the requested number of vcores, and use that
+      // instead. See https://github.com/dask/dask-yarn/issues/48 for more
+      // discussion.
+      Resource requested = service.getResources();
+      resource = Resource.newInstance(
+        resource.getMemory(), requested.getVirtualCores()
+      );
+      if (requested.compareTo(resource) <= 0) {
+        return resource;
+      };
+      return null;
     }
 
     public void addDependent(ServiceTracker tracker) {
