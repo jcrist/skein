@@ -329,15 +329,7 @@ public class Driver {
 
     LOG.debug("Killing application {}", appId);
     yarnClient.killApplication(appId);
-
-    try {
-      Path appDir = getAppDir(fs, appId);
-      if (fs.delete(appDir, true)) {
-        LOG.debug("Deleted application directory {}", appDir);
-      }
-    } catch (IOException exc) {
-      LOG.warn("Failed to delete application directory for {}", appId, exc);
-    }
+    deleteAppDir(fs, getAppDir(fs, appId));
   }
 
   /** Start a new application. **/
@@ -369,9 +361,8 @@ public class Driver {
     // Start building the appmaster request
     Model.Master master = spec.getMaster();
 
-    // Setup the LocalResources for the appmaster and containers
+    // Directory to store temporary application resources
     Path appDir = getAppDir(fs, appId);
-    Map<String, LocalResource> localResources = setupAppDir(fs, spec, appDir);
 
     // Setup the appmaster environment variables
     Map<String, String> env = new HashMap<String, String>();
@@ -402,62 +393,76 @@ public class Driver {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     ByteBuffer fsTokens = null;
     if (UserGroupInformation.isSecurityEnabled()) {
-      // Collect security tokens as needed
-      LOG.debug("Collecting filesystem delegation tokens");
-      Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
-      TokenCache.obtainTokensForNamenodes(
-              credentials,
-              ObjectArrays.concat(
-                      new Path(fs.getUri()),
-                      spec.getFileSystems().toArray(new Path[0])),
-              conf);
-
-      boolean hasRMToken = false;
-      for (Token<?> token: credentials.getAllTokens()) {
-        if (token.getKind().equals(RMDelegationTokenIdentifier.KIND_NAME)) {
-          LOG.debug("RM delegation token already acquired");
-          hasRMToken = true;
-          break;
-        }
-      }
-      if (!hasRMToken) {
-        LOG.debug("Adding RM delegation token");
-        Text rmDelegationTokenService = ClientRMProxy.getRMDelegationTokenService(conf);
-        String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
-        org.apache.hadoop.yarn.api.records.Token rmDelegationToken =
-            yarnClient.getRMDelegationToken(new Text(tokenRenewer));
-        Token<TokenIdentifier> rmToken = ConverterUtils.convertFromYarn(
-            rmDelegationToken, rmDelegationTokenService
-        );
-        credentials.addToken(rmDelegationTokenService, rmToken);
-      }
-
-      DataOutputBuffer dob = new DataOutputBuffer();
-      credentials.writeTokenStorageToStream(dob);
-      fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      fsTokens = collectTokens(yarnClient, fs, spec);
     } else {
       env.put("HADOOP_USER_NAME", ugi.getUserName());
     }
 
     Map<ApplicationAccessType, String> acls = spec.getAcls().getYarnAcls();
 
-    ContainerLaunchContext amContext = ContainerLaunchContext.newInstance(
-        localResources, env, commands, null, fsTokens, acls);
+    try {
+      // Setup the LocalResources for the appmaster and containers
+      Map<String, LocalResource> localResources = setupAppDir(fs, spec, appDir);
 
-    appContext.setApplicationType("skein");
-    appContext.setAMContainerSpec(amContext);
-    appContext.setApplicationName(spec.getName());
-    appContext.setResource(master.getResources());
-    appContext.setPriority(Priority.newInstance(0));
-    appContext.setQueue(spec.getQueue());
-    appContext.setMaxAppAttempts(spec.getMaxAttempts());
-    appContext.setNodeLabelExpression(Strings.emptyToNull(spec.getNodeLabel()));
-    appContext.setApplicationTags(spec.getTags());
+      ContainerLaunchContext amContext = ContainerLaunchContext.newInstance(
+          localResources, env, commands, null, fsTokens, acls);
 
-    LOG.info("Submitting application...");
-    yarnClient.submitApplication(appContext);
+      appContext.setApplicationType("skein");
+      appContext.setAMContainerSpec(amContext);
+      appContext.setApplicationName(spec.getName());
+      appContext.setResource(master.getResources());
+      appContext.setPriority(Priority.newInstance(0));
+      appContext.setQueue(spec.getQueue());
+      appContext.setMaxAppAttempts(spec.getMaxAttempts());
+      appContext.setNodeLabelExpression(Strings.emptyToNull(spec.getNodeLabel()));
+      appContext.setApplicationTags(spec.getTags());
+
+      LOG.info("Submitting application...");
+      yarnClient.submitApplication(appContext);
+    } catch (Exception exc) {
+      // Ensure application directory is deleted on submission failure
+      deleteAppDir(fs, appDir);
+      throw exc;
+    }
 
     return appId;
+  }
+
+  private ByteBuffer collectTokens(YarnClient yarnClient, FileSystem fs,
+      Model.ApplicationSpec spec) throws IOException, YarnException {
+    // Collect security tokens as needed
+    LOG.debug("Collecting filesystem delegation tokens");
+    Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
+    TokenCache.obtainTokensForNamenodes(
+            credentials,
+            ObjectArrays.concat(
+                    new Path(fs.getUri()),
+                    spec.getFileSystems().toArray(new Path[0])),
+            conf);
+
+    boolean hasRMToken = false;
+    for (Token<?> token: credentials.getAllTokens()) {
+      if (token.getKind().equals(RMDelegationTokenIdentifier.KIND_NAME)) {
+        LOG.debug("RM delegation token already acquired");
+        hasRMToken = true;
+        break;
+      }
+    }
+    if (!hasRMToken) {
+      LOG.debug("Adding RM delegation token");
+      Text rmDelegationTokenService = ClientRMProxy.getRMDelegationTokenService(conf);
+      String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
+      org.apache.hadoop.yarn.api.records.Token rmDelegationToken =
+          yarnClient.getRMDelegationToken(new Text(tokenRenewer));
+      Token<TokenIdentifier> rmToken = ConverterUtils.convertFromYarn(
+          rmDelegationToken, rmDelegationTokenService
+      );
+      credentials.addToken(rmDelegationTokenService, rmToken);
+    }
+
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
+    return ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
   }
 
   private LocalResource finalizeSecurityFile(
@@ -477,6 +482,22 @@ public class Driver {
       file = Utils.localResource(fs, uploadPath, LocalResourceType.FILE);
     }
     return file;
+  }
+
+  private void deleteAppDir(FileSystem fs, Path appDir) {
+    try {
+      if (fs.exists(appDir)) {
+        if (fs.delete(appDir, true)) {
+          LOG.debug("Deleted application directory {}", appDir);
+          return;
+        }
+        if (fs.exists(appDir)) {
+          LOG.warn("Failed to delete application directory {}", appDir);
+        }
+      }
+    } catch (IOException exc) {
+      LOG.warn("Failed to delete application directory {}", appDir, exc);
+    }
   }
 
   private Map<String, LocalResource> setupAppDir(FileSystem fs,

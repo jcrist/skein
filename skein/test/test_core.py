@@ -498,6 +498,31 @@ def test_kill_application_removes_appdir(use_skein, client):
     assert not fs.exists("/user/testuser/.skein/%s" % app.id)
 
 
+def test_submit_failure_removes_appdir(client):
+    hdfs = pytest.importorskip('pyarrow.hdfs')
+
+    # Application with vcores > max
+    spec = skein.ApplicationSpec(
+        name="test_submit_failure_removes_appdir",
+        queue="default",
+        master=skein.Master(
+            resources=skein.Resources(vcores=1000, memory=128),
+            script="echo 'should never run'"
+        )
+    )
+
+    fs = hdfs.connect()
+    before = set(fs.ls("/user/testuser/.skein"))
+
+    with pytest.raises(skein.DriverError):
+        client.submit(spec)
+
+    after = set(fs.ls("/user/testuser/.skein"))
+
+    # Application directory is cleaned up on failure
+    assert before == after
+
+
 custom_log4j_properties = """
 # Root logger option
 log4j.rootCategory=INFO, console
