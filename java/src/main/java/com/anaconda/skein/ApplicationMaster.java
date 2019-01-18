@@ -86,9 +86,16 @@ public class ApplicationMaster {
   private static final int MIN_EXECUTOR_THREADS = 0;
   private static final int MAX_EXECUTOR_THREADS = 25;
 
-  private Configuration conf;
+  // Exit codes.
+  private static final int EXIT_OK = 0;
+  private static final int EXIT_MASTER_FAILURE = 10;
+  private static final int EXIT_DRIVER_FAILURE = 11;
+  private static final int EXIT_SERVICE_FAILURE = 12;
+
+  private final Configuration conf = new YarnConfiguration();
 
   private Model.ApplicationSpec spec;
+  private ByteBuffer tokens;
 
   private Path appDir;
 
@@ -123,21 +130,155 @@ public class ApplicationMaster {
   private FileSystem fs;
   private AMRMClient<ContainerRequest> rmClient;
   private NMClient nmClient;
-  private ThreadPoolExecutor executor;
+  private ThreadPoolExecutor containerLaunchExecutor;
   private Thread allocatorThread;
   private Process driverProcess;
   private Thread driverThread;
 
-  // Flags to communicate with exit hook
-  // - The defaults will only be used in the case of an unexpected shutdown
-  //   of the application master.
-  boolean currentlyRegistered = false;
-  FinalApplicationStatus finalStatus = FinalApplicationStatus.FAILED;
-  String finalMessage = ("Application master failed unexpectedly. See the "
-                         + "logs for more information.");
+  // Flags/attributes for shutdown procedure
+  private final Object shutdownLock = new Object();
+  private boolean appRegistered = false;
+  private boolean appFinished = false;
+  // The defaults should never get used unless there's a bug
+  private int exitCode = EXIT_MASTER_FAILURE;
+  private FinalApplicationStatus finalStatus = FinalApplicationStatus.FAILED;
+  private String finalMessage = ("Application master shutdown unexpectedly, "
+                                 + "see logs for more information");
 
-  private UserGroupInformation ugi;
-  private ByteBuffer tokens;
+  /** Main entrypoint for the ApplicationMaster. **/
+  public static void main(String[] args) {
+    // Specify the netty native workdir. This is necessary for systems where
+    // `/tmp` is not executable.
+    Utils.configureNettyNativeWorkDir();
+
+    ApplicationMaster appMaster = new ApplicationMaster();
+
+    appMaster.init(args);
+
+    System.exit(appMaster.run());
+  }
+
+  public void init(String[] args) {
+    if (args.length != 1) {
+      LOG.error("Usage: <command> applicationDirectory");
+      System.exit(1);
+    }
+    appDir = new Path(args[0]);
+    String appIdEnv = System.getenv("SKEIN_APPLICATION_ID");
+    if (appIdEnv == null) {
+      LOG.error("Couldn't find 'SKEIN_APPLICATION_ID' envar");
+      System.exit(1);
+    }
+    appId = Utils.appIdFromString(appIdEnv);
+
+    containerId = ConverterUtils.toContainerId(
+        System.getenv(Environment.CONTAINER_ID.name())
+    );
+
+    hostname = System.getenv(Environment.NM_HOST.name());
+  }
+
+  public int run() {
+    try {
+      userName = UserGroupInformation.getCurrentUser().getUserName();
+      LOG.info("Running as user {}", userName);
+
+      loadApplicationSpec();
+      loadDelegationTokens();
+
+      registerShutdownHook();
+
+      startClients();
+      startServer();
+      startUI();
+
+      LOG.info("Registering application with resource manager");
+      synchronized (shutdownLock) {
+        rmClient.registerApplicationMaster(
+            hostname, grpcServer.getPort(), ui.getURI().toString()
+        );
+        appRegistered = true;
+      }
+
+      // Determine the actual memory/vcores allocated to *this* container. We
+      // need to do this here, after the application is already registered
+      lookupAppMasterResources();
+
+      // Start allocator loop
+      startAllocator();
+
+      // Start application driver (if applicable)
+      startApplicationDriver();
+
+      // Start services
+      for (ServiceTracker tracker: services.values()) {
+        tracker.initialize();
+      }
+
+      // Block on allocator thread until shutdown
+      allocatorThread.join();
+    } catch (Exception exc) {
+      shutdown(FinalApplicationStatus.FAILED,
+               "Unexpected error in application master",
+               exc,
+               EXIT_MASTER_FAILURE);
+    }
+    return exitCode;
+  }
+
+  private void loadApplicationSpec() throws Exception {
+    spec = MsgUtils.readApplicationSpec(
+        Msg.ApplicationSpec.parseFrom(new FileInputStream(".skein.proto")));
+    spec.validate();
+
+    // Setup service trackers
+    for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
+      services.put(entry.getKey(),
+          new ServiceTracker(entry.getKey(), entry.getValue()));
+    }
+
+    // Setup dependents
+    for (ServiceTracker tracker : services.values()) {
+      for (String dep : tracker.service.getDepends()) {
+        services.get(dep).addDependent(tracker);
+      }
+    }
+
+    LOG.info("Application specification successfully loaded");
+  }
+
+  private void loadDelegationTokens() throws IOException {
+    // Remove the AM->RM token
+    Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
+    Iterator<Token<?>> iter = credentials.getAllTokens().iterator();
+    while (iter.hasNext()) {
+      Token<?> token = iter.next();
+      if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
+        iter.remove();
+      }
+    }
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
+    tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+  }
+
+  private void startClients() throws IOException {
+    fs = FileSystem.get(conf);
+
+    rmClient = AMRMClient.createAMRMClient();
+    rmClient.init(conf);
+    rmClient.start();
+
+    nmClient = NMClient.createNMClient();
+    nmClient.init(conf);
+    nmClient.start();
+
+    containerLaunchExecutor = Utils.newThreadPoolExecutor(
+        "container-launch-executor",
+        MIN_EXECUTOR_THREADS,
+        MAX_EXECUTOR_THREADS,
+        true);
+  }
 
   private void startServer() throws IOException {
     // Setup and start the server
@@ -174,7 +315,7 @@ public class ApplicationMaster {
     }
   }
 
-  private void startUI() {
+  private void startUI() throws Exception {
     // Sorted list of service trackers
     final List<ServiceTracker> sortedServices = Lists.newArrayList(services.values());
     Collections.sort(sortedServices, new Comparator<ServiceTracker>() {
@@ -201,27 +342,22 @@ public class ApplicationMaster {
       if (!uiUsers.contains("*")) {
         allowedUsers = new HashSet<String>(uiUsers);
         // The application owner is always allowed
-        allowedUsers.add(ugi.getShortUserName());
+        allowedUsers.add(UserGroupInformation.getCurrentUser().getShortUserName());
       }
     }
 
+    boolean hasDriver = !spec.getMaster().getScript().isEmpty();
+    String amLogAddress = WebAppUtils.getRunningLogURL(
+        hostname + ":" + System.getenv(Environment.NM_HTTP_PORT.name()),
+        containerId.toString(),
+        userName
+    );
+    ui = new WebUI(0, appId.toString(), spec.getName(), userName,
+                    amLogAddress, hasDriver, progress, totalMemory,
+                    totalVcores, startTimeMillis, keyValueStore,
+                    serviceContexts, allowedUsers, conf, false);
 
-    try {
-      boolean hasDriver = !spec.getMaster().getScript().isEmpty();
-      String amLogAddress = WebAppUtils.getRunningLogURL(
-          hostname + ":" + System.getenv(Environment.NM_HTTP_PORT.name()),
-          containerId.toString(),
-          System.getenv(Environment.USER.name())
-      );
-      ui = new WebUI(0, appId.toString(), spec.getName(), userName,
-                     amLogAddress, hasDriver, progress, totalMemory,
-                     totalVcores, startTimeMillis, keyValueStore,
-                     serviceContexts, allowedUsers, conf, false);
-
-      ui.start();
-    } catch (Exception e) {
-      fatal("Failed to start WebUI server", e);
-    }
+    ui.start();
 
     LOG.info("WebUI server started at {}:{}", hostname, ui.getURI().getPort());
   }
@@ -234,6 +370,7 @@ public class ApplicationMaster {
   }
 
   private void startAllocator() {
+    LOG.debug("Starting allocator thread");
     allocatorThread =
       new Thread() {
         public void run() {
@@ -241,15 +378,21 @@ public class ApplicationMaster {
             try {
               long start = System.currentTimeMillis();
               allocate();
+              // Check after allocation to cut sleep time from shutdown
+              if (appFinished) {
+                break;
+              }
               long left = 1000 - (System.currentTimeMillis() - start);
               if (left > 0) {
                 Thread.sleep(left);
               }
             } catch (InterruptedException exc) {
               break;
-            } catch (Throwable exc) {
+            } catch (Exception exc) {
               shutdown(FinalApplicationStatus.FAILED,
-                       exc.getMessage());
+                       "Failure in container allocator",
+                       exc,
+                       EXIT_MASTER_FAILURE);
               break;
             }
           }
@@ -260,7 +403,8 @@ public class ApplicationMaster {
   }
 
   private void stopAllocator() {
-    if (!Thread.currentThread().equals(allocatorThread)) {
+    if (allocatorThread != null && !Thread.currentThread().equals(allocatorThread)) {
+      LOG.debug("Stopping allocator thread");
       allocatorThread.interrupt();
     }
   }
@@ -294,23 +438,27 @@ public class ApplicationMaster {
           try {
             exitValue = driverProcess.waitFor();
           } catch (InterruptedException exc) {
-            // Interrupted during some other shutdown process, ignore
+            // Interrupted during shutdown, just cleanup process
+            driverProcess.destroy();
             return;
           }
           if (exitValue == 0) {
             shutdown(FinalApplicationStatus.SUCCEEDED,
-                     "Application driver completed successfully.");
+                     "Application driver completed successfully.",
+                     EXIT_OK);
           } else if (exitValue == 143) {
             // SIGTERM results in exit code 143
             shutdown(FinalApplicationStatus.FAILED,
                      "Application driver failed with exit code 143. "
                      + "This is often due to the application master "
                      + "memory limit being exceeded. See the "
-                     + "diagnostics for more information.");
+                     + "diagnostics for more information.",
+                     EXIT_DRIVER_FAILURE);
           } else {
             shutdown(FinalApplicationStatus.FAILED,
                      "Application driver failed with exit code "
-                     + exitValue + ", see logs for more information.");
+                     + exitValue + ", see logs for more information.",
+                     EXIT_DRIVER_FAILURE);
           }
         }
       };
@@ -319,47 +467,117 @@ public class ApplicationMaster {
   }
 
   private void stopApplicationDriver() {
-    if (driverThread != null && driverThread.isAlive()) {
+    if (driverThread != null && !Thread.currentThread().equals(driverThread)) {
       LOG.info("Stopping application driver");
       driverThread.interrupt();
-      driverProcess.destroy();
     }
   }
 
-  private void updateServiceEnvironment(Map<String, String> env, Resource resource,
-      String containerId) {
-    env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + grpcServer.getPort());
-    env.put("SKEIN_APPLICATION_ID", appId.toString());
-    env.put("SKEIN_RESOURCE_VCORES", String.valueOf(resource.getVirtualCores()));
-    env.put("SKEIN_RESOURCE_MEMORY", String.valueOf(resource.getMemory()));
-    if (containerId != null) {
-      env.put("SKEIN_CONTAINER_ID", containerId);
-    }
-  }
+  private void runOnExit() {
+    int maxAttempts = Math.min(
+        spec.getMaxAttempts(),
+        conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+                    YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS)
+    );
+    int currentAttempt = containerId.getApplicationAttemptId().getAttemptId();
 
-  private void loadApplicationSpec() throws Exception {
-    try {
-      spec = MsgUtils.readApplicationSpec(
-          Msg.ApplicationSpec.parseFrom(new FileInputStream(".skein.proto")));
-    } catch (IOException exc) {
-      fatal("Issue loading application specification", exc);
-    }
-    spec.validate();
-
-    // Setup service trackers
-    for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
-      services.put(entry.getKey(),
-          new ServiceTracker(entry.getKey(), entry.getValue()));
-    }
-
-    // Setup dependents
-    for (ServiceTracker tracker : services.values()) {
-      for (String dep : tracker.service.getDepends()) {
-        services.get(dep).addDependent(tracker);
+    synchronized (shutdownLock) {
+      if (!appFinished) {
+        // Shutdown hook called due to external mechanism (likely killed by a
+        // signal). Set the message and log the reason.
+        appFinished = true;
+        finalStatus = FinalApplicationStatus.FAILED;
+        finalMessage = ("Application master shutdown by external signal. "
+                        + "This usually means that the application was killed "
+                        + "by a user/administrator, or that the application "
+                        + "master memory limit was exceeded. See the "
+                        + "diagnostics for more information.");
+        exitCode = EXIT_MASTER_FAILURE;
+        LOG.warn(finalMessage);
+      }
+      if (finalStatus == FinalApplicationStatus.SUCCEEDED || currentAttempt >= maxAttempts) {
+        // Unregister the application
+        if (appRegistered) {
+          try {
+            LOG.info("Unregistering application with status {}", finalStatus);
+            rmClient.unregisterApplicationMaster(finalStatus, finalMessage, null);
+          } catch (Exception ex) {
+            LOG.error("Failed to unregister application", ex);
+          }
+        }
+        // Attempt to delete the app directory
+        if (fs == null) {
+          LOG.warn("Shutdown before filesystem connected, failed to delete "
+                  + "application directory {}", appDir);
+        } else {
+          try {
+            if (fs.delete(appDir, true)) {
+              LOG.info("Deleted application directory {}", appDir);
+            }
+          } catch (IOException exc) {
+            LOG.warn("Failed to delete application directory {}", appDir, exc);
+          }
+        }
+      } else {
+        LOG.info("Application attempt {} out of {} failed, will retry",
+                currentAttempt, maxAttempts);
       }
     }
+    stopUI();
+    stopServer();
+  }
 
-    LOG.info("Application specification successfully loaded");
+  private void registerShutdownHook() {
+    // We register with a higher priority than FileSystem to ensure that the
+    // hdfs client is still active
+    ShutdownHookManager.get().addShutdownHook(
+        new Runnable() {
+          @Override
+          public void run() {
+            runOnExit();
+          }
+        },
+        FileSystem.SHUTDOWN_HOOK_PRIORITY + 30);
+  }
+
+  private void shutdown(FinalApplicationStatus status, String msg,
+      Exception exc, int code) {
+    synchronized (shutdownLock) {
+      startShutdown(status, msg, exc, code);
+      finishShutdown();
+    }
+  }
+
+  private void shutdown(FinalApplicationStatus status, String msg, int code) {
+    shutdown(status, msg, null, code);
+  }
+
+  private void startShutdown(FinalApplicationStatus status, String msg,
+      Exception exc, int code) {
+    synchronized (shutdownLock) {
+      // If shutdown has't already been called
+      if (!appFinished) {
+        if (exc != null) {
+          // If the application terminated with an exception, log it as an
+          // error, and add the exception to the final message.
+          LOG.error("Shutting down: {}", msg, exc);
+          msg = String.format("%s:\n%s", msg, exc.getMessage());
+        } else {
+          LOG.info("Shutting down: {}", msg);
+        }
+        appFinished = true;
+        finalStatus = status;
+        finalMessage = msg;
+        exitCode = code;
+      }
+    }
+  }
+
+  private void finishShutdown() {
+    synchronized (shutdownLock) {
+      stopApplicationDriver();
+      stopAllocator();
+    }
   }
 
   // Due to how YARN container allocation works, sometimes duplicate requests
@@ -437,19 +655,14 @@ public class ApplicationMaster {
     LOG.debug("Received {} new containers", newContainers.size());
 
     for (Container c : newContainers) {
-      Priority priority = c.getPriority();
-      Resource resource = c.getResource();
-      ServiceTracker tracker = trackerFromPriority(priority);
+      ServiceTracker tracker = trackerFromPriority(c.getPriority());
       if (tracker != null) {
-        Resource matched = tracker.matchResource(resource);
-        if (matched != null) {
-          tracker.startContainer(c, matched);
-          return;
-        }
+        tracker.handleNewContainer(c);
+      } else {
+        LOG.debug("Releasing {} with priority {} due to canceled request",
+                  c.getId(), c.getPriority());
+        rmClient.releaseAssignedContainer(c.getId());
       }
-      LOG.warn("No matching service found for resource {}, priority {}, releasing {}",
-               resource, priority, c.getId());
-      rmClient.releaseAssignedContainer(c.getId());
     }
   }
 
@@ -460,7 +673,7 @@ public class ApplicationMaster {
       Model.Container container = containers.get(status.getContainerId());
       if (container == null) {
         // released container that was never started
-        LOG.debug("Releasing newly allocated container {} due to canceled request",
+        LOG.debug("{} was released without ever starting, nothing to do",
                   status.getContainerId());
         continue;
       }
@@ -503,114 +716,6 @@ public class ApplicationMaster {
     }
   }
 
-  private static void fatal(String msg, Throwable exc) {
-    LOG.error(msg, exc);
-    System.exit(1);
-  }
-
-  public void init(String[] args) {
-    if (args.length != 1) {
-      LOG.error("Usage: <command> applicationDirectory");
-      System.exit(1);
-    }
-    appDir = new Path(args[0]);
-    String appIdEnv = System.getenv("SKEIN_APPLICATION_ID");
-    if (appIdEnv == null) {
-      LOG.error("Couldn't find 'SKEIN_APPLICATION_ID' envar");
-      System.exit(1);
-    }
-    appId = Utils.appIdFromString(appIdEnv);
-
-    containerId = ConverterUtils.toContainerId(
-        System.getenv(Environment.CONTAINER_ID.name())
-    );
-  }
-
-  public void run() throws Exception {
-    conf = new YarnConfiguration();
-
-    // Initialize HDFS client
-    fs = FileSystem.get(conf);
-
-    // Register this hook early so it always gets run
-    // - We register with a higher priority than FileSystem
-    //   to ensure that the hdfs client is still active
-    ShutdownHookManager.get().addShutdownHook(
-        new Runnable() {
-          @Override
-          public void run() {
-            runOnExit();
-          }
-        },
-        FileSystem.SHUTDOWN_HOOK_PRIORITY + 30);
-
-    loadApplicationSpec();
-
-    // Determine application username
-    userName = System.getenv(Environment.USER.name());
-    LOG.info("Running as user {}", userName);
-
-    // Remove the AM->RM token
-    Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
-    Iterator<Token<?>> iter = credentials.getAllTokens().iterator();
-    while (iter.hasNext()) {
-      Token<?> token = iter.next();
-      if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
-        iter.remove();
-      }
-    }
-    DataOutputBuffer dob = new DataOutputBuffer();
-    credentials.writeTokenStorageToStream(dob);
-    tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
-
-    // Create ugi and add original tokens to it
-    ugi = UserGroupInformation.createRemoteUser(userName);
-    ugi.addCredentials(credentials);
-
-    rmClient = AMRMClient.createAMRMClient();
-    rmClient.init(conf);
-    rmClient.start();
-
-    nmClient = NMClient.createNMClient();
-    nmClient.init(conf);
-    nmClient.start();
-
-    executor = Utils.newThreadPoolExecutor(
-        "executor",
-        MIN_EXECUTOR_THREADS,
-        MAX_EXECUTOR_THREADS,
-        true);
-
-    hostname = System.getenv(Environment.NM_HOST.name());
-    startServer();
-    startUI();
-
-    synchronized (this) {
-      rmClient.registerApplicationMaster(
-          hostname, grpcServer.getPort(), ui.getURI().toString()
-      );
-      currentlyRegistered = true;
-    }
-
-    startAllocator();
-
-    // Determine the actual memory/vcores allocated to *this* container. We
-    // need to do this here, after the application is already registered
-    loadAppMasterResources();
-    totalMemory.addAndGet(amResources.getMemory());
-    totalVcores.addAndGet(amResources.getVirtualCores());
-
-    // Start application driver (if applicable)
-    startApplicationDriver();
-
-    // Start services
-    for (ServiceTracker tracker: services.values()) {
-      tracker.initialize();
-    }
-
-    grpcServer.awaitTermination();
-  }
-
   private void maybeShutdown() {
     // Fail if any service is failed
     // Succeed if no driver, all services are finished, and none failed
@@ -620,28 +725,19 @@ public class ApplicationMaster {
       if (tracker.isFailed()) {
         shutdown(FinalApplicationStatus.FAILED,
                  "Failure in service " + tracker.getName()
-                 + ", see logs for more information.");
+                 + ", see logs for more information.",
+                 EXIT_SERVICE_FAILURE);
         return;
       }
     }
     if (finished) {
       shutdown(FinalApplicationStatus.SUCCEEDED,
-               "Application completed successfully.");
+               "Application completed successfully.",
+               EXIT_OK);
     }
   }
 
-  private void shutdown(FinalApplicationStatus status, String msg) {
-    preshutdown(status, msg);
-    System.exit(0);  // Trigger exit hooks
-  }
-
-  private void preshutdown(FinalApplicationStatus status, String msg) {
-    LOG.info("Shutting down: {}", msg);
-    finalStatus = status;
-    finalMessage = msg;
-  }
-
-  private void loadAppMasterResources() throws IOException, YarnException {
+  private void lookupAppMasterResources() throws IOException, YarnException {
     LOG.debug("Determining resources available for application master");
     YarnClient yarnClient = YarnClient.createYarnClient();
     yarnClient.init(conf);
@@ -651,75 +747,19 @@ public class ApplicationMaster {
       .getApplicationResourceUsageReport()
       .getUsedResources();
     yarnClient.stop();
+
+    totalMemory.addAndGet(amResources.getMemory());
+    totalVcores.addAndGet(amResources.getVirtualCores());
   }
 
-  private int getMaxAttempts() {
-    int maxAttempts = spec.getMaxAttempts();
-    int yarnMaxAttempts = conf.getInt(
-        YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS
-    );
-    if (yarnMaxAttempts < maxAttempts) {
-      maxAttempts = yarnMaxAttempts;
-    }
-    return maxAttempts;
-  }
-
-  private int getCurrentAttempt() {
-    return containerId.getApplicationAttemptId().getAttemptId();
-  }
-
-  private void runOnExit() {
-    int maxAttempts = getMaxAttempts();
-    int currentAttempt = getCurrentAttempt();
-    boolean isLastAttempt = currentAttempt >= maxAttempts;
-
-    if (finalStatus == FinalApplicationStatus.SUCCEEDED || isLastAttempt) {
-      // Unregister the application
-      synchronized (this) {
-        if (currentlyRegistered) {
-          try {
-            LOG.info("Unregistering application with status {}", finalStatus);
-            rmClient.unregisterApplicationMaster(finalStatus, finalMessage, null);
-            currentlyRegistered = false;
-          } catch (Exception ex) {
-            LOG.error("Failed to unregister application", ex);
-          }
-        }
-      }
-      // Delete the app directory
-      try {
-        if (fs.delete(appDir, true)) {
-          LOG.info("Deleted application directory {}", appDir);
-        }
-      } catch (IOException exc) {
-        LOG.warn("Failed to delete application directory {}", appDir, exc);
-      }
-    } else {
-      LOG.info("Application attempt {} out of {} failed, will retry",
-               currentAttempt, maxAttempts);
-    }
-
-    stopApplicationDriver();
-    stopAllocator();
-    stopUI();
-    stopServer();
-  }
-
-  /** Main entrypoint for the ApplicationMaster. **/
-  public static void main(String[] args) {
-    // Specify the netty native workdir. This is necessary for systems where
-    // `/tmp` is not executable.
-    Utils.configureNettyNativeWorkDir();
-
-    ApplicationMaster appMaster = new ApplicationMaster();
-
-    appMaster.init(args);
-
-    try {
-      appMaster.run();
-    } catch (Throwable exc) {
-      fatal("Error running ApplicationMaster", exc);
+  private void updateServiceEnvironment(Map<String, String> env, Resource resource,
+      String containerId) {
+    env.put("SKEIN_APPMASTER_ADDRESS", hostname + ":" + grpcServer.getPort());
+    env.put("SKEIN_APPLICATION_ID", appId.toString());
+    env.put("SKEIN_RESOURCE_VCORES", String.valueOf(resource.getVirtualCores()));
+    env.put("SKEIN_RESOURCE_MEMORY", String.valueOf(resource.getMemory()));
+    if (containerId != null) {
+      env.put("SKEIN_CONTAINER_ID", containerId);
     }
   }
 
@@ -874,7 +914,7 @@ public class ApplicationMaster {
       this.numTarget = service.getInstances();
     }
 
-    public Resource matchResource(Resource resource) {
+    public Resource lookupResources(Resource resource) {
       // Some YARN configurations return resources on allocate that have
       // vcores always set to 1 (even though the allocated container gets the
       // correct number of vcores). Here we create a new resource with the same
@@ -1065,39 +1105,63 @@ public class ApplicationMaster {
       return container;
     }
 
-    public Model.Container startContainer(final Container container,
-        Resource resource) {
-      LOG.info("Starting {}...", container.getId());
-      Priority priority = container.getPriority();
-      removePriority(priority);
-
-      Model.Container out;
-
+    public void handleNewContainer(final Container container) {
       // Synchronize only in this block so that only one service is blocked at
       // a time (instead of potentially multiple).
+      Model.Container newContainer;
       synchronized (this) {
-        out = requested.remove(priority);
-        final int instance = out.getInstance();
+        Priority priority = container.getPriority();
+        // Some YARN configurations return resources on allocate that have
+        // vcores always set to 1 (even though the allocated container gets the
+        // correct number of vcores). Here we create a new resource with the same
+        // memory returned, but the requested number of vcores, and use that
+        // instead. See https://github.com/dask/dask-yarn/issues/48 for more
+        // discussion.
+        Resource requestedResource = service.getResources();
+        Resource resource = Resource.newInstance(
+            container.getResource().getMemory(),
+            requestedResource.getVirtualCores()
+        );
+        if (requestedResource.compareTo(resource) > 0) {
+          // Safeguard around containers not matching, shouldn't ever be hit
+          LOG.warn("{} with {}, priority {} doesn't meet requested resource "
+                   + "requirements {}, releasing",
+                   container.getId(), resource, priority, service.getResources());
+          rmClient.releaseAssignedContainer(container.getId());
+          return;
+        }
+
+        removePriority(priority);
+        newContainer = requested.remove(priority);
+        if (newContainer == null) {
+          // Container received after request was canceled
+          LOG.debug("Releasing {} with priority {} due to canceled request for service {}",
+                    container.getId(), priority, name);
+          rmClient.releaseAssignedContainer(container.getId());
+          return;
+        }
         // Remove request so it dosn't get resubmitted
-        rmClient.removeContainerRequest(out.popContainerRequest());
+        rmClient.removeContainerRequest(newContainer.popContainerRequest());
 
         // Add fields for running container
-        out.setState(Model.Container.State.RUNNING);
-        out.setStartTime(System.currentTimeMillis());
-        out.setYarnContainerId(container.getId());
-        out.setYarnNodeId(container.getNodeId());
-        out.setYarnNodeHttpAddress(container.getNodeHttpAddress());
-        out.setResources(resource);
+        newContainer.setState(Model.Container.State.RUNNING);
+        newContainer.setStartTime(System.currentTimeMillis());
+        newContainer.setYarnContainerId(container.getId());
+        newContainer.setYarnNodeId(container.getNodeId());
+        newContainer.setYarnNodeHttpAddress(container.getNodeHttpAddress());
+        newContainer.setResources(resource);
 
-        ApplicationMaster.this.containers.put(container.getId(), out);
+        ApplicationMaster.this.containers.put(container.getId(), newContainer);
+
+        final int instance = newContainer.getInstance();
         running.add(instance);
 
         // Update container environment variables
         Map<String, String> env = new HashMap<String, String>(service.getEnv());
-        updateServiceEnvironment(env, resource, out.getId());
-        if (!ugi.isSecurityEnabled()) {
+        updateServiceEnvironment(env, resource, newContainer.getId());
+        if (!UserGroupInformation.isSecurityEnabled()) {
           // Add HADOOP_USER_NAME to environment for *simple* authentication only
-          env.put("HADOOP_USER_NAME", ugi.getUserName());
+          env.put("HADOOP_USER_NAME", userName);
         }
 
         final ContainerLaunchContext ctx =
@@ -1112,7 +1176,8 @@ public class ApplicationMaster {
         totalMemory.addAndGet(resource.getMemory());
         totalVcores.addAndGet(resource.getVirtualCores());
 
-        executor.execute(
+        LOG.info("Starting {}...", container.getId());
+        containerLaunchExecutor.execute(
             new Runnable() {
               @Override
               public void run() {
@@ -1127,7 +1192,7 @@ public class ApplicationMaster {
               }
             });
 
-        LOG.info("RUNNING: {} on {}", out.getId(), container.getId());
+        LOG.info("RUNNING: {} on {}", newContainer.getId(), container.getId());
       }
 
       if (!initialRunning && requested.size() == 0) {
@@ -1136,7 +1201,6 @@ public class ApplicationMaster {
           dep.notifyRunning(name);
         }
       }
-      return out;
     }
 
     public void finishContainer(int instance, Model.Container.State state, String exitMessage) {
@@ -1285,14 +1349,14 @@ public class ApplicationMaster {
         message = "Shutdown requested by user.";
       }
 
-      // Shutdown everything but the grpc server
-      preshutdown(status, message);
+      synchronized (shutdownLock) {
+        startShutdown(status, message, null, EXIT_OK);
 
-      resp.onNext(MsgUtils.EMPTY);
-      resp.onCompleted();
+        resp.onNext(MsgUtils.EMPTY);
+        resp.onCompleted();
 
-      // Finish shutdown
-      System.exit(0);
+        finishShutdown();
+      }
     }
 
     @Override
