@@ -11,7 +11,7 @@ if [[ "$DOCS" != "true" ]]; then
         htcluster exec -- kinit testuser -kt testuser.keytab
     fi
     # Run py.test inside docker
-    htcluster exec -- $CONDA_ENV/bin/py.test skein/skein/ -vv -s -k test_memory_limit_exceeded
+    htcluster exec -- $CONDA_ENV/bin/py.test skein/skein/ -vv
     # linting
     htcluster exec -- $CONDA_ENV/bin/flake8 skein/skein/
 else
