@@ -4,6 +4,18 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.5.1 (January 21, 2019)
+--------------------------------
+
+- Fix bug preventing launching containers with vcores > 1 on some YARN
+  configurations (:pr:`131`)
+- Ensure application staging directory is cleaned up if submission fails
+  (:pr:`132`)
+- Refactored error handling in application master, improving error logs during
+  application master failure (:pr:`134`)
+- Decrease heartbeat interval during steady-state operation, reducing
+  communication load on the resource manager (:pr:`137`, :issue:`135`)
+
 Version 0.5.0 (January 7, 2019)
 -------------------------------
 
