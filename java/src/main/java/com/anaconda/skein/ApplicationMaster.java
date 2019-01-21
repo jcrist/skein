@@ -94,6 +94,17 @@ public class ApplicationMaster {
 
   private final Configuration conf = new YarnConfiguration();
 
+  // Heartbeat intervals between the AM and RM
+  private final long idleHeartbeat = Math.min(
+      5000,
+      Math.max(
+        0,
+        conf.getInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+                    YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS) / 2
+      )
+  );
+  private final long pendingHeartbeat = Math.min(1000, idleHeartbeat);
+
   private Model.ApplicationSpec spec;
   private ByteBuffer tokens;
 
@@ -204,16 +215,16 @@ public class ApplicationMaster {
       // need to do this here, after the application is already registered
       lookupAppMasterResources();
 
+      // Start services
+      for (ServiceTracker tracker: services.values()) {
+        tracker.initialize();
+      }
+
       // Start allocator loop
       startAllocator();
 
       // Start application driver (if applicable)
       startApplicationDriver();
-
-      // Start services
-      for (ServiceTracker tracker: services.values()) {
-        tracker.initialize();
-      }
 
       // Block on allocator thread until shutdown
       allocatorThread.join();
@@ -371,6 +382,8 @@ public class ApplicationMaster {
 
   private void startAllocator() {
     LOG.debug("Starting allocator thread");
+    LOG.debug("Heartbeat intervals [idle: {} ms, pending: {} ms]",
+              idleHeartbeat, pendingHeartbeat);
     allocatorThread =
       new Thread() {
         public void run() {
@@ -382,7 +395,8 @@ public class ApplicationMaster {
               if (appFinished) {
                 break;
               }
-              long left = 1000 - (System.currentTimeMillis() - start);
+              long interval = (priorities.size() > 0) ? pendingHeartbeat : idleHeartbeat;
+              long left = interval - (System.currentTimeMillis() - start);
               if (left > 0) {
                 Thread.sleep(left);
               }
