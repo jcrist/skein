@@ -14,10 +14,10 @@ from skein.compatibility import PY2
 from skein.exceptions import context
 from skein.cli import main
 from skein.core import _write_driver
+from skein.utils import pid_exists
 from skein.test.conftest import (run_application, sleep_until_killed,
                                  check_is_shutdown, wait_for_containers,
-                                 set_skein_config, ensure_shutdown,
-                                 pid_exists)
+                                 set_skein_config, ensure_shutdown)
 
 
 bad_spec_yaml = """
@@ -224,7 +224,18 @@ def test_cli_driver_force_stop(tmpdir, capsys):
         with closing(sock):
             # PID is not a skein driver
             _write_driver(address, proc.pid)
+            with open(driver_file) as fil:
+                contents = fil.read()
             assert os.path.exists(driver_file)
+
+            run_command('driver start', error=True)
+            out, err = capsys.readouterr()
+            assert not out
+            assert err
+            assert os.path.exists(driver_file)
+            with open(driver_file) as fil:
+                contents2 = fil.read()
+            assert contents == contents2
 
             run_command('driver stop', error=True)
             out, err = capsys.readouterr()
@@ -239,18 +250,36 @@ def test_cli_driver_force_stop(tmpdir, capsys):
             assert not os.path.exists(driver_file)
             assert proc.wait() is not None
 
-            # Find a PID that doesn't exist
-            pid = 1234
-            while pid_exists(pid):
-                pid += 1
-            _write_driver(address, pid)
+
+@pytest.mark.parametrize('cmd', ['start', 'stop'])
+def test_cli_driver_after_bad_driver_file(cmd, tmpdir, capsys):
+    with set_skein_config(str(tmpdir)):
+        run_command('config gencerts')
+        driver_file = os.path.join(skein.properties.config_dir, 'driver')
+
+        sock = socket.socket()
+        sock.bind(('', 0))
+        address = 'localhost:%d' % sock.getsockname()[1]
+
+        # Find a PID that doesn't exist
+        pid = 1234
+        while pid_exists(pid):
+            pid += 1
+        _write_driver(address, pid)
+        assert os.path.exists(driver_file)
+
+        if cmd == 'start':
+            run_command('driver start')
+            out, err = capsys.readouterr()
+            assert out
+            assert 'Previous driver' in err
             assert os.path.exists(driver_file)
 
-            run_command('driver stop --force')
-            out, err = capsys.readouterr()
-            assert not out
-            assert not err
-            assert not os.path.exists(driver_file)
+        run_command('driver stop')
+        out, err = capsys.readouterr()
+        assert not out
+        assert not err
+        assert not os.path.exists(driver_file)
 
 
 def test_cli_application_submit_errors(tmpdir, capsys, global_client):

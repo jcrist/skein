@@ -10,9 +10,9 @@ import pytest
 import skein
 from skein.core import Properties
 from skein.exceptions import FileNotFoundError, FileExistsError
+from skein.utils import pid_exists
 from skein.test.conftest import (run_application, wait_for_containers,
-                                 wait_for_completion, get_logs, KEYTAB_PATH,
-                                 pid_exists)
+                                 wait_for_completion, get_logs, KEYTAB_PATH)
 
 
 def test_properties():
