@@ -25,7 +25,7 @@ from .model import (Security, ApplicationSpec, ApplicationReport,
                     ApplicationState, ContainerState, Container,
                     FinalStatus, Resources, container_instance_from_string,
                     LogLevel)
-from .utils import cached_property, grpc_fork_support_disabled
+from .utils import cached_property, grpc_fork_support_disabled, pid_exists
 
 
 __all__ = ('Client', 'ApplicationClient', 'properties')
@@ -393,12 +393,19 @@ class Client(_ClientBase):
         address : str
             The address of the driver
         """
-        try:
-            client = Client.from_global_driver()
-        except DriverNotRunningError:
-            pass
-        else:
-            return client.address
+        address, pid = _read_driver()
+
+        if address is not None:
+            try:
+                Client(address=address)
+                return address
+            except ConnectionError:
+                if pid_exists(pid):
+                    # PID exists, but we can't connect, reraise
+                    raise
+                # PID doesn't exist, warn and continue as normal
+                context.warn("Previous driver at %s, PID %d has died. Restarting."
+                             % (address, pid))
         address, _ = _start_driver(set_global=True,
                                    keytab=keytab,
                                    principal=principal,
@@ -426,7 +433,13 @@ class Client(_ClientBase):
 
         if not force:
             # Attempt to connect first, errors on failure
-            Client(address=address)
+            try:
+                Client(address=address)
+            except ConnectionError:
+                if pid_exists(pid):
+                    # PID exists, but we can't connect, reraise
+                    raise
+                # PID doesn't exist, continue cleanup as normal
         try:
             os.kill(pid, signal.SIGTERM)
         except OSError as exc:

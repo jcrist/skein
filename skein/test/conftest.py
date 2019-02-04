@@ -10,14 +10,6 @@ import pytest
 import skein
 
 
-def pid_exists(pid):
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
-
-
 @contextmanager
 def set_skein_config(tmpdir):
     tmpdir = str(tmpdir)

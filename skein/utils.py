@@ -1,10 +1,20 @@
 from __future__ import print_function, division, absolute_import
 
+import errno
 import os
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 from .compatibility import unicode, UTC
+
+
+def pid_exists(pid):
+    try:
+        os.kill(pid, 0)
+    except OSError as exc:
+        if exc.errno == errno.ESRCH:
+            return False
+    return True
 
 
 @contextmanager
