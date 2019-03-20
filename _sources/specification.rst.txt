@@ -494,7 +494,7 @@ restart, or 0 to never restart. Optional, default is 0.
 .. code-block:: none
 
     services:
-      my_service:
+      my_service1:
         max_restarts: -1  # always restart
         ...
 
@@ -504,6 +504,29 @@ restart, or 0 to never restart. Optional, default is 0.
 
       my_service3:
         max_restarts: 3   # restart a maximum of 3 times
+        ...
+
+``allow_failures``
+~~~~~~~~~~~~~~~~~~
+
+If False (default), the whole application will shutdown if the number of
+failures for this service exceeds ``max_restarts``. Set to True to keep the
+application running even if the number of failures exceeds this limit.
+Optional, default is False.
+
+**Example**
+
+.. code-block:: none
+
+    services:
+      my_service1:
+        max_restarts: 0         # Never restart
+        allow_failures: True    # Don't terminate the application on failure
+        ...
+
+      my_service2:
+        max_restarts: 3         # Restart a maximum of 3 times
+        allow_failures: False   # If more than 3 failures, terminate the application
         ...
 
 ``node_label``

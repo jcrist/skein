@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>API Docs &#8212; Skein 0.5.1+1.gf723edf documentation</title>
+    <title>API Docs &#8212; Skein 0.5.1+2.gb9d0317 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -2516,7 +2516,7 @@ client.</p>
 
 <dl class="class">
 <dt id="skein.Service">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Service</code><span class="sig-paren">(</span><em>resources=required</em>, <em>script=required</em>, <em>instances=1</em>, <em>files=None</em>, <em>env=None</em>, <em>depends=None</em>, <em>max_restarts=0</em>, <em>node_label=''</em>, <em>nodes=None</em>, <em>racks=None</em>, <em>relax_locality=False</em>, <em>commands=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Service</code><span class="sig-paren">(</span><em>resources=required</em>, <em>script=required</em>, <em>instances=1</em>, <em>files=None</em>, <em>env=None</em>, <em>depends=None</em>, <em>max_restarts=0</em>, <em>allow_failures=False</em>, <em>node_label=''</em>, <em>nodes=None</em>, <em>racks=None</em>, <em>relax_locality=False</em>, <em>commands=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service" title="Permalink to this definition">¶</a></dt>
 <dd><p>Description of a Skein service.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2550,6 +2550,12 @@ only be started after all its dependencies have been started.</p>
 are only restarted on failure, and the cap is set for all containers in
 the service, not per container. Set to -1 to allow infinite restarts.
 Default is 0.</p>
+</dd>
+<dt><strong>allow_failures</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If False (default), the whole application will shutdown if the number
+of failures for this service exceeds <code class="docutils literal notranslate"><span class="pre">max_restarts</span></code>. Set to True to
+keep the application running even if this service exceeds its failure
+limit.</p>
 </dd>
 <dt><strong>node_label</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
 <dd><p class="first last">The node label expression to use when requesting containers for this
