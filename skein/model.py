@@ -146,7 +146,7 @@ def check_no_cycles(dependencies):
 
 
 def _infer_format(path, format='infer'):
-    if format is 'infer':
+    if format == 'infer':
         _, ext = os.path.splitext(path)
         if ext == '.json':
             format = 'json'
