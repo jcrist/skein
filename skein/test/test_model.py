@@ -318,6 +318,12 @@ def test_master_invariants():
     assert m.files['target'].type == 'archive'
     assert m.files['target2'].type == 'file'
 
+    # File targets are checked
+    with pytest.raises(ValueError):
+        Master(files={'foo/bar': '/source.zip'})
+    # Local relative paths are fine
+    Master(files={'./bar': '/source.zip'})
+
 
 def test_service():
     r = Resources(memory=1024, vcores=1)
@@ -371,6 +377,14 @@ def test_service_invariants():
                        'target2': '/source2.txt'})
     assert s.files['target'].type == 'archive'
     assert s.files['target2'].type == 'file'
+
+    # File targets are checked
+    with pytest.raises(ValueError):
+        Service(script="script", resources=r,
+                files={'foo/bar': '/source.zip'})
+    # Local relative paths are fine
+    Service(script="script", resources=r,
+            files={'./bar': '/source.zip'})
 
 
 def test_application_spec():

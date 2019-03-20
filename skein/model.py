@@ -19,6 +19,18 @@ __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
            'ContainerState', 'Container', 'LogLevel')
 
 
+def _check_is_filename(target):
+    orig = target
+    # Allow local relative paths
+    if target.startswith("./"):
+        target = target[2:]
+    if "/" in target:
+        raise context.ValueError(
+            "Keys in `files` must be filenames only (no directories allowed), "
+            "found %r" % orig
+        )
+
+
 def _pop_origin(kwargs):
     _origin = kwargs.pop('_origin', None)
     if kwargs:
@@ -794,7 +806,8 @@ class Service(Specification):
         self.resources._validate(is_request=True)
 
         self._check_is_dict_of('files', string, File)
-        for f in self.files.values():
+        for target, f in self.files.items():
+            _check_is_filename(target)
             f._validate()
 
         self._check_is_dict_of('env', string, string)
@@ -1053,7 +1066,8 @@ class Master(Specification):
         self.resources._validate(is_request=True)
 
         self._check_is_dict_of('files', string, File)
-        for f in self.files.values():
+        for target, f in self.files.items():
+            _check_is_filename(target)
             f._validate()
 
         self._check_is_dict_of('env', string, string)
