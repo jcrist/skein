@@ -334,11 +334,9 @@ class Security(Specification):
 
         # Are we in a container started by skein?
         if properties.application_id is not None:
-            # Find the container directory from all the options
-            for path in os.environ.get('LOCAL_DIRS', '').split(','):
-                container_dir = os.path.join(path, properties.yarn_container_id)
-                cert_path = os.path.join(container_dir, '.skein.crt')
-                key_path = os.path.join(container_dir, '.skein.pem')
+            if properties.container_dir is not None:
+                cert_path = os.path.join(properties.container_dir, '.skein.crt')
+                key_path = os.path.join(properties.container_dir, '.skein.pem')
                 if os.path.exists(cert_path) and os.path.exists(key_path):
                     return Security(cert_file=cert_path, key_file=key_path)
             raise context.FileNotFoundError(

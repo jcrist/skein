@@ -264,7 +264,9 @@ def test_appclient_and_security_in_container(monkeypatch, tmpdir, security):
                      ('LOCAL_DIRS', bad_dir)]:
         monkeypatch.setenv(key, val)
 
-    monkeypatch.setattr(skein.core, 'properties', Properties())
+    properties = Properties()
+    assert properties.container_dir is None
+    monkeypatch.setattr(skein.core, 'properties', properties)
 
     # In container, but unable to find security configuration
     with pytest.raises(FileNotFoundError) as exc:
@@ -283,6 +285,10 @@ def test_appclient_and_security_in_container(monkeypatch, tmpdir, security):
     with open(str(local_dir.join(".skein.pem")), 'wb') as fil:
         fil.write(security._get_bytes('key'))
     monkeypatch.setenv('LOCAL_DIRS', '%s,%s' % (bad_dir, good_dir))
+
+    properties = Properties()
+    assert properties.container_dir == local_dir
+    monkeypatch.setattr(skein.core, 'properties', properties)
 
     # Picks up full configuration from environment variables
     app = skein.ApplicationClient.from_current()

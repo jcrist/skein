@@ -56,6 +56,9 @@ class Properties(Mapping):
     container_resources : Resources or None
         The resources allocated to the current container. None if not in a
         container.
+    container_dir : str or None
+        The absolute path to the working directory for this container. None if
+        not in a container.
     yarn_container_id : str or None
         The current YARN container id. None if not running in a container.
     """
@@ -73,12 +76,22 @@ class Properties(Mapping):
         except (ValueError, TypeError):
             container_resources = None
 
+        # Find the container directory from all the options
+        container_dir = None
+        if yarn_container_id is not None:
+            for path in os.environ.get('LOCAL_DIRS', '').split(','):
+                check_dir = os.path.join(path, yarn_container_id)
+                if os.path.exists(check_dir):
+                    container_dir = check_dir
+                    break
+
         mapping = dict(application_id=application_id,
                        appmaster_address=appmaster_address,
                        config_dir=config_dir,
                        container_id=container_id,
                        container_resources=container_resources,
-                       yarn_container_id=yarn_container_id)
+                       yarn_container_id=yarn_container_id,
+                       container_dir=container_dir)
 
         object.__setattr__(self, '_mapping', mapping)
 
