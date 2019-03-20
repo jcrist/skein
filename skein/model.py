@@ -146,7 +146,7 @@ def check_no_cycles(dependencies):
 
 
 def _infer_format(path, format='infer'):
-    if format is 'infer':
+    if format == 'infer':
         _, ext = os.path.splitext(path)
         if ext == '.json':
             format = 'json'
@@ -726,6 +726,11 @@ class Service(Specification):
         are only restarted on failure, and the cap is set for all containers in
         the service, not per container. Set to -1 to allow infinite restarts.
         Default is 0.
+    allow_failures : bool, optional
+        If False (default), the whole application will shutdown if the number
+        of failures for this service exceeds ``max_restarts``. Set to True to
+        keep the application running even if this service exceeds its failure
+        limit.
     node_label : str, optional
         The node label expression to use when requesting containers for this
         service. If not set, defaults to the application-level ``node_label``
@@ -743,14 +748,14 @@ class Service(Specification):
         are strictly enforced. Default is False.
     """
     __slots__ = ('resources', 'script', 'instances', 'files', 'env',
-                 'depends', 'max_restarts', 'node_label', 'nodes', 'racks',
-                 'relax_locality')
+                 'depends', 'max_restarts', 'allow_failures', 'node_label',
+                 'nodes', 'racks', 'relax_locality')
     _protobuf_cls = _proto.Service
 
     def __init__(self, resources=required, script=required, instances=1,
                  files=None, env=None, depends=None, max_restarts=0,
-                 node_label='', nodes=None, racks=None, relax_locality=False,
-                 commands=None):
+                 allow_failures=False, node_label='', nodes=None, racks=None,
+                 relax_locality=False, commands=None):
 
         if script is required and commands is not None:
             context.warn("The ``commands`` field for services is deprecated, "
@@ -766,6 +771,7 @@ class Service(Specification):
         self.env = {} if env is None else env
         self.depends = set() if depends is None else set(depends)
         self.max_restarts = max_restarts
+        self.allow_failures = allow_failures
         self.node_label = node_label
         self.nodes = [] if nodes is None else nodes
         self.racks = [] if racks is None else racks
@@ -782,6 +788,7 @@ class Service(Specification):
         self._check_is_list_of('racks', string)
         self._check_is_type('relax_locality', bool)
         self._check_is_bounded_int('max_restarts', min=-1)
+        self._check_is_type('allow_failures', bool)
 
         self._check_is_type('resources', Resources)
         self.resources._validate(is_request=True)
@@ -834,6 +841,7 @@ class Service(Specification):
                   'racks': list(obj.racks),
                   'relax_locality': obj.relax_locality,
                   'max_restarts': obj.max_restarts,
+                  'allow_failures': obj.allow_failures,
                   'resources': resources,
                   'files': files,
                   'env': dict(obj.env),

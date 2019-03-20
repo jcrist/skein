@@ -41,6 +41,7 @@ public class Model {
     private List<String> racks;
     private boolean relaxLocality;
     private int maxRestarts;
+    private boolean allowFailures;
     private Resource resources;
     private Map<String, LocalResource> localResources;
     private Map<String, String> env;
@@ -55,6 +56,7 @@ public class Model {
                    List<String> racks,
                    boolean relaxLocality,
                    int maxRestarts,
+                   boolean allowFailures,
                    Resource resources,
                    Map<String, LocalResource> localResources,
                    Map<String, String> env,
@@ -66,6 +68,7 @@ public class Model {
       this.racks = racks;
       this.relaxLocality = relaxLocality;
       this.maxRestarts = maxRestarts;
+      this.allowFailures = allowFailures;
       this.resources = resources;
       this.localResources = localResources;
       this.env = env;
@@ -102,6 +105,9 @@ public class Model {
 
     public void setMaxRestarts(int maxRestarts) { this.maxRestarts = maxRestarts; }
     public int getMaxRestarts() { return maxRestarts; }
+
+    public void setAllowFailures(boolean allowFailures) { this.allowFailures = allowFailures; }
+    public boolean getAllowFailures() { return allowFailures; }
 
     public void setResources(Resource resources) { this.resources = resources; }
     public Resource getResources() { return resources; }

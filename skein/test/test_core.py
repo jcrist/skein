@@ -845,3 +845,36 @@ def test_retries_fails(client):
 
     fs = hdfs.connect()
     assert not fs.exists("/user/testuser/.skein/%s" % app_id)
+
+
+@pytest.mark.parametrize('allow_failures', [False, True])
+def test_allow_failures_max_restarts(client, allow_failures):
+    name = "test_max_restarts_allow_failures_%s" % str(allow_failures).lower()
+    spec = skein.ApplicationSpec(
+        name=name,
+        master=skein.Master(
+            script="sleep infinity"
+        ),
+        services={
+            'myservice': skein.Service(
+                instances=1,
+                max_restarts=2,
+                allow_failures=allow_failures,
+                resources=skein.Resources(memory=128, vcores=1),
+                script="exit 1"
+            )
+        }
+    )
+    with run_application(client, spec=spec) as app:
+        if allow_failures:
+            # Service failed 3 times, doesn't keep trying to run more
+            wait_for_containers(app, 3, states=['FAILED'])
+            # Check still running fine after 3 failures
+            time.sleep(0.5)
+            app.get_specification()
+            # Shutdown manually
+            app.shutdown()
+            assert wait_for_completion(client, app.id) == 'SUCCEEDED'
+        else:
+            # Service failed 3 times and then terminates
+            assert wait_for_completion(client, app.id) == 'FAILED'
