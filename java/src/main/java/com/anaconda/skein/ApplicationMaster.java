@@ -966,7 +966,7 @@ public class ApplicationMaster {
     }
 
     public synchronized boolean isFailed() {
-      return numFailed > numRestarted;
+      return numFailed > numRestarted && !service.getAllowFailures();
     }
 
     public synchronized void notifyRunning(String dependency) {

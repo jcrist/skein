@@ -79,11 +79,12 @@ message Service {
   repeated string racks = 4;
   bool relax_locality = 5;
   int32 max_restarts = 6;
-  Resources resources = 7;
-  map<string, File> files = 8;
-  map<string, string> env = 9;
-  string script = 10;
-  repeated string depends = 11;
+  bool allow_failures = 7;
+  Resources resources = 8;
+  map<string, File> files = 9;
+  map<string, string> env = 10;
+  string script = 11;
+  repeated string depends = 12;
 }
 
 

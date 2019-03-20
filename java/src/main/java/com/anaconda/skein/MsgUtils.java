@@ -277,6 +277,7 @@ public class MsgUtils {
         .addAllRacks(service.getRacks())
         .setRelaxLocality(service.getRelaxLocality())
         .setMaxRestarts(service.getMaxRestarts())
+        .setAllowFailures(service.getAllowFailures())
         .setResources(writeResources(service.getResources()))
         .putAllEnv(service.getEnv())
         .setScript(service.getScript())
@@ -300,6 +301,7 @@ public class MsgUtils {
         new ArrayList<String>(service.getRacksList()),
         service.getRelaxLocality(),
         service.getMaxRestarts(),
+        service.getAllowFailures(),
         readResources(service.getResources()),
         localResources,
         new HashMap<String, String>(service.getEnvMap()),
