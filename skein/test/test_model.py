@@ -475,23 +475,6 @@ def test_service_roundtrip():
     assert s == s2
 
 
-def test_service_commands_deprecated():
-    script = ('set -x -e\n'
-              'command 1\n'
-              'command 2')
-
-    with pytest.warns(UserWarning):
-        s = Service(commands=['command 1', 'command 2'],
-                    resources=Resources(memory=1024, vcores=1))
-    assert s.script == script
-
-    with pytest.warns(UserWarning):
-        s = Service.from_dict({'resources': {'memory': 1024,
-                                             'vcores': 1},
-                               'commands': ['command 1', 'command 2']})
-    assert s.script == script
-
-
 def test_application_spec_from_yaml():
     spec = ApplicationSpec.from_yaml(app_spec)
     assert isinstance(spec, ApplicationSpec)

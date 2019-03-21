@@ -120,13 +120,10 @@ container = node(entry_subs, 'container', 'Manage application containers')
 kv = node(entry_subs, 'kv', 'Manage the key-value store')
 driver = node(entry_subs, 'driver', 'Manage the global driver')
 config = node(entry_subs, 'config', 'Manage configuration')
-daemon = node(entry_subs, 'daemon', 'DEPRECATED')
 
 ###################
 # DAEMON COMMANDS #
 ###################
-
-# TODO: daemon commands are deprecated, cleanup after next release cycle
 
 keytab = arg('--keytab', default=None, metavar='PATH',
              help=("Path to a keytab file to use when starting the driver. "
@@ -144,26 +141,8 @@ java_options = arg("--java-option", dest="java_options", action='append',
                          "multiple times."))
 
 
-def deprecate_daemon(name, func):
-    def inner(*args, **kwargs):
-        context.warn("`skein daemon %s` is deprecated, use `skein driver %s` instead"
-                     % (name, name))
-        return func(*args, **kwargs)
-    return inner
-
-
-def driver_and_daemon(name, help, *args):
-    def caller(func):
-        subcommand(daemon.subs,
-                   name,
-                   'DEPRECATED, use ``skein driver %s`` instead' % name,
-                   *args)(deprecate_daemon(name, func))
-        return subcommand(driver.subs, name, help, *args)(func)
-    return caller
-
-
-@driver_and_daemon('start', 'Start the skein driver',
-                   keytab, principal, log, log_level, java_options)
+@subcommand(driver.subs, 'start', 'Start the skein driver',
+            keytab, principal, log, log_level, java_options)
 def driver_start(keytab=None, principal=None, log=False,
                  log_level=None, java_options=None):
     print(Client.start_global_driver(keytab=keytab, principal=principal,
@@ -171,7 +150,8 @@ def driver_start(keytab=None, principal=None, log=False,
                                      java_options=java_options))
 
 
-@driver_and_daemon('address', 'The address of the running driver')
+@subcommand(driver.subs,
+            'address', 'The address of the running driver')
 def driver_address():
     address, _ = _read_driver()
     if address is None:
@@ -191,17 +171,19 @@ def driver_pid():
         print(pid)
 
 
-@driver_and_daemon('stop', 'Stop the skein driver',
-                   arg('--force', '-f', action='store_true',
-                       help=("Stop the process associated with the driver PID, "
-                             "even if unable to verify it corresponds to a "
-                             "skein driver")))
+@subcommand(driver.subs,
+            'stop', 'Stop the skein driver',
+            arg('--force', '-f', action='store_true',
+                help=("Stop the process associated with the driver PID, "
+                      "even if unable to verify it corresponds to a "
+                      "skein driver")))
 def driver_stop(force=False):
     Client.stop_global_driver(force=force)
 
 
-@driver_and_daemon('restart', 'Restart the skein driver',
-                   keytab, principal, log, log_level, java_options)
+@subcommand(driver.subs,
+            'restart', 'Restart the skein driver',
+            keytab, principal, log, log_level, java_options)
 def driver_restart(keytab=None, principal=None, log=False, log_level=None,
                    java_options=None):
     driver_stop()

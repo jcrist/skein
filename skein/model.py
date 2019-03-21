@@ -776,13 +776,7 @@ class Service(Specification):
     def __init__(self, resources=required, script=required, instances=1,
                  files=None, env=None, depends=None, max_restarts=0,
                  allow_failures=False, node_label='', nodes=None, racks=None,
-                 relax_locality=False, commands=None):
-
-        if script is required and commands is not None:
-            context.warn("The ``commands`` field for services is deprecated, "
-                         "use ``script`` instead")
-            script = '\n'.join(["set -x -e"] + commands)
-
+                 relax_locality=False):
         self._assign_required('resources', resources)
         self._assign_required('script', script)
         self.instances = instances
@@ -833,9 +827,6 @@ class Service(Specification):
         _origin = _pop_origin(kwargs)
         obj = obj.copy()
 
-        # deprecated
-        commands = obj.pop('commands', None)
-
         cls._check_keys(obj, cls.__slots__)
 
         resources = obj.pop('resources', None)
@@ -849,7 +840,6 @@ class Service(Specification):
 
         return cls(resources=resources,
                    files=files,
-                   commands=commands,
                    **obj)
 
     @classmethod
