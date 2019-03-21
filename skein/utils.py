@@ -1,11 +1,67 @@
 from __future__ import print_function, division, absolute_import
 
 import errno
+import fcntl
 import os
+import threading
+import weakref
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 from .compatibility import unicode, UTC
+
+
+_paths_lock = threading.Lock()
+_paths_to_locks = weakref.WeakValueDictionary()
+
+
+def lock_file(path):
+    """File based lock on ``path``.
+
+    Creates a file based lock. When acquired, other processes or threads are
+    prevented from acquiring the same lock until it is released.
+    """
+    with _paths_lock:
+        lock = _paths_to_locks.get(path)
+        if lock is None:
+            _paths_to_locks[path] = lock = _FileLock(path)
+    return lock
+
+
+class _FileLock(object):
+    """Internal file based lock object"""
+    def __init__(self, path):
+        self._path = path
+        self._file = None
+        self._threadlock = threading.Lock()
+
+    def _acquire_file(self):
+        if self._file is None:
+            self._file = open(self._path, "wb")
+        fcntl.flock(self._file, fcntl.LOCK_EX)
+
+    def _release_file(self):
+        fcntl.flock(self._file, fcntl.LOCK_UN)
+        self._file.close()
+        self._file = None
+
+    def acquire(self):
+        self._threadlock.acquire()
+        try:
+            self._acquire_file()
+        except Exception:  # pragma: no cover
+            self._threadlock.release()
+            raise
+
+    def release(self):
+        self._release_file()
+        self._threadlock.release()
+
+    def __enter__(self):
+        self.acquire()
+
+    def __exit__(self, *args):
+        self.release()
 
 
 def pid_exists(pid):

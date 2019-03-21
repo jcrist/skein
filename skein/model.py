@@ -10,8 +10,9 @@ import yaml
 from . import proto as _proto
 from .compatibility import urlparse, string, integer, math_ceil, makedirs
 from .objects import Enum, ProtobufMessage, Specification, required
-from .exceptions import context, FileNotFoundError
-from .utils import implements, format_list, datetime_from_millis, runtime, xor
+from .exceptions import context, FileNotFoundError, FileExistsError
+from .utils import (implements, format_list, datetime_from_millis, runtime,
+                    xor, lock_file)
 
 __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
            'FileVisibility', 'ACLs', 'Master', 'Security', 'ApplicationState',
@@ -349,9 +350,17 @@ class Security(Specification):
             return cls.from_directory(properties.config_dir)
         except FileNotFoundError:
             pass
-        context.warn("Skein global security credentials not found, writing now "
-                     "to %r." % properties.config_dir)
-        return cls.new_credentials().to_directory(directory=properties.config_dir)
+
+        new = cls.new_credentials()
+        try:
+            out = new.to_directory(properties.config_dir)
+            context.warn("Skein global security credentials not found, "
+                         "writing now to %r." % properties.config_dir)
+        except FileExistsError:
+            # Race condition between competing processes, use the credentials
+            # written by the other process.
+            out = cls.from_directory(properties.config_dir)
+        return out
 
     @classmethod
     def from_directory(cls, directory):
@@ -394,19 +403,21 @@ class Security(Specification):
         cert_bytes = self._get_bytes('cert')
         key_bytes = self._get_bytes('key')
 
-        for path, name in [(cert_path, 'skein.crt'), (key_path, 'skein.pem')]:
-            if os.path.exists(path):
-                if force:
-                    os.unlink(path)
-                else:
-                    msg = ("%r file already exists, use `%s` to overwrite" %
-                           (name, '--force' if context.is_cli else 'force'))
-                    raise context.FileExistsError(msg)
+        lock_path = os.path.join(directory, 'skein.lock')
+        with lock_file(lock_path):
+            for path, name in [(cert_path, 'skein.crt'), (key_path, 'skein.pem')]:
+                if os.path.exists(path):
+                    if force:
+                        os.unlink(path)
+                    else:
+                        msg = ("%r file already exists, use `%s` to overwrite" %
+                               (name, '--force' if context.is_cli else 'force'))
+                        raise context.FileExistsError(msg)
 
-        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-        for path, data in [(cert_path, cert_bytes), (key_path, key_bytes)]:
-            with os.fdopen(os.open(path, flags, 0o600), 'wb') as fil:
-                fil.write(data)
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            for path, data in [(cert_path, cert_bytes), (key_path, key_bytes)]:
+                with os.fdopen(os.open(path, flags, 0o600), 'wb') as fil:
+                    fil.write(data)
 
         return Security(cert_file=cert_path, key_file=key_path)
 
