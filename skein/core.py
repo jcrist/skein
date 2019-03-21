@@ -8,7 +8,6 @@ import signal
 import socket
 import struct
 import subprocess
-import warnings
 from contextlib import closing
 
 import grpc
@@ -466,18 +465,6 @@ class Client(_ClientBase):
             os.remove(os.path.join(properties.config_dir, 'driver'))
         except OSError:  # pragma: no cover
             pass
-
-    # TODO: deprecated, remove after next release cycle
-    @staticmethod
-    def start_global_daemon():  # pragma: no cover
-        warnings.warn("start_global_daemon is deprecated, use start_global_driver "
-                      "instead")
-        Client.start_global_driver()
-
-    @staticmethod
-    def stop_global_daemon():  # pragma: no cover
-        warnings.warn("stop_global_daemon is deprecated, use stop_global_driver instead")
-        Client.stop_global_driver()
 
     def __repr__(self):
         return 'Client<%s>' % self.address

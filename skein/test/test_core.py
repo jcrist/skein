@@ -757,19 +757,6 @@ def test_security_specified(client):
     assert remote_security.key_file.source.startswith('hdfs')
 
 
-def test_daemon_errors_deprecated():
-    with pytest.warns(UserWarning):
-        assert isinstance(skein.DriverError(), skein.DaemonError)
-    with pytest.warns(UserWarning):
-        assert not isinstance(skein.SkeinError(), skein.DaemonError)
-
-    with pytest.warns(UserWarning):
-        assert isinstance(skein.DriverNotRunningError(),
-                          skein.DaemonNotRunningError)
-    with pytest.warns(UserWarning):
-        assert not isinstance(skein.SkeinError(), skein.DaemonNotRunningError)
-
-
 def test_master_driver_foo(client, tmpdir):
     filpath = str(tmpdir.join("dummy-file"))
     with open(filpath, 'w') as fil:
