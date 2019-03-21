@@ -4,6 +4,20 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.6.0 (March 21, 2019)
+------------------------------
+
+- More robustly handle starting/stopping the global driver in the case of
+  previous driver failure (:pr:`141`, :issue:`140`)
+- Add ``allow_failures`` field to services (:pr:`145`)
+- Better error messages for improperly specified ``files`` (:pr:`146`,
+  :issue:`139`)
+- Expose the absolute path to the current container working directory as
+  ``skein.properties.container_dir`` (:pr:`147`, :issue:`138`)
+- Prevent a race condition when creating new global credentials (:pr:`148`,
+  :issue:`144`)
+- Remove functionality previously deprecated in version ``0.5.0`` (:pr:`149`)
+
 Version 0.5.1 (January 21, 2019)
 --------------------------------
 
