@@ -5,6 +5,7 @@ import subprocess
 import time
 import warnings
 import weakref
+from contextlib import closing
 from multiprocessing.pool import Pool
 
 import pytest
@@ -119,8 +120,9 @@ def _from_default_count_warnings(n):
 
 def test_security_auto_inits_no_race_condition(tmpdir):
     config_dir = str(tmpdir)
-    with Pool(processes=4, initializer=_pool_initializer,
-              initargs=(config_dir,)) as pool:
+    pool = Pool(processes=4, initializer=_pool_initializer,
+                initargs=(config_dir,))
+    with closing(pool):
         num_warnings = sum(pool.map(_from_default_count_warnings, range(8)))
     # Only one process actually writes (and raises a warning)
     # all others just read in credentials
