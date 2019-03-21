@@ -3,7 +3,10 @@ from __future__ import print_function, division, absolute_import
 import os
 import subprocess
 import time
+import warnings
 import weakref
+from contextlib import closing
+from multiprocessing.pool import Pool
 
 import pytest
 
@@ -103,6 +106,27 @@ def test_security_auto_inits(skein_config):
 
     assert not rec
     assert sec == sec2
+
+
+def _pool_initializer(config_dir):
+    skein.properties._mapping['config_dir'] = config_dir
+
+
+def _from_default_count_warnings(n):
+    with warnings.catch_warnings(record=True) as rec:
+        skein.Security.from_default()
+    return len(rec)
+
+
+def test_security_auto_inits_no_race_condition(tmpdir):
+    config_dir = str(tmpdir)
+    pool = Pool(processes=4, initializer=_pool_initializer,
+                initargs=(config_dir,))
+    with closing(pool):
+        num_warnings = sum(pool.map(_from_default_count_warnings, range(8)))
+    # Only one process actually writes (and raises a warning)
+    # all others just read in credentials
+    assert num_warnings == 1
 
 
 def test_client(security, kinit, tmpdir):
@@ -638,10 +662,15 @@ def test_node_locality(client, strict):
 def test_set_application_progress(client):
     with run_application(client) as app:
         app.set_progress(0.5)
-        # Give the allocate loop time to update
-        time.sleep(2)
-        report = client.application_report(app.id)
-        assert report.progress == 0.5
+        # The report won't update until the allocator loop runs. Try a couple
+        # times.
+        for _ in range(6):
+            report = client.application_report(app.id)
+            if report.progress == 0.5:
+                break
+            time.sleep(1)
+        else:
+            assert report.progress == 0.5
 
         with pytest.raises(ValueError):
             app.set_progress(-0.5)
