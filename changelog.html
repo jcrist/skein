@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Changelog &#8212; Skein 0.5.1+6.ga056c5d documentation</title>
+    <title>Changelog &#8212; Skein 0.6.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -39,6 +39,21 @@
 <h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="upcoming-release">
 <h2>Upcoming Release<a class="headerlink" href="#upcoming-release" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="version-0-6-0-march-21-2019">
+<h2>Version 0.6.0 (March 21, 2019)<a class="headerlink" href="#version-0-6-0-march-21-2019" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>More robustly handle starting/stopping the global driver in the case of
+previous driver failure (<a class="reference external" href="https://github.com/jcrist/skein/pull/141">PR #141</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/140">Issue #140</a>)</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">allow_failures</span></code> field to services (<a class="reference external" href="https://github.com/jcrist/skein/pull/145">PR #145</a>)</li>
+<li>Better error messages for improperly specified <code class="docutils literal notranslate"><span class="pre">files</span></code> (<a class="reference external" href="https://github.com/jcrist/skein/pull/146">PR #146</a>,
+<a class="reference external" href="https://github.com/jcrist/skein/issues/139">Issue #139</a>)</li>
+<li>Expose the absolute path to the current container working directory as
+<code class="docutils literal notranslate"><span class="pre">skein.properties.container_dir</span></code> (<a class="reference external" href="https://github.com/jcrist/skein/pull/147">PR #147</a>, <a class="reference external" href="https://github.com/jcrist/skein/issues/138">Issue #138</a>)</li>
+<li>Prevent a race condition when creating new global credentials (<a class="reference external" href="https://github.com/jcrist/skein/pull/148">PR #148</a>,
+<a class="reference external" href="https://github.com/jcrist/skein/issues/144">Issue #144</a>)</li>
+<li>Remove functionality previously deprecated in version <code class="docutils literal notranslate"><span class="pre">0.5.0</span></code> (<a class="reference external" href="https://github.com/jcrist/skein/pull/149">PR #149</a>)</li>
+</ul>
 </div>
 <div class="section" id="version-0-5-1-january-21-2019">
 <h2>Version 0.5.1 (January 21, 2019)<a class="headerlink" href="#version-0-5-1-january-21-2019" title="Permalink to this headline">¶</a></h2>
@@ -223,6 +238,7 @@ containers via environment variables (<a class="reference external" href="https:
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Changelog</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#upcoming-release">Upcoming Release</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version-0-6-0-march-21-2019">Version 0.6.0 (March 21, 2019)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-5-1-january-21-2019">Version 0.5.1 (January 21, 2019)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-5-0-january-7-2019">Version 0.5.0 (January 7, 2019)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-4-1-december-7-2018">Version 0.4.1 (December 7, 2018)</a></li>
