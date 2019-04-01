@@ -1,12 +1,10 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Debugging &#8212; Skein 0.6.0 documentation</title>
+    <meta charset="utf-8" />
+    <title>Debugging &#8212; Skein 0.6.0+1.ga80b895 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -45,10 +43,10 @@ do when you encounter failures.</p>
 <p>For running applications, the Skein <a class="reference external" href="web-ui.html">Web UI</a> can provide useful
 information including:</p>
 <ul class="simple">
-<li>What services are currently running in the application</li>
-<li>Status of all current and past containers</li>
-<li>Live links to logs for each service (these are especially useful)</li>
-<li>Key-value pairs in the <a class="reference external" href="key-value-store.html">Key-Value Store</a></li>
+<li><p>What services are currently running in the application</p></li>
+<li><p>Status of all current and past containers</p></li>
+<li><p>Live links to logs for each service (these are especially useful)</p></li>
+<li><p>Key-value pairs in the <a class="reference external" href="key-value-store.html">Key-Value Store</a></p></li>
 </ul>
 <p>For more information, see the <a class="reference external" href="web-ui.html">Web UI docs</a>.</p>
 </div>
@@ -71,12 +69,12 @@ When debugging issues in
 Skein itself, it can be useful to increase the log level to provide more
 information. This can be accomplished two different ways:</p>
 <ul class="simple">
-<li>Change the logging level with the <code class="docutils literal notranslate"><span class="pre">log_level</span></code> field (<code class="docutils literal notranslate"><span class="pre">debug</span></code> is a good option).</li>
-<li>Override the defaul log configuration by specifying a custom
+<li><p>Change the logging level with the <code class="docutils literal notranslate"><span class="pre">log_level</span></code> field (<code class="docutils literal notranslate"><span class="pre">debug</span></code> is a good option).</p></li>
+<li><p>Override the defaul log configuration by specifying a custom
 <code class="docutils literal notranslate"><span class="pre">log4j.properties</span></code> file in the <a class="reference external" href="specification.html">specification</a>. This
 allows you to increase the logging level for component libraries as well. See
 the <a class="reference external" href="https://logging.apache.org/log4j/1.2/">Log4j documentation</a> for more
-information on configuration files.</li>
+information on configuration files.</p></li>
 </ul>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>master:
   # Change the log level to debug
@@ -94,17 +92,17 @@ services (submitting, querying, or killing applications), it may be useful to
 increase logging verbosity for the skein driver process (<code class="docutils literal notranslate"><span class="pre">debug</span></code> is a good
 option). There are a few ways to do this:</p>
 <ul class="simple">
-<li>Using the <code class="docutils literal notranslate"><span class="pre">log_level</span></code> keyword when creating a <a class="reference internal" href="api.html#skein.Client" title="skein.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">skein.Client</span></code></a>.</li>
-<li>Setting the <code class="docutils literal notranslate"><span class="pre">SKEIN_LOG_LEVEL</span></code> environment variable (e.g.
-<code class="docutils literal notranslate"><span class="pre">SKEIN_LOG_LEVEL=DEBUG</span></code>).</li>
-<li>Using the <code class="docutils literal notranslate"><span class="pre">--log-level</span></code> flag when starting a persistent driver using the
-<a class="reference external" href="cli.html">CLI</a> (e.g.  <code class="docutils literal notranslate"><span class="pre">skein</span> <span class="pre">driver</span> <span class="pre">start</span> <span class="pre">--log-level</span> <span class="pre">debug</span></code>).</li>
+<li><p>Using the <code class="docutils literal notranslate"><span class="pre">log_level</span></code> keyword when creating a <a class="reference internal" href="api.html#skein.Client" title="skein.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">skein.Client</span></code></a>.</p></li>
+<li><p>Setting the <code class="docutils literal notranslate"><span class="pre">SKEIN_LOG_LEVEL</span></code> environment variable (e.g.
+<code class="docutils literal notranslate"><span class="pre">SKEIN_LOG_LEVEL=DEBUG</span></code>).</p></li>
+<li><p>Using the <code class="docutils literal notranslate"><span class="pre">--log-level</span></code> flag when starting a persistent driver using the
+<a class="reference external" href="cli.html">CLI</a> (e.g.  <code class="docutils literal notranslate"><span class="pre">skein</span> <span class="pre">driver</span> <span class="pre">start</span> <span class="pre">--log-level</span> <span class="pre">debug</span></code>).</p></li>
 </ul>
 <p>Additionally, you may want to log to a file instead of to the terminal. There
 are also a few ways to do this:</p>
 <ul class="simple">
-<li>Using the <code class="docutils literal notranslate"><span class="pre">log</span></code> keyword when creating a <a class="reference internal" href="api.html#skein.Client" title="skein.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">skein.Client</span></code></a>.</li>
-<li>Using the <code class="docutils literal notranslate"><span class="pre">--log</span></code> flag when starting a persistent driver using the <a class="reference external" href="cli.html">CLI</a>.</li>
+<li><p>Using the <code class="docutils literal notranslate"><span class="pre">log</span></code> keyword when creating a <a class="reference internal" href="api.html#skein.Client" title="skein.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">skein.Client</span></code></a>.</p></li>
+<li><p>Using the <code class="docutils literal notranslate"><span class="pre">--log</span></code> flag when starting a persistent driver using the <a class="reference external" href="cli.html">CLI</a>.</p></li>
 </ul>
 <p><strong>Example</strong></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create a client, logging to `driver.log` with &quot;debug&quot; log level</span>
@@ -191,8 +189,6 @@ are also a few ways to do this:</p>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
     </div>
 </div>

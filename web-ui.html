@@ -1,12 +1,10 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Web UI &#8212; Skein 0.6.0 documentation</title>
+    <meta charset="utf-8" />
+    <title>Web UI &#8212; Skein 0.6.0+1.ga80b895 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -39,21 +37,22 @@
 <h1>Web UI<a class="headerlink" href="#web-ui" title="Permalink to this headline">¶</a></h1>
 <p>Skein comes with an informative Web UI. This displays information on:</p>
 <ul class="simple">
-<li>What services are currently running in the application</li>
-<li>Status of all current and past containers</li>
-<li>Live links to logs for each service</li>
-<li>Key-value pairs in the <a class="reference external" href="key-value-store.html">Key-Value Store</a></li>
+<li><p>What services are currently running in the application</p></li>
+<li><p>Status of all current and past containers</p></li>
+<li><p>Live links to logs for each service</p></li>
+<li><p>Key-value pairs in the <a class="reference external" href="key-value-store.html">Key-Value Store</a></p></li>
 </ul>
 <p>As well as links to user registered pages.</p>
 <div class="contents local topic" id="contents">
 <ul class="simple">
-<li><a class="reference internal" href="#the-overview-page" id="id1">The Overview Page</a></li>
-<li><a class="reference internal" href="#the-key-value-page" id="id2">The Key/Value Page</a></li>
-<li><a class="reference internal" href="#custom-pages" id="id3">Custom Pages</a><ul>
-<li><a class="reference internal" href="#bokeh-dashboard-example" id="id4">Bokeh Dashboard Example</a></li>
+<li><p><a class="reference internal" href="#the-overview-page" id="id1">The Overview Page</a></p></li>
+<li><p><a class="reference internal" href="#the-key-value-page" id="id2">The Key/Value Page</a></p></li>
+<li><p><a class="reference internal" href="#custom-pages" id="id3">Custom Pages</a></p>
+<ul>
+<li><p><a class="reference internal" href="#bokeh-dashboard-example" id="id4">Bokeh Dashboard Example</a></p></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#security" id="id5">Security</a></li>
+<li><p><a class="reference internal" href="#security" id="id5">Security</a></p></li>
 </ul>
 </div>
 <p>The Skein Web UI is usually accessed through the YARN Resource Manager Web UI.</p>
@@ -69,21 +68,21 @@
 <p>The Overview page presents a summary view of the application and its contained
 services. Information contained here includes:</p>
 <ul class="simple">
-<li>The application name, ID, and user</li>
-<li>Links to the Application Master and Application Driver logs (if relevant)</li>
-<li>Total memory and cores allocated for this application</li>
-<li>Total runtime</li>
-<li>Application progress (if set by the application)</li>
-<li>A summary of the application services</li>
+<li><p>The application name, ID, and user</p></li>
+<li><p>Links to the Application Master and Application Driver logs (if relevant)</p></li>
+<li><p>Total memory and cores allocated for this application</p></li>
+<li><p>Total runtime</p></li>
+<li><p>Application progress (if set by the application)</p></li>
+<li><p>A summary of the application services</p></li>
 </ul>
 <a class="light-bordered-image reference internal image-reference" href="_images/webui-overview-closed.png"><img alt="Overview page, accordion closed" class="light-bordered-image align-center" src="_images/webui-overview-closed.png" style="width: 90%;" /></a>
 <p>Here we have two services - <code class="docutils literal notranslate"><span class="pre">my-first-service</span></code> and <code class="docutils literal notranslate"><span class="pre">my-second-service</span></code>. The
 icons in each row indicate for each service (in order):</p>
 <ul class="simple">
-<li>How many containers are currently running</li>
-<li>How many containers succeeded (exit code of 0)</li>
-<li>How many containers were killed (stopped by the user)</li>
-<li>How many containers have failed (non-zero exit code)</li>
+<li><p>How many containers are currently running</p></li>
+<li><p>How many containers succeeded (exit code of 0)</p></li>
+<li><p>How many containers were killed (stopped by the user)</p></li>
+<li><p>How many containers have failed (non-zero exit code)</p></li>
 </ul>
 <p>In this case, <code class="docutils literal notranslate"><span class="pre">my-first-service</span></code> has 2 containers running, 1 container
 succeeded, 1 container killed, and 1 container failed.</p>
@@ -108,20 +107,20 @@ through the “Service Pages” dropdown. This can be useful for providing
 application specific dashboards.</p>
 <p>Custom pages can be added with <code class="xref py py-func docutils literal notranslate"><span class="pre">WebUI.add_page()</span></code>, removed with
 <code class="xref py py-func docutils literal notranslate"><span class="pre">WebUI.remove_page()</span></code>, and queried with <code class="xref py py-func docutils literal notranslate"><span class="pre">WebUI.get_pages()</span></code>.</p>
-<table border="1" class="longtable docutils">
+<table class="longtable docutils align-center">
 <colgroup>
-<col width="10%" />
-<col width="90%" />
+<col style="width: 10%" />
+<col style="width: 90%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.ui.WebUI.add_page" title="skein.ui.WebUI.add_page"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WebUI.add_page</span></code></a>(route,&nbsp;target[,&nbsp;link_name])</td>
-<td>Add a new proxied page to the Web UI.</td>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api.html#skein.ui.WebUI.add_page" title="skein.ui.WebUI.add_page"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WebUI.add_page</span></code></a>(route, target[, link_name])</p></td>
+<td><p>Add a new proxied page to the Web UI.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="api.html#skein.ui.WebUI.remove_page" title="skein.ui.WebUI.remove_page"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WebUI.remove_page</span></code></a>(route)</td>
-<td>Remove a proxied page from the Web UI.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="api.html#skein.ui.WebUI.remove_page" title="skein.ui.WebUI.remove_page"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WebUI.remove_page</span></code></a>(route)</p></td>
+<td><p>Remove a proxied page from the Web UI.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="api.html#skein.ui.WebUI.get_pages" title="skein.ui.WebUI.get_pages"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WebUI.get_pages</span></code></a>()</td>
-<td>Get all registered pages.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api.html#skein.ui.WebUI.get_pages" title="skein.ui.WebUI.get_pages"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WebUI.get_pages</span></code></a>()</p></td>
+<td><p>Get all registered pages.</p></td>
 </tr>
 </tbody>
 </table>
@@ -146,16 +145,14 @@ so, useful web pages can still be supported.</p>
 <p>An example dashboard with live updates using <a class="reference external" href="https://bokeh.pydata.org/en/latest/">bokeh</a> is available <a class="reference external" href="https://github.com/jcrist/skein/tree/master/examples/pricing_dashboard">here</a>.</p>
 <p>A few high level notes:</p>
 <ul>
-<li><p class="first">Since the YARN web application proxy doesn’t support websockets, we use an
+<li><p>Since the YARN web application proxy doesn’t support websockets, we use an
 <a class="reference external" href="https://bokeh.pydata.org/en/latest/docs/reference/models/sources.html#bokeh.models.sources.AjaxDataSource">AjaxDataSource</a>.
 This is less efficient than a <code class="docutils literal notranslate"><span class="pre">ColumnDataSource</span></code> (which uses websockets),
 as it requires polling the server to get updates. For small amounts of data
-though this is sufficient and fine.</p>
-</li>
-<li><p class="first">We choose a dynamic port, as we can’t know for sure what ports will be
-available on the deployed container.</p>
-</li>
-<li><p class="first">The only Skein-specific bit is where <a class="reference external" href="https://github.com/jcrist/skein/blob/master/examples/pricing_dashboard/dashboard.py#L242-L246">the page is registered with the
+though this is sufficient and fine.</p></li>
+<li><p>We choose a dynamic port, as we can’t know for sure what ports will be
+available on the deployed container.</p></li>
+<li><p>The only Skein-specific bit is where <a class="reference external" href="https://github.com/jcrist/skein/blob/master/examples/pricing_dashboard/dashboard.py#L242-L246">the page is registered with the
 application</a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Register the page with the Skein Web UI.</span>
 <span class="c1"># This is the only Skein-specific bit</span>
@@ -190,14 +187,14 @@ against the specified ACLs. This goes both for requests made from outside the
 cluster (through the YARN web ui) and inside the cluster with direct access to
 the Web UI (this is due to YARN’s provided <a class="reference external" href="https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YarnApplicationSecurity.html#Securing_YARN_Application_Web_UIs_and_REST_APIs">security filter</a>).</p>
 <div class="admonition warning">
-<p class="first admonition-title">Warning</p>
+<p class="admonition-title">Warning</p>
 <p>While the <em>Skein</em> Web UI is secured against both external and internal
 access by the YARN security filter, <a class="reference internal" href="#custom-pages">Custom Pages</a> are currently only
 secured against access from outside the cluster (i.e. through the YARN Web
 UI). Users with SSH access to the cluster and knowledge of the internal
 address/ports used for custom web pages will currently have unrestricted
 access to these custom pages.</p>
-<p class="last">This is fixable, but deemed lower priority, as it’s only an issue in the
+<p>This is fixable, but deemed lower priority, as it’s only an issue in the
 case of malicious users that already have direct access to the cluster. If
 this is a problem for you, please let us know by <a class="reference external" href="https://github.com/jcrist/skein/issues">filing an issue</a>.</p>
 </div>
@@ -280,8 +277,6 @@ this is a problem for you, please let us know by <a class="reference external" h
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
     </div>
 </div>

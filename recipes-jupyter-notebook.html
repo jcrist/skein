@@ -1,12 +1,10 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Jupyter Notebook Server &#8212; Skein 0.6.0 documentation</title>
+    <meta charset="utf-8" />
+    <title>Jupyter Notebook Server &#8212; Skein 0.6.0+1.ga80b895 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -46,16 +44,16 @@ to execute the module in a service, using the command:</p>
 <p>The executing Python environment must contain the following dependencies to
 work properly:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">skein</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">notebook</span></code></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">skein</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">notebook</span></code></p></li>
 </ul>
 <p>After launching the service, the notebook server connection information will be
 stored in the <a class="reference external" href="key-value-store.html">key-value store</a> under the key
 <code class="docutils literal notranslate"><span class="pre">'jupyter.notebook.info'</span></code>. This key name is configurable with the
 command-line flag <code class="docutils literal notranslate"><span class="pre">--notebook-info-key</span></code>.</p>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">This recipe is <em>not</em> production ready, and is mostly provided for
+<p class="admonition-title">Note</p>
+<p>This recipe is <em>not</em> production ready, and is mostly provided for
 educational reasons. Port forwarding the running notebook server off a
 container may be forbidden by your cluster admins, and in general is not a
 nice workflow. For a better way of running Jupyter on a YARN cluster see
@@ -80,8 +78,8 @@ node.</p>
 conda environments. As mentioned above, we need to make sure we have the
 following packages installed in the remote environment:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">skein</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">notebook</span></code></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">skein</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">notebook</span></code></p></li>
 </ul>
 <p>we’ll also install <code class="docutils literal notranslate"><span class="pre">numpy</span></code> to have an example library for doing some
 computation.</p>
@@ -209,10 +207,9 @@ to the distributed Python environment.</p>
 <h3>Shutdown the Application<a class="headerlink" href="#shutdown-the-application" title="Permalink to this headline">¶</a></h3>
 <p>Once you’re done, you can shutdown the application in one of two ways.</p>
 <ul>
-<li><p class="first">Hit the <code class="docutils literal notranslate"><span class="pre">Quit</span></code> button on the Jupyter Web UI at <code class="docutils literal notranslate"><span class="pre">localhost:8888/tree</span></code>.
-This will shutdown the notebook server, causing the container to exit.</p>
-</li>
-<li><p class="first">Manually shutdown the application using the Skein CLI</p>
+<li><p>Hit the <code class="docutils literal notranslate"><span class="pre">Quit</span></code> button on the Jupyter Web UI at <code class="docutils literal notranslate"><span class="pre">localhost:8888/tree</span></code>.
+This will shutdown the notebook server, causing the container to exit.</p></li>
+<li><p>Manually shutdown the application using the Skein CLI</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> skein application shutdown <span class="nv">$APPID</span>
 </pre></div>
 </div>
@@ -305,8 +302,6 @@ This will shutdown the notebook server, causing the container to exit.</p>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
     </div>
 </div>

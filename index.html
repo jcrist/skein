@@ -1,12 +1,10 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Skein &#8212; Skein 0.6.0 documentation</title>
+    <meta charset="utf-8" />
+    <title>Skein &#8212; Skein 0.6.0+1.ga80b895 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -40,7 +38,7 @@
 <blockquote>
 <div><p><a class="reference external" href="https://en.wiktionary.org/wiki/skein">skein</a> /skān/ <em>noun</em></p>
 <ol class="arabic simple">
-<li><em>A quantity of yarn, thread, or the like, put up together, after it is taken from the reel.</em></li>
+<li><p><em>A quantity of yarn, thread, or the like, put up together, after it is taken from the reel.</em></p></li>
 </ol>
 </div></blockquote>
 <p>Skein is a simple library and command-line interface (CLI) for deploying
@@ -51,17 +49,17 @@ applications, these features also can make it difficult for developers to use.</
 <div class="section" id="highlights">
 <h2>Highlights<a class="headerlink" href="#highlights" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>No Java required! Compose and deploy applications using either the native
-<a class="reference external" href="api.html">Python API</a> or the <a class="reference external" href="cli.html">CLI</a>.</li>
-<li>A declarative, language independent <a class="reference external" href="specification.html">specification</a>
-allowing applications to be deployed in any language.</li>
-<li>Support for dynamic applications. Containers can be started and stopped at
-runtime, allowing for services to scale to your needs.</li>
-<li>An internal <a class="reference internal" href="key-value-store.html"><span class="doc">Key-Value Store</span></a> for coordinating state between application
-containers.</li>
-<li>An extensible <a class="reference internal" href="web-ui.html"><span class="doc">Web UI</span></a> for tracking and interacting with applications.</li>
-<li>A <a class="reference external" href="https://travis-ci.org/jcrist/skein">rigorous test suite</a>. Skein is
-tested on multiple YARN configurations to ensure wide support.</li>
+<li><p>No Java required! Compose and deploy applications using either the native
+<a class="reference external" href="api.html">Python API</a> or the <a class="reference external" href="cli.html">CLI</a>.</p></li>
+<li><p>A declarative, language independent <a class="reference external" href="specification.html">specification</a>
+allowing applications to be deployed in any language.</p></li>
+<li><p>Support for dynamic applications. Containers can be started and stopped at
+runtime, allowing for services to scale to your needs.</p></li>
+<li><p>An internal <a class="reference internal" href="key-value-store.html"><span class="doc">Key-Value Store</span></a> for coordinating state between application
+containers.</p></li>
+<li><p>An extensible <a class="reference internal" href="web-ui.html"><span class="doc">Web UI</span></a> for tracking and interacting with applications.</p></li>
+<li><p>A <a class="reference external" href="https://travis-ci.org/jcrist/skein">rigorous test suite</a>. Skein is
+tested on multiple YARN configurations to ensure wide support.</p></li>
 </ul>
 </div>
 <div class="section" id="installation">
@@ -69,17 +67,17 @@ tested on multiple YARN configurations to ensure wide support.</li>
 <p>Skein doesn’t require elevated user privileges or cluster-wide configuration to
 use. Simply install it on an edge node and get started.</p>
 <p><strong>Install with Conda:</strong></p>
-<div class="code highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">install</span> <span class="o">-</span><span class="n">c</span> <span class="n">conda</span><span class="o">-</span><span class="n">forge</span> <span class="n">skein</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">install</span> <span class="o">-</span><span class="n">c</span> <span class="n">conda</span><span class="o">-</span><span class="n">forge</span> <span class="n">skein</span>
 </pre></div>
 </div>
 <p><strong>Install with Pip:</strong></p>
-<div class="code highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">skein</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">skein</span>
 </pre></div>
 </div>
 <p><strong>Install from source:</strong></p>
 <p>Skein is <a class="reference external" href="https://github.com/jcrist/skein">available on github</a> and can
 always be installed from source. Note that this requires <a class="reference external" href="https://maven.apache.org/">Apache Maven</a> to build.</p>
-<div class="code highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">jcrist</span><span class="o">/</span><span class="n">skein</span><span class="o">.</span><span class="n">git</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">jcrist</span><span class="o">/</span><span class="n">skein</span><span class="o">.</span><span class="n">git</span>
 <span class="n">cd</span> <span class="n">skein</span>
 <span class="n">pip</span> <span class="n">install</span> <span class="o">.</span>
 </pre></div>
@@ -254,8 +252,6 @@ always be installed from source. Note that this requires <a class="reference ext
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
     </div>
 </div>
