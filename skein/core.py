@@ -81,7 +81,11 @@ class Properties(Mapping):
         if yarn_container_id is not None:
             for path in os.environ.get('LOCAL_DIRS', '').split(','):
                 check_dir = os.path.join(path, yarn_container_id)
-                if os.path.exists(check_dir):
+                # YARN will create all possible directories, but only populate
+                # one of them. We have to check that the files exist in the
+                # directory, rather than just that the directory exists.
+                if (os.path.exists(os.path.join(check_dir, '.skein.crt')) and
+                        os.path.exists(os.path.join(check_dir, '.skein.pem'))):
                     container_dir = check_dir
                     break
 
