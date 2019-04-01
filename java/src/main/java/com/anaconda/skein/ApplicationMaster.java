@@ -1044,7 +1044,7 @@ public class ApplicationMaster {
       return context;
     }
 
-    public List<Model.Container> scale(int instances) {
+    public List<Model.Container> scale(int count, int delta) {
       List<Model.Container> out =  new ArrayList<Model.Container>();
 
       // Any function that may remove containers needs to lock the kv store
@@ -1052,9 +1052,15 @@ public class ApplicationMaster {
       synchronized (keyValueStore) {
         synchronized (this) {
           int active = getNumActive();
-          int delta = instances - active;
+          if (delta == 0) {
+            delta = count - active;
+          } else {
+            // If delta would result in negative instances, we just scale to 0
+            delta = Math.max(delta, -active);
+            count = delta + active;
+          }
           LOG.info("Scaling service '{}' to {} instances, a delta of {}.",
-                   name, instances, delta);
+                   name, count, delta);
           if (delta > 0) {
             // Scale up
             for (int i = 0; i < delta; i++) {
@@ -1450,18 +1456,25 @@ public class ApplicationMaster {
       if (!checkService(service, resp)) {
         return;
       }
-
-      int instances = req.getInstances();
-      if (instances < 0) {
+      int count = req.getCount();
+      int delta = req.getDelta();
+      if (delta != 0) {
+        if (count != 0) {
+          resp.onError(Status.INVALID_ARGUMENT
+              .withDescription("Can't specify both count and delta")
+              .asRuntimeException());
+          return;
+        }
+      } else if (count < 0) {
         resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("instances must be >= 0")
+            .withDescription("count must be >= 0")
             .asRuntimeException());
         return;
       }
 
       Msg.ContainersResponse.Builder msg = Msg.ContainersResponse.newBuilder();
       ServiceTracker tracker = services.get(service);
-      List<Model.Container> containers = tracker.scale(instances);
+      List<Model.Container> containers = tracker.scale(count, delta);
       // Lock on tracker to prevent containers from updating while writing. If
       // this proves costly, may want to copy beforehand.
       synchronized (tracker) {

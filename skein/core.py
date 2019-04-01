@@ -8,6 +8,7 @@ import signal
 import socket
 import struct
 import subprocess
+import warnings
 from contextlib import closing
 
 import grpc
@@ -730,29 +731,51 @@ class ApplicationClient(_ClientBase):
         resp = self._call('getApplicationSpec', proto.Empty())
         return ApplicationSpec.from_protobuf(resp)
 
-    def scale(self, service, instances):
+    def scale(self, service, count=None, delta=None, **kwargs):
         """Scale a service to a requested number of instances.
 
         Adds or removes containers to match the requested number of instances.
+        The number of instances for the service can be specified either as a
+        total count or a delta in that count.
+
         When choosing which containers to remove, containers are removed in
-        order of state (`WAITING`, `REQUESTED`, `RUNNING`) followed by age
-        (oldest to newest).
+        order of state (``WAITING``, ``REQUESTED``, ``RUNNING``) followed by
+        age (oldest to newest).
+
+        When specified as a negative ``delta``, if the number of removed
+        containers is greater than the number of existing containers, all
+        containers are removed rather than throwing an error. This means that
+        ``app.scale(delta=-1)`` will remove a container if one exists,
+        otherwise it will do nothing.
 
         Parameters
         ----------
-        service : str, optional
+        service : str
             The service to scale.
-        instances : int
+        count : int, optional
             The number of instances to scale to.
+        delta : int, optional
+            The change in number of instances.
 
         Returns
         -------
         containers : list of Container
             A list of containers that were started or stopped.
         """
-        if instances < 0:
-            raise context.ValueError("instances must be >= 0")
-        req = proto.ScaleRequest(service_name=service, instances=instances)
+        if 'instances' in kwargs:
+            count = kwargs.pop('instances')
+            warnings.warn("instances is deprecated, use count instead")
+        assert not kwargs
+        if count is not None and delta is not None:
+            raise context.ValueError("cannot specify both `count` and `delta`")
+        elif count is None and delta is None:
+            raise context.ValueError("must specify either `count` or `delta`")
+        if count and count < 0:
+            raise context.ValueError("count must be >= 0")
+
+        req = proto.ScaleRequest(service_name=service,
+                                 count=count,
+                                 delta=delta)
         resp = self._call('scale', req)
         return [Container.from_protobuf(c) for c in resp.containers]
 
