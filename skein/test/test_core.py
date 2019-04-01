@@ -445,30 +445,30 @@ def test_dynamic_containers(client):
         # All completed containers have an exit message
         assert all(c.exit_message for c in killed)
 
-        # Add containers by change
+        # Add containers by delta
         ncurrent = len(app.get_containers())
-        new = app.scale('sleeper', change=2)
+        new = app.scale('sleeper', delta=2)
         assert len(new) == 2
         assert len(app.get_containers()) == ncurrent + 2
 
-        # Remove containers by change
+        # Remove containers by delta
         ncurrent = len(app.get_containers())
         assert ncurrent >= 1
-        res = app.scale('sleeper', change=-1)
+        res = app.scale('sleeper', delta=-1)
         assert len(res) == 1
         assert len(app.get_containers()) == ncurrent - 1
 
         # Removing more containers than active removes all containers
         ncurrent = len(app.get_containers())
-        res = app.scale('sleeper', change=-(ncurrent + 2))
+        res = app.scale('sleeper', delta=-(ncurrent + 2))
         assert len(res) == ncurrent
         assert len(app.get_containers()) == 0
 
-        # Can't specify both count and change
+        # Can't specify both count and delta
         with pytest.raises(ValueError):
-            app.scale('sleeper', count=2, change=2)
+            app.scale('sleeper', count=2, delta=2)
 
-        # Must specify either count and change
+        # Must specify either count or delta
         with pytest.raises(ValueError):
             app.scale('sleeper')
 
