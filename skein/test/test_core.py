@@ -388,7 +388,18 @@ def test_shutdown_arguments(client):
 
 
 def test_dynamic_containers(client):
-    with run_application(client) as app:
+    spec = skein.ApplicationSpec(
+        name="test_dynamic_containers",
+        services={
+            'sleeper': skein.Service(
+                instances=1,
+                resources=skein.Resources(memory=128, vcores=1),
+                script='sleep infinity'
+            )
+        },
+        master=skein.Master(script='sleep infinity')
+    )
+    with run_application(client, spec=spec) as app:
         initial = wait_for_containers(app, 1, states=['RUNNING'])
         assert initial[0].state == 'RUNNING'
         assert initial[0].service_name == 'sleeper'
@@ -433,6 +444,33 @@ def test_dynamic_containers(client):
         assert [c.instance for c in killed] == [0, 1, 3]
         # All completed containers have an exit message
         assert all(c.exit_message for c in killed)
+
+        # Add containers by change
+        ncurrent = len(app.get_containers())
+        new = app.scale('sleeper', change=2)
+        assert len(new) == 2
+        assert len(app.get_containers()) == ncurrent + 2
+
+        # Remove containers by change
+        ncurrent = len(app.get_containers())
+        assert ncurrent >= 1
+        res = app.scale('sleeper', change=-1)
+        assert len(res) == 1
+        assert len(app.get_containers()) == ncurrent - 1
+
+        # Removing more containers than active removes all containers
+        ncurrent = len(app.get_containers())
+        res = app.scale('sleeper', change=-(ncurrent + 2))
+        assert len(res) == ncurrent
+        assert len(app.get_containers()) == 0
+
+        # Can't specify both count and change
+        with pytest.raises(ValueError):
+            app.scale('sleeper', count=2, change=2)
+
+        # Must specify either count and change
+        with pytest.raises(ValueError):
+            app.scale('sleeper')
 
         # Can't scale non-existant service
         with pytest.raises(ValueError):

@@ -1044,7 +1044,7 @@ public class ApplicationMaster {
       return context;
     }
 
-    public List<Model.Container> scale(int instances) {
+    public List<Model.Container> scale(int count, int change) {
       List<Model.Container> out =  new ArrayList<Model.Container>();
 
       // Any function that may remove containers needs to lock the kv store
@@ -1052,18 +1052,24 @@ public class ApplicationMaster {
       synchronized (keyValueStore) {
         synchronized (this) {
           int active = getNumActive();
-          int delta = instances - active;
-          LOG.info("Scaling service '{}' to {} instances, a delta of {}.",
-                   name, instances, delta);
-          if (delta > 0) {
+          if (change == 0) {
+            change = count - active;
+          } else {
+            // If change would result in negative instances, we just scale to 0
+            change = Math.max(change, -active);
+            count = change + active;
+          }
+          LOG.info("Scaling service '{}' to {} instances, a change of {}.",
+                   name, count, change);
+          if (change > 0) {
             // Scale up
-            for (int i = 0; i < delta; i++) {
+            for (int i = 0; i < change; i++) {
               out.add(addContainer());
               numTarget += 1;
             }
-          } else if (delta < 0) {
+          } else if (change < 0) {
             // Scale down
-            for (int i = delta; i < 0; i++) {
+            for (int i = change; i < 0; i++) {
               int instance;
               if (waiting.size() > 0) {
                 instance = Utils.popfirst(waiting);
@@ -1450,18 +1456,25 @@ public class ApplicationMaster {
       if (!checkService(service, resp)) {
         return;
       }
-
-      int instances = req.getInstances();
-      if (instances < 0) {
+      int count = req.getCount();
+      int change = req.getChange();
+      if (change != 0) {
+        if (count != 0) {
+          resp.onError(Status.INVALID_ARGUMENT
+              .withDescription("Can't specify both count and change")
+              .asRuntimeException());
+          return;
+        }
+      } else if (count < 0) {
         resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("instances must be >= 0")
+            .withDescription("count must be >= 0")
             .asRuntimeException());
         return;
       }
 
       Msg.ContainersResponse.Builder msg = Msg.ContainersResponse.newBuilder();
       ServiceTracker tracker = services.get(service);
-      List<Model.Container> containers = tracker.scale(instances);
+      List<Model.Container> containers = tracker.scale(count, change);
       // Lock on tracker to prevent containers from updating while writing. If
       // this proves costly, may want to copy beforehand.
       synchronized (tracker) {

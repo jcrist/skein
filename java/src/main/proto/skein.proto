@@ -454,7 +454,8 @@ message ContainersResponse {
 
 message ScaleRequest {
   string service_name = 1;
-  int32 instances = 2;
+  int32 count = 2;
+  int32 change = 3;
 }
 
 
