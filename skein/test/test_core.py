@@ -280,12 +280,13 @@ def test_appclient_and_security_in_container(monkeypatch, tmpdir, security):
     app_id = 'application_1526134340424_0012'
     container_id = 'container_1526134340424_0012_01_000005'
     address = 'edge.example.com:8765'
-    bad_dir = str(tmpdir.mkdir("nothing_in_here"))
+    bad_dir = tmpdir.mkdir("nothing_in_here")
+    bad_dir.mkdir(container_id)
 
     for key, val in [('SKEIN_APPLICATION_ID', app_id),
                      ('CONTAINER_ID', container_id),
                      ('SKEIN_APPMASTER_ADDRESS', address),
-                     ('LOCAL_DIRS', bad_dir)]:
+                     ('LOCAL_DIRS', str(bad_dir))]:
         monkeypatch.setenv(key, val)
 
     properties = Properties()
