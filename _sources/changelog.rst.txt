@@ -4,6 +4,13 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.6.1 (April 3, 2019)
+-----------------------------
+
+- Add support to ``ApplicationClient.scale`` for scaling by a delta in
+  instances rather than a total instance count (:pr:`150`)
+- Fix bug in finding container directory (:pr:`151`)
+
 Version 0.6.0 (March 21, 2019)
 ------------------------------
 
