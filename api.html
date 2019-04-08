@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>API Docs &#8212; Skein 0.6.1 documentation</title>
+    <title>API Docs &#8212; Skein 0.6.1+2.g8a3856c documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -169,6 +169,33 @@ states. Default is <code class="docutils literal notranslate"><span class="pre">
 <span class="go">[ApplicationReport&lt;name=&#39;demo&#39;&gt;,</span>
 <span class="go"> ApplicationReport&lt;name=&#39;dask&#39;&gt;,</span>
 <span class="go"> ApplicationReport&lt;name=&#39;demo&#39;&gt;]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Client.get_nodes">
+<code class="descname">get_nodes</code><span class="sig-paren">(</span><em>states=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the status of nodes in the cluster.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>states</strong><span class="classifier">sequence of NodeState, optional</span></dt><dd><p>If provided, nodes will be filtered to these node states. Default
+is all states.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>reports</strong><span class="classifier">list of NodeReport</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Get all the running nodes</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_nodes</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;RUNNING&#39;</span><span class="p">])</span>
+<span class="go">[NodeReport&lt;id=&#39;worker1.example.com:34721&#39;&gt;,</span>
+<span class="go"> NodeReport&lt;id=&#39;worker2.example.com:34721&#39;&gt;]</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -1927,6 +1954,45 @@ output all fields.</p>
 </dd></dl>
 
 <dl class="class">
+<dt id="skein.LogLevel">
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">LogLevel</code><a class="headerlink" href="#skein.LogLevel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enum of log levels.</p>
+<p>Corresponds with <code class="docutils literal notranslate"><span class="pre">log4j</span></code> logging levels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>OFF</strong><span class="classifier">LogLevel</span></dt><dd><p>Turns on all logging.</p>
+</dd>
+<dt><strong>TRACE</strong><span class="classifier">LogLevel</span></dt><dd><p>The finest level of events.</p>
+</dd>
+<dt><strong>DEBUG</strong><span class="classifier">LogLevel</span></dt><dd><p>Fine-grained informational events that are most useful to debug an
+application.</p>
+</dd>
+<dt><strong>INFO</strong><span class="classifier">LogLevel</span></dt><dd><p>Informational messages that highlight the progress of the application
+at a coarse-grained level. The default LogLevel.</p>
+</dd>
+<dt><strong>WARN</strong><span class="classifier">LogLevel</span></dt><dd><p>Potentially harmful situations that still allow the application to
+continue running.</p>
+</dd>
+<dt><strong>ERROR</strong><span class="classifier">LogLevel</span></dt><dd><p>Error events that might still allow the application to continue
+running.</p>
+</dd>
+<dt><strong>FATAL</strong><span class="classifier">LogLevel</span></dt><dd><p>Severe error events that will lead the application to abort.</p>
+</dd>
+<dt><strong>OFF</strong><span class="classifier">LogLevel</span></dt><dd><p>Turns off all logging.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="classmethod">
+<dt id="skein.LogLevel.values">
+<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.LogLevel.values" title="Permalink to this definition">¶</a></dt>
+<dd><p>The constants of this enum type, in the order they are declared.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
 <dt id="skein.Master">
 <em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Master</code><span class="sig-paren">(</span><em>resources=None</em>, <em>script=''</em>, <em>files=None</em>, <em>env=None</em>, <em>log_level=LogLevel.INFO</em>, <em>log_config=None</em>, <em>security=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master" title="Permalink to this definition">¶</a></dt>
 <dd><p>Configuration for the Application Master.</p>
@@ -2713,6 +2779,175 @@ number of seconds the application has been running.</p>
 <dl class="method">
 <dt id="skein.model.ResourceUsageReport.to_protobuf">
 <code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a protobuf message</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.model.ContainerState">
+<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">ContainerState</code><a class="headerlink" href="#skein.model.ContainerState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enum of container states.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>WAITING</strong><span class="classifier">ContainerState</span></dt><dd><p>Container is waiting on another service to startup before being
+requested.</p>
+</dd>
+<dt><strong>REQUESTED</strong><span class="classifier">ContainerState</span></dt><dd><p>Container has been requested but is not currently running.</p>
+</dd>
+<dt><strong>RUNNING</strong><span class="classifier">ContainerState</span></dt><dd><p>Container is currently running.</p>
+</dd>
+<dt><strong>SUCCEEDED</strong><span class="classifier">ContainerState</span></dt><dd><p>Container finished successfully.</p>
+</dd>
+<dt><strong>FAILED</strong><span class="classifier">ContainerState</span></dt><dd><p>Container failed.</p>
+</dd>
+<dt><strong>KILLED</strong><span class="classifier">ContainerState</span></dt><dd><p>Container was terminated by a user or admin.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="classmethod">
+<dt id="skein.model.ContainerState.values">
+<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ContainerState.values" title="Permalink to this definition">¶</a></dt>
+<dd><p>The constants of this enum type, in the order they are declared.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.model.Container">
+<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">Container</code><span class="sig-paren">(</span><em>service_name</em>, <em>instance</em>, <em>state</em>, <em>yarn_container_id</em>, <em>yarn_node_http_address</em>, <em>start_time</em>, <em>finish_time</em>, <em>exit_message</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Container" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current container state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>service_name</strong><span class="classifier">str</span></dt><dd><p>The name of the service this container is running.</p>
+</dd>
+<dt><strong>instance</strong><span class="classifier">int</span></dt><dd><p>The container instance number.</p>
+</dd>
+<dt><strong>state</strong><span class="classifier">ContainerState</span></dt><dd><p>The current container state.</p>
+</dd>
+<dt><strong>yarn_container_id</strong><span class="classifier">str</span></dt><dd><p>The YARN container id.</p>
+</dd>
+<dt><strong>yarn_node_http_address</strong><span class="classifier">str</span></dt><dd><p>The YARN node HTTP address given as <code class="docutils literal notranslate"><span class="pre">host:port</span></code>.</p>
+</dd>
+<dt><strong>start_time</strong><span class="classifier">datetime</span></dt><dd><p>The start time, None if container has not started.</p>
+</dd>
+<dt><strong>finish_time</strong><span class="classifier">datetime</span></dt><dd><p>The finish time, None if container has not finished.</p>
+</dd>
+<dt><strong>exit_message</strong><span class="classifier">str</span></dt><dd><p>The diagnostic exit message for completed containers.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="classmethod">
+<dt id="skein.model.Container.from_protobuf">
+<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Container.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a protobuf message.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="skein.model.Container.id">
+<code class="descname">id</code><a class="headerlink" href="#skein.model.Container.id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The complete service_name &amp; instance identity of this container.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="skein.model.Container.runtime">
+<code class="descname">runtime</code><a class="headerlink" href="#skein.model.Container.runtime" title="Permalink to this definition">¶</a></dt>
+<dd><p>The total runtime of the application.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.model.Container.to_protobuf">
+<code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Container.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a protobuf message</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.model.NodeState">
+<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">NodeState</code><a class="headerlink" href="#skein.model.NodeState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enum of node states.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>DECOMMISSIONED</strong><span class="classifier">NodeState</span></dt><dd><p>Node is out of service.</p>
+</dd>
+<dt><strong>DECOMMISSIONING</strong><span class="classifier">NodeState</span></dt><dd><p>Node is currently decommissioning.</p>
+</dd>
+<dt><strong>LOST</strong><span class="classifier">NodeState</span></dt><dd><p>Node has not sent responded for some time.</p>
+</dd>
+<dt><strong>NEW</strong><span class="classifier">NodeState</span></dt><dd><p>New has just started.</p>
+</dd>
+<dt><strong>REBOOTED</strong><span class="classifier">NodeState</span></dt><dd><p>Node is just rebooted.</p>
+</dd>
+<dt><strong>RUNNING</strong><span class="classifier">NodeState</span></dt><dd><p>Node is currently running.</p>
+</dd>
+<dt><strong>SHUTDOWN</strong><span class="classifier">NodeState</span></dt><dd><p>Node has been shutdown gracefully.</p>
+</dd>
+<dt><strong>UNHEALTHY</strong><span class="classifier">NodeState</span></dt><dd><p>Node is unhealthy.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="classmethod">
+<dt id="skein.model.NodeState.values">
+<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeState.values" title="Permalink to this definition">¶</a></dt>
+<dd><p>The constants of this enum type, in the order they are declared.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.model.NodeReport">
+<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">NodeReport</code><span class="sig-paren">(</span><em>id</em>, <em>http_address</em>, <em>rack_name</em>, <em>labels</em>, <em>state</em>, <em>health_report</em>, <em>total_resources</em>, <em>used_resources</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeReport" title="Permalink to this definition">¶</a></dt>
+<dd><p>Report of node status.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>id</strong><span class="classifier">str</span></dt><dd><p>The node id.</p>
+</dd>
+<dt><strong>http_address</strong><span class="classifier">str</span></dt><dd><p>The http address to the node manager.</p>
+</dd>
+<dt><strong>rack_name</strong><span class="classifier">str</span></dt><dd><p>The rack name for this node.</p>
+</dd>
+<dt><strong>labels</strong><span class="classifier">set</span></dt><dd><p>Node labels for this node.</p>
+</dd>
+<dt><strong>state</strong><span class="classifier">NodeState</span></dt><dd><p>The node’s current state.</p>
+</dd>
+<dt><strong>health_report</strong><span class="classifier">str</span></dt><dd><p>The diagnostic health report for this node.</p>
+</dd>
+<dt><strong>total_resources</strong><span class="classifier">Resources</span></dt><dd><p>Total resources available on this node.</p>
+</dd>
+<dt><strong>used_resources</strong><span class="classifier">Resources</span></dt><dd><p>Used resources available on this node.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="classmethod">
+<dt id="skein.model.NodeReport.from_protobuf">
+<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeReport.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an instance from a protobuf message.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="skein.model.NodeReport.host">
+<code class="descname">host</code><a class="headerlink" href="#skein.model.NodeReport.host" title="Permalink to this definition">¶</a></dt>
+<dd><p>The node manager host for this node.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="skein.model.NodeReport.port">
+<code class="descname">port</code><a class="headerlink" href="#skein.model.NodeReport.port" title="Permalink to this definition">¶</a></dt>
+<dd><p>The node manager port for this node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.model.NodeReport.to_protobuf">
+<code class="descname">to_protobuf</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
