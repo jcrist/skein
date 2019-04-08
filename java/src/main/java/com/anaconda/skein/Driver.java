@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -804,6 +806,46 @@ public class Driver {
       }
 
       resp.onNext(MsgUtils.writeApplicationsResponse(reports));
+      resp.onCompleted();
+    }
+
+    @Override
+    public void getNodes(Msg.NodesRequest req,
+        StreamObserver<Msg.NodesResponse> resp) {
+
+      if (notLoggedIn(resp)) {
+        return;
+      }
+
+      EnumSet<NodeState> states;
+      states = EnumSet.noneOf(NodeState.class);
+      for (Msg.NodeState.Type s : req.getStatesList()) {
+        try {
+          states.add(MsgUtils.readNodeState(s));
+        } catch (IllegalArgumentException exc) {
+          // NodeState not supported by this version of Hadoop, ignore
+          continue;
+        }
+      }
+
+      List<NodeReport> reports;
+      if (states.isEmpty() && req.getStatesCount() != 0) {
+        // There were states requested, but none of them exist for this version
+        // of Hadoop. Output empty list, no nodes with those states exist.
+        reports = new ArrayList<NodeReport>();
+      } else {
+        try {
+          reports = defaultYarnClient.getNodeReports(states.toArray(new NodeState[0]));
+        } catch (Exception exc) {
+          resp.onError(Status.INTERNAL
+              .withDescription("Failed to get node reports, exception:\n"
+                              + exc.getMessage())
+              .asRuntimeException());
+          return;
+        }
+      }
+
+      resp.onNext(MsgUtils.writeNodesResponse(reports));
       resp.onCompleted();
     }
 

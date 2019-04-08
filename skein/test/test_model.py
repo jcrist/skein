@@ -11,7 +11,7 @@ from skein.compatibility import UTC, math_ceil
 from skein.model import (ApplicationSpec, Service, Resources, File,
                          ApplicationState, FinalStatus, FileType, ACLs, Master,
                          Container, ApplicationReport, ResourceUsageReport,
-                         LogLevel, parse_memory, Security)
+                         NodeReport, LogLevel, parse_memory, Security)
 
 
 def indent(s, n):
@@ -656,3 +656,28 @@ def test_application_report():
     runtime = a.runtime
     after = datetime.datetime.now(UTC)
     assert (before - a.start_time) <= runtime <= (after - a.start_time)
+
+
+def test_node_report():
+    a = NodeReport(id='worker1.example.com:34721',
+                   http_address='worker1.example.com:8042',
+                   rack_name='/default-rack',
+                   labels={'gpu', 'fpga'},
+                   health_report='some words here',
+                   state='RUNNING',
+                   total_resources=Resources(memory=8192, vcores=8),
+                   used_resources=Resources(memory=0, vcores=0))
+
+    b = NodeReport(id='worker2.example.com:34721',
+                   http_address='worker2.example.com:8042',
+                   rack_name='/default-rack',
+                   state='NEW',
+                   labels=set(),
+                   health_report='',
+                   total_resources=Resources(memory=8192, vcores=8),
+                   used_resources=Resources(memory=0, vcores=0))
+
+    check_base_methods(a, b)
+
+    assert a.host == 'worker1.example.com'
+    assert a.port == 34721

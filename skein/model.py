@@ -17,7 +17,7 @@ from .utils import (implements, format_list, datetime_from_millis, runtime,
 __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
            'FileVisibility', 'ACLs', 'Master', 'Security', 'ApplicationState',
            'FinalStatus', 'ResourceUsageReport', 'ApplicationReport',
-           'ContainerState', 'Container', 'LogLevel')
+           'ContainerState', 'Container', 'LogLevel', 'NodeState', 'NodeReport')
 
 
 def _check_is_filename(target):
@@ -1636,3 +1636,125 @@ class Container(ProtobufMessage):
                    start_time=datetime_from_millis(obj.start_time),
                    finish_time=datetime_from_millis(obj.finish_time),
                    exit_message=obj.exit_message)
+
+
+class NodeState(Enum):
+    """Enum of node states.
+
+    Attributes
+    ----------
+    DECOMMISSIONED : NodeState
+        Node is out of service.
+    DECOMMISSIONING : NodeState
+        Node is currently decommissioning.
+    LOST : NodeState
+        Node has not sent responded for some time.
+    NEW : NodeState
+        New has just started.
+    REBOOTED : NodeState
+        Node is just rebooted.
+    RUNNING : NodeState
+        Node is currently running.
+    SHUTDOWN : NodeState
+        Node has been shutdown gracefully.
+    UNHEALTHY : NodeState
+        Node is unhealthy.
+    """
+    _values = ('DECOMMISSIONED',
+               'DECOMMISSIONING',
+               'LOST',
+               'NEW',
+               'REBOOTED',
+               'RUNNING',
+               'SHUTDOWN',
+               'UNHEALTHY')
+
+
+class NodeReport(ProtobufMessage):
+    """Report of node status.
+
+    Attributes
+    ----------
+    id : str
+        The node id.
+    host : str
+        The node manager host for this node.
+    port : int
+        The node manager port for this node.
+    http_address : str
+        The http address to the node manager.
+    rack_name : str
+        The rack name for this node.
+    labels : set
+        Node labels for this node.
+    state : NodeState
+        The node's current state.
+    health_report : str
+        The diagnostic health report for this node.
+    total_resources : Resources
+        Total resources available on this node.
+    used_resources : Resources
+        Used resources available on this node.
+    """
+    __slots__ = ('id', 'http_address', 'rack_name', 'labels', '_state',
+                 'health_report', 'total_resources', 'used_resources')
+    _params = ('id', 'http_address', 'rack_name', 'labels', 'state',
+               'health_report', 'total_resources', 'used_resources')
+    _protobuf_cls = _proto.NodeReport
+
+    def __init__(self, id, http_address, rack_name, labels, state,
+                 health_report, total_resources, used_resources):
+        self.id = id
+        self.http_address = http_address
+        self.rack_name = rack_name
+        self.labels = labels
+        self.state = state
+        self.health_report = health_report
+        self.total_resources = total_resources
+        self.used_resources = used_resources
+
+        self._validate()
+
+    def __repr__(self):
+        return 'NodeReport<id=%r>' % self.id
+
+    @property
+    def host(self):
+        """The host for this node."""
+        return self.id.split(':')[0]
+
+    @property
+    def port(self):
+        """The node manager port for this node."""
+        return int(self.id.split(':')[1])
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, state):
+        self._state = NodeState(state)
+
+    def _validate(self):
+        self._check_is_type('id', string)
+        self._check_is_type('http_address', string)
+        self._check_is_type('rack_name', string)
+        self._check_is_set_of('labels', string)
+        self._check_is_type('health_report', string)
+        self._check_is_type('total_resources', Resources)
+        self.total_resources._validate()
+        self._check_is_type('used_resources', Resources)
+        self.used_resources._validate()
+
+    @classmethod
+    @implements(ProtobufMessage.from_protobuf)
+    def from_protobuf(cls, obj):
+        return cls(id=obj.id,
+                   http_address=obj.http_address,
+                   rack_name=obj.rack_name,
+                   labels=set(obj.labels),
+                   state=NodeState(_proto.NodeState.Type.Name(obj.state)),
+                   health_report=obj.health_report,
+                   total_resources=Resources.from_protobuf(obj.total_resources),
+                   used_resources=Resources.from_protobuf(obj.used_resources))

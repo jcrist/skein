@@ -24,7 +24,7 @@ from .ui import WebUI
 from .model import (Security, ApplicationSpec, ApplicationReport,
                     ApplicationState, ContainerState, Container,
                     FinalStatus, Resources, container_instance_from_string,
-                    LogLevel)
+                    LogLevel, NodeState, NodeReport)
 from .utils import cached_property, grpc_fork_support_disabled, pid_exists
 
 
@@ -606,6 +606,37 @@ class Client(_ClientBase):
         req = proto.ApplicationsRequest(states=[str(s) for s in states])
         resp = self._call('getApplications', req)
         return sorted((ApplicationReport.from_protobuf(r) for r in resp.reports),
+                      key=lambda x: x.id)
+
+    def get_nodes(self, states=None):
+        """Get the status of nodes in the cluster.
+
+        Parameters
+        ----------
+        states : sequence of NodeState, optional
+            If provided, nodes will be filtered to these node states. Default
+            is all states.
+
+        Returns
+        -------
+        reports : list of NodeReport
+
+        Examples
+        --------
+        Get all the running nodes
+
+        >>> client.get_nodes(states=['RUNNING'])
+        [NodeReport<id='worker1.example.com:34721'>,
+         NodeReport<id='worker2.example.com:34721'>]
+        """
+        if states is not None:
+            states = tuple(NodeState(s) for s in states)
+        else:
+            states = ()
+
+        req = proto.NodesRequest(states=[str(s) for s in states])
+        resp = self._call('getNodes', req)
+        return sorted((NodeReport.from_protobuf(r) for r in resp.reports),
                       key=lambda x: x.id)
 
     def application_report(self, app_id):
