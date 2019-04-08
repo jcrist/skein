@@ -5,7 +5,8 @@ from .skein_pb2 import (Empty, FinalStatus, ApplicationState, Resources, File,
                         ResourceUsageReport, ApplicationReport, Application,
                         ApplicationsRequest, Url, ContainersRequest, Container,
                         ContainerInstance, ScaleRequest, ShutdownRequest,
-                        KillRequest, SetProgressRequest)
+                        KillRequest, SetProgressRequest, NodeState, NodeReport,
+                        NodesRequest)
 from .skein_pb2 import (GetRangeRequest, GetRangeResponse,
                         PutKeyRequest, PutKeyResponse,
                         DeleteRangeRequest, DeleteRangeResponse,

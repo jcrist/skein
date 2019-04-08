@@ -201,6 +201,32 @@ message ApplicationReport {
 }
 
 
+message NodeState {
+  enum Type {
+    DECOMMISSIONED = 0;
+    DECOMMISSIONING = 1;
+    LOST = 2;
+    NEW = 3;
+    REBOOTED = 4;
+    RUNNING = 5;
+    SHUTDOWN = 6;
+    UNHEALTHY = 7;
+  }
+}
+
+
+message NodeReport {
+  string id = 1;
+  string http_address = 2;
+  string rack_name = 3;
+  repeated string labels = 4;
+  NodeState.Type state = 5;
+  string health_report = 6;
+  Resources total_resources = 7;
+  Resources used_resources = 8;
+}
+
+
 // Driver only definitions
 
 
@@ -210,6 +236,8 @@ service Driver {
   rpc getStatus (Application) returns (ApplicationReport);
 
   rpc getApplications (ApplicationsRequest) returns (ApplicationsResponse);
+
+  rpc getNodes (NodesRequest) returns (NodesResponse);
 
   rpc submit (ApplicationSpec) returns (Application);
 
@@ -231,6 +259,16 @@ message ApplicationsRequest {
 
 message ApplicationsResponse {
   repeated ApplicationReport reports = 1;
+}
+
+
+message NodesRequest {
+  repeated NodeState.Type states = 1;
+}
+
+
+message NodesResponse {
+  repeated NodeReport reports = 1;
 }
 
 

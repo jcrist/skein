@@ -12,6 +12,8 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -180,6 +182,14 @@ public class MsgUtils {
     return null; // appease the compiler, but can't get here
   }
 
+  public static Msg.NodeState.Type writeNodeState(NodeState state) {
+    return Msg.NodeState.Type.valueOf(state.toString());
+  }
+
+  public static NodeState readNodeState(Msg.NodeState.Type state) {
+    return NodeState.valueOf(state.toString());
+  }
+
   public static Msg.ApplicationReport writeApplicationReport(
       ApplicationReport r) {
     return Msg.ApplicationReport.newBuilder()
@@ -229,6 +239,29 @@ public class MsgUtils {
     Msg.ApplicationsResponse.Builder builder = Msg.ApplicationsResponse.newBuilder();
     for (ApplicationReport report : reports) {
       builder.addReports(writeApplicationReport(report));
+    }
+    return builder.build();
+  }
+
+  public static Msg.NodeReport writeNodeReport(
+      NodeReport r) {
+    return Msg.NodeReport.newBuilder()
+      .setId(r.getNodeId().toString())
+      .setHttpAddress(r.getHttpAddress())
+      .setRackName(r.getRackName())
+      .addAllLabels(r.getNodeLabels())
+      .setState(writeNodeState(r.getNodeState()))
+      .setHealthReport(r.getHealthReport())
+      .setTotalResources(writeResources(r.getCapability()))
+      .setUsedResources(writeResources(r.getUsed()))
+      .build();
+  }
+
+  public static Msg.NodesResponse writeNodesResponse(
+      List<NodeReport> reports) {
+    Msg.NodesResponse.Builder builder = Msg.NodesResponse.newBuilder();
+    for (NodeReport report : reports) {
+      builder.addReports(writeNodeReport(report));
     }
     return builder.build();
   }

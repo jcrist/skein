@@ -190,6 +190,7 @@ def test_client_errors_nicely_if_not_logged_in(security, not_logged_in):
 
     with skein.Client(security=security) as client:
         for func, args in [('get_applications', ()),
+                           ('get_nodes', ()),
                            ('application_report', (appid,)),
                            ('connect', (appid,)),
                            ('kill_application', (appid,)),
@@ -268,6 +269,19 @@ def test_client_login_from_keytab(security, not_logged_in):
 
     with pytest.raises(ValueError):
         skein.Client(keytab=KEYTAB_PATH, security=security)
+
+
+def test_get_nodes(client):
+    nodes = client.get_nodes()
+    assert nodes
+
+    # Doesn't exist for Hadoop <= 2.8, should be empty list
+    nodes = client.get_nodes(states=['SHUTDOWN'])
+    assert not nodes
+
+    # Should still have results here
+    nodes = client.get_nodes(states=['SHUTDOWN', 'RUNNING'])
+    assert nodes
 
 
 def test_appclient_and_security_in_container(monkeypatch, tmpdir, security):
