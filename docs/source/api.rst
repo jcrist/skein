@@ -128,6 +128,10 @@ Application Specification
     :members:
     :inherited-members:
 
+.. autoclass:: LogLevel
+    :members:
+    :inherited-members:
+
 .. autoclass:: Master
     :members:
     :inherited-members:
@@ -177,6 +181,22 @@ Application Responses
     :inherited-members:
 
 .. autoclass:: skein.model.ResourceUsageReport
+    :members:
+    :inherited-members:
+
+.. autoclass:: skein.model.ContainerState
+    :members:
+    :inherited-members:
+
+.. autoclass:: skein.model.Container
+    :members:
+    :inherited-members:
+
+.. autoclass:: skein.model.NodeState
+    :members:
+    :inherited-members:
+
+.. autoclass:: skein.model.NodeReport
     :members:
     :inherited-members:
 

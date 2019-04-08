@@ -1677,10 +1677,6 @@ class NodeReport(ProtobufMessage):
     ----------
     id : str
         The node id.
-    host : str
-        The node manager host for this node.
-    port : int
-        The node manager port for this node.
     http_address : str
         The http address to the node manager.
     rack_name : str
@@ -1720,7 +1716,7 @@ class NodeReport(ProtobufMessage):
 
     @property
     def host(self):
-        """The host for this node."""
+        """The node manager host for this node."""
         return self.id.split(':')[0]
 
     @property
