@@ -11,7 +11,7 @@ from skein.compatibility import UTC, math_ceil
 from skein.model import (ApplicationSpec, Service, Resources, File,
                          ApplicationState, FinalStatus, FileType, ACLs, Master,
                          Container, ApplicationReport, ResourceUsageReport,
-                         NodeReport, LogLevel, parse_memory, Security)
+                         NodeReport, LogLevel, parse_memory, Security, Queue)
 
 
 def indent(s, n):
@@ -681,3 +681,9 @@ def test_node_report():
 
     assert a.host == 'worker1.example.com'
     assert a.port == 34721
+
+
+def test_queue():
+    a = Queue('queue1', 'RUNNING', 50.0, 60.0, 80.0, set(), '')
+    b = Queue('queue2', 'RUNNING', 40.0, 60.0, 30.0, set('*'), '')
+    check_base_methods(a, b)

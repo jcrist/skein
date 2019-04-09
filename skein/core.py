@@ -24,7 +24,7 @@ from .ui import WebUI
 from .model import (Security, ApplicationSpec, ApplicationReport,
                     ApplicationState, ContainerState, Container,
                     FinalStatus, Resources, container_instance_from_string,
-                    LogLevel, NodeState, NodeReport)
+                    LogLevel, NodeState, NodeReport, Queue)
 from .utils import cached_property, grpc_fork_support_disabled, pid_exists
 
 
@@ -638,6 +638,67 @@ class Client(_ClientBase):
         resp = self._call('getNodes', req)
         return sorted((NodeReport.from_protobuf(r) for r in resp.reports),
                       key=lambda x: x.id)
+
+    def get_queue(self, name):
+        """Get information about a queue.
+
+        Parameters
+        ----------
+        name : str
+            The queue name.
+
+        Returns
+        -------
+        queue : Queue
+
+        Examples
+        --------
+        >>> client.get_queue('myqueue')
+        Queue<name='myqueue', percent_used=5.00>
+        """
+        req = proto.QueueRequest(name=name)
+        resp = self._call('getQueue', req)
+        return Queue.from_protobuf(resp)
+
+    def get_child_queues(self, name):
+        """Get information about all children of a parent queue.
+
+        Parameters
+        ----------
+        name : str
+            The parent queue name.
+
+        Returns
+        -------
+        queues : list of Queue
+
+        Examples
+        --------
+        >>> client.get_child_queues('myqueue')
+        [Queue<name='child1', percent_used=10.00>,
+         Queue<name='child2', percent_used=0.00>]
+        """
+        req = proto.QueueRequest(name=name)
+        resp = self._call('getChildQueues', req)
+        return [Queue.from_protobuf(q) for q in resp.queues]
+
+    def get_all_queues(self):
+        """Get information about all queues in the cluster.
+
+        Returns
+        -------
+        queues : list of Queue
+
+        Examples
+        --------
+        >>> client.get_all_queues()
+        [Queue<name='default', percent_used=0.00>,
+         Queue<name='myqueue', percent_used=5.00>,
+         Queue<name='child1', percent_used=10.00>,
+         Queue<name='child2', percent_used=0.00>]
+        """
+        resp = self._call('getAllQueues', proto.Empty())
+        return [Queue.from_protobuf(q) for q in resp.queues]
 
     def application_report(self, app_id):
         """Get a report on the status of a skein application.

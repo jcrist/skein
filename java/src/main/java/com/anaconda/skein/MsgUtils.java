@@ -14,6 +14,8 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -263,6 +265,37 @@ public class MsgUtils {
     for (NodeReport report : reports) {
       builder.addReports(writeNodeReport(report));
     }
+    return builder.build();
+  }
+
+  public static Msg.Queue.State writeQueueState(QueueState state) {
+    switch (state) {
+      case RUNNING:
+        return Msg.Queue.State.RUNNING;
+      case STOPPED:
+        return Msg.Queue.State.STOPPED;
+    }
+    return null; // appease the compiler, but can't get here
+  }
+
+  public static Msg.Queue writeQueue(QueueInfo q) {
+    float maxCapacity = q.getMaximumCapacity();
+    // Negative means no max, set to 100%
+    if (maxCapacity < 0) {
+      maxCapacity = 1;
+    }
+    maxCapacity = Math.max(0, Math.min(100, maxCapacity * 100));
+    float capacity = Math.max(0, Math.min(100, q.getCapacity() * 100));
+    // Can be > 100, but must always be positive
+    float percentUsed = Math.max(0, q.getCurrentCapacity() * 100);
+    Msg.Queue.Builder builder = Msg.Queue.newBuilder()
+        .setName(q.getQueueName())
+        .setState(writeQueueState(q.getQueueState()))
+        .setCapacity(capacity)
+        .setMaxCapacity(maxCapacity)
+        .setPercentUsed(percentUsed)
+        .addAllNodeLabels(q.getAccessibleNodeLabels())
+        .setDefaultNodeLabel(Strings.nullToEmpty(q.getDefaultNodeLabelExpression()));
     return builder.build();
   }
 

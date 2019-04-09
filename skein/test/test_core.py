@@ -191,6 +191,9 @@ def test_client_errors_nicely_if_not_logged_in(security, not_logged_in):
     with skein.Client(security=security) as client:
         for func, args in [('get_applications', ()),
                            ('get_nodes', ()),
+                           ('get_queue', ('default',)),
+                           ('get_child_queues', ('default',)),
+                           ('get_all_queues', ()),
                            ('application_report', (appid,)),
                            ('connect', (appid,)),
                            ('kill_application', (appid,)),
@@ -282,6 +285,25 @@ def test_get_nodes(client):
     # Should still have results here
     nodes = client.get_nodes(states=['SHUTDOWN', 'RUNNING'])
     assert nodes
+
+
+def test_get_queue_methods(client):
+    def qnames(qs):
+        return {q.name for q in qs}
+
+    all_queues = client.get_all_queues()
+    assert qnames(all_queues) == {'default', 'fruit', 'apples', 'bananas', 'oranges'}
+
+    assert qnames(client.get_child_queues('root')) == {'default', 'fruit'}
+    assert client.get_child_queues('default') == []
+
+    assert client.get_queue('default').name == 'default'
+
+    with pytest.raises(ValueError):
+        client.get_queue("missing")
+
+    with pytest.raises(ValueError):
+        client.get_child_queues("missing")
 
 
 def test_appclient_and_security_in_container(monkeypatch, tmpdir, security):

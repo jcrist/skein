@@ -17,7 +17,8 @@ from .utils import (implements, format_list, datetime_from_millis, runtime,
 __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
            'FileVisibility', 'ACLs', 'Master', 'Security', 'ApplicationState',
            'FinalStatus', 'ResourceUsageReport', 'ApplicationReport',
-           'ContainerState', 'Container', 'LogLevel', 'NodeState', 'NodeReport')
+           'ContainerState', 'Container', 'LogLevel', 'NodeState', 'NodeReport',
+           'QueueState', 'Queue')
 
 
 def _check_is_filename(target):
@@ -1754,3 +1755,99 @@ class NodeReport(ProtobufMessage):
                    health_report=obj.health_report,
                    total_resources=Resources.from_protobuf(obj.total_resources),
                    used_resources=Resources.from_protobuf(obj.used_resources))
+
+
+class QueueState(Enum):
+    """Enum of queue states.
+
+    Attributes
+    ----------
+    RUNNING : QueueState
+        Queue is running, normal operation.
+    STOPPED : QueueState
+        Queue is stopped, no longer taking new requests.
+    """
+    _values = ('RUNNING',
+               'STOPPED')
+
+
+class Queue(ProtobufMessage):
+    """Information about a specific YARN queue.
+
+    Attributes
+    ----------
+    name : str
+        The queue's name.
+    state : QueueState
+        The queue's state.
+    capacity : float
+        The queue's capacity as a percentage. For the capacity scheduler, the
+        queue is guaranteed access to this percentage of the parent queue's
+        resources (if sibling queues are running over their limit, there may be
+        a lag accessing resources as those applications scale down). For the
+        fair scheduler, this number is the percentage of the total cluster this
+        queue currently has in its fair share (this will shift dynamically
+        during cluster use).
+    max_capacity : float
+        The queue's max capacity as a percentage. For the capacity scheduler,
+        this queue may elastically expand to use up to this percentage of its
+        parent's resources if its siblings aren't running at their capacity.
+        For the fair scheduler this is always 100%.
+    percent_used : float
+        The percent of this queue's capacity that's currently in use. This may
+        be over 100% if elasticity is in effect.
+    node_labels : set
+        A set of all accessible node labels for this queue. If all node labels
+        are accessible this is the set ``{"*"}``.
+    default_node_label : str
+        The default node label for this queue. This will be used if the
+        application doesn't specify a node label itself.
+    """
+    __slots__ = ('name', '_state', 'capacity', 'max_capacity', 'percent_used',
+                 'node_labels', 'default_node_label')
+    _params = ('name', 'state', 'capacity', 'max_capacity', 'percent_used',
+               'node_labels', 'default_node_label')
+    _protobuf_cls = _proto.Queue
+
+    def __init__(self, name, state, capacity, max_capacity, percent_used,
+                 node_labels, default_node_label):
+        self.name = name
+        self.state = state
+        self.capacity = capacity
+        self.max_capacity = max_capacity
+        self.percent_used = percent_used
+        self.node_labels = node_labels
+        self.default_node_label = default_node_label
+
+        self._validate()
+
+    def __repr__(self):
+        return ('Queue<name=%r, percent_used=%.2f>'
+                % (self.name, self.percent_used))
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, state):
+        self._state = QueueState(state)
+
+    def _validate(self):
+        self._check_is_type('name', string)
+        self._check_is_type('capacity', float)
+        self._check_is_type('max_capacity', float)
+        self._check_is_type('percent_used', float)
+        self._check_is_set_of('node_labels', string)
+        self._check_is_type('default_node_label', string)
+
+    @classmethod
+    @implements(ProtobufMessage.from_protobuf)
+    def from_protobuf(cls, obj):
+        return cls(name=obj.name,
+                   state=QueueState(_proto.Queue.State.Name(obj.state)),
+                   capacity=obj.capacity,
+                   max_capacity=obj.max_capacity,
+                   percent_used=obj.percent_used,
+                   node_labels=set(obj.node_labels),
+                   default_node_label=obj.default_node_label)

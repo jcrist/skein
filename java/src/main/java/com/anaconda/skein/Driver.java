@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
@@ -846,6 +847,104 @@ public class Driver {
       }
 
       resp.onNext(MsgUtils.writeNodesResponse(reports));
+      resp.onCompleted();
+    }
+
+    @Override
+    public void getQueue(Msg.QueueRequest req, StreamObserver<Msg.Queue> resp) {
+      if (notLoggedIn(resp)) {
+        return;
+      }
+
+      String name = req.getName();
+
+      QueueInfo queue;
+      try {
+        queue = defaultYarnClient.getQueueInfo(name);
+      } catch (Exception exc) {
+        resp.onError(Status.INTERNAL
+            .withDescription("Failed to get queue information, exception:\n"
+                             + exc.getMessage())
+            .asRuntimeException());
+        return;
+      }
+
+      if (queue == null) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Queue '" + name + "' does not exist")
+            .asRuntimeException());
+        return;
+      }
+
+      resp.onNext(MsgUtils.writeQueue(queue));
+      resp.onCompleted();
+    }
+
+    @Override
+    public void getChildQueues(Msg.QueueRequest req, StreamObserver<Msg.QueuesResponse> resp) {
+      if (notLoggedIn(resp)) {
+        return;
+      }
+
+      String name = req.getName();
+
+      List<QueueInfo> queues;
+      try {
+        queues = defaultYarnClient.getChildQueueInfos(name);
+      } catch (NullPointerException exc) {
+        // This is dumb. The YARN ResourceManager server exposes a flexible
+        // queue querying API, but YarnClient then wraps it in a way that
+        // removes much of the flexibility (e.g. there's no way to recursively
+        // get child queues, even though the server does support that). Rather
+        // than reimplement the client here (either requires opening a new
+        // connection or reimplementing all client requests), we hack around
+        // the exposed API.
+        //
+        // Here we'd like to get a list of child queues in a single server
+        // request. Unfortunately, the exposed method doesn't properly handle
+        // null pointers, so we catch the NullPointerException here.
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Queue '" + name + "' does not exist")
+            .asRuntimeException());
+        return;
+      } catch (Exception exc) {
+        resp.onError(Status.INTERNAL
+            .withDescription("Failed to get queue information, exception:\n"
+                             + exc.getMessage())
+            .asRuntimeException());
+        return;
+      }
+
+      Msg.QueuesResponse.Builder builder = Msg.QueuesResponse.newBuilder();
+      for (QueueInfo queue : queues) {
+        builder.addQueues(MsgUtils.writeQueue(queue));
+      }
+      resp.onNext(builder.build());
+      resp.onCompleted();
+    }
+
+    @Override
+    public void getAllQueues(Msg.Empty req, StreamObserver<Msg.QueuesResponse> resp) {
+      if (notLoggedIn(resp)) {
+        return;
+      }
+
+      List<QueueInfo> queues;
+      try {
+        queues = defaultYarnClient.getAllQueues();
+      } catch (Exception exc) {
+        resp.onError(Status.INTERNAL
+            .withDescription("Failed to get queue information, exception:\n"
+                             + exc.getMessage())
+            .asRuntimeException());
+        return;
+      }
+
+      Msg.QueuesResponse.Builder builder = Msg.QueuesResponse.newBuilder();
+      for (QueueInfo queue : queues) {
+        builder.addQueues(MsgUtils.writeQueue(queue));
+      }
+      resp.onNext(builder.build());
       resp.onCompleted();
     }
 
