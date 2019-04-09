@@ -227,6 +227,20 @@ message NodeReport {
 }
 
 
+message Queue {
+  enum State {
+    RUNNING = 0;
+    STOPPED = 1;
+  }
+  string name = 1;
+  State state = 2;
+  float capacity = 3;
+  float max_capacity = 4;
+  float percent_used = 5;
+  repeated string node_labels = 6;
+  string default_node_label = 7;
+}
+
 // Driver only definitions
 
 
@@ -238,6 +252,12 @@ service Driver {
   rpc getApplications (ApplicationsRequest) returns (ApplicationsResponse);
 
   rpc getNodes (NodesRequest) returns (NodesResponse);
+
+  rpc getQueue (QueueRequest) returns (Queue);
+
+  rpc getChildQueues (QueueRequest) returns (QueuesResponse);
+
+  rpc getAllQueues (Empty) returns (QueuesResponse);
 
   rpc submit (ApplicationSpec) returns (Application);
 
@@ -269,6 +289,16 @@ message NodesRequest {
 
 message NodesResponse {
   repeated NodeReport reports = 1;
+}
+
+
+message QueueRequest {
+  string name = 1;
+}
+
+
+message QueuesResponse {
+  repeated Queue queues = 1;
 }
 
 

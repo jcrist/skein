@@ -200,6 +200,14 @@ Application Responses
     :members:
     :inherited-members:
 
+.. autoclass:: skein.model.QueueState
+    :members:
+    :inherited-members:
+
+.. autoclass:: skein.model.Queue
+    :members:
+    :inherited-members:
+
 
 Exceptions
 ----------
