@@ -1839,7 +1839,7 @@ class Queue(ProtobufMessage):
         self._check_is_type('max_capacity', float)
         self._check_is_type('percent_used', float)
         self._check_is_set_of('node_labels', string)
-        self._check_is_type('default_node_label', str)
+        self._check_is_type('default_node_label', string)
 
     @classmethod
     @implements(ProtobufMessage.from_protobuf)
