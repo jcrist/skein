@@ -1,3 +1,4 @@
+import errno
 import os
 import re
 import subprocess
@@ -76,8 +77,17 @@ class build_java(Command):
         # Compile the java code and copy the jar to skein/java/
         # This will be picked up as package_data later
         self.mkpath(SKEIN_JAVA_DIR)
-        code = subprocess.call(['mvn', '-f', os.path.join(JAVA_DIR, 'pom.xml'),
-                                '--batch-mode', 'package'])
+        try:
+            code = subprocess.call(['mvn', '-f', os.path.join(JAVA_DIR, 'pom.xml'),
+                                    '--batch-mode', 'package'])
+        except OSError as exc:
+            if exc.errno == errno.ENOENT:
+                self.warn("Building Skein requires Maven, which wasn't found "
+                          "in your environment. For information on setting "
+                          "up a build environment for Skein see "
+                          "https://jcrist.github.io/skein/develop.html.")
+                sys.exit(1)
+            raise
         if code:
             sys.exit(code)
 
