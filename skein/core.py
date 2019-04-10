@@ -1,5 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
+import datetime
 import errno
 import json
 import os
@@ -25,7 +26,8 @@ from .model import (Security, ApplicationSpec, ApplicationReport,
                     ApplicationState, ContainerState, Container,
                     FinalStatus, Resources, container_instance_from_string,
                     LogLevel, NodeState, NodeReport, Queue)
-from .utils import cached_property, grpc_fork_support_disabled, pid_exists
+from .utils import (cached_property, grpc_fork_support_disabled, pid_exists,
+                    datetime_to_millis)
 
 
 __all__ = ('Client', 'ApplicationClient', 'properties')
@@ -574,7 +576,34 @@ class Client(_ClientBase):
                                  app_id,
                                  security=security)
 
-    def get_applications(self, states=None):
+    @staticmethod
+    def _parse_datetime(x, parameter_name):
+        if x is None:
+            return None
+        if isinstance(x, datetime.datetime):
+            return x
+        if not isinstance(x, str):
+            raise context.TypeError("%s must be a datetime or str, got %r"
+                                    % (parameter_name, type(x).__name__))
+        for format in ['%Y-%m-%d', '%Y-%m-%d %H:%M', '%Y-%m-%d %H:%M:%S']:
+            try:
+                return datetime.datetime.strptime(x, format)
+            except ValueError:
+                continue
+        # Times without dates refer to today
+        for format in ['%H:%M', '%H:%M:%S']:
+            try:
+                t = datetime.datetime.strptime(x, format).time()
+                return datetime.datetime.combine(datetime.date.today(), t)
+            except ValueError:
+                continue
+
+        raise context.ValueError("Unable to parse %r from %r as datetime"
+                                 % (x, parameter_name))
+
+    def get_applications(self, states=None, name=None, user=None, queue=None,
+                         started_begin=None, started_end=None,
+                         finished_begin=None, finished_end=None):
         """Get the status of current skein applications.
 
         Parameters
@@ -582,6 +611,32 @@ class Client(_ClientBase):
         states : sequence of ApplicationState, optional
             If provided, applications will be filtered to these application
             states. Default is ``['SUBMITTED', 'ACCEPTED', 'RUNNING']``.
+        name : str, optional
+            Only select applications with this name.
+        user : str, optional
+            Only select applications with this user.
+        queue : str, optional
+            Only select applications in this queue.
+        started_begin : datetime or str, optional
+            Only select applications that started after this time (inclusive).
+            Can be either a datetime or a string representation of one. String
+            representations can use any of the following formats:
+
+              - ``YYYY-M-D H:M:S`` (e.g. 2019-4-10 14:50:20)
+              - ``YYYY-M-D H:M`` (e.g. 2019-4-10 14:50)
+              - ``YYYY-M-D`` (e.g. 2019-4-10)
+              - ``H:M:S`` (e.g. 14:50:20, today is used for date)
+              - ``H:M`` (e.g. 14:50, today is used for date)
+
+        started_end : datetime or str, optional
+            Only select applications that started before this time (inclusive).
+            Can be either a datetime or a string representation of one.
+        finished_begin : datetime or str, optional
+            Only select applications that finished after this time (inclusive).
+            Can be either a datetime or a string representation of one.
+        finished_end : datetime or str, optional
+            Only select applications that finished before this time (inclusive).
+            Can be either a datetime or a string representation of one.
 
         Returns
         -------
@@ -595,6 +650,12 @@ class Client(_ClientBase):
         [ApplicationReport<name='demo'>,
          ApplicationReport<name='dask'>,
          ApplicationReport<name='demo'>]
+
+        Get all applications named 'demo' started after 2019-4-10:
+
+        >>> client.get_applications(name='demo', started_begin='2019-4-10')
+        [ApplicationReport<name='demo'>,
+         ApplicationReport<name='demo'>]
         """
         if states is not None:
             states = tuple(ApplicationState(s) for s in states)
@@ -603,7 +664,21 @@ class Client(_ClientBase):
                       ApplicationState.ACCEPTED,
                       ApplicationState.RUNNING)
 
-        req = proto.ApplicationsRequest(states=[str(s) for s in states])
+        started_begin = self._parse_datetime(started_begin, 'started_begin')
+        started_end = self._parse_datetime(started_end, 'started_end')
+        finished_begin = self._parse_datetime(finished_begin, 'finished_begin')
+        finished_end = self._parse_datetime(finished_end, 'finished_end')
+
+        req = proto.ApplicationsRequest(
+            states=[str(s) for s in states],
+            name=name,
+            user=user,
+            queue=queue,
+            started_begin=datetime_to_millis(started_begin),
+            started_end=datetime_to_millis(started_end),
+            finished_begin=datetime_to_millis(finished_begin),
+            finished_end=datetime_to_millis(finished_end)
+        )
         resp = self._call('getApplications', req)
         return sorted((ApplicationReport.from_protobuf(r) for r in resp.reports),
                       key=lambda x: x.id)

@@ -806,7 +806,48 @@ public class Driver {
         return;
       }
 
-      resp.onNext(MsgUtils.writeApplicationsResponse(reports));
+      // XXX: Much like the Queue API, YARN actually provides a method to have
+      // the server do this filtering in the query, but then doesn't expose it
+      // in `YarnClient`. Newer versions of YARN support querying all but the
+      // ranges in the YarnClient API, we should use these when available.
+      String name = Strings.emptyToNull(req.getName());
+      String user = Strings.emptyToNull(req.getUser());
+      String queue = Strings.emptyToNull(req.getQueue());
+      long startedBegin = req.getStartedBegin();
+      long startedEnd = req.getStartedEnd();
+      if (startedEnd == 0) {
+        startedEnd = Long.MAX_VALUE;
+      }
+      long finishedBegin = req.getFinishedBegin();
+      long finishedEnd = req.getFinishedEnd();
+      if (finishedEnd == 0) {
+        finishedEnd = Long.MAX_VALUE;
+      }
+
+      Msg.ApplicationsResponse.Builder builder = Msg.ApplicationsResponse.newBuilder();
+      for (ApplicationReport report : reports) {
+        if (name != null && !report.getName().equals(name)) {
+          continue;
+        }
+        if (user != null && !report.getUser().equals(user)) {
+          continue;
+        }
+        if (queue != null && !report.getQueue().equals(queue)) {
+          continue;
+        }
+        // Ranges are inclusive on both ends
+        long startTime = report.getStartTime();
+        if (startedBegin > startTime || startedEnd < startTime) {
+          continue;
+        }
+        long finishTime = report.getFinishTime();
+        if (finishedBegin > finishTime || finishedEnd < finishTime) {
+          continue;
+        }
+        builder.addReports(MsgUtils.writeApplicationReport(report));
+      }
+
+      resp.onNext(builder.build());
       resp.onCompleted();
     }
 

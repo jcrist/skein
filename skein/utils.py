@@ -4,6 +4,7 @@ import errno
 import fcntl
 import os
 import threading
+import time
 import weakref
 from contextlib import contextmanager
 from datetime import datetime, timedelta
@@ -132,20 +133,35 @@ _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 def datetime_from_millis(x):
+    """Convert milliseconds since the epoch to a naive `datetime.datetime`"""
     if x is None or x == 0:
         return None
-    return _EPOCH + timedelta(milliseconds=x)
+    return datetime.fromtimestamp(x / 1e3)
 
 
 def datetime_to_millis(x):
-    return int((x - _EPOCH).total_seconds() * 1000)
+    """Convert a `datetime.datetime` to milliseconds since the epoch"""
+    if x is None:
+        return None
+    if hasattr(x, 'timestamp'):
+        # Python >= 3.3
+        secs = x.timestamp()
+    elif x.tzinfo is None:
+        # Timezone naive
+        secs = (time.mktime((x.year, x.month, x.day,
+                             x.hour, x.minute, x.second,
+                             -1, -1, -1)) + x.microsecond / 1e6)
+    else:
+        # Timezone aware
+        secs = (x - _EPOCH).total_seconds()
+    return int(secs * 1000)
 
 
 def runtime(start_time, finish_time):
     if start_time is None:
         return timedelta(0)
     if finish_time is None:
-        return datetime.now(UTC) - start_time
+        return datetime.now() - start_time
     return finish_time - start_time
 
 

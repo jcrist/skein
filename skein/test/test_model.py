@@ -7,7 +7,7 @@ import pickle
 
 import pytest
 
-from skein.compatibility import UTC, math_ceil
+from skein.compatibility import math_ceil
 from skein.model import (ApplicationSpec, Service, Resources, File,
                          ApplicationState, FinalStatus, FileType, ACLs, Master,
                          Container, ApplicationReport, ResourceUsageReport,
@@ -566,10 +566,8 @@ def test_enums():
 
 
 def test_container():
-    start = datetime.datetime(2018, 6, 7, 23, 24, 25, 26 * 1000,
-                              tzinfo=UTC)
-    finish = datetime.datetime(2018, 6, 7, 23, 21, 25, 26 * 1000,
-                               tzinfo=UTC)
+    start = datetime.datetime(2018, 6, 7, 23, 24, 25, 26 * 1000)
+    finish = datetime.datetime(2018, 6, 7, 23, 21, 25, 26 * 1000)
 
     kwargs = dict(service_name="foo",
                   instance=0,
@@ -596,9 +594,9 @@ def test_container():
 
     assert c2.runtime == c2.finish_time - c2.start_time
 
-    before = datetime.datetime.now(UTC)
+    before = datetime.datetime.now()
     runtime = c.runtime
-    after = datetime.datetime.now(UTC)
+    after = datetime.datetime.now()
     assert (before - c.start_time) <= runtime <= (after - c.start_time)
 
     assert c3.runtime == datetime.timedelta(0)
@@ -621,8 +619,8 @@ def test_application_report():
                                 Resources(memory=256, vcores=2),
                                 Resources(memory=384, vcores=3))
 
-    start = datetime.datetime(2018, 6, 7, 23, 24, 25, 26 * 1000, tzinfo=UTC)
-    finish = datetime.datetime(2018, 6, 7, 23, 21, 25, 26 * 1000, tzinfo=UTC)
+    start = datetime.datetime(2018, 6, 7, 23, 24, 25, 26 * 1000)
+    finish = datetime.datetime(2018, 6, 7, 23, 21, 25, 26 * 1000)
 
     kwargs = dict(id='application_1528138529205_0001',
                   name='test',
@@ -652,9 +650,9 @@ def test_application_report():
     check_base_methods(a, b)
 
     assert b.runtime == b.finish_time - b.start_time
-    before = datetime.datetime.now(UTC)
+    before = datetime.datetime.now()
     runtime = a.runtime
-    after = datetime.datetime.now(UTC)
+    after = datetime.datetime.now()
     assert (before - a.start_time) <= runtime <= (after - a.start_time)
 
 
