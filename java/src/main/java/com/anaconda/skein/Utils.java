@@ -29,6 +29,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Utils {
+  public static String getSkeinVersion() {
+    return Utils.class.getPackage().getImplementationVersion();
+  }
+
   public static <T> T popfirst(Set<T> s) {
     for (T out: s) {
       s.remove(out);

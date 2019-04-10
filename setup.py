@@ -15,6 +15,8 @@ from setuptools.command.install import install as _install
 
 import versioneer
 
+VERSION = versioneer.get_version()
+
 ROOT_DIR = os.path.abspath(os.path.dirname(os.path.relpath(__file__)))
 JAVA_DIR = os.path.join(ROOT_DIR, 'java')
 JAVA_TARGET_DIR = os.path.join(JAVA_DIR, 'target')
@@ -79,6 +81,7 @@ class build_java(Command):
         self.mkpath(SKEIN_JAVA_DIR)
         try:
             code = subprocess.call(['mvn', '-f', os.path.join(JAVA_DIR, 'pom.xml'),
+                                    '-Dskein.version=%s' % VERSION,
                                     '--batch-mode', 'package'])
         except OSError as exc:
             if exc.errno == errno.ENOENT:
@@ -187,7 +190,7 @@ cmdclass.update({'build_java': build_java,    # directly build the java source
 
 
 setup(name='skein',
-      version=versioneer.get_version(),
+      version=VERSION,
       cmdclass=cmdclass,
       maintainer='Jim Crist',
       maintainer_email='jiminy.crist@gmail.com',

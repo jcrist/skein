@@ -158,6 +158,8 @@ public class ApplicationMaster {
 
   /** Main entrypoint for the ApplicationMaster. **/
   public static void main(String[] args) {
+    LOG.info("Starting Skein version {}", Utils.getSkeinVersion());
+
     // Specify the netty native workdir. This is necessary for systems where
     // `/tmp` is not executable.
     Utils.configureNettyNativeWorkDir();
