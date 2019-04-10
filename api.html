@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>API Docs &#8212; Skein 0.6.1+4.gaed914c documentation</title>
+    <title>API Docs &#8212; Skein 0.6.1+5.g4b0ffa7 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -281,6 +281,22 @@ is all states.</p>
 </dd>
 <dt><strong>user</strong><span class="classifier">str, optional</span></dt><dd><p>The user to kill the application as. Requires the current user to
 have permissions to proxy as <code class="docutils literal notranslate"><span class="pre">user</span></code>. Default is the current user.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.Client.move_application">
+<code class="descname">move_application</code><span class="sig-paren">(</span><em>app_id</em>, <em>queue</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.move_application" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move an application to a different queue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>app_id</strong><span class="classifier">str</span></dt><dd><p>The id of the application to move.</p>
+</dd>
+<dt><strong>queue</strong><span class="classifier">str</span></dt><dd><p>The queue to move the application to.</p>
 </dd>
 </dl>
 </dd>
