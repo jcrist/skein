@@ -161,6 +161,8 @@ public class Driver {
 
   /** Main Entry Point. **/
   public static void main(String[] args) {
+    LOG.debug("Starting Skein version {}", Utils.getSkeinVersion());
+
     // Maybe specify the netty native workdir. This is necessary for systems
     // where `/tmp` is not executable.
     Utils.configureNettyNativeWorkDir();
