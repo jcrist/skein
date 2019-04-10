@@ -196,6 +196,7 @@ def test_client_errors_nicely_if_not_logged_in(security, not_logged_in):
                            ('get_all_queues', ()),
                            ('application_report', (appid,)),
                            ('connect', (appid,)),
+                           ('move_application', (appid, 'default')),
                            ('kill_application', (appid,)),
                            ('submit', (spec,))]:
             with pytest.raises(skein.DriverError) as exc:
@@ -975,3 +976,54 @@ def test_allow_failures_max_restarts(client, allow_failures):
         else:
             # Service failed 3 times and then terminates
             assert wait_for_completion(client, app.id) == 'FAILED'
+
+
+def test_move_application(client):
+    spec = skein.ApplicationSpec(
+        name="test_move_application",
+        queue="default",
+        master=skein.Master(script="sleep infinity")
+    )
+
+    def assert_good_message(msg):
+        # Ensure message doesn't contain traceback
+        assert 'org.apache.hadoop' not in str(msg)
+
+    with run_application(client, spec=spec) as app:
+        assert client.application_report(app.id).queue == "default"
+
+        # Successful move
+        client.move_application(app.id, "apples")
+        assert client.application_report(app.id).queue == "apples"
+
+        # Not a leaf queue
+        with pytest.raises(ValueError) as exc:
+            client.move_application(app.id, "fruit")
+        assert 'Leaf' in str(exc.value)
+        assert_good_message(exc.value)
+
+        # Queue doesn't exist
+        with pytest.raises(ValueError) as exc:
+            client.move_application(app.id, "missing")
+        assert "doesn't exist" in str(exc.value)
+        assert_good_message(exc.value)
+
+        app.shutdown()
+
+    # App already shutdown
+    with pytest.raises(ValueError) as exc:
+        client.move_application(app.id, "default")
+    assert "cannot be moved" in str(exc.value)
+    assert_good_message(exc.value)
+
+    # App doesn't exist
+    missing_appid = 'application_1526134340424_0012'
+    with pytest.raises(ValueError) as exc:
+        client.move_application(missing_appid, "default")
+    assert "absent" in str(exc.value)
+    assert_good_message(exc.value)
+
+    # Invalid application id
+    with pytest.raises(ValueError) as exc:
+        client.move_application("oh no", "default")
+    assert "Invalid" in str(exc.value)
