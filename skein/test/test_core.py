@@ -1,5 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
+import datetime
 import os
 import subprocess
 import time
@@ -305,6 +306,95 @@ def test_get_queue_methods(client):
 
     with pytest.raises(ValueError):
         client.get_child_queues("missing")
+
+
+@pytest.fixture
+def at_least_3_apps_in_history(client):
+    all_apps = client.get_applications(states=skein.model.ApplicationState.values())
+    all_expected = [a for a in all_apps if a.user == 'testuser' and a.queue == 'default']
+    for _ in range(3 - len(all_expected)):
+        with run_application(client) as app:
+            app.shutdown()
+
+
+def test_get_applications(client, at_least_3_apps_in_history):
+    all_states = skein.model.ApplicationState.values()
+    all_apps = client.get_applications(states=all_states)
+    # This test is a bit tricky, since the many apps may have been run
+    # previously, some not in our test suite. Here we filter to just ones we'd
+    # expect.
+    all_expected = [a for a in all_apps if a.user == 'testuser' and a.queue == 'default']
+    assert all_expected
+
+    # Filter on user and queue to show identical
+    common = {'states': all_states, 'user': 'testuser', 'queue': 'default'}
+    res = client.get_applications(**common)
+    assert res == all_expected
+
+    # Filter on name as well
+    app_name = all_expected[0].name
+    sol = [a for a in all_expected if a.name == app_name]
+    res = client.get_applications(name=app_name, **common)
+    assert res == sol
+
+    # Filter out all apps
+    assert not client.get_applications(states=all_states, user='not-a-real-value')
+    assert not client.get_applications(states=all_states, queue='not-a-real-value')
+    assert not client.get_applications(states=all_states, name='not-a-real-value')
+
+    mid_app = all_expected[len(all_expected) // 2]
+    start_time = mid_app.start_time.replace(microsecond=0)
+    finish_time = mid_app.finish_time.replace(microsecond=0)
+
+    # All apps started after start_time
+    sol = [a for a in all_expected if a.start_time >= start_time]
+    res = client.get_applications(started_begin=start_time, **common)
+    assert res == sol
+
+    # All apps started before start_time
+    sol = [a for a in all_expected if a.start_time <= start_time]
+    res = client.get_applications(started_end=start_time, **common)
+    assert res == sol
+
+    # All apps finished after finish_time
+    sol = [a for a in all_expected if a.finish_time >= finish_time]
+    res = client.get_applications(finished_begin=finish_time, **common)
+    assert res == sol
+
+    # All apps finished before finish_time
+    sol = [a for a in all_expected if a.finish_time <= finish_time]
+    res = client.get_applications(finished_end=finish_time, **common)
+    assert res == sol
+
+    # Check time parsing
+    t = datetime.datetime.now()
+    for format in ['%Y-%m-%d', '%Y-%m-%d %H:%M', '%Y-%m-%d %H:%M:%S']:
+        t_str = t.strftime(format)
+        sol = datetime.datetime.strptime(t_str, format)
+        res = client._parse_datetime(t_str, '')
+        assert sol == res
+
+    for format in ['%H:%M', '%H:%M:%S']:
+        d = datetime.datetime(year=t.year, month=t.month, day=t.day)
+        t_str = t.strftime(format)
+        tm = datetime.datetime.strptime(t_str, format).time()
+        sol = datetime.datetime.combine(d, tm)
+        res = client._parse_datetime(t_str, '')
+        assert sol == res
+
+    sol = [a for a in all_expected if a.finish_time <= finish_time]
+    res = client.get_applications(
+        finished_end=finish_time.strftime('%Y-%m-%d %H:%M:%S'), **common
+    )
+    assert res == sol
+
+    with pytest.raises(TypeError) as exc:
+        res = client.get_applications(finished_end=123)
+    assert 'finished_end' in str(exc.value)
+
+    with pytest.raises(ValueError) as exc:
+        res = client.get_applications(finished_end='4-1-2019')
+    assert 'finished_end' in str(exc.value)
 
 
 def test_appclient_and_security_in_container(monkeypatch, tmpdir, security):

@@ -276,6 +276,13 @@ message Application {
 
 message ApplicationsRequest {
   repeated ApplicationState.Type states = 1;
+  string name = 2;
+  string user = 3;
+  string queue = 4;
+  int64 started_begin = 5;
+  int64 started_end = 6;
+  int64 finished_begin = 7;
+  int64 finished_end = 8;
 }
 
 

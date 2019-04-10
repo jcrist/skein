@@ -283,15 +283,39 @@ def application_submit(spec):
 @subcommand(application.subs,
             'ls', 'List applications',
             arg('--all', '-a', action='store_true',
-                help=('Show all applications (default is only active '
-                      'applications)')),
-            arg("--state", "-s", action='append',
-                help=('Filter by application states. May be repeated '
-                      'to select multiple states.')))
-def application_ls(all=False, state=None):
+                help=('Show applications in all states (default is only '
+                      'active applications)')),
+            arg('--state', '-s', action='append',
+                help=('Select applications with this state. May be '
+                      'repeated to filter on multiple states.')),
+            arg('--name', help='Select applications with this name.'),
+            arg('--queue', help='Select applications with this queue.'),
+            arg('--user', help='Select applications with this user.'),
+            arg('--started-begin',
+                help=('Select applications that started after this datetime '
+                      '(inclusive). Accepts several date and time formats '
+                      '(e.g. ``YYYY-M-D H:M:S`` or ``H:M``). See the '
+                      'documentation for more information.')),
+            arg('--started-end',
+                help=('Select applications that started before this datetime '
+                      '(inclusive)')),
+            arg('--finished-begin',
+                help=('Select applications that finished after this datetime '
+                      '(inclusive)')),
+            arg('--finished-end',
+                help=('Select applications that finished before this datetime '
+                      '(inclusive)')))
+def application_ls(all=False, state=None, name=None, queue=None, user=None,
+                   started_begin=None, started_end=None, finished_begin=None,
+                   finished_end=None):
     if all and state is None:
         state = tuple(ApplicationState)
-    apps = get_driver().get_applications(states=state)
+
+    apps = get_driver().get_applications(
+        states=state, name=name, queue=queue, user=user,
+        started_begin=started_begin, started_end=started_end,
+        finished_begin=finished_begin, finished_end=finished_end
+    )
     _print_application_status(apps)
 
 

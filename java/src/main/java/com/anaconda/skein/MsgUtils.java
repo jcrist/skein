@@ -236,15 +236,6 @@ public class MsgUtils {
       .build();
   }
 
-  public static Msg.ApplicationsResponse writeApplicationsResponse(
-      List<ApplicationReport> reports) {
-    Msg.ApplicationsResponse.Builder builder = Msg.ApplicationsResponse.newBuilder();
-    for (ApplicationReport report : reports) {
-      builder.addReports(writeApplicationReport(report));
-    }
-    return builder.build();
-  }
-
   public static Msg.NodeReport writeNodeReport(
       NodeReport r) {
     return Msg.NodeReport.newBuilder()
