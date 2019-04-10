@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>API Docs &#8212; Skein 0.6.1+5.g4b0ffa7 documentation</title>
+    <title>API Docs &#8212; Skein 0.6.1+6.g4c50ac1 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -168,13 +168,41 @@ application master. Defaults to the global configuration.</p>
 
 <dl class="method">
 <dt id="skein.Client.get_applications">
-<code class="descname">get_applications</code><span class="sig-paren">(</span><em>states=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_applications" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_applications</code><span class="sig-paren">(</span><em>states=None</em>, <em>name=None</em>, <em>user=None</em>, <em>queue=None</em>, <em>started_begin=None</em>, <em>started_end=None</em>, <em>finished_begin=None</em>, <em>finished_end=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_applications" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the status of current skein applications.</p>
-<dl class="field-list simple">
+<dl class="field-list">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><dl class="simple">
+<dd class="field-odd"><dl>
 <dt><strong>states</strong><span class="classifier">sequence of ApplicationState, optional</span></dt><dd><p>If provided, applications will be filtered to these application
 states. Default is <code class="docutils literal notranslate"><span class="pre">['SUBMITTED',</span> <span class="pre">'ACCEPTED',</span> <span class="pre">'RUNNING']</span></code>.</p>
+</dd>
+<dt><strong>name</strong><span class="classifier">str, optional</span></dt><dd><p>Only select applications with this name.</p>
+</dd>
+<dt><strong>user</strong><span class="classifier">str, optional</span></dt><dd><p>Only select applications with this user.</p>
+</dd>
+<dt><strong>queue</strong><span class="classifier">str, optional</span></dt><dd><p>Only select applications in this queue.</p>
+</dd>
+<dt><strong>started_begin</strong><span class="classifier">datetime or str, optional</span></dt><dd><p>Only select applications that started after this time (inclusive).
+Can be either a datetime or a string representation of one. String
+representations can use any of the following formats:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">YYYY-M-D</span> <span class="pre">H:M:S</span></code> (e.g. 2019-4-10 14:50:20)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">YYYY-M-D</span> <span class="pre">H:M</span></code> (e.g. 2019-4-10 14:50)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">YYYY-M-D</span></code> (e.g. 2019-4-10)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">H:M:S</span></code> (e.g. 14:50:20, today is used for date)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">H:M</span></code> (e.g. 14:50, today is used for date)</p></li>
+</ul>
+</div></blockquote>
+</dd>
+<dt><strong>started_end</strong><span class="classifier">datetime or str, optional</span></dt><dd><p>Only select applications that started before this time (inclusive).
+Can be either a datetime or a string representation of one.</p>
+</dd>
+<dt><strong>finished_begin</strong><span class="classifier">datetime or str, optional</span></dt><dd><p>Only select applications that finished after this time (inclusive).
+Can be either a datetime or a string representation of one.</p>
+</dd>
+<dt><strong>finished_end</strong><span class="classifier">datetime or str, optional</span></dt><dd><p>Only select applications that finished before this time (inclusive).
+Can be either a datetime or a string representation of one.</p>
 </dd>
 </dl>
 </dd>
@@ -189,6 +217,12 @@ states. Default is <code class="docutils literal notranslate"><span class="pre">
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_applications</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;FINISHED&#39;</span><span class="p">,</span> <span class="s1">&#39;FAILED&#39;</span><span class="p">])</span>
 <span class="go">[ApplicationReport&lt;name=&#39;demo&#39;&gt;,</span>
 <span class="go"> ApplicationReport&lt;name=&#39;dask&#39;&gt;,</span>
+<span class="go"> ApplicationReport&lt;name=&#39;demo&#39;&gt;]</span>
+</pre></div>
+</div>
+<p>Get all applications named ‘demo’ started after 2019-4-10:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_applications</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;demo&#39;</span><span class="p">,</span> <span class="n">started_begin</span><span class="o">=</span><span class="s1">&#39;2019-4-10&#39;</span><span class="p">)</span>
+<span class="go">[ApplicationReport&lt;name=&#39;demo&#39;&gt;,</span>
 <span class="go"> ApplicationReport&lt;name=&#39;demo&#39;&gt;]</span>
 </pre></div>
 </div>
