@@ -1073,5 +1073,55 @@ public class Driver {
       resp.onNext(MsgUtils.EMPTY);
       resp.onCompleted();
     }
+
+    private String getCleanMessage(YarnException exc) {
+      String msg = exc.getMessage();
+
+      // YarnException wraps the underlying exception (which is what we care
+      // about) by setting the entire remote stacktrace as the message,
+      // sometimes with the exception name as a prefix (this inconsistency is
+      // annoying). To get around this we strip the prefix and grab only the
+      // first line (the message).
+      final String prefix = "org.apache.hadoop.yarn.exceptions.YarnException: ";
+      if (msg.startsWith(prefix)) {
+        msg = msg.substring(prefix.length());
+      }
+
+      return msg.split("\n", 2)[0];
+    }
+
+    @Override
+    public void moveApplication(Msg.MoveRequest req, StreamObserver<Msg.Empty> resp) {
+      if (notLoggedIn(resp)) {
+        return;
+      }
+
+      ApplicationId appId = Utils.appIdFromString(req.getId());
+      if (appId == null) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Invalid ApplicationId '" + req.getId() + "'")
+            .asRuntimeException());
+        return;
+      }
+      String queue = req.getQueue();
+
+      try {
+        defaultYarnClient.moveApplicationAcrossQueues(appId, queue);
+      } catch (YarnException exc) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription(getCleanMessage(exc))
+            .asRuntimeException());
+        return;
+      } catch (IOException exc) {
+        resp.onError(Status.INTERNAL
+            .withDescription("Failed to move application, exception:\n"
+                             + exc.getMessage())
+            .asRuntimeException());
+        return;
+      }
+
+      resp.onNext(MsgUtils.EMPTY);
+      resp.onCompleted();
+    }
   }
 }

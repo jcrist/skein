@@ -76,6 +76,7 @@ def global_client(kinit, tmpdir_factory):
                           'application status',
                           'application ls',
                           'application specification',
+                          'application mv',
                           'application kill',
                           'application shutdown',
                           'container',
@@ -334,6 +335,13 @@ def test_cli_application(tmpdir, capsys, global_client):
         out, err = capsys.readouterr()
         assert not err
         skein.ApplicationSpec.from_yaml(out)
+
+        # `skein application mv`
+        run_command('application mv %s apples' % app_id)
+        out, err = capsys.readouterr()
+        assert not out
+        assert not err
+        assert global_client.application_report(app_id).queue == 'apples'
 
         # `skein application shutdown`
         run_command('application shutdown %s' % app_id)

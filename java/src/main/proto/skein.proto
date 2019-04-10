@@ -259,6 +259,8 @@ service Driver {
 
   rpc getAllQueues (Empty) returns (QueuesResponse);
 
+  rpc moveApplication (MoveRequest) returns (Empty);
+
   rpc submit (ApplicationSpec) returns (Application);
 
   rpc waitForStart (Application) returns (ApplicationReport);
@@ -299,6 +301,12 @@ message QueueRequest {
 
 message QueuesResponse {
   repeated Queue queues = 1;
+}
+
+
+message MoveRequest {
+  string id = 1;
+  string queue = 2;
 }
 
 

@@ -720,6 +720,18 @@ class Client(_ClientBase):
         resp = self._call('getStatus', proto.Application(id=app_id))
         return ApplicationReport.from_protobuf(resp)
 
+    def move_application(self, app_id, queue):
+        """Move an application to a different queue.
+
+        Parameters
+        ----------
+        app_id : str
+            The id of the application to move.
+        queue : str
+            The queue to move the application to.
+        """
+        self._call('moveApplication', proto.MoveRequest(id=app_id, queue=queue))
+
     def kill_application(self, app_id, user=""):
         """Kill an application.
 

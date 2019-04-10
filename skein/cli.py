@@ -304,6 +304,15 @@ def application_status(app_id):
 
 
 @subcommand(application.subs,
+            'mv', 'Move a Skein application to a different queue',
+            app_id,
+            arg('queue', type=str, metavar='QUEUE',
+                help='The queue to move the application to.'))
+def application_move(app_id, queue):
+    get_driver().move_application(app_id, queue)
+
+
+@subcommand(application.subs,
             'kill', 'Kill a Skein application',
             app_id,
             arg('--user', default='', type=str,
