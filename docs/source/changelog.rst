@@ -4,6 +4,17 @@ Changelog
 Upcoming Release
 ----------------
 
+- Add ``Client.get_nodes`` for querying status of YARN cluster nodes
+  (:issue:`155`, :pr:`156`)
+- Expose information on YARN queues through ``Client.get_queue``,
+  ``Client.get_child_queues``, and ``Client.get_all_queues`` (:pr:`159`)
+- Improve error in build script if maven isn't installed (:issue:`158`,
+  :pr:`160`)
+- Add support for moving applications between queues (:pr:`161`)
+- Support more filters in ``Client.get_applications`` (:issue:`133`, :pr:`162`)
+- Log skein version in both ``Driver`` and ``ApplicationMaster`` Java processes
+  (:pr:`163`)
+
 Version 0.6.1 (April 3, 2019)
 -----------------------------
 
