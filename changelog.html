@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Changelog &#8212; Skein 0.6.1+7.g9d6788b documentation</title>
+    <title>Changelog &#8212; Skein 0.6.1+8.ge3bd5e6 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -37,6 +37,18 @@
 <h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="upcoming-release">
 <h2>Upcoming Release<a class="headerlink" href="#upcoming-release" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">Client.get_nodes</span></code> for querying status of YARN cluster nodes
+(<a class="reference external" href="https://github.com/jcrist/skein/issues/155">Issue #155</a>, <a class="reference external" href="https://github.com/jcrist/skein/pull/156">PR #156</a>)</p></li>
+<li><p>Expose information on YARN queues through <code class="docutils literal notranslate"><span class="pre">Client.get_queue</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Client.get_child_queues</span></code>, and <code class="docutils literal notranslate"><span class="pre">Client.get_all_queues</span></code> (<a class="reference external" href="https://github.com/jcrist/skein/pull/159">PR #159</a>)</p></li>
+<li><p>Improve error in build script if maven isn’t installed (<a class="reference external" href="https://github.com/jcrist/skein/issues/158">Issue #158</a>,
+<a class="reference external" href="https://github.com/jcrist/skein/pull/160">PR #160</a>)</p></li>
+<li><p>Add support for moving applications between queues (<a class="reference external" href="https://github.com/jcrist/skein/pull/161">PR #161</a>)</p></li>
+<li><p>Support more filters in <code class="docutils literal notranslate"><span class="pre">Client.get_applications</span></code> (<a class="reference external" href="https://github.com/jcrist/skein/issues/133">Issue #133</a>, <a class="reference external" href="https://github.com/jcrist/skein/pull/162">PR #162</a>)</p></li>
+<li><p>Log skein version in both <code class="docutils literal notranslate"><span class="pre">Driver</span></code> and <code class="docutils literal notranslate"><span class="pre">ApplicationMaster</span></code> Java processes
+(<a class="reference external" href="https://github.com/jcrist/skein/pull/163">PR #163</a>)</p></li>
+</ul>
 </div>
 <div class="section" id="version-0-6-1-april-3-2019">
 <h2>Version 0.6.1 (April 3, 2019)<a class="headerlink" href="#version-0-6-1-april-3-2019" title="Permalink to this headline">¶</a></h2>
