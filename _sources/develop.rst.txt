@@ -105,11 +105,11 @@ Startup the Test Cluster
 
 This command starts up a tiny Hadoop cluster with ``simple`` security, and
 mounts the current directory as ``~/skein`` on every node. To create a cluster
-with ``kerberos`` security enabled, use ``--image kerberos`` instead.
+with ``kerberos`` security enabled, add ``--config kerberos`` to the command.
 
 .. code-block:: console
 
-    $ htcluster startup --image base --mount .:skein
+    $ htcluster startup --image cdh5 --mount .:skein
 
 
 Login to the Edge Node

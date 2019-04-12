@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Development &#8212; Skein 0.6.1+8.ge3bd5e6 documentation</title>
+    <title>Development &#8212; Skein 0.6.1+9.g95421a0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -110,8 +110,8 @@ we provide a few commands needed for using the cluster to run the tests.</p>
 <h3>Startup the Test Cluster<a class="headerlink" href="#startup-the-test-cluster" title="Permalink to this headline">¶</a></h3>
 <p>This command starts up a tiny Hadoop cluster with <code class="docutils literal notranslate"><span class="pre">simple</span></code> security, and
 mounts the current directory as <code class="docutils literal notranslate"><span class="pre">~/skein</span></code> on every node. To create a cluster
-with <code class="docutils literal notranslate"><span class="pre">kerberos</span></code> security enabled, use <code class="docutils literal notranslate"><span class="pre">--image</span> <span class="pre">kerberos</span></code> instead.</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> htcluster startup --image base --mount .:skein
+with <code class="docutils literal notranslate"><span class="pre">kerberos</span></code> security enabled, add <code class="docutils literal notranslate"><span class="pre">--config</span> <span class="pre">kerberos</span></code> to the command.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> htcluster startup --image cdh5 --mount .:skein
 </pre></div>
 </div>
 </div>
