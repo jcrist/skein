@@ -873,7 +873,10 @@ def test_proxy_user(client):
     assert not fs.exists("/user/testuser/.skein/%s" % app.id)
 
 
-def test_proxy_user_no_permissions(client):
+def test_proxy_user_no_permissions(client, hadoop3):
+    if hadoop3:
+        pytest.skip("Lack of proxyuser permissions causes "
+                    "yarnclient to hang in hadoop3")
     spec = skein.ApplicationSpec(
         name="test_proxy_user_no_permissions",
         user="bob",
@@ -1110,7 +1113,8 @@ def test_move_application(client):
     missing_appid = 'application_1526134340424_0012'
     with pytest.raises(ValueError) as exc:
         client.move_application(missing_appid, "default")
-    assert "absent" in str(exc.value)
+    # This error message is different in Hadoop 3
+    assert "absent" in str(exc.value) or "doesn't exist" in str(exc.value)
     assert_good_message(exc.value)
 
     # Invalid application id

@@ -38,6 +38,12 @@ def has_kerberos_enabled():
     return HAS_KERBEROS
 
 
+@pytest.fixture(scope="session")
+def hadoop3():
+    out = subprocess.check_output(['hadoop', 'version']).decode()
+    return 'Hadoop 3' in out
+
+
 KEYTAB_PATH = "/home/testuser/testuser.keytab"
 HAS_KERBEROS = os.path.exists(KEYTAB_PATH)
 

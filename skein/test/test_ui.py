@@ -9,7 +9,7 @@ requests = pytest.importorskip('requests')
 
 simplehttp = skein.Service(resources=skein.Resources(memory=128, vcores=1),
                            script='/usr/bin/python -m SimpleHTTPServer 8888')
-master = skein.Master(resources=skein.Resources(memory=512, vcores=1),
+master = skein.Master(resources=skein.Resources(memory=256, vcores=1),
                       script="sleep infinity")
 spec = skein.ApplicationSpec(name="test_webui",
                              queue="default",
@@ -100,7 +100,7 @@ def test_webui_home_and_overview(ui_test_app):
         resp = get_page(ui_test_app.ui.address + suffix + LOGIN)
         assert resp.ok
         # Application Metrics
-        assert "Memory:</b> 640.0 MiB" in resp.text
+        assert "Memory:</b> 384.0 MiB" in resp.text
         assert "Cores:</b> 2" in resp.text
         assert "Progress:</b> N/A" in resp.text
         # Logs
@@ -241,19 +241,12 @@ def test_webui_acls(client, has_kerberos_enabled, ui_users, checks):
     if has_kerberos_enabled:
         pytest.skip("Testing only implemented for simple authentication")
 
-    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
-                            script='sleep infinity')
     spec = skein.ApplicationSpec(name="test_webui_acls",
                                  queue="default",
-                                 acls=skein.ACLs(enable=True, ui_users=ui_users),
-                                 services={'sleeper': service})
+                                 master=master,
+                                 acls=skein.ACLs(enable=True, ui_users=ui_users))
 
     with run_application(client, spec=spec) as app:
-        # Wait for a single container
-        initial = wait_for_containers(app, 1, states=['RUNNING'])
-        assert initial[0].state == 'RUNNING'
-        assert initial[0].service_name == 'sleeper'
-
         # Base url of web ui
         base = 'http://master.example.com:8088/proxy/%s' % app.id
 
