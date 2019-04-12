@@ -38,8 +38,14 @@ def has_kerberos_enabled():
     return HAS_KERBEROS
 
 
+@pytest.fixture(scope="session")
+def hadoop3():
+    return HADOOP3
+
+
 KEYTAB_PATH = "/home/testuser/testuser.keytab"
-HAS_KERBEROS = os.path.exists(KEYTAB_PATH)
+HAS_KERBEROS = os.environ['HADOOP_TESTING_CONFIG'].lower() == 'kerberos'
+HADOOP3 = os.environ['HADOOP_TESTING_VERSION'].lower() == 'cdh6'
 
 
 def do_kinit():
@@ -69,7 +75,7 @@ def client(security, kinit):
         yield client
 
 
-sleeper = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+sleeper = skein.Service(resources=skein.Resources(memory=32, vcores=1),
                         script='sleep infinity')
 
 

@@ -9,7 +9,7 @@ if [[ "$DOCS" != "true" ]]; then
     # Install the test cluster
     pip install git+https://github.com/jcrist/hadoop-test-cluster.git
     # Start the test cluster
-    htcluster startup --image $CLUSTER_TYPE:latest --mount .:skein
+    htcluster startup --image $CLUSTER_IMAGE:latest --config $CLUSTER_CONFIG --mount .:skein
 fi
 
 set +xe

@@ -184,7 +184,7 @@ def test_client_errors_nicely_if_not_logged_in(security, not_logged_in):
         queue="default",
         services={
             'service': skein.Service(
-                resources=skein.Resources(memory=128, vcores=1),
+                resources=skein.Resources(memory=32, vcores=1),
                 script='env')
         }
     )
@@ -521,7 +521,7 @@ def test_dynamic_containers(client):
         services={
             'sleeper': skein.Service(
                 instances=1,
-                resources=skein.Resources(memory=128, vcores=1),
+                resources=skein.Resources(memory=32, vcores=1),
                 script='sleep infinity'
             )
         },
@@ -702,7 +702,7 @@ def test_submit_failure_removes_appdir(client):
         name="test_submit_failure_removes_appdir",
         queue="default",
         master=skein.Master(
-            resources=skein.Resources(vcores=1000, memory=128),
+            resources=skein.Resources(vcores=1000, memory=32),
             script="echo 'should never run'"
         )
     )
@@ -733,7 +733,7 @@ log4j.appender.console.layout.ConversionPattern=CUSTOM-LOG4J-SUCCEEDED %m
 
 def test_custom_log4j_properties(client, tmpdir):
     configpath = str(tmpdir.join("log4j.properties"))
-    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+    service = skein.Service(resources=skein.Resources(memory=32, vcores=1),
                             script='ls')
     spec = skein.ApplicationSpec(name="test_custom_log4j_properties",
                                  queue="default",
@@ -750,7 +750,7 @@ def test_custom_log4j_properties(client, tmpdir):
 
 
 def test_set_log_level(client):
-    service = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+    service = skein.Service(resources=skein.Resources(memory=32, vcores=1),
                             script='ls')
     spec = skein.ApplicationSpec(name="test_custom_log4j_properties",
                                  queue="default",
@@ -766,8 +766,8 @@ def test_set_log_level(client):
 
 @pytest.mark.parametrize('kind', ['master', 'service'])
 def test_memory_limit_exceeded(kind, client):
-    resources = skein.Resources(memory=128, vcores=1)
-    # Allocate noticeably more memory than the 128 MB limit
+    resources = skein.Resources(memory=32, vcores=1)
+    # Allocate noticeably more memory than the 32 MB limit
     script = 'python -c "b = bytearray(int(256e6)); import time; time.sleep(10)"'
 
     master = services = None
@@ -805,7 +805,7 @@ def test_node_locality(client, strict):
         racks = ['not.a.real.rack.name']
 
     service = skein.Service(
-        resources=skein.Resources(memory=128, vcores=1),
+        resources=skein.Resources(memory=32, vcores=1),
         script='sleep infinity',
         nodes=nodes,
         racks=racks,
@@ -855,7 +855,7 @@ def test_proxy_user(client):
         user="alice",
         services={
             "service": skein.Service(
-                resources=skein.Resources(memory=128, vcores=1),
+                resources=skein.Resources(memory=32, vcores=1),
                 script='sleep infinity')
         }
     )
@@ -873,13 +873,16 @@ def test_proxy_user(client):
     assert not fs.exists("/user/testuser/.skein/%s" % app.id)
 
 
-def test_proxy_user_no_permissions(client):
+def test_proxy_user_no_permissions(client, hadoop3):
+    if hadoop3:
+        pytest.skip("Lack of proxyuser permissions causes "
+                    "yarnclient to hang in hadoop3")
     spec = skein.ApplicationSpec(
         name="test_proxy_user_no_permissions",
         user="bob",
         services={
             'service': skein.Service(
-                resources=skein.Resources(memory=128, vcores=1),
+                resources=skein.Resources(memory=32, vcores=1),
                 script='env')
         }
     )
@@ -957,7 +960,7 @@ def test_master_driver_shutdown_sequence(kind, master_cmd, service_cmd,
         master=skein.Master(script=master_cmd),
         services={
             'service': skein.Service(
-                resources=skein.Resources(memory=128, vcores=1),
+                resources=skein.Resources(memory=32, vcores=1),
                 script=service_cmd
             )
         }
@@ -1048,7 +1051,7 @@ def test_allow_failures_max_restarts(client, allow_failures):
                 instances=1,
                 max_restarts=2,
                 allow_failures=allow_failures,
-                resources=skein.Resources(memory=128, vcores=1),
+                resources=skein.Resources(memory=32, vcores=1),
                 script="exit 1"
             )
         }
@@ -1110,7 +1113,8 @@ def test_move_application(client):
     missing_appid = 'application_1526134340424_0012'
     with pytest.raises(ValueError) as exc:
         client.move_application(missing_appid, "default")
-    assert "absent" in str(exc.value)
+    # This error message is different in Hadoop 3
+    assert "absent" in str(exc.value) or "doesn't exist" in str(exc.value)
     assert_good_message(exc.value)
 
     # Invalid application id
