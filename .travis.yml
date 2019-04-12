@@ -26,15 +26,18 @@ jobs:
     include:
         - if: commit_message !~ skip-tests
           env:
-            - CLUSTER_TYPE=base
+            - CLUSTER_IMAGE=cdh5
+            - CLUSTER_CONFIG=kerberos
             - PYTHON=3.6
         - if: commit_message !~ skip-tests
           env:
-            - CLUSTER_TYPE=kerberos
+            - CLUSTER_IMAGE=cdh6
+            - CLUSTER_CONFIG=kerberos
             - PYTHON=3.6
         - if: commit_message !~ skip-tests
           env:
-            - CLUSTER_TYPE=base
+            - CLUSTER_IMAGE=cdh5
+            - CLUSTER_CONFIG=simple
             - PYTHON=2.7
         - sudo: false
           env:

@@ -7,7 +7,7 @@ if [[ "$DOCS" != "true" ]]; then
         export CONDA_ENV="/home/testuser/miniconda/"
     fi
     # kinit if needed
-    if [[ "$CLUSTER_TYPE" == "kerberos" ]]; then
+    if [[ "$CLUSTER_CONFIG" == "kerberos" ]]; then
         htcluster exec -- kinit testuser -kt testuser.keytab
     fi
     # Run py.test inside docker

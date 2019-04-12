@@ -153,7 +153,7 @@ def test_cli_config_gencerts(capsys, skein_config):
     assert key != key2
 
 
-def test_works_if_cli_driver_not_running(capfd, skein_config):
+def test_works_if_cli_driver_not_running(kinit, capfd, skein_config):
     run_command('application ls')
     out, err = capfd.readouterr()
     assert 'APPLICATION_ID' in out

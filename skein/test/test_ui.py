@@ -7,7 +7,7 @@ from skein.test.conftest import run_application, wait_for_containers
 requests = pytest.importorskip('requests')
 
 
-simplehttp = skein.Service(resources=skein.Resources(memory=128, vcores=1),
+simplehttp = skein.Service(resources=skein.Resources(memory=32, vcores=1),
                            script='/usr/bin/python -m SimpleHTTPServer 8888')
 master = skein.Master(resources=skein.Resources(memory=256, vcores=1),
                       script="sleep infinity")
@@ -100,7 +100,7 @@ def test_webui_home_and_overview(ui_test_app):
         resp = get_page(ui_test_app.ui.address + suffix + LOGIN)
         assert resp.ok
         # Application Metrics
-        assert "Memory:</b> 384.0 MiB" in resp.text
+        assert "Memory:</b> 288.0 MiB" in resp.text
         assert "Cores:</b> 2" in resp.text
         assert "Progress:</b> N/A" in resp.text
         # Logs
