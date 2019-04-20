@@ -57,6 +57,7 @@ import org.slf4j.LoggerFactory;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -132,7 +133,7 @@ public class Driver {
         MAX_GRPC_EXECUTOR_THREADS,
         true);
 
-    server = NettyServerBuilder.forPort(0)
+    server = NettyServerBuilder.forAddress(new InetSocketAddress("127.0.0.1", 0))
         .sslContext(sslContext)
         .addService(new DriverImpl())
         .workerEventLoopGroup(eg)

@@ -221,7 +221,7 @@ def _start_driver(security=None, set_global=False, keytab=None, principal=None,
     env['CLASSPATH'] = '%s:%s' % (_SKEIN_JAR, classpath)
 
     callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    callback.bind(('localhost', 0))
+    callback.bind(('127.0.0.1', 0))
     callback.listen(1)
 
     with closing(callback):
@@ -265,7 +265,7 @@ def _start_driver(security=None, set_global=False, keytab=None, principal=None,
         else:
             raise DriverError("Failed to start java process")
 
-    address = 'localhost:%d' % port
+    address = '127.0.0.1:%d' % port
 
     if set_global:
         Client.stop_global_driver()

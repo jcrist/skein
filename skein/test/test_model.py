@@ -572,7 +572,7 @@ def test_container():
     kwargs = dict(service_name="foo",
                   instance=0,
                   yarn_container_id='container_1528138529205_0038_01_000001',
-                  yarn_node_http_address='localhost:14420',
+                  yarn_node_http_address='worker.example.com:14420',
                   exit_message="")
 
     c = Container(state='RUNNING',
