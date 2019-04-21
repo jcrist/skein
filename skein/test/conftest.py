@@ -44,8 +44,8 @@ def hadoop3():
 
 
 KEYTAB_PATH = "/home/testuser/testuser.keytab"
-HAS_KERBEROS = os.environ['HADOOP_TESTING_CONFIG'].lower() == 'kerberos'
-HADOOP3 = os.environ['HADOOP_TESTING_VERSION'].lower() == 'cdh6'
+HAS_KERBEROS = os.environ.get('HADOOP_TESTING_CONFIG', '').lower() == 'kerberos'
+HADOOP3 = os.environ.get('HADOOP_TESTING_VERSION', '').lower() == 'cdh6'
 
 
 def do_kinit():

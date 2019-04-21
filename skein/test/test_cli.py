@@ -172,7 +172,7 @@ def test_cli_driver(capsys, skein_config):
         run_command('driver start')
         out, err = capsys.readouterr()
         assert "Skein global security credentials not found" in err
-        assert 'localhost' in out
+        assert '127.0.0.1' in out
 
         # Daemon start is idempotent
         run_command('driver start')
@@ -221,7 +221,7 @@ def test_cli_driver_force_stop(tmpdir, capsys):
         )
         sock = socket.socket()
         sock.bind(('', 0))
-        address = 'localhost:%d' % sock.getsockname()[1]
+        address = '127.0.0.1:%d' % sock.getsockname()[1]
         with closing(sock):
             # PID is not a skein driver
             _write_driver(address, proc.pid)
@@ -260,7 +260,7 @@ def test_cli_driver_after_bad_driver_file(cmd, tmpdir, capsys):
 
         sock = socket.socket()
         sock.bind(('', 0))
-        address = 'localhost:%d' % sock.getsockname()[1]
+        address = '127.0.0.1:%d' % sock.getsockname()[1]
 
         # Find a PID that doesn't exist
         pid = 1234
