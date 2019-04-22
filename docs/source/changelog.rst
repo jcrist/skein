@@ -4,6 +4,9 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.7.0 (April 22, 2019)
+------------------------------
+
 - Add ``Client.get_nodes`` for querying status of YARN cluster nodes
   (:issue:`155`, :pr:`156`)
 - Expose information on YARN queues through ``Client.get_queue``,
@@ -14,6 +17,9 @@ Upcoming Release
 - Support more filters in ``Client.get_applications`` (:issue:`133`, :pr:`162`)
 - Log skein version in both ``Driver`` and ``ApplicationMaster`` Java processes
   (:pr:`163`)
+- Enable testing on Hadoop 3/CDH 6 (:issue:`153`, :pr:`164`)
+- Explicitly use ipv4 for Python <-> Java connection, removing potential for
+  each binding to different interfaces (:issue:`165`, :pr:`166`)
 
 Version 0.6.1 (April 3, 2019)
 -----------------------------
