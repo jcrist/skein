@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Changelog &#8212; Skein 0.6.1+10.g8688043 documentation</title>
+    <title>Changelog &#8212; Skein 0.7.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -37,6 +37,9 @@
 <h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="upcoming-release">
 <h2>Upcoming Release<a class="headerlink" href="#upcoming-release" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="version-0-7-0-april-22-2019">
+<h2>Version 0.7.0 (April 22, 2019)<a class="headerlink" href="#version-0-7-0-april-22-2019" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><p>Add <code class="docutils literal notranslate"><span class="pre">Client.get_nodes</span></code> for querying status of YARN cluster nodes
 (<a class="reference external" href="https://github.com/jcrist/skein/issues/155">Issue #155</a>, <a class="reference external" href="https://github.com/jcrist/skein/pull/156">PR #156</a>)</p></li>
@@ -48,6 +51,9 @@
 <li><p>Support more filters in <code class="docutils literal notranslate"><span class="pre">Client.get_applications</span></code> (<a class="reference external" href="https://github.com/jcrist/skein/issues/133">Issue #133</a>, <a class="reference external" href="https://github.com/jcrist/skein/pull/162">PR #162</a>)</p></li>
 <li><p>Log skein version in both <code class="docutils literal notranslate"><span class="pre">Driver</span></code> and <code class="docutils literal notranslate"><span class="pre">ApplicationMaster</span></code> Java processes
 (<a class="reference external" href="https://github.com/jcrist/skein/pull/163">PR #163</a>)</p></li>
+<li><p>Enable testing on Hadoop 3/CDH 6 (<a class="reference external" href="https://github.com/jcrist/skein/issues/153">Issue #153</a>, <a class="reference external" href="https://github.com/jcrist/skein/pull/164">PR #164</a>)</p></li>
+<li><p>Explicitly use ipv4 for Python &lt;-&gt; Java connection, removing potential for
+each binding to different interfaces (<a class="reference external" href="https://github.com/jcrist/skein/issues/165">Issue #165</a>, <a class="reference external" href="https://github.com/jcrist/skein/pull/166">PR #166</a>)</p></li>
 </ul>
 </div>
 <div class="section" id="version-0-6-1-april-3-2019">
@@ -256,6 +262,7 @@ containers via environment variables (<a class="reference external" href="https:
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Changelog</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#upcoming-release">Upcoming Release</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version-0-7-0-april-22-2019">Version 0.7.0 (April 22, 2019)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-6-1-april-3-2019">Version 0.6.1 (April 3, 2019)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-6-0-march-21-2019">Version 0.6.0 (March 21, 2019)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-5-1-january-21-2019">Version 0.5.1 (January 21, 2019)</a></li>
