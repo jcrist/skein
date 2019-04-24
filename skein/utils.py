@@ -8,6 +8,12 @@ import time
 import weakref
 from contextlib import contextmanager
 from datetime import datetime, timedelta
+from distutils.version import LooseVersion
+
+try:
+    from grpc import __version__ as GRPC_VERSION
+except AttributeError:
+    from grpc._grpcio_metadata import __version__ as GRPC_VERSION
 
 from .compatibility import unicode, UTC
 
@@ -82,12 +88,15 @@ def grpc_fork_support_disabled():
     gRPC (>= 1.15) results in extraneous error logs currently. For now we
     explicitly disable fork support for gRPC clients we create.
     """
-    key = 'GRPC_ENABLE_FORK_SUPPORT'
-    try:
-        os.environ[key] = '0'
+    if LooseVersion(GRPC_VERSION) < '1.18.0':
+        key = 'GRPC_ENABLE_FORK_SUPPORT'
+        try:
+            os.environ[key] = '0'
+            yield
+        finally:
+            del os.environ[key]
+    else:
         yield
-    finally:
-        del os.environ[key]
 
 
 def xor(a, b):
