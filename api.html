@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>API Docs &#8212; Skein 0.7.0+3.g3a43484 documentation</title>
+    <title>API Docs &#8212; Skein 0.7.0+4.g39ba759 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -2429,7 +2429,7 @@ determined by the file system.</p>
 
 <dl class="class">
 <dt id="skein.Resources">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Resources</code><span class="sig-paren">(</span><em>memory=required</em>, <em>vcores=required</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Resources</code><span class="sig-paren">(</span><em>memory=required</em>, <em>vcores=required</em>, <em>gpus=0</em>, <em>fpgas=0</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources" title="Permalink to this definition">¶</a></dt>
 <dd><p>Resource requests per container.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters</dt>
@@ -2447,6 +2447,12 @@ allocation will error on application submission.</p>
 configuration one virtual core may map to a single actual core, or a
 fraction of a core. Requests larger than the maximum allocation will
 error on application submission.</p>
+</dd>
+<dt><strong>gpus</strong><span class="classifier">int, optional</span></dt><dd><p>The number of gpus to request. Requires Hadoop &gt;= 3.1, sets
+resource requirements for <code class="docutils literal notranslate"><span class="pre">yarn.io/gpu</span></code>. Default is 0.</p>
+</dd>
+<dt><strong>fpgas</strong><span class="classifier">int, optional</span></dt><dd><p>The number of fpgas to request. Requires Hadoop &gt;= 3.1, sets
+resource requirements for <code class="docutils literal notranslate"><span class="pre">yarn.io/fpga</span></code>. Default is 0.</p>
 </dd>
 </dl>
 </dd>

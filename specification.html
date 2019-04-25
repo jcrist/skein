@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Specification &#8212; Skein 0.7.0+3.g3a43484 documentation</title>
+    <title>Specification &#8212; Skein 0.7.0+4.g39ba759 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -247,6 +247,14 @@ will error on application submission.</p>
 configuration one virtual core may map to a single actual core, or a fraction
 of a core. Requests larger than the maximum allocation will error on
 application submission.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gpus</span></code></p>
+<p>The number of gpus to request. Requires Hadoop &gt;= 3.1, sets resource
+requirements for <code class="docutils literal notranslate"><span class="pre">yarn.io/gpu</span></code>. Optional, default is 0.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fpgas</span></code></p>
+<p>The number of fpgas to request. Requires Hadoop &gt;= 3.1, sets resource
+requirements for <code class="docutils literal notranslate"><span class="pre">yarn.io/fpga</span></code>. Optional, default is 0.</p>
 </li>
 </ul>
 <p><strong>Example</strong></p>
