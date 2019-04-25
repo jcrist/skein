@@ -527,14 +527,22 @@ class Resources(Specification):
         configuration one virtual core may map to a single actual core, or a
         fraction of a core. Requests larger than the maximum allocation will
         error on application submission.
+    gpus : int, optional
+        The number of gpus to request. Requires Hadoop >= 3.1, sets
+        resource requirements for ``yarn.io/gpu``. Default is 0.
+    fpgas : int, optional
+        The number of fpgas to request. Requires Hadoop >= 3.1, sets
+        resource requirements for ``yarn.io/fpga``. Default is 0.
     """
-    __slots__ = ('_memory', 'vcores')
-    _params = ('memory', 'vcores')
+    __slots__ = ('_memory', 'vcores', 'gpus', 'fpgas')
+    _params = ('memory', 'vcores', 'gpus', 'fpgas')
     _protobuf_cls = _proto.Resources
 
-    def __init__(self, memory=required, vcores=required):
+    def __init__(self, memory=required, vcores=required, gpus=0, fpgas=0):
         self._assign_required('memory', memory)
         self._assign_required('vcores', vcores)
+        self.gpus = gpus
+        self.fpgas = fpgas
         self._validate()
 
     @property
@@ -552,6 +560,8 @@ class Resources(Specification):
         min = 1 if is_request else 0
         self._check_is_bounded_int('vcores', min=min)
         self._check_is_bounded_int('memory', min=min)
+        self._check_is_bounded_int('gpus', min=0)
+        self._check_is_bounded_int('fpgas', min=0)
 
 
 class FileVisibility(Enum):

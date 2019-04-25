@@ -1069,7 +1069,15 @@ public class Driver {
         return;
       }
 
-      Model.ApplicationSpec spec = MsgUtils.readApplicationSpec(req);
+      Model.ApplicationSpec spec;
+      try {
+        spec = MsgUtils.readApplicationSpec(req);
+      } catch (Utils.UnsupportedFeatureException exc) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription(exc.getMessage())
+            .asRuntimeException());
+        return;
+      }
 
       ApplicationId appId = null;
       try {

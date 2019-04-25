@@ -210,6 +210,16 @@ fields:
   of a core. Requests larger than the maximum allocation will error on
   application submission.
 
+- ``gpus``
+
+  The number of gpus to request. Requires Hadoop >= 3.1, sets resource
+  requirements for ``yarn.io/gpu``. Optional, default is 0.
+
+- ``fpgas``
+
+  The number of fpgas to request. Requires Hadoop >= 3.1, sets resource
+  requirements for ``yarn.io/fpga``. Optional, default is 0.
+
 **Example**
 
 .. code-block:: none

@@ -29,6 +29,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Utils {
+  // An exception indicating an unsupported Hadoop feature was requested
+  public static class UnsupportedFeatureException extends IllegalArgumentException {
+    public UnsupportedFeatureException(String msg) {
+      super(msg);
+    }
+  }
+
   public static String getSkeinVersion() {
     return Utils.class.getPackage().getImplementationVersion();
   }

@@ -17,7 +17,8 @@ from skein.core import Properties
 from skein.exceptions import FileNotFoundError, FileExistsError
 from skein.utils import pid_exists
 from skein.test.conftest import (run_application, wait_for_containers,
-                                 wait_for_completion, get_logs, KEYTAB_PATH)
+                                 wait_for_completion, get_logs, KEYTAB_PATH,
+                                 HADOOP3)
 
 
 def test_properties():
@@ -1132,3 +1133,23 @@ def test_move_application(client):
     with pytest.raises(ValueError) as exc:
         client.move_application("oh no", "default")
     assert "Invalid" in str(exc.value)
+
+
+def test_hadoop3_resource(client):
+    spec = skein.ApplicationSpec(
+        name="test_hadoop3_resources",
+        master=skein.Master(
+            resources=skein.Resources(
+                memory='32 MiB',
+                vcores=1,
+                gpus=1
+            ),
+            script="sleep infinity"
+        )
+    )
+    with pytest.raises(ValueError) as exc:
+        client.submit(spec)
+    if HADOOP3:
+        assert "Resource 'yarn.io/gpu'" in str(exc.value)
+    else:
+        assert "Custom resources not supported"
