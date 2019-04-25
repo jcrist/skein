@@ -369,6 +369,9 @@ class Client(_ClientBase):
                 proc.wait()
             raise
 
+    def __reduce__(self):
+        return (type(self), (self.address, self.security))
+
     @classmethod
     def from_global_driver(self):
         """Connect to the global driver."""

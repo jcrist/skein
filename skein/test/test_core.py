@@ -2,6 +2,7 @@ from __future__ import print_function, division, absolute_import
 
 import datetime
 import os
+import pickle
 import subprocess
 import time
 import warnings
@@ -274,6 +275,16 @@ def test_client_login_from_keytab(security, not_logged_in):
 
     with pytest.raises(ValueError):
         skein.Client(keytab=KEYTAB_PATH, security=security)
+
+
+def test_client_picklable(client):
+    b = pickle.dumps(client)
+    client2 = pickle.loads(b)
+    assert client2.address == client.address
+    assert client2.security == client.security
+    assert client2._proc is None
+    # Smoketest
+    client2.get_applications()
 
 
 def test_get_nodes(client):
