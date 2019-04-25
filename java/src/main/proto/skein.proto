@@ -41,6 +41,8 @@ message ApplicationState {
 message Resources {
   int32 memory = 1;
   int32 vcores = 2;
+  int64 gpus = 3;
+  int64 fpgas = 4;
 }
 
 

@@ -21,6 +21,8 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.log4j.Level;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -225,14 +227,71 @@ public class MsgUtils {
       .build();
   }
 
+  public static long getResourceValue(Resource r, String s) {
+    Method method;
+    try {
+      method = Resource.class.getMethod("getResourceValue", String.class);
+    } catch (NoSuchMethodException exc) {
+      return 0;
+    }
+
+    try {
+      return (long) method.invoke(r, s);
+    } catch (InvocationTargetException exc) {
+      return 0;
+    } catch (IllegalAccessException exc) {
+      // This can never happen
+      throw new RuntimeException(
+          "Unexpected access exception accessing Resource.getResourceValue"
+      );
+    }
+  }
+
+  public static void setResourceValue(Resource r, String name, long value) {
+    Method method;
+    try {
+      method = Resource.class.getMethod("setResourceValue", String.class, long.class);
+    } catch (NoSuchMethodException exc) {
+      throw new Utils.UnsupportedFeatureException(
+          "Custom resources not supported in this version of Hadoop, "
+          + "can't set request for '" + name + "'"
+      );
+    }
+
+    try {
+      method.invoke(r, name, value);
+    } catch (InvocationTargetException exc) {
+      Throwable cause = exc.getCause();
+      throw new Utils.UnsupportedFeatureException(
+          "Resource '" + name + "' is not defined in your cluster's configuration"
+      );
+    } catch (IllegalAccessException exc) {
+      // This can never happen
+      throw new RuntimeException(
+          "Unexpected access exception accessing Resource.setResourceValue"
+      );
+    }
+  }
+
   public static Resource readResources(Msg.Resources r) {
-    return Resource.newInstance(r.getMemory(), r.getVcores());
+    Resource out = Resource.newInstance(r.getMemory(), r.getVcores());
+    long gpus = r.getGpus();
+    if (gpus != 0) {
+      setResourceValue(out, "yarn.io/gpu", gpus);
+    }
+    long fpgas = r.getFpgas();
+    if (fpgas != 0) {
+      setResourceValue(out, "yarn.io/fpga", gpus);
+    }
+    return out;
   }
 
   public static Msg.Resources writeResources(Resource r) {
     return Msg.Resources.newBuilder()
       .setMemory(Math.max(0, r.getMemory()))
       .setVcores(Math.max(0, r.getVirtualCores()))
+      .setGpus(getResourceValue(r, "yarn.io/gpu"))
+      .setFpgas(getResourceValue(r, "yarn.io/fpga"))
       .build();
   }
 

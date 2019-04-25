@@ -127,7 +127,9 @@ def test_parse_memory():
 def test_resources():
     r = Resources(memory=1024, vcores=1)
     r2 = Resources(memory=1024, vcores=2)
+    r3 = Resources(memory=1, vcores=2, gpus=3, fpgas=4)
     check_specification_methods(r, r2)
+    check_specification_methods(r3, r2)
 
 
 def test_resources_invariants():

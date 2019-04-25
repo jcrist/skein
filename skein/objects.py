@@ -187,6 +187,8 @@ class Base(object):
 
 
 class ProtobufMessage(Base):
+    __slots__ = ()
+
     @classmethod
     def from_protobuf(cls, msg):
         """Create an instance from a protobuf message."""
@@ -206,6 +208,8 @@ class ProtobufMessage(Base):
 
 class Specification(ProtobufMessage):
     """Base class for objects that are part of the specification"""
+    __slots__ = ()
+
     @classmethod
     def from_dict(cls, obj):
         """Create an instance from a dict.
