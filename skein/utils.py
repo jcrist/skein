@@ -12,7 +12,7 @@ from distutils.version import LooseVersion
 
 try:
     from grpc import __version__ as GRPC_VERSION
-except AttributeError:
+except ImportError:
     from grpc._grpcio_metadata import __version__ as GRPC_VERSION
 
 from .compatibility import unicode, UTC
