@@ -4,6 +4,14 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.7.1 (April 25, 2019)
+------------------------------
+
+- Re-enable fork support when grpcio >= 1.18.0 (:issue:`167`, :pr:`168`)
+- Make ``Client`` objects picklable (:pr:`169`)
+- Support GPU and FPGA resources in Hadoop 3.1 (:issue:`154`, :pr:`171`)
+
+
 Version 0.7.0 (April 22, 2019)
 ------------------------------
 
