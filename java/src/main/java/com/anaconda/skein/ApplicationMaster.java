@@ -1316,7 +1316,7 @@ public class ApplicationMaster {
             addContainer();
           }
 
-          if (isFinished()) {
+          if (isFinished() || isFailed()) {
             maybeShutdown();
           }
         }

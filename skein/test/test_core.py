@@ -776,7 +776,12 @@ def test_set_log_level(client):
     assert 'DEBUG' in logs
 
 
-@pytest.mark.parametrize('kind', ['master', 'service'])
+@pytest.mark.parametrize('kind', [
+    pytest.param('master', marks=pytest.mark.xfail(
+        reason="Memory error on master isn't deterministic"
+    )),
+    'service'
+])
 def test_memory_limit_exceeded(kind, client):
     resources = skein.Resources(memory=32, vcores=1)
     # Allocate noticeably more memory than the 32 MB limit
@@ -1081,6 +1086,36 @@ def test_allow_failures_max_restarts(client, allow_failures):
         else:
             # Service failed 3 times and then terminates
             assert wait_for_completion(client, app.id) == 'FAILED'
+
+
+@pytest.mark.parametrize('with_restarts', [True, False])
+def test_fail_on_container_failure(client, with_restarts):
+    script = ('if [[ "$SKEIN_CONTAINER_ID" != "test_0" ]]; then\n'
+              '  exit 1\n'
+              'else\n'
+              '  sleep infinity\n'
+              'fi')
+
+    spec = skein.ApplicationSpec(
+        name="test_fail_on_container_failure",
+        services={
+            'test': skein.Service(
+                instances=2,
+                max_restarts=2 if with_restarts else 0,
+                resources=skein.Resources(memory=32, vcores=1),
+                script=script
+            )
+        }
+    )
+    with run_application(client, spec=spec) as app:
+        wait_for_completion(client, app.id) == "FAILED"
+
+    logs = get_logs(app.id)
+    assert "test_0" in logs
+    assert "test_1" in logs
+    assert ("test_2" in logs) == with_restarts
+    assert ("test_3" in logs) == with_restarts
+    assert "test_4" not in logs
 
 
 def test_move_application(client):
