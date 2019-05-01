@@ -776,7 +776,12 @@ def test_set_log_level(client):
     assert 'DEBUG' in logs
 
 
-@pytest.mark.parametrize('kind', ['master', 'service'])
+@pytest.mark.parametrize('kind', [
+    pytest.param('master', marks=pytest.mark.xfail(
+        reason="Memory error on master isn't deterministic"
+    )),
+    'service'
+])
 def test_memory_limit_exceeded(kind, client):
     resources = skein.Resources(memory=32, vcores=1)
     # Allocate noticeably more memory than the 32 MB limit
