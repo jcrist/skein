@@ -338,16 +338,21 @@ def test_get_applications(client, at_least_3_apps_in_history):
     all_expected = [a for a in all_apps if a.user == 'testuser' and a.queue == 'default']
     assert all_expected
 
+    def assert_eq(a, b):
+        a = set(i.id for i in a)
+        b = set(i.id for i in b)
+        assert a == b
+
     # Filter on user and queue to show identical
     common = {'states': all_states, 'user': 'testuser', 'queue': 'default'}
     res = client.get_applications(**common)
-    assert res == all_expected
+    assert_eq(res, all_expected)
 
     # Filter on name as well
     app_name = all_expected[0].name
     sol = [a for a in all_expected if a.name == app_name]
     res = client.get_applications(name=app_name, **common)
-    assert res == sol
+    assert_eq(res, sol)
 
     # Filter out all apps
     assert not client.get_applications(states=all_states, user='not-a-real-value')
@@ -361,22 +366,22 @@ def test_get_applications(client, at_least_3_apps_in_history):
     # All apps started after start_time
     sol = [a for a in all_expected if a.start_time >= start_time]
     res = client.get_applications(started_begin=start_time, **common)
-    assert res == sol
+    assert_eq(res, sol)
 
     # All apps started before start_time
     sol = [a for a in all_expected if a.start_time <= start_time]
     res = client.get_applications(started_end=start_time, **common)
-    assert res == sol
+    assert_eq(res, sol)
 
     # All apps finished after finish_time
     sol = [a for a in all_expected if a.finish_time >= finish_time]
     res = client.get_applications(finished_begin=finish_time, **common)
-    assert res == sol
+    assert_eq(res, sol)
 
     # All apps finished before finish_time
     sol = [a for a in all_expected if a.finish_time <= finish_time]
     res = client.get_applications(finished_end=finish_time, **common)
-    assert res == sol
+    assert_eq(res, sol)
 
     # Check time parsing
     t = datetime.datetime.now()
@@ -398,7 +403,7 @@ def test_get_applications(client, at_least_3_apps_in_history):
     res = client.get_applications(
         finished_end=finish_time.strftime('%Y-%m-%d %H:%M:%S'), **common
     )
-    assert res == sol
+    assert_eq(res, sol)
 
     with pytest.raises(TypeError) as exc:
         res = client.get_applications(finished_end=123)
@@ -636,6 +641,61 @@ def test_dynamic_containers(client):
             app.get_containers(services=['sleeper', 'missing'])
 
         app.shutdown()
+
+
+def test_add_container(client):
+    script = ('echo "$SKEIN_CONTAINER_ID - MYENV=$MYENV"\n'
+              'echo "$SKEIN_CONTAINER_ID - MYENV2=$MYENV2"\n'
+              'if [[ "$MYENV" == "bar" ]]; then\n'
+              '  exit 1\n'
+              'else\n'
+              '  exit 0\n'
+              'fi')
+
+    spec = skein.ApplicationSpec(
+        name="test_add_container",
+        master=skein.Master(script="sleep infinity"),
+        services={
+            'test': skein.Service(
+                instances=0,
+                resources=skein.Resources(memory=32, vcores=1),
+                env={'MYENV': 'foo',
+                     'MYENV2': 'baz'},
+                max_restarts=1,
+                script=script
+            )
+        }
+    )
+
+    with run_application(client, spec=spec) as app:
+        # Add container with new overrides
+        c = app.add_container('test')
+        assert c.instance == 0
+        wait_for_containers(app, 1, states=['RUNNING', 'SUCCEEDED'])
+
+        # Non-existant service
+        with pytest.raises(ValueError):
+            app.add_container('foobar')
+
+        # Add container with override for MYENV
+        c = app.add_container('test', {'MYENV': 'bar'})
+        assert c.instance == 1
+
+        # The new env var triggers a failure, should fail twice,
+        # then fail the whole application
+        assert wait_for_completion(client, app.id) == 'FAILED'
+
+    logs = get_logs(app.id)
+    assert "test_0 - MYENV=foo" in logs
+    assert "test_0 - MYENV2=baz" in logs
+
+    assert "test_1 - MYENV=bar" in logs
+    assert "test_1 - MYENV2=baz" in logs
+
+    assert "test_2 - MYENV=bar" in logs
+    assert "test_2 - MYENV2=baz" in logs
+
+    assert "test_3" not in logs
 
 
 @pytest.mark.parametrize('runon', ['service', 'master'])
