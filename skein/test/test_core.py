@@ -638,6 +638,61 @@ def test_dynamic_containers(client):
         app.shutdown()
 
 
+def test_add_container(client):
+    script = ('echo "$SKEIN_CONTAINER_ID - MYENV=$MYENV"\n'
+              'echo "$SKEIN_CONTAINER_ID - MYENV2=$MYENV2"\n'
+              'if [[ "$MYENV" == "bar" ]]; then\n'
+              '  exit 1\n'
+              'else\n'
+              '  exit 0\n'
+              'fi')
+
+    spec = skein.ApplicationSpec(
+        name="test_add_container",
+        master=skein.Master(script="sleep infinity"),
+        services={
+            'test': skein.Service(
+                instances=0,
+                resources=skein.Resources(memory=32, vcores=1),
+                env={'MYENV': 'foo',
+                     'MYENV2': 'baz'},
+                max_restarts=1,
+                script=script
+            )
+        }
+    )
+
+    with run_application(client, spec=spec) as app:
+        # Add container with new overrides
+        c = app.add_container('test')
+        assert c.instance == 0
+        wait_for_containers(app, 1, states=['RUNNING', 'SUCCEEDED'])
+
+        # Non-existant service
+        with pytest.raises(ValueError):
+            app.add_container('foobar')
+
+        # Add container with override for MYENV
+        c = app.add_container('test', {'MYENV': 'bar'})
+        assert c.instance == 1
+
+        # The new env var triggers a failure, should fail twice,
+        # then fail the whole application
+        assert wait_for_completion(client, app.id) == 'FAILED'
+
+    logs = get_logs(app.id)
+    assert "test_0 - MYENV=foo" in logs
+    assert "test_0 - MYENV2=baz" in logs
+
+    assert "test_1 - MYENV=bar" in logs
+    assert "test_1 - MYENV2=baz" in logs
+
+    assert "test_2 - MYENV=bar" in logs
+    assert "test_2 - MYENV2=baz" in logs
+
+    assert "test_3" not in logs
+
+
 @pytest.mark.parametrize('runon', ['service', 'master'])
 def test_container_environment(runon, client, has_kerberos_enabled):
     script = ('set -e\n'

@@ -398,6 +398,7 @@ public class Model {
     private String serviceName;
     private int instance;
     private State state;
+    private Map<String, String> env;
     private Resource resources;
     private ContainerId yarnContainerId;
     private NodeId yarnNodeId;
@@ -410,10 +411,12 @@ public class Model {
 
     public Container() {}
 
-    public Container(String serviceName, int instance, State state) {
+    public Container(String serviceName, int instance, State state,
+                     Map<String, String> env) {
       this.serviceName = serviceName;
       this.instance = instance;
       this.state = state;
+      this.env = env;
       this.yarnContainerId = null;
       this.startTime = 0;
       this.finishTime = 0;
@@ -436,6 +439,9 @@ public class Model {
 
     public void setState(State state) { this.state = state; }
     public State getState() { return state; }
+
+    public void setEnv(Map<String, String> env) { this.env = env; }
+    public Map<String, String> getEnv() { return env; }
 
     public boolean completed() {
       switch (state) {

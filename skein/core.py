@@ -965,6 +965,30 @@ class ApplicationClient(_ClientBase):
         resp = self._call('scale', req)
         return [Container.from_protobuf(c) for c in resp.containers]
 
+    def add_container(self, service, env=None):
+        """Add a new container to a service.
+
+        Unlike ``scale``, this adds the ability to override configuration of
+        the requested container.
+
+        Parameters
+        ----------
+        service : str
+            The service to scale.
+        env : dict, optional
+            A mapping of environment variables to set in the container. These
+            will be applied after any environment variables set in the service
+            description, and can be used as overrides.
+
+        Returns
+        -------
+        container : Container
+            The new container that was started.
+        """
+        req = proto.AddContainerRequest(service_name=service, env=env)
+        resp = self._call('addContainer', req)
+        return Container.from_protobuf(resp)
+
     def set_progress(self, progress):
         """Update the progress for this application.
 

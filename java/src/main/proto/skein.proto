@@ -349,6 +349,8 @@ service AppMaster {
 
   rpc scale (ScaleRequest) returns (ContainersResponse);
 
+  rpc addContainer (AddContainerRequest) returns (Container);
+
   rpc SetProgress (SetProgressRequest) returns (Empty);
 
   rpc AddProxy (Proxy) returns (Empty);
@@ -541,6 +543,12 @@ message ScaleRequest {
   string service_name = 1;
   int32 count = 2;
   int32 delta = 3;
+}
+
+
+message AddContainerRequest {
+  string service_name = 1;
+  map<string, string> env = 2;
 }
 
 

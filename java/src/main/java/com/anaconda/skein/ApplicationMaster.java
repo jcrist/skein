@@ -1111,16 +1111,22 @@ public class ApplicationMaster {
       LOG.info("REQUESTED: {}", container.getId());
     }
 
-    public synchronized Model.Container addContainer() {
+    public Model.Container addContainer() {
+      return addContainer(Collections.<String, String>emptyMap());
+    }
+
+    public synchronized Model.Container addContainer(Map<String, String> env) {
       Model.Container container;
       if (!isReady()) {
         container = new Model.Container(name, containers.size(),
-                                        Model.Container.State.WAITING);
+                                        Model.Container.State.WAITING,
+                                        env);
         waiting.add(container.getInstance());
         LOG.info("WAITING: {}", container.getId());
       } else {
         container = new Model.Container(name, containers.size(),
-                                        Model.Container.State.REQUESTED);
+                                        Model.Container.State.REQUESTED,
+                                        env);
         requestContainer(container);
       }
       containers.add(container);
@@ -1180,6 +1186,7 @@ public class ApplicationMaster {
 
         // Update container environment variables
         Map<String, String> env = new HashMap<String, String>(service.getEnv());
+        env.putAll(newContainer.getEnv());
         updateServiceEnvironment(env, resource, newContainer.getId());
         if (!UserGroupInformation.isSecurityEnabled()) {
           // Add HADOOP_USER_NAME to environment for *simple* authentication only
@@ -1313,7 +1320,7 @@ public class ApplicationMaster {
             numRestarted += 1;
             LOG.info("RESTARTING: adding new container to replace {}.",
                      container.getId());
-            addContainer();
+            addContainer(container.getEnv());
           }
 
           if (isFinished() || isFailed()) {
@@ -1485,6 +1492,25 @@ public class ApplicationMaster {
         }
       }
       resp.onNext(msg.build());
+      resp.onCompleted();
+    }
+
+    @Override
+    public void addContainer(Msg.AddContainerRequest req,
+        StreamObserver<Msg.Container> resp) {
+
+      String service = req.getServiceName();
+      if (!checkService(service, resp)) {
+        return;
+      }
+
+      ServiceTracker tracker = services.get(service);
+      Msg.Container msg;
+      synchronized (tracker) {
+        Model.Container container = tracker.addContainer(req.getEnvMap());
+        msg = MsgUtils.writeContainer(container);
+      }
+      resp.onNext(msg);
       resp.onCompleted();
     }
 
