@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>API Docs &#8212; Skein 0.7.2 documentation</title>
+    <title>API Docs &#8212; Skein 0.7.2+1.gabadaf9 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -458,6 +458,32 @@ application master.  Defaults to the global configuration.</p>
 </dl>
 </dd>
 </dl>
+<dl class="method">
+<dt id="skein.ApplicationClient.add_container">
+<code class="descname">add_container</code><span class="sig-paren">(</span><em>self</em>, <em>service</em>, <em>env=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.add_container" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new container to a service.</p>
+<p>Unlike <code class="docutils literal notranslate"><span class="pre">scale</span></code>, this adds the ability to override configuration of
+the requested container.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>service</strong><span class="classifier">str</span></dt><dd><p>The service to scale.</p>
+</dd>
+<dt><strong>env</strong><span class="classifier">dict, optional</span></dt><dd><p>A mapping of environment variables to set in the container. These
+will be applied after any environment variables set in the service
+description, and can be used as overrides.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>container</strong><span class="classifier">Container</span></dt><dd><p>The new container that was started.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="classmethod">
 <dt id="skein.ApplicationClient.from_current">
 <em class="property">classmethod </em><code class="descname">from_current</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.from_current" title="Permalink to this definition">¶</a></dt>
