@@ -338,16 +338,21 @@ def test_get_applications(client, at_least_3_apps_in_history):
     all_expected = [a for a in all_apps if a.user == 'testuser' and a.queue == 'default']
     assert all_expected
 
+    def assert_eq(a, b):
+        a = set(i.id for i in a)
+        b = set(i.id for i in b)
+        assert a == b
+
     # Filter on user and queue to show identical
     common = {'states': all_states, 'user': 'testuser', 'queue': 'default'}
     res = client.get_applications(**common)
-    assert res == all_expected
+    assert_eq(res, all_expected)
 
     # Filter on name as well
     app_name = all_expected[0].name
     sol = [a for a in all_expected if a.name == app_name]
     res = client.get_applications(name=app_name, **common)
-    assert res == sol
+    assert_eq(res, sol)
 
     # Filter out all apps
     assert not client.get_applications(states=all_states, user='not-a-real-value')
@@ -361,22 +366,22 @@ def test_get_applications(client, at_least_3_apps_in_history):
     # All apps started after start_time
     sol = [a for a in all_expected if a.start_time >= start_time]
     res = client.get_applications(started_begin=start_time, **common)
-    assert res == sol
+    assert_eq(res, sol)
 
     # All apps started before start_time
     sol = [a for a in all_expected if a.start_time <= start_time]
     res = client.get_applications(started_end=start_time, **common)
-    assert res == sol
+    assert_eq(res, sol)
 
     # All apps finished after finish_time
     sol = [a for a in all_expected if a.finish_time >= finish_time]
     res = client.get_applications(finished_begin=finish_time, **common)
-    assert res == sol
+    assert_eq(res, sol)
 
     # All apps finished before finish_time
     sol = [a for a in all_expected if a.finish_time <= finish_time]
     res = client.get_applications(finished_end=finish_time, **common)
-    assert res == sol
+    assert_eq(res, sol)
 
     # Check time parsing
     t = datetime.datetime.now()
@@ -398,7 +403,7 @@ def test_get_applications(client, at_least_3_apps_in_history):
     res = client.get_applications(
         finished_end=finish_time.strftime('%Y-%m-%d %H:%M:%S'), **common
     )
-    assert res == sol
+    assert_eq(res, sol)
 
     with pytest.raises(TypeError) as exc:
         res = client.get_applications(finished_end=123)
