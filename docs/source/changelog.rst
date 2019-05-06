@@ -4,6 +4,13 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.7.3 (May 6, 2019)
+------------------------------
+
+- Add ``ApplicationClient.add_container``, providing the ability to add a
+  container to a service with optional service configuration overrides
+  (:pr:`174`)
+
 Version 0.7.2 (May 2, 2019)
 ------------------------------
 
