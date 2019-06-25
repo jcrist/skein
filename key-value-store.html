@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Key-Value Store &#8212; Skein 0.7.3 documentation</title>
+    <title>Key-Value Store &#8212; Skein 0.7.3+1.gf0dc339 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -242,7 +242,7 @@ cases of range operations (since <code class="docutils literal notranslate"><spa
 provides a larger set of methods for common operations. Each of these runs as a
 single atomic transaction, and most have variations for a single key, a range
 of keys, or a key prefix.</p>
-<table class="longtable docutils align-center">
+<table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
 <col style="width: 90%" />
@@ -410,7 +410,7 @@ to False.</p></li>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">Condition</span></code> objects are prechecks on the state of the key-value store.
 They can check for the existance or absence of a key, as well as comparisons
 (equality or order) on the value or owner corresponding with a key.</p>
-<table class="longtable docutils align-center">
+<table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
 <col style="width: 90%" />
@@ -460,7 +460,7 @@ They can check for the existance or absence of a key, as well as comparisons
 These coincide with the <a class="reference internal" href="#additional-methods">Additional Methods</a> described above - for every
 method on the <a class="reference internal" href="api.html#skein.kv.KeyValueStore" title="skein.kv.KeyValueStore"><code class="xref py py-class docutils literal notranslate"><span class="pre">KeyValueStore</span></code></a> there is an identical operation in the
 <code class="xref py py-mod docutils literal notranslate"><span class="pre">skein.kv</span></code> namespace.</p>
-<table class="longtable docutils align-center">
+<table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
 <col style="width: 90%" />
@@ -552,7 +552,7 @@ method on the <a class="reference internal" href="api.html#skein.kv.KeyValueStor
 <p>Skein provides a way for clients to subscribe to a range (or ranges) of keys
 for changes. This can be useful for waiting for certain keys to be set, or
 creating larger abstractions for coordinating workers like locks or semaphores.</p>
-<table class="longtable docutils align-center">
+<table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
 <col style="width: 90%" />
@@ -849,10 +849,10 @@ we provide a simple recipe for an atomic shared counter.</p>
   Open an issue in the <a href="https://github.com/jcrist/skein/issues">issue tracker</a>.
 </p>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
       <input type="submit" value="Go" />
     </form>
     </div>

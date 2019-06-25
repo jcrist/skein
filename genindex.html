@@ -5,7 +5,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Index &#8212; Skein 0.7.3 documentation</title>
+    <title>Index &#8212; Skein 0.7.3+1.gf0dc339 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -336,13 +336,13 @@
 </li>
       <li><a href="api.html#skein.ui.WebUI.add_page">add_page() (skein.ui.WebUI method)</a>
 </li>
-      <li><a href="api.html#skein.ui.ProxiedPage.address">address (skein.ui.ProxiedPage attribute)</a>
+      <li><a href="api.html#skein.ui.ProxiedPage.address">address() (skein.ui.ProxiedPage property)</a>
 
       <ul>
-        <li><a href="api.html#skein.ui.WebUI.address">(skein.ui.WebUI attribute)</a>
+        <li><a href="api.html#skein.ui.WebUI.address">(skein.ui.WebUI property)</a>
 </li>
       </ul></li>
-      <li><a href="api.html#skein.ui.WebUI.addresses">addresses (skein.ui.WebUI attribute)</a>
+      <li><a href="api.html#skein.ui.WebUI.addresses">addresses() (skein.ui.WebUI property)</a>
 </li>
       <li>
     app_id
@@ -399,14 +399,18 @@
 </li>
       <li><a href="api.html#skein.Client">Client (class in skein)</a>
 </li>
-      <li><a href="api.html#skein.Client.close">close() (skein.Client method)</a>
+      <li><a href="api.html#skein.ApplicationClient.close">close() (skein.ApplicationClient method)</a>
+
+      <ul>
+        <li><a href="api.html#skein.Client.close">(skein.Client method)</a>
 </li>
+      </ul></li>
       <li><a href="api.html#skein.kv.comparison">comparison (class in skein.kv)</a>
-</li>
-      <li><a href="api.html#skein.Client.connect">connect() (skein.Client method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#skein.Client.connect">connect() (skein.Client method)</a>
+</li>
       <li><a href="api.html#skein.ConnectionError">ConnectionError</a>
 </li>
       <li><a href="api.html#skein.model.Container">Container (class in skein.model)</a>
@@ -611,7 +615,7 @@
 <h2 id="H">H</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#skein.model.NodeReport.host">host (skein.model.NodeReport attribute)</a>
+      <li><a href="api.html#skein.model.NodeReport.host">host() (skein.model.NodeReport property)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -619,7 +623,7 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#skein.model.Container.id">id (skein.model.Container attribute)</a>
+      <li><a href="api.html#skein.model.Container.id">id() (skein.model.Container property)</a>
 </li>
       <li><a href="api.html#skein.kv.is_condition">is_condition() (in module skein.kv)</a>
 </li>
@@ -721,13 +725,13 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#skein.model.NodeReport.port">port (skein.model.NodeReport attribute)</a>
+      <li><a href="api.html#skein.model.NodeReport.port">port() (skein.model.NodeReport property)</a>
 </li>
       <li><a href="api.html#skein.properties">properties (in module skein)</a>
 </li>
       <li><a href="api.html#skein.ui.ProxiedPage">ProxiedPage (class in skein.ui)</a>
 </li>
-      <li><a href="api.html#skein.ui.WebUI.proxy_prefix">proxy_prefix (skein.ui.WebUI attribute)</a>
+      <li><a href="api.html#skein.ui.WebUI.proxy_prefix">proxy_prefix() (skein.ui.WebUI property)</a>
 </li>
       <li><a href="api.html#skein.kv.put">put (class in skein.kv)</a>
 </li>
@@ -770,10 +774,10 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#skein.model.ResourceUsageReport">ResourceUsageReport (class in skein.model)</a>
 </li>
-      <li><a href="api.html#skein.model.ApplicationReport.runtime">runtime (skein.model.ApplicationReport attribute)</a>
+      <li><a href="api.html#skein.model.ApplicationReport.runtime">runtime() (skein.model.ApplicationReport property)</a>
 
       <ul>
-        <li><a href="api.html#skein.model.Container.runtime">(skein.model.Container attribute)</a>
+        <li><a href="api.html#skein.model.Container.runtime">(skein.model.Container property)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -1318,10 +1322,10 @@
   Open an issue in the <a href="https://github.com/jcrist/skein/issues">issue tracker</a>.
 </p>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
       <input type="submit" value="Go" />
     </form>
     </div>

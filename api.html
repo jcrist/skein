@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>API Docs &#8212; Skein 0.7.3 documentation</title>
+    <title>API Docs &#8212; Skein 0.7.3+1.gf0dc339 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -39,7 +39,7 @@
 <h2>Client<a class="headerlink" href="#client" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="skein.Client">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Client</code><span class="sig-paren">(</span><em>address=None</em>, <em>security=None</em>, <em>keytab=None</em>, <em>principal=None</em>, <em>log=None</em>, <em>log_level=None</em>, <em>java_options=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">Client</code><span class="sig-paren">(</span><em class="sig-param">address=None</em>, <em class="sig-param">security=None</em>, <em class="sig-param">keytab=None</em>, <em class="sig-param">principal=None</em>, <em class="sig-param">log=None</em>, <em class="sig-param">log_level=None</em>, <em class="sig-param">java_options=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connect to and schedule applications on the YARN cluster.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -79,7 +79,7 @@ configured by setting the environment variable
 </div>
 <dl class="method">
 <dt id="skein.Client.application_report">
-<code class="descname">application_report</code><span class="sig-paren">(</span><em>self</em>, <em>app_id</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.application_report" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">application_report</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">app_id</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.application_report" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a report on the status of a skein application.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -103,13 +103,14 @@ configured by setting the environment variable
 
 <dl class="method">
 <dt id="skein.Client.close">
-<code class="descname">close</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.close" title="Permalink to this definition">¶</a></dt>
-<dd><p>Closes the java driver if started by this client. No-op otherwise.</p>
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Release all resources used by this client. Idempotent.</p>
+<p>Note that this closes the Java driver if it was started by this client.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Client.connect">
-<code class="descname">connect</code><span class="sig-paren">(</span><em>self</em>, <em>app_id</em>, <em>wait=True</em>, <em>security=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.connect" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">connect</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">app_id</em>, <em class="sig-param">wait=True</em>, <em class="sig-param">security=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.connect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connect to a running application.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -139,15 +140,15 @@ application master. Defaults to the global configuration.</p>
 </dl>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Client.from_global_driver">
-<em class="property">classmethod </em><code class="descname">from_global_driver</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.from_global_driver" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_global_driver</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.from_global_driver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connect to the global driver.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Client.get_all_queues">
-<code class="descname">get_all_queues</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_all_queues" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_all_queues</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_all_queues" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get information about all queues in the cluster.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -168,7 +169,7 @@ application master. Defaults to the global configuration.</p>
 
 <dl class="method">
 <dt id="skein.Client.get_applications">
-<code class="descname">get_applications</code><span class="sig-paren">(</span><em>self</em>, <em>states=None</em>, <em>name=None</em>, <em>user=None</em>, <em>queue=None</em>, <em>started_begin=None</em>, <em>started_end=None</em>, <em>finished_begin=None</em>, <em>finished_end=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_applications" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_applications</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">states=None</em>, <em class="sig-param">name=None</em>, <em class="sig-param">user=None</em>, <em class="sig-param">queue=None</em>, <em class="sig-param">started_begin=None</em>, <em class="sig-param">started_end=None</em>, <em class="sig-param">finished_begin=None</em>, <em class="sig-param">finished_end=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_applications" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the status of current skein applications.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters</dt>
@@ -230,7 +231,7 @@ Can be either a datetime or a string representation of one.</p>
 
 <dl class="method">
 <dt id="skein.Client.get_child_queues">
-<code class="descname">get_child_queues</code><span class="sig-paren">(</span><em>self</em>, <em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_child_queues" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_child_queues</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">name</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_child_queues" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get information about all children of a parent queue.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -255,7 +256,7 @@ Can be either a datetime or a string representation of one.</p>
 
 <dl class="method">
 <dt id="skein.Client.get_nodes">
-<code class="descname">get_nodes</code><span class="sig-paren">(</span><em>self</em>, <em>states=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_nodes" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">states=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_nodes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the status of nodes in the cluster.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -282,7 +283,7 @@ is all states.</p>
 
 <dl class="method">
 <dt id="skein.Client.get_queue">
-<code class="descname">get_queue</code><span class="sig-paren">(</span><em>self</em>, <em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_queue" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_queue</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">name</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.get_queue" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get information about a queue.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -306,7 +307,7 @@ is all states.</p>
 
 <dl class="method">
 <dt id="skein.Client.kill_application">
-<code class="descname">kill_application</code><span class="sig-paren">(</span><em>self</em>, <em>app_id</em>, <em>user=''</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.kill_application" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">kill_application</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">app_id</em>, <em class="sig-param">user=''</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.kill_application" title="Permalink to this definition">¶</a></dt>
 <dd><p>Kill an application.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -323,7 +324,7 @@ have permissions to proxy as <code class="docutils literal notranslate"><span cl
 
 <dl class="method">
 <dt id="skein.Client.move_application">
-<code class="descname">move_application</code><span class="sig-paren">(</span><em>self</em>, <em>app_id</em>, <em>queue</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.move_application" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">move_application</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">app_id</em>, <em class="sig-param">queue</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.move_application" title="Permalink to this definition">¶</a></dt>
 <dd><p>Move an application to a different queue.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -337,9 +338,9 @@ have permissions to proxy as <code class="docutils literal notranslate"><span cl
 </dl>
 </dd></dl>
 
-<dl class="staticmethod">
+<dl class="method">
 <dt id="skein.Client.start_global_driver">
-<em class="property">static </em><code class="descname">start_global_driver</code><span class="sig-paren">(</span><em>keytab=None</em>, <em>principal=None</em>, <em>log=None</em>, <em>log_level=None</em>, <em>java_options=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.start_global_driver" title="Permalink to this definition">¶</a></dt>
+<em class="property">static </em><code class="sig-name descname">start_global_driver</code><span class="sig-paren">(</span><em class="sig-param">keytab=None</em>, <em class="sig-param">principal=None</em>, <em class="sig-param">log=None</em>, <em class="sig-param">log_level=None</em>, <em class="sig-param">java_options=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.start_global_driver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Start the global driver.</p>
 <p>No-op if the global driver is already running.</p>
 <dl class="field-list simple">
@@ -373,9 +374,9 @@ configured by setting the environment variable
 </dl>
 </dd></dl>
 
-<dl class="staticmethod">
+<dl class="method">
 <dt id="skein.Client.stop_global_driver">
-<em class="property">static </em><code class="descname">stop_global_driver</code><span class="sig-paren">(</span><em>force=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.stop_global_driver" title="Permalink to this definition">¶</a></dt>
+<em class="property">static </em><code class="sig-name descname">stop_global_driver</code><span class="sig-paren">(</span><em class="sig-param">force=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.stop_global_driver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Stops the global driver if running.</p>
 <p>No-op if no global driver is running.</p>
 <dl class="field-list simple">
@@ -392,7 +393,7 @@ driver PID is actually a skein driver. Setting <code class="docutils literal not
 
 <dl class="method">
 <dt id="skein.Client.submit">
-<code class="descname">submit</code><span class="sig-paren">(</span><em>self</em>, <em>spec</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.submit" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">submit</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">spec</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.submit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Submit a new skein application.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -414,7 +415,7 @@ dictionary description of an application specification.</p>
 
 <dl class="method">
 <dt id="skein.Client.submit_and_connect">
-<code class="descname">submit_and_connect</code><span class="sig-paren">(</span><em>self</em>, <em>spec</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.submit_and_connect" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">submit_and_connect</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">spec</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.submit_and_connect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Submit a new skein application, and wait to connect to it.</p>
 <p>If an error occurs before the application connects, the application is
 killed.</p>
@@ -442,7 +443,7 @@ dictionary description of an application specification.</p>
 <h2>Application Client<a class="headerlink" href="#application-client" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="skein.ApplicationClient">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">ApplicationClient</code><span class="sig-paren">(</span><em>address</em>, <em>app_id</em>, <em>security=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">ApplicationClient</code><span class="sig-paren">(</span><em class="sig-param">address</em>, <em class="sig-param">app_id</em>, <em class="sig-param">security=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient" title="Permalink to this definition">¶</a></dt>
 <dd><p>A client for the application master.</p>
 <p>Used to interact with a running application.</p>
 <dl class="field-list simple">
@@ -460,7 +461,7 @@ application master.  Defaults to the global configuration.</p>
 </dl>
 <dl class="method">
 <dt id="skein.ApplicationClient.add_container">
-<code class="descname">add_container</code><span class="sig-paren">(</span><em>self</em>, <em>service</em>, <em>env=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.add_container" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_container</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">service</em>, <em class="sig-param">env=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.add_container" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a new container to a service.</p>
 <p>Unlike <code class="docutils literal notranslate"><span class="pre">scale</span></code>, this adds the ability to override configuration of
 the requested container.</p>
@@ -484,9 +485,17 @@ description, and can be used as overrides.</p>
 </dl>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
+<dt id="skein.ApplicationClient.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Release all resources used by this client. Idempotent.</p>
+<p>Note that this only frees resources used by the client, it doesn’t
+shutdown the application itself. For that see <code class="docutils literal notranslate"><span class="pre">shutdown</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="skein.ApplicationClient.from_current">
-<em class="property">classmethod </em><code class="descname">from_current</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.from_current" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_current</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.from_current" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an application client from within a running container.</p>
 <p>Useful for connecting to the application master from a running
 container in a application.</p>
@@ -494,7 +503,7 @@ container in a application.</p>
 
 <dl class="method">
 <dt id="skein.ApplicationClient.get_containers">
-<code class="descname">get_containers</code><span class="sig-paren">(</span><em>self</em>, <em>services=None</em>, <em>states=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.get_containers" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_containers</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">services=None</em>, <em class="sig-param">states=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.get_containers" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get information on containers in this application.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -517,7 +526,7 @@ Default is <code class="docutils literal notranslate"><span class="pre">['WAITIN
 
 <dl class="method">
 <dt id="skein.ApplicationClient.get_specification">
-<code class="descname">get_specification</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.get_specification" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_specification</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.get_specification" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the specification for the running application.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -530,7 +539,7 @@ Default is <code class="docutils literal notranslate"><span class="pre">['WAITIN
 
 <dl class="method">
 <dt id="skein.ApplicationClient.kill_container">
-<code class="descname">kill_container</code><span class="sig-paren">(</span><em>self</em>, <em>id</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.kill_container" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">kill_container</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">id</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.kill_container" title="Permalink to this definition">¶</a></dt>
 <dd><p>Kill a container.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -544,7 +553,7 @@ Default is <code class="docutils literal notranslate"><span class="pre">['WAITIN
 
 <dl class="attribute">
 <dt id="skein.ApplicationClient.kv">
-<code class="descname">kv</code><a class="headerlink" href="#skein.ApplicationClient.kv" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">kv</code><a class="headerlink" href="#skein.ApplicationClient.kv" title="Permalink to this definition">¶</a></dt>
 <dd><p>The Skein Key-Value store.</p>
 <p>Used by applications to coordinate configuration and global state.</p>
 <p>This implements the standard MutableMapping interface, along with the
@@ -568,7 +577,7 @@ client. This is useful for inter-service synchronization.</p>
 
 <dl class="method">
 <dt id="skein.ApplicationClient.scale">
-<code class="descname">scale</code><span class="sig-paren">(</span><em>self</em>, <em>service</em>, <em>count=None</em>, <em>delta=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.scale" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">scale</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">service</em>, <em class="sig-param">count=None</em>, <em class="sig-param">delta=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.scale" title="Permalink to this definition">¶</a></dt>
 <dd><p>Scale a service to a requested number of instances.</p>
 <p>Adds or removes containers to match the requested number of instances.
 The number of instances for the service can be specified either as a
@@ -603,7 +612,7 @@ otherwise it will do nothing.</p>
 
 <dl class="method">
 <dt id="skein.ApplicationClient.set_progress">
-<code class="descname">set_progress</code><span class="sig-paren">(</span><em>self</em>, <em>progress</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.set_progress" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">set_progress</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">progress</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.set_progress" title="Permalink to this definition">¶</a></dt>
 <dd><p>Update the progress for this application.</p>
 <p>For applications processing a fixed set of work it may be useful for
 diagnostics to set the progress as the application processes.</p>
@@ -623,7 +632,7 @@ good default value for applications that don’t know their progress,
 
 <dl class="method">
 <dt id="skein.ApplicationClient.shutdown">
-<code class="descname">shutdown</code><span class="sig-paren">(</span><em>self</em>, <em>status='SUCCEEDED'</em>, <em>diagnostics=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.shutdown" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">shutdown</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">status='SUCCEEDED'</em>, <em class="sig-param">diagnostics=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationClient.shutdown" title="Permalink to this definition">¶</a></dt>
 <dd><p>Shutdown the application.</p>
 <p>Stop all running containers and shutdown the application.</p>
 <dl class="field-list simple">
@@ -644,7 +653,7 @@ used.</p>
 
 <dl class="attribute">
 <dt id="skein.ApplicationClient.ui">
-<code class="descname">ui</code><a class="headerlink" href="#skein.ApplicationClient.ui" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">ui</code><a class="headerlink" href="#skein.ApplicationClient.ui" title="Permalink to this definition">¶</a></dt>
 <dd><p>The Skein Web UI.</p>
 <p>Used by applications to register additional web pages, and to get the
 addresses of these pages.</p>
@@ -657,7 +666,7 @@ addresses of these pages.</p>
 <h2>Runtime Properties<a class="headerlink" href="#runtime-properties" title="Permalink to this headline">¶</a></h2>
 <dl class="data">
 <dt id="skein.properties">
-<code class="descclassname">skein.</code><code class="descname">properties</code><em class="property"> = &lt;skein.core.Properties object&gt;</em><a class="headerlink" href="#skein.properties" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">skein.</code><code class="sig-name descname">properties</code><em class="property"> = &lt;skein.core.Properties object&gt;</em><a class="headerlink" href="#skein.properties" title="Permalink to this definition">¶</a></dt>
 <dd><p>Skein runtime properties.</p>
 <p>This class implements an immutable mapping type, exposing properties
 determined at import time.</p>
@@ -692,17 +701,17 @@ not in a container.</p>
 <h2>Key Value Store<a class="headerlink" href="#key-value-store" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="skein.kv.KeyValueStore">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">KeyValueStore</code><span class="sig-paren">(</span><em>client</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">KeyValueStore</code><span class="sig-paren">(</span><em class="sig-param">client</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore" title="Permalink to this definition">¶</a></dt>
 <dd><p>The Skein Key-Value store.</p>
 <p>Used by applications to coordinate configuration and global state.</p>
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.clear">
-<code class="descname">clear</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.clear" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">clear</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.clear" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.count">
-<code class="descname">count</code><span class="sig-paren">(</span><em>self</em>, <em>start=None</em>, <em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.count" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">count</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.count" title="Permalink to this definition">¶</a></dt>
 <dd><p>Count keys in the key-value store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -727,7 +736,7 @@ upper bound will be used.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.discard">
-<code class="descname">discard</code><span class="sig-paren">(</span><em>self</em>, <em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">discard</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard" title="Permalink to this definition">¶</a></dt>
 <dd><p>Discard a single key.</p>
 <p>Returns true if the key was present, false otherwise.</p>
 <dl class="field-list simple">
@@ -747,7 +756,7 @@ upper bound will be used.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.discard_prefix">
-<code class="descname">discard_prefix</code><span class="sig-paren">(</span><em>self</em>, <em>prefix</em>, <em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard_prefix" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">discard_prefix</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">prefix</em>, <em class="sig-param">return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard_prefix" title="Permalink to this definition">¶</a></dt>
 <dd><p>Discard all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</p>
 <p>Returns either the number of keys discarded or a list of those keys,
 depending on the value of <code class="docutils literal notranslate"><span class="pre">return_keys</span></code>.</p>
@@ -771,7 +780,7 @@ Default is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.discard_range">
-<code class="descname">discard_range</code><span class="sig-paren">(</span><em>self</em>, <em>start=None</em>, <em>end=None</em>, <em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard_range" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">discard_range</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.discard_range" title="Permalink to this definition">¶</a></dt>
 <dd><p>Discard a range of keys.</p>
 <p>Returns either the number of keys discarded or a list of those keys,
 depending on the value of <code class="docutils literal notranslate"><span class="pre">return_keys</span></code>.</p>
@@ -799,7 +808,7 @@ Default is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.event_queue">
-<code class="descname">event_queue</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.event_queue" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">event_queue</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.event_queue" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a new EventQueue subscribed to no events.</p>
 <p class="rubric">Examples</p>
 <p>Subscribe to events starting with <code class="docutils literal notranslate"><span class="pre">'foo'</span></code> or <code class="docutils literal notranslate"><span class="pre">'bar'</span></code>.</p>
@@ -819,7 +828,7 @@ Default is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.events">
-<code class="descname">events</code><span class="sig-paren">(</span><em>self</em>, <em>event_filter=None</em>, <em>key=None</em>, <em>prefix=None</em>, <em>start=None</em>, <em>end=None</em>, <em>event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.events" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">events</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">event_filter=None</em>, <em class="sig-param">key=None</em>, <em class="sig-param">prefix=None</em>, <em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.events" title="Permalink to this definition">¶</a></dt>
 <dd><p>Shorthand for creating an EventQueue and adding a single filter.</p>
 <p>May provide either an explicit event filter, or provide arguments to
 create a new one and add it to the queue.</p>
@@ -865,7 +874,7 @@ may be provided.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.exists">
-<code class="descname">exists</code><span class="sig-paren">(</span><em>self</em>, <em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.exists" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">exists</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.exists" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check if a key exists in the key-value store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -884,7 +893,7 @@ may be provided.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.get">
-<code class="descname">get</code><span class="sig-paren">(</span><em>self</em>, <em>key</em>, <em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">key</em>, <em class="sig-param">default=None</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the value associated with a single key.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -908,7 +917,7 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.get_prefix">
-<code class="descname">get_prefix</code><span class="sig-paren">(</span><em>self</em>, <em>prefix</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get_prefix" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_prefix</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">prefix</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get_prefix" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -930,7 +939,7 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.get_range">
-<code class="descname">get_range</code><span class="sig-paren">(</span><em>self</em>, <em>start=None</em>, <em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get_range" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_range</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.get_range" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a range of keys.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -956,17 +965,17 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.items">
-<code class="descname">items</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.items" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">items</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.items" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.keys">
-<code class="descname">keys</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.keys" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">keys</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.keys" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.list_keys">
-<code class="descname">list_keys</code><span class="sig-paren">(</span><em>self</em>, <em>start=None</em>, <em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.list_keys" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">list_keys</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.list_keys" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a list of keys in the key-value store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -991,7 +1000,7 @@ upper bound will be used.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.missing">
-<code class="descname">missing</code><span class="sig-paren">(</span><em>self</em>, <em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.missing" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">missing</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.missing" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check if a key is not in the key-value store.</p>
 <p>This is the inverse of <code class="docutils literal notranslate"><span class="pre">exists</span></code>.</p>
 <dl class="field-list simple">
@@ -1011,7 +1020,7 @@ upper bound will be used.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.pop">
-<code class="descname">pop</code><span class="sig-paren">(</span><em>self</em>, <em>key</em>, <em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">pop</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">key</em>, <em class="sig-param">default=None</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove a single key and return its corresponding value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1035,7 +1044,7 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.pop_prefix">
-<code class="descname">pop_prefix</code><span class="sig-paren">(</span><em>self</em>, <em>prefix</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop_prefix" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">pop_prefix</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">prefix</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop_prefix" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>, and return
 their corresponding values.</p>
 <dl class="field-list simple">
@@ -1058,7 +1067,7 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.pop_range">
-<code class="descname">pop_range</code><span class="sig-paren">(</span><em>self</em>, <em>start=None</em>, <em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop_range" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">pop_range</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.pop_range" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove a range of keys and return their corresponding values.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1084,13 +1093,13 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.popitem">
-<code class="descname">popitem</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.popitem" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">popitem</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.popitem" title="Permalink to this definition">¶</a></dt>
 <dd><p>as a 2-tuple; but raise KeyError if D is empty.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.put">
-<code class="descname">put</code><span class="sig-paren">(</span><em>self</em>, <em>key</em>, <em>value=no_change</em>, <em>owner=no_change</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.put" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">put</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">key</em>, <em class="sig-param">value=no_change</em>, <em class="sig-param">owner=no_change</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.put" title="Permalink to this definition">¶</a></dt>
 <dd><p>Assign a value and/or owner for a single key.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1110,7 +1119,7 @@ no owner. Default is to leave value unchanged.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.setdefault">
-<code class="descname">setdefault</code><span class="sig-paren">(</span><em>self</em>, <em>key</em>, <em>default</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.setdefault" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">setdefault</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">key</em>, <em class="sig-param">default</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.setdefault" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the value associated with key, setting it to default if
 not present.</p>
 <p>This transaction happens atomically on the key-value store.</p>
@@ -1133,7 +1142,7 @@ not present.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.swap">
-<code class="descname">swap</code><span class="sig-paren">(</span><em>self</em>, <em>key</em>, <em>value=no_change</em>, <em>owner=no_change</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.swap" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">swap</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">key</em>, <em class="sig-param">value=no_change</em>, <em class="sig-param">owner=no_change</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.swap" title="Permalink to this definition">¶</a></dt>
 <dd><p>Assign a new value and/or owner for a single key, and return the
 previous value.</p>
 <dl class="field-list simple">
@@ -1162,7 +1171,7 @@ is False.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.transaction">
-<code class="descname">transaction</code><span class="sig-paren">(</span><em>self</em>, <em>conditions=None</em>, <em>on_success=None</em>, <em>on_failure=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.transaction" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">transaction</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">conditions=None</em>, <em class="sig-param">on_success=None</em>, <em class="sig-param">on_failure=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.transaction" title="Permalink to this definition">¶</a></dt>
 <dd><p>An atomic transaction on the key-value store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1220,7 +1229,7 @@ conditional expression fails and <code class="docutils literal notranslate"><spa
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.update">
-<code class="descname">update</code><span class="sig-paren">(</span><em>self</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.update" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Update the key-value store with multiple key-value pairs atomically.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1238,12 +1247,12 @@ keys between the two.</p>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.values">
-<code class="descname">values</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.values" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">values</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.values" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="skein.kv.KeyValueStore.wait">
-<code class="descname">wait</code><span class="sig-paren">(</span><em>self</em>, <em>key</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.wait" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">wait</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">key</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.KeyValueStore.wait" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the value associated with a single key, blocking until the key
 exists if not present.</p>
 <dl class="field-list simple">
@@ -1268,7 +1277,7 @@ is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.ValueOwnerPair">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">ValueOwnerPair</code><a class="headerlink" href="#skein.kv.ValueOwnerPair" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">ValueOwnerPair</code><a class="headerlink" href="#skein.kv.ValueOwnerPair" title="Permalink to this definition">¶</a></dt>
 <dd><p>A (value, owner) pair in the key-value store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1284,7 +1293,7 @@ is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.count">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">count</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.count" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">count</code><span class="sig-paren">(</span><em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.count" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to count keys in the key-value store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1304,7 +1313,7 @@ upper bound will be used.</p>
 
 <dl class="class">
 <dt>
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">count</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">count</code><span class="sig-paren">(</span><em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">prefix=None</em><span class="sig-paren">)</span></dt>
 <dd><p>A request to count keys in the key-value store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1324,7 +1333,7 @@ upper bound will be used.</p>
 
 <dl class="class">
 <dt id="skein.kv.list_keys">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">list_keys</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.list_keys" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">list_keys</code><span class="sig-paren">(</span><em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.list_keys" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to get a list of keys in the key-value store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1344,7 +1353,7 @@ upper bound will be used.</p>
 
 <dl class="class">
 <dt id="skein.kv.exists">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">exists</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.exists" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">exists</code><span class="sig-paren">(</span><em class="sig-param">key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.exists" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to check if a key exists in the key-value store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1358,7 +1367,7 @@ upper bound will be used.</p>
 
 <dl class="class">
 <dt id="skein.kv.missing">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">missing</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.missing" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">missing</code><span class="sig-paren">(</span><em class="sig-param">key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.missing" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to check if a key is not in the key-value store.</p>
 <p>This is the inverse of <code class="docutils literal notranslate"><span class="pre">exists</span></code>.</p>
 <dl class="field-list simple">
@@ -1373,7 +1382,7 @@ upper bound will be used.</p>
 
 <dl class="class">
 <dt id="skein.kv.get">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">get</code><span class="sig-paren">(</span><em>key</em>, <em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.get" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">get</code><span class="sig-paren">(</span><em class="sig-param">key</em>, <em class="sig-param">default=None</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to get the value associated with a single key.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1392,7 +1401,7 @@ is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.get_prefix">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">get_prefix</code><span class="sig-paren">(</span><em>prefix</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.get_prefix" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">get_prefix</code><span class="sig-paren">(</span><em class="sig-param">prefix</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.get_prefix" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to get all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1409,7 +1418,7 @@ is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.get_range">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">get_range</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.get_range" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">get_range</code><span class="sig-paren">(</span><em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.get_range" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to get a range of keys.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1430,7 +1439,7 @@ is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.pop">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">pop</code><span class="sig-paren">(</span><em>key</em>, <em>default=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.pop" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">pop</code><span class="sig-paren">(</span><em class="sig-param">key</em>, <em class="sig-param">default=None</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.pop" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to remove a single key and return its corresponding value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1449,7 +1458,7 @@ is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.pop_prefix">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">pop_prefix</code><span class="sig-paren">(</span><em>prefix</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.pop_prefix" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">pop_prefix</code><span class="sig-paren">(</span><em class="sig-param">prefix</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.pop_prefix" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to remove all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>,
 and return their corresponding values.</p>
 <dl class="field-list simple">
@@ -1467,7 +1476,7 @@ is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.pop_range">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">pop_range</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.pop_range" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">pop_range</code><span class="sig-paren">(</span><em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.pop_range" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to remove a range of keys and return their corresponding values.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1488,7 +1497,7 @@ is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.discard">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">discard</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.discard" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">discard</code><span class="sig-paren">(</span><em class="sig-param">key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.discard" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to discard a single key.</p>
 <p>Returns true if the key was present, false otherwise.</p>
 <dl class="field-list simple">
@@ -1503,7 +1512,7 @@ is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.discard_prefix">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">discard_prefix</code><span class="sig-paren">(</span><em>prefix</em>, <em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.discard_prefix" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">discard_prefix</code><span class="sig-paren">(</span><em class="sig-param">prefix</em>, <em class="sig-param">return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.discard_prefix" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to discard all key-value pairs whose keys start with <code class="docutils literal notranslate"><span class="pre">prefix</span></code>.</p>
 <p>Returns either the number of keys discarded or a list of those keys,
 depending on the value of <code class="docutils literal notranslate"><span class="pre">return_keys</span></code>.</p>
@@ -1522,7 +1531,7 @@ Default is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.discard_range">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">discard_range</code><span class="sig-paren">(</span><em>start=None</em>, <em>end=None</em>, <em>return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.discard_range" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">discard_range</code><span class="sig-paren">(</span><em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">return_keys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.discard_range" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to discard a range of keys.</p>
 <p>Returns either the number of keys discarded or a list of those keys,
 depending on the value of <code class="docutils literal notranslate"><span class="pre">return_keys</span></code>.</p>
@@ -1545,7 +1554,7 @@ Default is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.put">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">put</code><span class="sig-paren">(</span><em>key</em>, <em>value=no_change</em>, <em>owner=no_change</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.put" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">put</code><span class="sig-paren">(</span><em class="sig-param">key</em>, <em class="sig-param">value=no_change</em>, <em class="sig-param">owner=no_change</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.put" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to assign a value and/or owner for a single key.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1565,7 +1574,7 @@ no owner. Default is to leave value unchanged.</p>
 
 <dl class="class">
 <dt id="skein.kv.swap">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">swap</code><span class="sig-paren">(</span><em>key</em>, <em>value=no_change</em>, <em>owner=no_change</em>, <em>return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.swap" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">swap</code><span class="sig-paren">(</span><em class="sig-param">key</em>, <em class="sig-param">value=no_change</em>, <em class="sig-param">owner=no_change</em>, <em class="sig-param">return_owner=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.swap" title="Permalink to this definition">¶</a></dt>
 <dd><p>A request to assign a new value and/or owner for a single key, and
 return the previous value.</p>
 <dl class="field-list simple">
@@ -1589,7 +1598,7 @@ is False.</p>
 
 <dl class="class">
 <dt id="skein.kv.TransactionResult">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">TransactionResult</code><a class="headerlink" href="#skein.kv.TransactionResult" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">TransactionResult</code><a class="headerlink" href="#skein.kv.TransactionResult" title="Permalink to this definition">¶</a></dt>
 <dd><p>A result from a key-value store transaction.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1607,7 +1616,7 @@ conditions evaluated to True or False.</p>
 
 <dl class="class">
 <dt id="skein.kv.value">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">value</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.value" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">value</code><span class="sig-paren">(</span><em class="sig-param">key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.value" title="Permalink to this definition">¶</a></dt>
 <dd><p>Represents the value for a key, for use in transaction conditions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1621,7 +1630,7 @@ conditions evaluated to True or False.</p>
 
 <dl class="class">
 <dt id="skein.kv.owner">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">owner</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.owner" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">owner</code><span class="sig-paren">(</span><em class="sig-param">key</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.owner" title="Permalink to this definition">¶</a></dt>
 <dd><p>Represents the owner for a key, for use in transaction conditions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1635,7 +1644,7 @@ conditions evaluated to True or False.</p>
 
 <dl class="class">
 <dt id="skein.kv.comparison">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">comparison</code><span class="sig-paren">(</span><em>key</em>, <em>field</em>, <em>operator</em>, <em>rhs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.comparison" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">comparison</code><span class="sig-paren">(</span><em class="sig-param">key</em>, <em class="sig-param">field</em>, <em class="sig-param">operator</em>, <em class="sig-param">rhs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.comparison" title="Permalink to this definition">¶</a></dt>
 <dd><p>A comparison of the value or owner for a specified key.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1657,19 +1666,19 @@ Must be a <code class="docutils literal notranslate"><span class="pre">bytes</sp
 
 <dl class="function">
 <dt id="skein.kv.is_condition">
-<code class="descclassname">skein.kv.</code><code class="descname">is_condition</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.is_condition" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">is_condition</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.is_condition" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return if <code class="docutils literal notranslate"><span class="pre">x</span></code> is a valid skein key-value store condition</p>
 </dd></dl>
 
 <dl class="function">
 <dt id="skein.kv.is_operation">
-<code class="descclassname">skein.kv.</code><code class="descname">is_operation</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.is_operation" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">is_operation</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.is_operation" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return if <code class="docutils literal notranslate"><span class="pre">obj</span></code> is a valid skein key-value store operation</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="skein.kv.EventType">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">EventType</code><a class="headerlink" href="#skein.kv.EventType" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">EventType</code><a class="headerlink" href="#skein.kv.EventType" title="Permalink to this definition">¶</a></dt>
 <dd><p>Event types to listen on.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Attributes</dt>
@@ -1687,7 +1696,7 @@ Must be a <code class="docutils literal notranslate"><span class="pre">bytes</sp
 
 <dl class="class">
 <dt id="skein.kv.Event">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">Event</code><a class="headerlink" href="#skein.kv.Event" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">Event</code><a class="headerlink" href="#skein.kv.Event" title="Permalink to this definition">¶</a></dt>
 <dd><p>An event in the key-value store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1707,7 +1716,7 @@ Must be a <code class="docutils literal notranslate"><span class="pre">bytes</sp
 
 <dl class="class">
 <dt id="skein.kv.EventFilter">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">EventFilter</code><span class="sig-paren">(</span><em>key=None</em>, <em>prefix=None</em>, <em>start=None</em>, <em>end=None</em>, <em>event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventFilter" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">EventFilter</code><span class="sig-paren">(</span><em class="sig-param">key=None</em>, <em class="sig-param">prefix=None</em>, <em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventFilter" title="Permalink to this definition">¶</a></dt>
 <dd><p>An event filter.</p>
 <p>Specifies a subset of events to watch for. May specify one of <code class="docutils literal notranslate"><span class="pre">key</span></code>,
 <code class="docutils literal notranslate"><span class="pre">prefix</span></code>, or <code class="docutils literal notranslate"><span class="pre">start</span></code>/<code class="docutils literal notranslate"><span class="pre">end</span></code>. If no parameters are
@@ -1732,7 +1741,7 @@ provided, selects all events.</p>
 
 <dl class="class">
 <dt id="skein.kv.EventQueue">
-<em class="property">class </em><code class="descclassname">skein.kv.</code><code class="descname">EventQueue</code><span class="sig-paren">(</span><em>kv</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">EventQueue</code><span class="sig-paren">(</span><em class="sig-param">kv</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue" title="Permalink to this definition">¶</a></dt>
 <dd><p>A queue of events on the key-value store.</p>
 <p>Besides the normal <code class="docutils literal notranslate"><span class="pre">Queue</span></code> interface, also supports iteration.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">):</span>
@@ -1749,7 +1758,7 @@ as a contextmanager to unsubscribe-all on <code class="docutils literal notransl
 <code class="docutils literal notranslate"><span class="pre">unsubscribe_all</span></code>.</p>
 <dl class="method">
 <dt id="skein.kv.EventQueue.get">
-<code class="descname">get</code><span class="sig-paren">(</span><em>self</em>, <em>block=True</em>, <em>timeout=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.get" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">block=True</em>, <em class="sig-param">timeout=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove and return an item from the queue.</p>
 <p>If optional args ‘block’ is true and ‘timeout’ is None (the default),
 block if necessary until an item is available. If ‘timeout’ is
@@ -1762,7 +1771,7 @@ in that case).</p>
 
 <dl class="method">
 <dt id="skein.kv.EventQueue.put">
-<code class="descname">put</code><span class="sig-paren">(</span><em>self</em>, <em>item</em>, <em>block=True</em>, <em>timeout=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.put" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">put</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">item</em>, <em class="sig-param">block=True</em>, <em class="sig-param">timeout=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.put" title="Permalink to this definition">¶</a></dt>
 <dd><p>Put an item into the queue.</p>
 <p>If optional args ‘block’ is true and ‘timeout’ is None (the default),
 block if necessary until a free slot is available. If ‘timeout’ is
@@ -1775,7 +1784,7 @@ is ignored in that case).</p>
 
 <dl class="method">
 <dt id="skein.kv.EventQueue.subscribe">
-<code class="descname">subscribe</code><span class="sig-paren">(</span><em>self</em>, <em>event_filter=None</em>, <em>key=None</em>, <em>prefix=None</em>, <em>start=None</em>, <em>end=None</em>, <em>event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.subscribe" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">subscribe</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">event_filter=None</em>, <em class="sig-param">key=None</em>, <em class="sig-param">prefix=None</em>, <em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.subscribe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Subscribe to an event filter.</p>
 <p>May provide either an explicit event filter, or provide arguments to
 create a new one and add it to the queue. In either case, the event
@@ -1809,7 +1818,7 @@ may be provided.</p>
 
 <dl class="method">
 <dt id="skein.kv.EventQueue.unsubscribe">
-<code class="descname">unsubscribe</code><span class="sig-paren">(</span><em>self</em>, <em>event_filter=None</em>, <em>key=None</em>, <em>prefix=None</em>, <em>start=None</em>, <em>end=None</em>, <em>event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.unsubscribe" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">unsubscribe</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">event_filter=None</em>, <em class="sig-param">key=None</em>, <em class="sig-param">prefix=None</em>, <em class="sig-param">start=None</em>, <em class="sig-param">end=None</em>, <em class="sig-param">event_type=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.unsubscribe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Unsubscribe from an event filter.</p>
 <p>May provide either an explicit event filter, or provide arguments to
 create a new one and add it to the queue.</p>
@@ -1844,7 +1853,7 @@ may be provided.</p>
 
 <dl class="method">
 <dt id="skein.kv.EventQueue.unsubscribe_all">
-<code class="descname">unsubscribe_all</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.unsubscribe_all" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">unsubscribe_all</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue.unsubscribe_all" title="Permalink to this definition">¶</a></dt>
 <dd><p>Unsubscribe from all event filters</p>
 </dd></dl>
 
@@ -1855,26 +1864,26 @@ may be provided.</p>
 <h2>Web UI<a class="headerlink" href="#web-ui" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="skein.ui.WebUI">
-<em class="property">class </em><code class="descclassname">skein.ui.</code><code class="descname">WebUI</code><span class="sig-paren">(</span><em>client</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ui.WebUI" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.ui.</code><code class="sig-name descname">WebUI</code><span class="sig-paren">(</span><em class="sig-param">client</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ui.WebUI" title="Permalink to this definition">¶</a></dt>
 <dd><p>The Skein WebUI.</p>
-<dl class="attribute">
+<dl class="method">
 <dt id="skein.ui.WebUI.proxy_prefix">
-<code class="descname">proxy_prefix</code><a class="headerlink" href="#skein.ui.WebUI.proxy_prefix" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">proxy_prefix</code><a class="headerlink" href="#skein.ui.WebUI.proxy_prefix" title="Permalink to this definition">¶</a></dt>
 <dd><p>The path between the Web UI address and the proxied pages.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="method">
 <dt id="skein.ui.WebUI.addresses">
-<code class="descname">addresses</code><a class="headerlink" href="#skein.ui.WebUI.addresses" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">addresses</code><a class="headerlink" href="#skein.ui.WebUI.addresses" title="Permalink to this definition">¶</a></dt>
 <dd><p>All known addresses of the Web UI.</p>
 <p>In most cases this will be a list of length 1. If YARN is running in
 high availability mode, there may be several available addresses. Use
 the <code class="docutils literal notranslate"><span class="pre">address</span></code> attribute to choose one at random.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="method">
 <dt id="skein.ui.WebUI.address">
-<code class="descname">address</code><a class="headerlink" href="#skein.ui.WebUI.address" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">address</code><a class="headerlink" href="#skein.ui.WebUI.address" title="Permalink to this definition">¶</a></dt>
 <dd><p>The address of the Web UI.</p>
 <p>If YARN is running in high availability mode, a single address is
 chosen at random on first access.</p>
@@ -1882,7 +1891,7 @@ chosen at random on first access.</p>
 
 <dl class="method">
 <dt id="skein.ui.WebUI.add_page">
-<code class="descname">add_page</code><span class="sig-paren">(</span><em>self</em>, <em>route</em>, <em>target</em>, <em>link_name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ui.WebUI.add_page" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_page</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">route</em>, <em class="sig-param">target</em>, <em class="sig-param">link_name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ui.WebUI.add_page" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a new proxied page to the Web UI.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1909,7 +1918,7 @@ to the Web UI. Link names must be unique across the application.</p>
 
 <dl class="method">
 <dt id="skein.ui.WebUI.remove_page">
-<code class="descname">remove_page</code><span class="sig-paren">(</span><em>self</em>, <em>route</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ui.WebUI.remove_page" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">remove_page</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">route</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ui.WebUI.remove_page" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove a proxied page from the Web UI.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1925,7 +1934,7 @@ across the application.</p>
 
 <dl class="method">
 <dt id="skein.ui.WebUI.get_pages">
-<code class="descname">get_pages</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ui.WebUI.get_pages" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_pages</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ui.WebUI.get_pages" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get all registered pages.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -1941,7 +1950,7 @@ across the application.</p>
 
 <dl class="class">
 <dt id="skein.ui.ProxiedPage">
-<em class="property">class </em><code class="descclassname">skein.ui.</code><code class="descname">ProxiedPage</code><span class="sig-paren">(</span><em>route</em>, <em>target</em>, <em>link_name</em>, <em>_ui_address</em>, <em>_proxy_prefix</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ui.ProxiedPage" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.ui.</code><code class="sig-name descname">ProxiedPage</code><span class="sig-paren">(</span><em class="sig-param">route</em>, <em class="sig-param">target</em>, <em class="sig-param">link_name</em>, <em class="sig-param">_ui_address</em>, <em class="sig-param">_proxy_prefix</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ui.ProxiedPage" title="Permalink to this definition">¶</a></dt>
 <dd><p>A page proxied by the Skein Web UI.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Attributes</dt>
@@ -1958,9 +1967,9 @@ still proxied but isn’t linked to in the Web UI.</p>
 </dl>
 </dd>
 </dl>
-<dl class="attribute">
+<dl class="method">
 <dt id="skein.ui.ProxiedPage.address">
-<code class="descname">address</code><a class="headerlink" href="#skein.ui.ProxiedPage.address" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">address</code><a class="headerlink" href="#skein.ui.ProxiedPage.address" title="Permalink to this definition">¶</a></dt>
 <dd><p>The full proxied address to this page</p>
 </dd></dl>
 
@@ -1971,7 +1980,7 @@ still proxied but isn’t linked to in the Web UI.</p>
 <h2>Application Specification<a class="headerlink" href="#application-specification" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="skein.ApplicationSpec">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">ApplicationSpec</code><span class="sig-paren">(</span><em>services=None</em>, <em>master=None</em>, <em>name='skein'</em>, <em>queue='default'</em>, <em>user=''</em>, <em>node_label=''</em>, <em>tags=None</em>, <em>file_systems=None</em>, <em>acls=None</em>, <em>max_attempts=1</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">ApplicationSpec</code><span class="sig-paren">(</span><em class="sig-param">services=None</em>, <em class="sig-param">master=None</em>, <em class="sig-param">name='skein'</em>, <em class="sig-param">queue='default'</em>, <em class="sig-param">user=''</em>, <em class="sig-param">node_label=''</em>, <em class="sig-param">tags=None</em>, <em class="sig-param">file_systems=None</em>, <em class="sig-param">acls=None</em>, <em class="sig-param">max_attempts=1</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec" title="Permalink to this definition">¶</a></dt>
 <dd><p>A complete description of an application.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2010,16 +2019,16 @@ application master during startup. Default is 1.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.ApplicationSpec.from_dict">
-<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.from_dict" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_dict</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.from_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a dict.</p>
 <p>Keys in the dict should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.ApplicationSpec.from_file">
-<em class="property">classmethod </em><code class="descname">from_file</code><span class="sig-paren">(</span><em>path</em>, <em>format='infer'</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.from_file" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_file</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">format='infer'</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.from_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a json or yaml file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2034,34 +2043,34 @@ extension.</p>
 </dl>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.ApplicationSpec.from_json">
-<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.from_json" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.from_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a json string.</p>
 <p>Keys in the json object should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.ApplicationSpec.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.ApplicationSpec.from_yaml">
-<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.from_yaml" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_yaml</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.from_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a yaml string.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.ApplicationSpec.to_dict">
-<code class="descname">to_dict</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.to_dict" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_dict</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.to_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a dict</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.ApplicationSpec.to_file">
-<code class="descname">to_file</code><span class="sig-paren">(</span><em>self</em>, <em>path</em>, <em>format='infer'</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.to_file" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_file</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">path</em>, <em class="sig-param">format='infer'</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.to_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write object to a file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2081,19 +2090,19 @@ output all fields.</p>
 
 <dl class="method">
 <dt id="skein.ApplicationSpec.to_json">
-<code class="descname">to_json</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.to_json" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.to_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a json string</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.ApplicationSpec.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.ApplicationSpec.to_yaml">
-<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.to_yaml" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_yaml</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ApplicationSpec.to_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a yaml string</p>
 </dd></dl>
 
@@ -2101,7 +2110,7 @@ output all fields.</p>
 
 <dl class="class">
 <dt id="skein.LogLevel">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">LogLevel</code><a class="headerlink" href="#skein.LogLevel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">LogLevel</code><a class="headerlink" href="#skein.LogLevel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enum of log levels.</p>
 <p>Corresponds with <code class="docutils literal notranslate"><span class="pre">log4j</span></code> logging levels.</p>
 <dl class="field-list simple">
@@ -2130,9 +2139,9 @@ running.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.LogLevel.values">
-<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.LogLevel.values" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.LogLevel.values" title="Permalink to this definition">¶</a></dt>
 <dd><p>The constants of this enum type, in the order they are declared.</p>
 </dd></dl>
 
@@ -2140,7 +2149,7 @@ running.</p>
 
 <dl class="class">
 <dt id="skein.Master">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Master</code><span class="sig-paren">(</span><em>resources=None</em>, <em>script=''</em>, <em>files=None</em>, <em>env=None</em>, <em>log_level=LogLevel.INFO</em>, <em>log_config=None</em>, <em>security=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">Master</code><span class="sig-paren">(</span><em class="sig-param">resources=None</em>, <em class="sig-param">script=''</em>, <em class="sig-param">files=None</em>, <em class="sig-param">env=None</em>, <em class="sig-param">log_level=LogLevel.INFO</em>, <em class="sig-param">log_config=None</em>, <em class="sig-param">security=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master" title="Permalink to this definition">¶</a></dt>
 <dd><p>Configuration for the Application Master.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2173,53 +2182,53 @@ client.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Master.from_dict">
-<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.from_dict" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_dict</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.from_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a dict.</p>
 <p>Keys in the dict should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Master.from_json">
-<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.from_json" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.from_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a json string.</p>
 <p>Keys in the json object should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Master.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Master.from_yaml">
-<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.from_yaml" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_yaml</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.from_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a yaml string.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Master.to_dict">
-<code class="descname">to_dict</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.to_dict" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_dict</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.to_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a dict</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Master.to_json">
-<code class="descname">to_json</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.to_json" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.to_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a json string</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Master.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Master.to_yaml">
-<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.to_yaml" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_yaml</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Master.to_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a yaml string</p>
 </dd></dl>
 
@@ -2227,7 +2236,7 @@ client.</p>
 
 <dl class="class">
 <dt id="skein.Service">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Service</code><span class="sig-paren">(</span><em>resources=required</em>, <em>script=required</em>, <em>instances=1</em>, <em>files=None</em>, <em>env=None</em>, <em>depends=None</em>, <em>max_restarts=0</em>, <em>allow_failures=False</em>, <em>node_label=''</em>, <em>nodes=None</em>, <em>racks=None</em>, <em>relax_locality=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">Service</code><span class="sig-paren">(</span><em class="sig-param">resources=required</em>, <em class="sig-param">script=required</em>, <em class="sig-param">instances=1</em>, <em class="sig-param">files=None</em>, <em class="sig-param">env=None</em>, <em class="sig-param">depends=None</em>, <em class="sig-param">max_restarts=0</em>, <em class="sig-param">allow_failures=False</em>, <em class="sig-param">node_label=''</em>, <em class="sig-param">nodes=None</em>, <em class="sig-param">racks=None</em>, <em class="sig-param">relax_locality=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service" title="Permalink to this definition">¶</a></dt>
 <dd><p>Description of a Skein service.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2276,53 +2285,53 @@ are strictly enforced. Default is False.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Service.from_dict">
-<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_dict" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_dict</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a dict.</p>
 <p>Keys in the dict should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Service.from_json">
-<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_json" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a json string.</p>
 <p>Keys in the json object should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Service.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Service.from_yaml">
-<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_yaml" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_yaml</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.from_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a yaml string.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Service.to_dict">
-<code class="descname">to_dict</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_dict" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_dict</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a dict</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Service.to_json">
-<code class="descname">to_json</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_json" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a json string</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Service.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Service.to_yaml">
-<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_yaml" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_yaml</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Service.to_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a yaml string</p>
 </dd></dl>
 
@@ -2330,7 +2339,7 @@ are strictly enforced. Default is False.</p>
 
 <dl class="class">
 <dt id="skein.FileType">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">FileType</code><a class="headerlink" href="#skein.FileType" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">FileType</code><a class="headerlink" href="#skein.FileType" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enum of possible file types to distribute with the application.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Attributes</dt>
@@ -2343,9 +2352,9 @@ unarchived in the containers.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.FileType.values">
-<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.FileType.values" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.FileType.values" title="Permalink to this definition">¶</a></dt>
 <dd><p>The constants of this enum type, in the order they are declared.</p>
 </dd></dl>
 
@@ -2353,7 +2362,7 @@ unarchived in the containers.</p>
 
 <dl class="class">
 <dt id="skein.FileVisibility">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">FileVisibility</code><a class="headerlink" href="#skein.FileVisibility" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">FileVisibility</code><a class="headerlink" href="#skein.FileVisibility" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enum of possible file visibilities.</p>
 <p>Determines how the file can be shared between containers.</p>
 <dl class="field-list simple">
@@ -2368,9 +2377,9 @@ unarchived in the containers.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.FileVisibility.values">
-<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.FileVisibility.values" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.FileVisibility.values" title="Permalink to this definition">¶</a></dt>
 <dd><p>The constants of this enum type, in the order they are declared.</p>
 </dd></dl>
 
@@ -2378,7 +2387,7 @@ unarchived in the containers.</p>
 
 <dl class="class">
 <dt id="skein.File">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">File</code><span class="sig-paren">(</span><em>source=required</em>, <em>type='infer'</em>, <em>visibility=FileVisibility.APPLICATION</em>, <em>size=0</em>, <em>timestamp=0</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">File</code><span class="sig-paren">(</span><em class="sig-param">source=required</em>, <em class="sig-param">type='infer'</em>, <em class="sig-param">visibility=FileVisibility.APPLICATION</em>, <em class="sig-param">size=0</em>, <em class="sig-param">timestamp=0</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File" title="Permalink to this definition">¶</a></dt>
 <dd><p>A file/archive to distribute with the service.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2401,53 +2410,53 @@ determined by the file system.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.File.from_dict">
-<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_dict" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_dict</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a dict.</p>
 <p>Keys in the dict should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.File.from_json">
-<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_json" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a json string.</p>
 <p>Keys in the json object should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.File.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.File.from_yaml">
-<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_yaml" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_yaml</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.from_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a yaml string.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.File.to_dict">
-<code class="descname">to_dict</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_dict" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_dict</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a dict</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.File.to_json">
-<code class="descname">to_json</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_json" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a json string</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.File.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.File.to_yaml">
-<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_yaml" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_yaml</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.File.to_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a yaml string</p>
 </dd></dl>
 
@@ -2455,7 +2464,7 @@ determined by the file system.</p>
 
 <dl class="class">
 <dt id="skein.Resources">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Resources</code><span class="sig-paren">(</span><em>memory=required</em>, <em>vcores=required</em>, <em>gpus=0</em>, <em>fpgas=0</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">Resources</code><span class="sig-paren">(</span><em class="sig-param">memory=required</em>, <em class="sig-param">vcores=required</em>, <em class="sig-param">gpus=0</em>, <em class="sig-param">fpgas=0</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources" title="Permalink to this definition">¶</a></dt>
 <dd><p>Resource requests per container.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters</dt>
@@ -2483,53 +2492,53 @@ resource requirements for <code class="docutils literal notranslate"><span class
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Resources.from_dict">
-<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_dict" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_dict</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a dict.</p>
 <p>Keys in the dict should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Resources.from_json">
-<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_json" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a json string.</p>
 <p>Keys in the json object should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Resources.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>msg</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">msg</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Resources.from_yaml">
-<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_yaml" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_yaml</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.from_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a yaml string.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Resources.to_dict">
-<code class="descname">to_dict</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_dict" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_dict</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a dict</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Resources.to_json">
-<code class="descname">to_json</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_json" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a json string</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Resources.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Resources.to_yaml">
-<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_yaml" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_yaml</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Resources.to_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a yaml string</p>
 </dd></dl>
 
@@ -2537,7 +2546,7 @@ resource requirements for <code class="docutils literal notranslate"><span class
 
 <dl class="class">
 <dt id="skein.ACLs">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">ACLs</code><span class="sig-paren">(</span><em>enable=False</em>, <em>view_users=None</em>, <em>view_groups=None</em>, <em>modify_users=None</em>, <em>modify_groups=None</em>, <em>ui_users=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">ACLs</code><span class="sig-paren">(</span><em class="sig-param">enable=False</em>, <em class="sig-param">view_users=None</em>, <em class="sig-param">view_groups=None</em>, <em class="sig-param">modify_users=None</em>, <em class="sig-param">modify_groups=None</em>, <em class="sig-param">ui_users=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Skein Access Control Lists.</p>
 <p>Maps access types to users/groups to provide that access.</p>
 <p>The following access types are supported:</p>
@@ -2602,53 +2611,53 @@ Here we give view access to all users:</p>
 <span class="gp">... </span>                  <span class="n">view_users</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;*&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.ACLs.from_dict">
-<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_dict" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_dict</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a dict.</p>
 <p>Keys in the dict should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.ACLs.from_json">
-<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_json" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a json string.</p>
 <p>Keys in the json object should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.ACLs.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.ACLs.from_yaml">
-<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_yaml" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_yaml</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.from_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a yaml string.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.ACLs.to_dict">
-<code class="descname">to_dict</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_dict" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_dict</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a dict</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.ACLs.to_json">
-<code class="descname">to_json</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_json" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a json string</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.ACLs.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.ACLs.to_yaml">
-<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_yaml" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_yaml</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.ACLs.to_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a yaml string</p>
 </dd></dl>
 
@@ -2656,7 +2665,7 @@ Here we give view access to all users:</p>
 
 <dl class="class">
 <dt id="skein.Security">
-<em class="property">class </em><code class="descclassname">skein.</code><code class="descname">Security</code><span class="sig-paren">(</span><em>cert_file=None</em>, <em>key_file=None</em>, <em>cert_bytes=None</em>, <em>key_bytes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">Security</code><span class="sig-paren">(</span><em class="sig-param">cert_file=None</em>, <em class="sig-param">key_file=None</em>, <em class="sig-param">cert_bytes=None</em>, <em class="sig-param">key_bytes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security" title="Permalink to this definition">¶</a></dt>
 <dd><p>Security configuration.</p>
 <p>Secrets may be specified either as file paths or raw bytes, but not both.</p>
 <dl class="field-list simple">
@@ -2675,9 +2684,9 @@ specified File object.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Security.from_default">
-<em class="property">classmethod </em><code class="descname">from_default</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_default" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_default</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_default" title="Permalink to this definition">¶</a></dt>
 <dd><p>The default security configuration.</p>
 <p>Usually this loads the credentials stored in the configuration
 directory (<code class="docutils literal notranslate"><span class="pre">~/.skein</span></code> by default). If these credentials don’t already
@@ -2686,55 +2695,55 @@ exist, new ones will be created.</p>
 security credentials as used for the current application.</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Security.from_dict">
-<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>obj</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_dict" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_dict</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a dict.</p>
 <p>Keys in the dict should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Security.from_directory">
-<em class="property">classmethod </em><code class="descname">from_directory</code><span class="sig-paren">(</span><em>directory</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_directory" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_directory</code><span class="sig-paren">(</span><em class="sig-param">directory</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_directory" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a security object from a directory.</p>
 <p>Relies on standard names for each file (<code class="docutils literal notranslate"><span class="pre">skein.crt</span></code> and
 <code class="docutils literal notranslate"><span class="pre">skein.pem</span></code>).</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Security.from_json">
-<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_json" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a json string.</p>
 <p>Keys in the json object should match parameter names</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Security.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Security.from_yaml">
-<em class="property">classmethod </em><code class="descname">from_yaml</code><span class="sig-paren">(</span><em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_yaml" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_yaml</code><span class="sig-paren">(</span><em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.from_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a yaml string.</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.Security.new_credentials">
-<em class="property">classmethod </em><code class="descname">new_credentials</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.new_credentials" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">new_credentials</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.new_credentials" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a new Security object with a new certificate/key pair.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Security.to_dict">
-<code class="descname">to_dict</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_dict" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_dict</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a dict</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Security.to_directory">
-<code class="descname">to_directory</code><span class="sig-paren">(</span><em>self</em>, <em>directory</em>, <em>force=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_directory" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_directory</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">directory</em>, <em class="sig-param">force=False</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_directory" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write this security object to a directory.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2757,19 +2766,19 @@ will be raised by default. Set to True to overwrite existing files.</p>
 
 <dl class="method">
 <dt id="skein.Security.to_json">
-<code class="descname">to_json</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_json" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a json string</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Security.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.Security.to_yaml">
-<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>self</em>, <em>skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_yaml" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_yaml</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">skip_nulls=True</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Security.to_yaml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a yaml string</p>
 </dd></dl>
 
@@ -2780,7 +2789,7 @@ will be raised by default. Set to True to overwrite existing files.</p>
 <h2>Application Responses<a class="headerlink" href="#application-responses" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="skein.model.ApplicationState">
-<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">ApplicationState</code><a class="headerlink" href="#skein.model.ApplicationState" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.model.</code><code class="sig-name descname">ApplicationState</code><a class="headerlink" href="#skein.model.ApplicationState" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enum of application states.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Attributes</dt>
@@ -2804,9 +2813,9 @@ will be raised by default. Set to True to overwrite existing files.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.model.ApplicationState.values">
-<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationState.values" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationState.values" title="Permalink to this definition">¶</a></dt>
 <dd><p>The constants of this enum type, in the order they are declared.</p>
 </dd></dl>
 
@@ -2814,7 +2823,7 @@ will be raised by default. Set to True to overwrite existing files.</p>
 
 <dl class="class">
 <dt id="skein.model.FinalStatus">
-<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">FinalStatus</code><a class="headerlink" href="#skein.model.FinalStatus" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.model.</code><code class="sig-name descname">FinalStatus</code><a class="headerlink" href="#skein.model.FinalStatus" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enum of application final statuses.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Attributes</dt>
@@ -2830,9 +2839,9 @@ will be raised by default. Set to True to overwrite existing files.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.model.FinalStatus.values">
-<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.FinalStatus.values" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.FinalStatus.values" title="Permalink to this definition">¶</a></dt>
 <dd><p>The constants of this enum type, in the order they are declared.</p>
 </dd></dl>
 
@@ -2840,7 +2849,7 @@ will be raised by default. Set to True to overwrite existing files.</p>
 
 <dl class="class">
 <dt id="skein.model.ApplicationReport">
-<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">ApplicationReport</code><span class="sig-paren">(</span><em>id</em>, <em>name</em>, <em>user</em>, <em>queue</em>, <em>tags</em>, <em>host</em>, <em>port</em>, <em>tracking_url</em>, <em>state</em>, <em>final_status</em>, <em>progress</em>, <em>usage</em>, <em>diagnostics</em>, <em>start_time</em>, <em>finish_time</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.model.</code><code class="sig-name descname">ApplicationReport</code><span class="sig-paren">(</span><em class="sig-param">id</em>, <em class="sig-param">name</em>, <em class="sig-param">user</em>, <em class="sig-param">queue</em>, <em class="sig-param">tags</em>, <em class="sig-param">host</em>, <em class="sig-param">port</em>, <em class="sig-param">tracking_url</em>, <em class="sig-param">state</em>, <em class="sig-param">final_status</em>, <em class="sig-param">progress</em>, <em class="sig-param">usage</em>, <em class="sig-param">diagnostics</em>, <em class="sig-param">start_time</em>, <em class="sig-param">finish_time</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport" title="Permalink to this definition">¶</a></dt>
 <dd><p>Report of application status.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2878,21 +2887,21 @@ will be raised by default. Set to True to overwrite existing files.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.model.ApplicationReport.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="method">
 <dt id="skein.model.ApplicationReport.runtime">
-<code class="descname">runtime</code><a class="headerlink" href="#skein.model.ApplicationReport.runtime" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">runtime</code><a class="headerlink" href="#skein.model.ApplicationReport.runtime" title="Permalink to this definition">¶</a></dt>
 <dd><p>The total runtime of the container.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.model.ApplicationReport.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
@@ -2900,7 +2909,7 @@ will be raised by default. Set to True to overwrite existing files.</p>
 
 <dl class="class">
 <dt id="skein.model.ResourceUsageReport">
-<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">ResourceUsageReport</code><span class="sig-paren">(</span><em>memory_seconds</em>, <em>vcore_seconds</em>, <em>num_used_containers</em>, <em>needed_resources</em>, <em>reserved_resources</em>, <em>used_resources</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.model.</code><code class="sig-name descname">ResourceUsageReport</code><span class="sig-paren">(</span><em class="sig-param">memory_seconds</em>, <em class="sig-param">vcore_seconds</em>, <em class="sig-param">num_used_containers</em>, <em class="sig-param">needed_resources</em>, <em class="sig-param">reserved_resources</em>, <em class="sig-param">used_resources</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport" title="Permalink to this definition">¶</a></dt>
 <dd><p>Resource usage report.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2922,15 +2931,15 @@ number of seconds the application has been running.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.model.ResourceUsageReport.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.model.ResourceUsageReport.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ResourceUsageReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
@@ -2938,7 +2947,7 @@ number of seconds the application has been running.</p>
 
 <dl class="class">
 <dt id="skein.model.ContainerState">
-<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">ContainerState</code><a class="headerlink" href="#skein.model.ContainerState" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.model.</code><code class="sig-name descname">ContainerState</code><a class="headerlink" href="#skein.model.ContainerState" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enum of container states.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Attributes</dt>
@@ -2959,9 +2968,9 @@ requested.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.model.ContainerState.values">
-<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ContainerState.values" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ContainerState.values" title="Permalink to this definition">¶</a></dt>
 <dd><p>The constants of this enum type, in the order they are declared.</p>
 </dd></dl>
 
@@ -2969,7 +2978,7 @@ requested.</p>
 
 <dl class="class">
 <dt id="skein.model.Container">
-<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">Container</code><span class="sig-paren">(</span><em>service_name</em>, <em>instance</em>, <em>state</em>, <em>yarn_container_id</em>, <em>yarn_node_http_address</em>, <em>start_time</em>, <em>finish_time</em>, <em>exit_message</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Container" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.model.</code><code class="sig-name descname">Container</code><span class="sig-paren">(</span><em class="sig-param">service_name</em>, <em class="sig-param">instance</em>, <em class="sig-param">state</em>, <em class="sig-param">yarn_container_id</em>, <em class="sig-param">yarn_node_http_address</em>, <em class="sig-param">start_time</em>, <em class="sig-param">finish_time</em>, <em class="sig-param">exit_message</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Container" title="Permalink to this definition">¶</a></dt>
 <dd><p>Current container state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2993,27 +3002,27 @@ requested.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.model.Container.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Container.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Container.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="method">
 <dt id="skein.model.Container.id">
-<code class="descname">id</code><a class="headerlink" href="#skein.model.Container.id" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">id</code><a class="headerlink" href="#skein.model.Container.id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The complete service_name &amp; instance identity of this container.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="method">
 <dt id="skein.model.Container.runtime">
-<code class="descname">runtime</code><a class="headerlink" href="#skein.model.Container.runtime" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">runtime</code><a class="headerlink" href="#skein.model.Container.runtime" title="Permalink to this definition">¶</a></dt>
 <dd><p>The total runtime of the application.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.model.Container.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Container.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Container.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
@@ -3021,7 +3030,7 @@ requested.</p>
 
 <dl class="class">
 <dt id="skein.model.NodeState">
-<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">NodeState</code><a class="headerlink" href="#skein.model.NodeState" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.model.</code><code class="sig-name descname">NodeState</code><a class="headerlink" href="#skein.model.NodeState" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enum of node states.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Attributes</dt>
@@ -3045,9 +3054,9 @@ requested.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.model.NodeState.values">
-<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeState.values" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeState.values" title="Permalink to this definition">¶</a></dt>
 <dd><p>The constants of this enum type, in the order they are declared.</p>
 </dd></dl>
 
@@ -3055,7 +3064,7 @@ requested.</p>
 
 <dl class="class">
 <dt id="skein.model.NodeReport">
-<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">NodeReport</code><span class="sig-paren">(</span><em>id</em>, <em>http_address</em>, <em>rack_name</em>, <em>labels</em>, <em>state</em>, <em>health_report</em>, <em>total_resources</em>, <em>used_resources</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeReport" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.model.</code><code class="sig-name descname">NodeReport</code><span class="sig-paren">(</span><em class="sig-param">id</em>, <em class="sig-param">http_address</em>, <em class="sig-param">rack_name</em>, <em class="sig-param">labels</em>, <em class="sig-param">state</em>, <em class="sig-param">health_report</em>, <em class="sig-param">total_resources</em>, <em class="sig-param">used_resources</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeReport" title="Permalink to this definition">¶</a></dt>
 <dd><p>Report of node status.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Attributes</dt>
@@ -3079,27 +3088,27 @@ requested.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.model.NodeReport.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeReport.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeReport.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="method">
 <dt id="skein.model.NodeReport.host">
-<code class="descname">host</code><a class="headerlink" href="#skein.model.NodeReport.host" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">host</code><a class="headerlink" href="#skein.model.NodeReport.host" title="Permalink to this definition">¶</a></dt>
 <dd><p>The node manager host for this node.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="method">
 <dt id="skein.model.NodeReport.port">
-<code class="descname">port</code><a class="headerlink" href="#skein.model.NodeReport.port" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">port</code><a class="headerlink" href="#skein.model.NodeReport.port" title="Permalink to this definition">¶</a></dt>
 <dd><p>The node manager port for this node.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.model.NodeReport.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.NodeReport.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
@@ -3107,7 +3116,7 @@ requested.</p>
 
 <dl class="class">
 <dt id="skein.model.QueueState">
-<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">QueueState</code><a class="headerlink" href="#skein.model.QueueState" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.model.</code><code class="sig-name descname">QueueState</code><a class="headerlink" href="#skein.model.QueueState" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enum of queue states.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Attributes</dt>
@@ -3119,9 +3128,9 @@ requested.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.model.QueueState.values">
-<em class="property">classmethod </em><code class="descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.QueueState.values" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.QueueState.values" title="Permalink to this definition">¶</a></dt>
 <dd><p>The constants of this enum type, in the order they are declared.</p>
 </dd></dl>
 
@@ -3129,7 +3138,7 @@ requested.</p>
 
 <dl class="class">
 <dt id="skein.model.Queue">
-<em class="property">class </em><code class="descclassname">skein.model.</code><code class="descname">Queue</code><span class="sig-paren">(</span><em>name</em>, <em>state</em>, <em>capacity</em>, <em>max_capacity</em>, <em>percent_used</em>, <em>node_labels</em>, <em>default_node_label</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Queue" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">skein.model.</code><code class="sig-name descname">Queue</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">state</em>, <em class="sig-param">capacity</em>, <em class="sig-param">max_capacity</em>, <em class="sig-param">percent_used</em>, <em class="sig-param">node_labels</em>, <em class="sig-param">default_node_label</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Queue" title="Permalink to this definition">¶</a></dt>
 <dd><p>Information about a specific YARN queue.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Attributes</dt>
@@ -3163,15 +3172,15 @@ application doesn’t specify a node label itself.</p>
 </dl>
 </dd>
 </dl>
-<dl class="classmethod">
+<dl class="method">
 <dt id="skein.model.Queue.from_protobuf">
-<em class="property">classmethod </em><code class="descname">from_protobuf</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Queue.from_protobuf" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_protobuf</code><span class="sig-paren">(</span><em class="sig-param">obj</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Queue.from_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance from a protobuf message.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="skein.model.Queue.to_protobuf">
-<code class="descname">to_protobuf</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Queue.to_protobuf" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Queue.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
 </dd></dl>
 
@@ -3182,42 +3191,42 @@ application doesn’t specify a node label itself.</p>
 <h2>Exceptions<a class="headerlink" href="#exceptions" title="Permalink to this headline">¶</a></h2>
 <dl class="exception">
 <dt id="skein.SkeinError">
-<em class="property">exception </em><code class="descclassname">skein.</code><code class="descname">SkeinError</code><a class="headerlink" href="#skein.SkeinError" title="Permalink to this definition">¶</a></dt>
+<em class="property">exception </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">SkeinError</code><a class="headerlink" href="#skein.SkeinError" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
 <p>Base class for Skein specific exceptions</p>
 </dd></dl>
 
 <dl class="exception">
 <dt id="skein.ConnectionError">
-<em class="property">exception </em><code class="descclassname">skein.</code><code class="descname">ConnectionError</code><a class="headerlink" href="#skein.ConnectionError" title="Permalink to this definition">¶</a></dt>
+<em class="property">exception </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">ConnectionError</code><a class="headerlink" href="#skein.ConnectionError" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">skein.exceptions.SkeinError</span></code>, <a class="reference internal" href="#skein.ConnectionError" title="skein.ConnectionError"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConnectionError</span></code></a></p>
 <p>Failed to connect to the driver or application master</p>
 </dd></dl>
 
 <dl class="exception">
 <dt id="skein.DriverNotRunningError">
-<em class="property">exception </em><code class="descclassname">skein.</code><code class="descname">DriverNotRunningError</code><a class="headerlink" href="#skein.DriverNotRunningError" title="Permalink to this definition">¶</a></dt>
+<em class="property">exception </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">DriverNotRunningError</code><a class="headerlink" href="#skein.DriverNotRunningError" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">skein.exceptions.ConnectionError</span></code></p>
 <p>The driver process is not currently running</p>
 </dd></dl>
 
 <dl class="exception">
 <dt id="skein.ApplicationNotRunningError">
-<em class="property">exception </em><code class="descclassname">skein.</code><code class="descname">ApplicationNotRunningError</code><a class="headerlink" href="#skein.ApplicationNotRunningError" title="Permalink to this definition">¶</a></dt>
+<em class="property">exception </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">ApplicationNotRunningError</code><a class="headerlink" href="#skein.ApplicationNotRunningError" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">skein.exceptions.ConnectionError</span></code></p>
 <p>The application master is not currently running</p>
 </dd></dl>
 
 <dl class="exception">
 <dt id="skein.DriverError">
-<em class="property">exception </em><code class="descclassname">skein.</code><code class="descname">DriverError</code><a class="headerlink" href="#skein.DriverError" title="Permalink to this definition">¶</a></dt>
+<em class="property">exception </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">DriverError</code><a class="headerlink" href="#skein.DriverError" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">skein.exceptions.SkeinError</span></code></p>
 <p>Internal exceptions from the driver</p>
 </dd></dl>
 
 <dl class="exception">
 <dt id="skein.ApplicationError">
-<em class="property">exception </em><code class="descclassname">skein.</code><code class="descname">ApplicationError</code><a class="headerlink" href="#skein.ApplicationError" title="Permalink to this definition">¶</a></dt>
+<em class="property">exception </em><code class="sig-prename descclassname">skein.</code><code class="sig-name descname">ApplicationError</code><a class="headerlink" href="#skein.ApplicationError" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">skein.exceptions.SkeinError</span></code></p>
 <p>Internal exceptions from the application master</p>
 </dd></dl>
@@ -3300,10 +3309,10 @@ application doesn’t specify a node label itself.</p>
   Open an issue in the <a href="https://github.com/jcrist/skein/issues">issue tracker</a>.
 </p>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
       <input type="submit" value="Go" />
     </form>
     </div>
