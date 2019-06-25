@@ -481,6 +481,17 @@ def test_simple_app(client):
 
         assert client.application_report(app.id).state == 'RUNNING'
 
+        # Connect with a new client
+        with client.connect(app.id) as app2:
+            app2.get_specification()
+
+        # application client is closed
+        with pytest.raises(Exception):
+            app2.get_specification()
+
+        # Closing an application client is idempotent
+        app2.close()
+
         app.shutdown()
 
     with pytest.raises(skein.ConnectionError):
