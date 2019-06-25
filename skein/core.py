@@ -335,7 +335,7 @@ class Client(_ClientBase):
     >>> with skein.Client() as client:
     ...     app_id = client.submit('spec.yaml')
     """
-    __slots__ = ('address', 'security', '_stub', '_proc')
+    __slots__ = ('address', 'security', '_channel', '_stub', '_proc')
     _server_name = 'driver'
     _server_error = DriverError
 
@@ -355,7 +355,8 @@ class Client(_ClientBase):
             proc = None
 
         with grpc_fork_support_disabled():
-            self._stub = proto.DriverStub(secure_channel(address, security))
+            self._channel = secure_channel(address, security)
+            self._stub = proto.DriverStub(self._channel)
         self.address = address
         self.security = security
         self._proc = proc
@@ -480,10 +481,15 @@ class Client(_ClientBase):
         return 'Client<%s>' % self.address
 
     def close(self):
-        """Closes the java driver if started by this client. No-op otherwise."""
+        """Release all resources used by this client. Idempotent.
+
+        Note that this closes the Java driver if it was started by this client.
+        """
         if self._proc is not None:
             self._proc.stdin.close()
             self._proc.wait()
+        if hasattr(self, '_channel'):
+            self._channel.close()
 
     def __enter__(self):
         return self
@@ -847,10 +853,29 @@ class ApplicationClient(_ClientBase):
         self.security = security or Security.from_default()
         self.id = app_id
         with grpc_fork_support_disabled():
-            self._stub = proto.AppMasterStub(secure_channel(address, self.security))
+            self._channel = secure_channel(address, self.security)
+            self._stub = proto.AppMasterStub(self._channel)
 
     def __repr__(self):
         return 'ApplicationClient<%s, %s>' % (self.id, self.address)
+
+    def close(self):
+        """Release all resources used by this client. Idempotent.
+
+        Note that this only frees resources used by the client, it doesn't
+        shutdown the application itself. For that see ``shutdown``.
+        """
+        if hasattr(self, '_channel'):
+            self._channel.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def __del__(self):
+        self.close()
 
     def shutdown(self, status='SUCCEEDED', diagnostics=None):
         """Shutdown the application.
