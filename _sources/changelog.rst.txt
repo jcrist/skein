@@ -4,15 +4,21 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.7.4 (June 28, 2019)
+-----------------------------
+
+- Close gRPC channels automatically on client shutdown (:pr:`179`)
+- Silence client shutdown logging that was confusing to new users
+
 Version 0.7.3 (May 6, 2019)
-------------------------------
+---------------------------
 
 - Add ``ApplicationClient.add_container``, providing the ability to add a
   container to a service with optional service configuration overrides
   (:pr:`174`)
 
 Version 0.7.2 (May 2, 2019)
-------------------------------
+---------------------------
 
 - Fix bug in shutdown logic preventing shutdown on certain container failures
   (:issue:`172`, :pr:`173`)
