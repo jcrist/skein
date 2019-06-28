@@ -156,7 +156,7 @@ public class Driver {
   private void stopServer() {
     if (server != null) {
       server.shutdown();
-      LOG.info("Driver shut down");
+      LOG.debug("Driver shut down");
     }
   }
 
