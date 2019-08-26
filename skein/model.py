@@ -18,7 +18,7 @@ __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
            'FileVisibility', 'ACLs', 'Master', 'Security', 'ApplicationState',
            'FinalStatus', 'ResourceUsageReport', 'ApplicationReport',
            'ContainerState', 'Container', 'LogLevel', 'NodeState', 'NodeReport',
-           'QueueState', 'Queue')
+           'QueueState', 'Queue', 'ApplicationLogs', 'ContainerLogs')
 
 
 def _check_is_filename(target):
@@ -1861,3 +1861,23 @@ class Queue(ProtobufMessage):
                    percent_used=obj.percent_used,
                    node_labels=set(obj.node_labels),
                    default_node_label=obj.default_node_label)
+
+
+class ContainerLogs(str):
+    """Logs for a single container"""
+
+    def _repr_html_(self):
+        return "<pre><code>\n{log}\n</code></pre>".format(log=self.rstrip())
+
+
+class ApplicationLogs(dict):
+    """A mapping of ``yarn_container_id`` to ``ContainerLogs`` for an application"""
+
+    def _repr_html_(self):
+        summaries = [
+            "<details>\n<summary>{title}</summary>\n{log}\n</details>".format(
+                title=title, log=log._repr_html_()
+            )
+            for title, log in sorted(self.items())
+        ]
+        return "\n\n".join(summaries)

@@ -268,6 +268,8 @@ service Driver {
   rpc waitForStart (Application) returns (ApplicationReport);
 
   rpc kill (KillRequest) returns (Empty);
+
+  rpc getLogs (LogsRequest) returns (LogsResponse);
 }
 
 
@@ -310,6 +312,17 @@ message QueueRequest {
 
 message QueuesResponse {
   repeated Queue queues = 1;
+}
+
+
+message LogsRequest {
+  string id = 1;
+  string user = 2;
+}
+
+
+message LogsResponse {
+  map<string, string> logs = 2;
 }
 
 
