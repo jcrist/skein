@@ -1108,7 +1108,6 @@ public class Driver {
             .asRuntimeException());
         return;
       }
-      LOG.info("Trying to send", logs);
       resp.onNext(Msg.LogsResponse.newBuilder().putAllLogs(logs).build());
       resp.onCompleted();
     }
