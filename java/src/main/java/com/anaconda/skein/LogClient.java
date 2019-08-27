@@ -15,7 +15,6 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,6 +59,16 @@ public class LogClient {
     return new Path(out, appId.toString());
   }
 
+  static private String rTrimToString(byte[] buf) {
+    // Remove trailing whitespace and convert to a string
+    // Does so without an extra copy.
+    int end = buf.length - 1;
+    while ((end >= 0) && (buf[end] <= 32)) {
+      end--;
+    }
+    return new String(buf, 0, end + 1);
+  }
+
   public Map<String, String> getLogs(ApplicationId appId, String appOwner) throws IOException {
     Map<String, String> out = new HashMap<String, String>();
 
@@ -81,7 +90,7 @@ public class LogClient {
           LogKey key = new LogKey();
           DataInputStream valueStream = reader.next(key);
           while (valueStream != null) {
-            OutputStream os = new ByteArrayOutputStream();
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
             PrintStream printer = new PrintStream(os);
             while (true) {
               try {
@@ -91,7 +100,7 @@ public class LogClient {
                 break;
               }
             }
-            out.put(key.toString(), os.toString());
+            out.put(key.toString(), rTrimToString(os.toByteArray()));
             // Next container
             key = new LogKey();
             valueStream = reader.next(key);

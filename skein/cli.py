@@ -335,11 +335,7 @@ def application_status(app_id):
                       'current user to have permissions to proxy as ``user``. '
                       'Default is the current user.')))
 def application_logs(app_id, user):
-    logs = get_driver().application_logs(app_id, user=user)
-    for k, v in sorted(logs.items()):
-        print(k)
-        print("=" * len(k))
-        print(v)
+    get_driver().application_logs(app_id, user=user).dump()
 
 
 @subcommand(application.subs,

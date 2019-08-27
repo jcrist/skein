@@ -192,6 +192,9 @@ Application Responses
     :members:
     :inherited-members:
 
+.. autoclass:: skein.model.ApplicationLogs
+    :members:
+
 .. autoclass:: skein.model.NodeState
     :members:
     :inherited-members:
