@@ -32,13 +32,8 @@ jobs:
         - if: commit_message !~ skip-tests
           env:
             - CLUSTER_IMAGE=cdh6
-            - CLUSTER_CONFIG=kerberos
-            - PYTHON=3.6
-        - if: commit_message !~ skip-tests
-          env:
-            - CLUSTER_IMAGE=cdh5
             - CLUSTER_CONFIG=simple
-            - PYTHON=2.7
+            - PYTHON=3.6
         - sudo: false
           env:
             - DOCS=true
