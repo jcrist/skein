@@ -328,6 +328,21 @@ def application_status(app_id):
 
 
 @subcommand(application.subs,
+            'logs', 'Get the logs from a completed Skein application',
+            app_id,
+            arg('--user', default='', type=str,
+                help=('The user to get the application logs as. Requires the '
+                      'current user to have permissions to proxy as ``user``. '
+                      'Default is the current user.')))
+def application_logs(app_id, user):
+    logs = get_driver().application_logs(app_id, user=user)
+    for k, v in sorted(logs.items()):
+        print(k)
+        print("=" * len(k))
+        print(v)
+
+
+@subcommand(application.subs,
             'mv', 'Move a Skein application to a different queue',
             app_id,
             arg('queue', type=str, metavar='QUEUE',
