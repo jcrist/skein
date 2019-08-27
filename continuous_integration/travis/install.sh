@@ -1,6 +1,8 @@
 set -xe
 
 if [[ "$DOCS" != "true" ]]; then
+    # No-op to possibly for fixuid in a more robust way
+    htcluster exec -- whoami
     # Install runtime and test dependencies on the docker container
     htcluster exec -- ./skein/continuous_integration/travis/docker_install.sh $PYTHON
 else
