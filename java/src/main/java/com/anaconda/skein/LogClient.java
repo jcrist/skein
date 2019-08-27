@@ -21,7 +21,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class LogClient {
-
+  /* XXX: Unfortunately Hadoop doesn't have any nice public methods for
+   * accessing logs. This class contains code pulled out of Hadoop 2.6.5, and
+   * works with the *default* configuration of everything up to at least 3.0.2
+   * (it may well work with later versions as well). The log handling was made
+   * way more complicated in recent versions with
+   * `LogAggregationFileController` and `LogAggregationFileControllerFactory`
+   * java classes. These don't seem necessary to use when using the default
+   * configuration, but our implementation here will likely break for other
+   * configurations. I don't feel like using reflection yet, so punting on this
+   * for now until someone has an issue.
+   */
   public static class LogClientException extends IOException {
     public LogClientException(String msg) {
       super(msg);
