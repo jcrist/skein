@@ -150,11 +150,11 @@ def wait_for_containers(app, n, **kwargs):
     return containers
 
 
-def get_logs(app_id, tries=3):
-    command = ["yarn", "logs", "-applicationId", app_id]
-    for i in range(tries - 1):
+def get_logs(client, app_id, tries=20):
+    for i in range(tries):
         try:
-            return subprocess.check_output(command).decode()
+            return client.application_logs(app_id).dumps()
         except Exception:
-            pass
-    return subprocess.check_output(command).decode()
+            if i == tries - 1:
+                raise
+        time.sleep(0.20)

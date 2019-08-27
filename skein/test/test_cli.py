@@ -5,6 +5,7 @@ import os
 import socket
 import subprocess
 import sys
+import time
 from contextlib import contextmanager, closing
 
 import pytest
@@ -74,6 +75,7 @@ def global_client(kinit, tmpdir_factory):
                           'application',
                           'application submit',
                           'application status',
+                          'application logs',
                           'application ls',
                           'application specification',
                           'application mv',
@@ -352,6 +354,20 @@ def test_cli_application(tmpdir, capsys, global_client):
 
         # `skein application ls -a`
         run_command('application ls -a')
+        out, err = capsys.readouterr()
+        assert not err
+        assert app_id in out
+
+        # `skein application logs`
+        for attempt in range(20):
+            try:
+                run_command('application logs %s' % app_id)
+            except Exception:
+                if attempt == 19:
+                    raise
+                # Scrap output
+                capsys.readouterr()
+                time.sleep(0.2)
         out, err = capsys.readouterr()
         assert not err
         assert app_id in out

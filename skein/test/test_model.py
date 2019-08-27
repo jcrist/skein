@@ -11,7 +11,8 @@ from skein.compatibility import math_ceil
 from skein.model import (ApplicationSpec, Service, Resources, File,
                          ApplicationState, FinalStatus, FileType, ACLs, Master,
                          Container, ApplicationReport, ResourceUsageReport,
-                         NodeReport, LogLevel, parse_memory, Security, Queue)
+                         NodeReport, LogLevel, parse_memory, Security, Queue,
+                         ApplicationLogs)
 
 
 def indent(s, n):
@@ -687,3 +688,20 @@ def test_queue():
     a = Queue('queue1', 'RUNNING', 50.0, 60.0, 80.0, set(), '')
     b = Queue('queue2', 'RUNNING', 40.0, 60.0, 30.0, set('*'), '')
     check_base_methods(a, b)
+
+
+def test_application_logs():
+    raw = {"container_1528138529205_0038_01_000001": "line 1\nline 2\nline 3",
+           "container_1528138529205_0038_01_000002": "line 4\nline 5\nline 6"}
+
+    logs = ApplicationLogs('application_1528138529205_0001', raw)
+    assert repr(logs) == "ApplicationLogs<application_1528138529205_0001>"
+    assert len(logs) == 2
+    assert dict(logs) == raw
+    out = logs.dumps()
+    assert "line 6" in out
+    assert logs.app_id in out
+    assert all(k in out for k in raw)
+
+    html = logs._repr_html_()
+    assert logs.app_id in html

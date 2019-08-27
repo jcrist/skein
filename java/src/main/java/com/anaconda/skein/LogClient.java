@@ -59,7 +59,7 @@ public class LogClient {
     return new Path(out, appId.toString());
   }
 
-  static private String rTrimToString(byte[] buf) {
+  private static String rightTrimToString(byte[] buf) {
     // Remove trailing whitespace and convert to a string
     // Does so without an extra copy.
     int end = buf.length - 1;
@@ -82,6 +82,7 @@ public class LogClient {
     } catch (FileNotFoundException fnf) {
       throw new LogClientException("Log aggregation has not completed or is not enabled.");
     }
+    boolean logsFound = false;
     while (nodeFiles.hasNext()) {
       FileStatus thisNodeFile = nodeFiles.next();
       if (!thisNodeFile.getPath().getName().endsWith(TMP_FILE_SUFFIX)) {
@@ -96,11 +97,12 @@ public class LogClient {
               try {
                 LogReader.readAContainerLogsForALogType(valueStream, printer,
                     thisNodeFile.getModificationTime());
+                logsFound = true;
               } catch (EOFException eof) {
                 break;
               }
             }
-            out.put(key.toString(), rTrimToString(os.toByteArray()));
+            out.put(key.toString(), rightTrimToString(os.toByteArray()));
             // Next container
             key = new LogKey();
             valueStream = reader.next(key);
@@ -109,6 +111,10 @@ public class LogClient {
           reader.close();
         }
       }
+    }
+    if (!logsFound) {
+      throw new LogClientException("No logs found. Log aggregation may have not "
+                                    + "completed, or it may not be enabled.");
     }
     return out;
   }

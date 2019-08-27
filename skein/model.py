@@ -5,6 +5,7 @@ import os
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from getpass import getuser
+from io import StringIO
 
 import yaml
 
@@ -1904,10 +1905,23 @@ class ApplicationLogs(Mapping):
         file : file-like, optional
             A file-like object to write the logs to. Defaults to ``sys.stdout``.
         """
+        if file is not None:
+            write = lambda s: print(s, file=file)
+        else:
+            write = print
         N = len(self.logs) - 1
+        write("** Logs for %s **" % self.app_id)
+        write("")
         for n, (k, v) in enumerate(sorted(self.logs.items())):
-            print(k, file=file)
-            print("=" * len(k), file=file)
-            print(v, file=file)
+            write(k)
+            write("=" * len(k))
+            write(v)
             if n < N:
-                print("", file=file)
+                write("")
+
+    def dumps(self):
+        """Write the logs to a string."""
+        s = StringIO()
+        self.dump(s)
+        s.seek(0)
+        return s.read()
