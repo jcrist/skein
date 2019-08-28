@@ -4,6 +4,13 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.8.0 (August 28, 2019)
+-------------------------------
+
+- Dropped support for Python 2 (:issue:`180`, :pr:`186`)
+- Add method to programmatically get logs from completed applications (:pr:`185`)
+- Upgrade javascript dependencies (:issue:`184`, :pr:`187`)
+
 Version 0.7.4 (June 28, 2019)
 -----------------------------
 
