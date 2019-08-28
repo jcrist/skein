@@ -150,10 +150,10 @@ def wait_for_containers(app, n, **kwargs):
     return containers
 
 
-def get_logs(client, app_id, tries=20):
+def get_logs(client, app_id, tries=20, user=''):
     for i in range(tries):
         try:
-            return client.application_logs(app_id).dumps()
+            return client.application_logs(app_id, user=user).dumps()
         except Exception:
             if i == tries - 1:
                 raise

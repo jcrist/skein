@@ -958,7 +958,7 @@ def test_proxy_user(client):
         assert fil.source.startswith('hdfs://master.example.com:9000/user/alice')
 
     # Can get logs as user
-    logs = client.application_logs(app.id, user="alice").dumps()
+    logs = get_logs(client, app.id, user="alice")
     assert app.id in logs
     assert "application.master.log" in logs
 
