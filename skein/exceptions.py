@@ -1,10 +1,6 @@
-from __future__ import print_function, division, absolute_import
-
 import warnings
 import sys
 from contextlib import contextmanager
-
-from .compatibility import PY2, bind_method
 
 __all__ = ('FileExistsError',    # py2 compat
            'FileNotFoundError',  # py2 compat
@@ -17,35 +13,19 @@ __all__ = ('FileExistsError',    # py2 compat
            'ApplicationError')
 
 
-if PY2:
-    class _ConnectionError(OSError):
-        pass
-
-    class _TimeoutError(OSError):
-        pass
-
-    class FileExistsError(OSError):
-        pass
-
-    class FileNotFoundError(OSError):
-        pass
-
-else:
-    _ConnectionError = ConnectionError  # noqa
-    _TimeoutError = TimeoutError  # noqa
-    FileExistsError = FileExistsError
-    FileNotFoundError = FileNotFoundError
+FileExistsError = FileExistsError
+FileNotFoundError = FileNotFoundError
 
 
 class SkeinError(Exception):
     """Base class for Skein specific exceptions"""
 
 
-class ConnectionError(SkeinError, _ConnectionError):
+class ConnectionError(SkeinError, ConnectionError):
     """Failed to connect to the driver or application master"""
 
 
-class TimeoutError(SkeinError, _TimeoutError):
+class TimeoutError(SkeinError, TimeoutError):
     """Request to driver or application master timed out"""
 
 
@@ -90,7 +70,7 @@ class _Context(object):
         def wrap(self, msg):
             return typ2(msg) if self.is_cli else typ(msg)
 
-        bind_method(cls, name, wrap)
+        setattr(cls, name, wrap)
 
 
 for exc in [ValueError, KeyError, TypeError, FileExistsError,

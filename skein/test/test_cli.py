@@ -1,5 +1,3 @@
-from __future__ import absolute_import, print_function, division
-
 import io
 import os
 import socket
@@ -11,7 +9,6 @@ from contextlib import contextmanager, closing
 import pytest
 
 import skein
-from skein.compatibility import PY2
 from skein.exceptions import context
 from skein.cli import main
 from skein.core import _write_driver
@@ -391,7 +388,7 @@ def test_cli_kv(global_client, capfdbinary):
         # Set key from stdin. Not valid unicode.
         bytes_val = b'H\x9e[\x0e\xa6~\x7fVb\xea'
         buf = io.BytesIO(bytes_val)
-        mock_stdin = buf if PY2 else io.TextIOWrapper(buf)
+        mock_stdin = io.TextIOWrapper(buf)
         old_stdin = sys.stdin
         try:
             sys.stdin = mock_stdin
@@ -427,8 +424,7 @@ def test_cli_kv(global_client, capfdbinary):
         run_command('kv get %s --key fizz' % app.id, error=True)
         out, err = capfdbinary.readouterr()
         assert not out
-        assert ((b"Error: Key %s is not set\n"
-                 % (b"u'fizz'" if PY2 else b"'fizz'")) == err)
+        assert b"Error: Key 'fizz' is not set\n" == err
 
         # Kill application
         run_command('application kill %s' % app.id)

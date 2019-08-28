@@ -1,5 +1,3 @@
-from __future__ import print_function, division, absolute_import
-
 import copy
 import operator
 import sys
@@ -7,11 +5,11 @@ import threading
 import time
 import weakref
 from collections import OrderedDict
+from collections.abc import MutableMapping
 
 import pytest
 
 from skein import kv
-from skein.compatibility import MutableMapping
 from skein.exceptions import ConnectionError
 from skein.test.conftest import run_application
 

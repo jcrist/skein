@@ -1,5 +1,3 @@
-from __future__ import print_function, division, absolute_import
-
 import argparse
 import os
 import sys
@@ -7,7 +5,6 @@ import traceback
 
 from . import __version__
 from .core import Client, ApplicationClient, properties, _read_driver
-from .compatibility import read_stdin_bytes, write_stdout_bytes
 from .exceptions import context, SkeinError, DriverNotRunningError
 from .model import ApplicationSpec, ContainerState, ApplicationState, Security
 from .utils import format_table, humanize_timedelta
@@ -23,19 +20,6 @@ class _Formatter(argparse.HelpFormatter):
     @_action_max_length.setter
     def _action_max_length(self, value):
         pass
-
-
-class _VersionAction(argparse.Action):
-    def __init__(self, option_strings, version=None, dest=argparse.SUPPRESS,
-                 default=argparse.SUPPRESS, help="Show version then exit"):
-        super(_VersionAction, self).__init__(option_strings=option_strings,
-                                             dest=dest, default=default,
-                                             nargs=0, help=help)
-        self.version = version
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        print(self.version % {'prog': parser.prog})
-        sys.exit(0)
 
 
 def fail(msg, prefix=True):
@@ -85,7 +69,7 @@ entry = argparse.ArgumentParser(prog="skein",
                                 formatter_class=_Formatter,
                                 add_help=False)
 add_help(entry)
-entry.add_argument("--version", action=_VersionAction,
+entry.add_argument("--version", action='version',
                    version='%(prog)s ' + __version__,
                    help="Show version then exit")
 entry.set_defaults(func=lambda: fail(entry.format_usage(), prefix=False))
@@ -207,7 +191,7 @@ def driver_restart(keytab=None, principal=None, log=False, log_level=None,
 def kv_get(app_id, key, wait=False):
     app = application_client_from_app_id(app_id)
     result = app.kv.wait(key) if wait else app.kv[key]
-    write_stdout_bytes(result + b'\n')
+    sys.stdout.buffer.write(result + b'\n')
 
 
 @subcommand(kv.subs,
@@ -223,7 +207,7 @@ def kv_get(app_id, key, wait=False):
                 help='The value to put. If not provided, will be read from stdin.'))
 def kv_put(app_id, key, value=None):
     if value is None:
-        value = read_stdin_bytes()
+        value = sys.stdin.buffer.read()
     else:
         value = value.encode()
     app = application_client_from_app_id(app_id)
