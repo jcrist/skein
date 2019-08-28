@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>API Docs &#8212; Skein 0.7.4 documentation</title>
+    <title>API Docs &#8212; Skein 0.7.4+2.g702192d documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -77,6 +77,35 @@ configured by setting the environment variable
 <span class="gp">... </span>    <span class="n">app_id</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="s1">&#39;spec.yaml&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
+<dl class="method">
+<dt id="skein.Client.application_logs">
+<code class="sig-name descname">application_logs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">app_id</em>, <em class="sig-param">user=''</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.application_logs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get logs from a completed skein application.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>app_id</strong><span class="classifier">str</span></dt><dd><p>The id of the application.</p>
+</dd>
+<dt><strong>user</strong><span class="classifier">str, optional</span></dt><dd><p>The user to get the application logs as. Requires the current user
+to have permissions to proxy as <code class="docutils literal notranslate"><span class="pre">user</span></code>. Default is the current
+user.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>ApplicationLogs</strong><span class="classifier">logs</span></dt><dd><p>A mapping of <code class="docutils literal notranslate"><span class="pre">yarn_container_id</span></code> to <code class="docutils literal notranslate"><span class="pre">logs</span></code> for each container.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">application_logs</span><span class="p">(</span><span class="s1">&#39;application_1526134340424_0012&#39;</span><span class="p">)</span>
+<span class="go">ApplicationLogs&lt;application_1526134340424_0012&gt;</span>
+</pre></div>
+</div>
+</dd></dl>
+
 <dl class="method">
 <dt id="skein.Client.application_report">
 <code class="sig-name descname">application_report</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">app_id</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.Client.application_report" title="Permalink to this definition">¶</a></dt>
@@ -814,10 +843,10 @@ Default is False.</p>
 <p>Subscribe to events starting with <code class="docutils literal notranslate"><span class="pre">'foo'</span></code> or <code class="docutils literal notranslate"><span class="pre">'bar'</span></code>.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">EventFilter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">bar</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">EventFilter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">event_queue</span><span class="p">()</span>              <span class="c1"># doctest: skip</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">foo</span><span class="p">)</span>                      <span class="c1"># doctest: skip</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">bar</span><span class="p">)</span>                      <span class="c1"># doctest: skip</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">queue</span><span class="p">:</span>                       <span class="c1"># doctest: skip</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">event_queue</span><span class="p">()</span>              
+<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">foo</span><span class="p">)</span>                      
+<span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">bar</span><span class="p">)</span>                      
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">queue</span><span class="p">:</span>                       
 <span class="gp">... </span>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">filter</span> <span class="o">==</span> <span class="n">foo</span><span class="p">:</span>
 <span class="gp">... </span>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;foo event&quot;</span><span class="p">)</span>
 <span class="gp">... </span>    <span class="k">else</span><span class="p">:</span>
@@ -859,7 +888,7 @@ may be provided.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>Subscribe to all events with prefix <code class="docutils literal notranslate"><span class="pre">'foo'</span></code>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">):</span>  <span class="c1"># doctest: skip</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">):</span>  
 <span class="gp">... </span>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;PUT&#39;</span><span class="p">:</span>
 <span class="gp">... </span>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PUT&lt;key=</span><span class="si">%r</span><span class="s2">, value=</span><span class="si">%r</span><span class="s2">&gt;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">value</span><span class="p">))</span>
 <span class="gp">... </span>    <span class="k">else</span><span class="p">:</span>  <span class="c1"># DELETE</span>
@@ -1210,18 +1239,18 @@ is <code class="docutils literal notranslate"><span class="pre">prev</span></cod
 <span class="gp">... </span>    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">succeeded</span>
 </pre></div>
 </div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span>  <span class="c1"># doctest: skip</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span>  
 </pre></div>
 </div>
 <p>Since <code class="docutils literal notranslate"><span class="pre">'key'</span></code> currently is <code class="docutils literal notranslate"><span class="pre">b'value'</span></code>, the conditional expression
 succeeds and <code class="docutils literal notranslate"><span class="pre">'key'</span></code> is set to <code class="docutils literal notranslate"><span class="pre">b'new_value'</span></code></p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;new_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>  <span class="c1"># doctest: skip</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;new_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>  
 <span class="go">True</span>
 </pre></div>
 </div>
 <p>Since <code class="docutils literal notranslate"><span class="pre">'key'</span></code> currently is <code class="docutils literal notranslate"><span class="pre">b'value'</span></code> and not <code class="docutils literal notranslate"><span class="pre">b'wrong'</span></code>, the
 conditional expression fails and <code class="docutils literal notranslate"><span class="pre">'key'</span></code> remains unchanged.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;another_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;wrong&#39;</span><span class="p">)</span>  <span class="c1"># doctest: skip</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;another_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;wrong&#39;</span><span class="p">)</span>  
 <span class="go">False</span>
 </pre></div>
 </div>
@@ -3024,6 +3053,32 @@ requested.</p>
 <dt id="skein.model.Container.to_protobuf">
 <code class="sig-name descname">to_protobuf</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.Container.to_protobuf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert object to a protobuf message</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.model.ApplicationLogs">
+<em class="property">class </em><code class="sig-prename descclassname">skein.model.</code><code class="sig-name descname">ApplicationLogs</code><span class="sig-paren">(</span><em class="sig-param">app_id</em>, <em class="sig-param">logs</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationLogs" title="Permalink to this definition">¶</a></dt>
+<dd><p>A mapping of <code class="docutils literal notranslate"><span class="pre">yarn_container_id</span></code> to their logs for an application</p>
+<dl class="method">
+<dt id="skein.model.ApplicationLogs.dump">
+<code class="sig-name descname">dump</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">file=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationLogs.dump" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write the logs to a file or stdout.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>file</strong><span class="classifier">file-like, optional</span></dt><dd><p>A file-like object to write the logs to. Defaults to <code class="docutils literal notranslate"><span class="pre">sys.stdout</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="skein.model.ApplicationLogs.dumps">
+<code class="sig-name descname">dumps</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.model.ApplicationLogs.dumps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write the logs to a string.</p>
 </dd></dl>
 
 </dd></dl>
