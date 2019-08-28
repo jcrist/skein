@@ -945,7 +945,7 @@ def test_proxy_user(client):
         services={
             "service": skein.Service(
                 resources=skein.Resources(memory=32, vcores=1),
-                script="echo 'running as alice'\nsleep infinity")
+                script="sleep infinity")
         }
     )
     with run_application(client, spec=spec) as app:
@@ -958,8 +958,9 @@ def test_proxy_user(client):
         assert fil.source.startswith('hdfs://master.example.com:9000/user/alice')
 
     # Can get logs as user
-    logs = client.application_logs(app.id, user="alice")
-    assert 'running as alice' in logs.dumps()
+    logs = client.application_logs(app.id, user="alice").dumps()
+    assert app.id in logs
+    assert "application.master.log" in logs
 
     # Application directory deleted after kill
     fs = hdfs.connect()
