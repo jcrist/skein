@@ -1,23 +1,17 @@
-from __future__ import (absolute_import as _,
-                        print_function as _,
-                        division as _)
-
 import textwrap as _textwrap
 import threading as _threading
 import weakref as _weakref
 from collections import (namedtuple as _namedtuple,
                          deque as _deque,
                          OrderedDict as _OrderedDict)
+from collections.abc import (Mapping as _Mapping,
+                             MutableMapping as _MutableMapping)
 from functools import wraps as _wraps
+from queue import Queue as _Queue
 
 import grpc as _grpc
 
 from . import proto as _proto
-from .compatibility import (bind_method as _bind_method,
-                            Queue as _Queue,
-                            string as _string,
-                            Mapping as _Mapping,
-                            MutableMapping as _MutableMapping)
 from .exceptions import (ApplicationError as _ApplicationError,
                          ConnectionError as _ConnectionError)
 from .model import (
@@ -119,19 +113,19 @@ class EventFilter(object):
             raise ValueError("Must specify at most one of `key`, `prefix`, or "
                              "`start`/`end`")
         if has_key:
-            if not isinstance(key, _string):
+            if not isinstance(key, str):
                 raise TypeError("key must be a string")
             start = key
             end = key + '\x00'
         elif has_prefix:
-            if not isinstance(prefix, _string):
+            if not isinstance(prefix, str):
                 raise TypeError("prefix must be a string")
             start = prefix
             end = _next_key(prefix)
         else:
-            if not (start is None or isinstance(start, _string)):
+            if not (start is None or isinstance(start, str)):
                 raise TypeError("start must be a string or None")
-            if not (end is None or isinstance(end, _string)):
+            if not (end is None or isinstance(end, str)):
                 raise TypeError("end must be a string or None")
 
         event_type = (EventType.ALL if event_type is None
@@ -830,7 +824,7 @@ def _register_op(return_type=None):
 
             method.__doc__ = "%s\n\n%s%s" % (header, footer, returns)
 
-        _bind_method(KeyValueStore, cls.__name__, method)
+        setattr(KeyValueStore, cls.__name__, method)
         return cls
 
     return inner
@@ -859,7 +853,7 @@ class comparison(Condition):
                     '>': 'GREATER', '>=': 'GREATER_EQUAL'}
 
     def __init__(self, key, field, operator, rhs):
-        if not isinstance(key, _string):
+        if not isinstance(key, str):
             raise TypeError("key must be a string")
         self._key = key
 
@@ -878,7 +872,7 @@ class comparison(Condition):
                     raise TypeError("Comparison (owner(%r) %s None) is "
                                     "unsupported" % (key, operator))
                 self._rhs_proto = self._rhs = None
-            elif isinstance(rhs, _string):
+            elif isinstance(rhs, str):
                 self._rhs_proto = _container_instance_from_string(rhs)
                 self._rhs = rhs
             else:
@@ -910,7 +904,7 @@ class _ComparisonBuilder(_Base):
     _params = ('key',)
 
     def __init__(self, key):
-        if not isinstance(key, _string):
+        if not isinstance(key, str):
             raise TypeError("key must be a string")
         self._key = key
 
@@ -981,9 +975,9 @@ class _CountOrKeys(Operation):
         return self.start is not None or self.end is not None
 
     def _validate(self):
-        self._check_is_type('start', _string, nullable=True)
-        self._check_is_type('end', _string, nullable=True)
-        self._check_is_type('prefix', _string, nullable=True)
+        self._check_is_type('start', str, nullable=True)
+        self._check_is_type('end', str, nullable=True)
+        self._check_is_type('prefix', str, nullable=True)
         if self._is_prefix and self._is_range:
             raise ValueError("Cannot specify `prefix` and `start`/`end`")
 
@@ -1060,7 +1054,7 @@ class _GetOrPop(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('key', _string)
+        self._check_is_type('key', str)
         self._check_is_type('default', bytes, nullable=True)
         self._check_is_type('return_owner', bool)
 
@@ -1140,7 +1134,7 @@ class _GetOrPopPrefix(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('prefix', _string)
+        self._check_is_type('prefix', str)
         self._check_is_type('return_owner', bool)
 
     def __repr__(self):
@@ -1203,8 +1197,8 @@ class _GetOrPopRange(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('start', _string, nullable=True)
-        self._check_is_type('end', _string, nullable=True)
+        self._check_is_type('start', str, nullable=True)
+        self._check_is_type('end', str, nullable=True)
         self._check_is_type('return_owner', bool)
 
     def __repr__(self):
@@ -1273,7 +1267,7 @@ class _ExistsMissingDiscard(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('key', _string)
+        self._check_is_type('key', str)
 
     def __repr__(self):
         return '%s(%r)' % (type(self).__name__, self.key)
@@ -1381,7 +1375,7 @@ class discard_prefix(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('prefix', _string)
+        self._check_is_type('prefix', str)
         self._check_is_type('return_keys', bool)
 
     def __repr__(self):
@@ -1428,8 +1422,8 @@ class discard_range(Operation):
         self._validate()
 
     def _validate(self):
-        self._check_is_type('start', _string, nullable=True)
-        self._check_is_type('end', _string, nullable=True)
+        self._check_is_type('start', str, nullable=True)
+        self._check_is_type('end', str, nullable=True)
         self._check_is_type('return_keys', bool)
 
     def __repr__(self):
@@ -1463,7 +1457,7 @@ class _PutOrSwap(Operation):
             self._owner = _no_change
         elif owner is None:
             self._owner_proto = self._owner = None
-        elif isinstance(owner, _string):
+        elif isinstance(owner, str):
             # do this before setting owner to nice python owner,
             # ensures validity check is performed beforehand
             self._owner_proto = _container_instance_from_string(owner)
@@ -1472,7 +1466,7 @@ class _PutOrSwap(Operation):
             raise TypeError("owner must be a string or None")
 
     def _validate(self):
-        self._check_is_type('key', _string)
+        self._check_is_type('key', str)
         if self.value is _no_change and self.owner is _no_change:
             raise ValueError("Must specify 'value', 'owner', or both")
         if self.value is not _no_change:

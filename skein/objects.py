@@ -1,19 +1,16 @@
-from __future__ import absolute_import, print_function, division
-
 import json
 from datetime import datetime
 
 import yaml
 
-from .compatibility import with_metaclass, string, integer
 from .exceptions import context
 from .utils import format_list, ensure_unicode, datetime_to_millis
 
 
 def typename(cls):
-    if cls is string:
+    if cls is str:
         return 'string'
-    elif cls is integer:
+    elif cls is int:
         return 'integer'
     return cls.__name__
 
@@ -59,14 +56,14 @@ class EnumMeta(type):
         return len(cls._values)
 
 
-class Enum(with_metaclass(EnumMeta)):
+class Enum(metaclass=EnumMeta):
     _values = ()
     __slots__ = ('_value',)
 
     def __new__(cls, x):
         if isinstance(x, cls):
             return x
-        if not isinstance(x, string):
+        if not isinstance(x, str):
             raise TypeError("Expected 'str' or %r" % cls.__name__)
         x = ensure_unicode(x).upper()
         if x not in cls._values:
@@ -85,7 +82,7 @@ class Enum(with_metaclass(EnumMeta)):
 
     def __eq__(self, other):
         return (self is other or
-                (isinstance(other, string) and self._value == other.upper()))
+                (isinstance(other, str) and self._value == other.upper()))
 
     def __ne__(self, other):
         return not (self == other)
@@ -181,7 +178,7 @@ class Base(object):
 
     def _check_is_bounded_int(self, field, min=0, nullable=False):
         x = getattr(self, field)
-        self._check_is_type(field, integer, nullable=nullable)
+        self._check_is_type(field, int, nullable=nullable)
         if x is not None and x < min:
             raise context.ValueError("%s must be >= %d" % (field, min))
 

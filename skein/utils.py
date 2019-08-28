@@ -1,5 +1,3 @@
-from __future__ import print_function, division, absolute_import
-
 import errno
 import fcntl
 import os
@@ -7,15 +5,13 @@ import threading
 import time
 import weakref
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from distutils.version import LooseVersion
 
 try:
     from grpc import __version__ as GRPC_VERSION
 except ImportError:
     from grpc._grpcio_metadata import __version__ as GRPC_VERSION
-
-from .compatibility import unicode, UTC
 
 
 _paths_lock = threading.Lock()
@@ -104,7 +100,7 @@ def xor(a, b):
 
 
 def ensure_unicode(x):
-    if type(x) is not unicode:
+    if type(x) is not str:
         x = x.decode('utf-8')
     return x
 
@@ -138,7 +134,7 @@ def humanize_timedelta(td):
     return '%ds' % secs
 
 
-_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 def datetime_from_millis(x):

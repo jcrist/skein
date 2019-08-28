@@ -1,5 +1,3 @@
-from __future__ import print_function, division, absolute_import
-
 import datetime
 import errno
 import json
@@ -11,11 +9,11 @@ import struct
 import subprocess
 import warnings
 from contextlib import closing
+from collections.abc import Mapping
 
 import grpc
 
 from . import proto
-from .compatibility import PY2, makedirs, isidentifier, Mapping
 
 from .exceptions import (context, ConnectionError, TimeoutError,
                          ApplicationNotRunningError, ApplicationError,
@@ -118,7 +116,7 @@ class Properties(Mapping):
     def __dir__(self):
         o = set(dir(type(self)))
         o.update(self.__dict__)
-        o.update(c for c in self._mapping if isidentifier(c))
+        o.update(c for c in self._mapping if c.isidentifier())
         return list(o)
 
     def __iter__(self):
@@ -154,7 +152,7 @@ def _read_driver():
 
 def _write_driver(address, pid):
     # Ensure the config dir exists
-    makedirs(properties.config_dir, exist_ok=True)
+    os.makedirs(properties.config_dir, exist_ok=True)
     # Write to the driver file
     with open(os.path.join(properties.config_dir, 'driver'), 'w') as fil:
         json.dump({'address': address, 'pid': pid}, fil)
@@ -228,18 +226,10 @@ def _start_driver(security=None, set_global=False, keytab=None, principal=None,
         _, callback_port = callback.getsockname()
         env['SKEIN_CALLBACK_PORT'] = str(callback_port)
 
-        if PY2:
-            popen_kwargs = dict(preexec_fn=os.setsid)
-        else:
-            popen_kwargs = dict(start_new_session=True)
-
         if log is None:
             outfil = None
         elif log is False:
-            if PY2:
-                outfil = open(os.devnull, 'w')
-            else:
-                outfil = subprocess.DEVNULL
+            outfil = subprocess.DEVNULL
         else:
             outfil = open(log, mode='w')
         infil = None if set_global else subprocess.PIPE
@@ -249,7 +239,7 @@ def _start_driver(security=None, set_global=False, keytab=None, principal=None,
                                 stdout=outfil,
                                 stderr=outfil,
                                 env=env,
-                                **popen_kwargs)
+                                start_new_session=True)
 
         while proc.poll() is None:
             readable, _, _ = select.select([callback], [], [], 1)

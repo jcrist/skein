@@ -1,10 +1,8 @@
-from __future__ import absolute_import, print_function, division
-
 import random
 from collections import namedtuple
+from urllib.parse import urlsplit
 
 from . import proto
-from .compatibility import urlsplit
 from .objects import Base
 from .utils import cached_property
 

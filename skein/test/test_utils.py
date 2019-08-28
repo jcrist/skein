@@ -1,9 +1,6 @@
-from __future__ import absolute_import, print_function, division
-
 import multiprocessing
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 
-from skein.compatibility import UTC
 from skein.utils import (humanize_timedelta, format_table,
                          format_comma_separated_list, lock_file,
                          datetime_from_millis, datetime_to_millis)
@@ -25,9 +22,9 @@ def test_datetime_conversion():
     assert now2 == now3
 
     # Timezone aware
-    now = datetime.now(UTC)
-    now2 = datetime_from_millis(datetime_to_millis(now)).replace(tzinfo=UTC)
-    now3 = datetime_from_millis(datetime_to_millis(now2)).replace(tzinfo=UTC)
+    now = datetime.now(timezone.utc)
+    now2 = datetime_from_millis(datetime_to_millis(now)).replace(tzinfo=timezone.utc)
+    now3 = datetime_from_millis(datetime_to_millis(now2)).replace(tzinfo=timezone.utc)
     # Rounded to nearest millisecond
     assert abs(now2 - now).total_seconds() < 0.001
     assert now2 == now3

@@ -1,16 +1,15 @@
-from __future__ import absolute_import, print_function, division
-
+import math
 import json
 import os
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from getpass import getuser
 from io import StringIO
+from urllib.parse import urlparse
 
 import yaml
 
 from . import proto as _proto
-from .compatibility import urlparse, string, integer, math_ceil, makedirs
 from .objects import Enum, ProtobufMessage, Specification, required
 from .exceptions import context, FileNotFoundError, FileExistsError
 from .utils import (implements, format_list, datetime_from_millis, runtime,
@@ -62,11 +61,11 @@ def parse_memory(s):
     """Converts bytes expression to number of mebibytes.
 
     If no unit is specified, ``MiB`` is used."""
-    if isinstance(s, integer):
+    if isinstance(s, int):
         out = s
     elif isinstance(s, float):
-        out = math_ceil(s)
-    elif isinstance(s, string):
+        out = math.ceil(s)
+    elif isinstance(s, str):
         s = s.replace(' ', '')
 
         if not s:
@@ -94,7 +93,7 @@ def parse_memory(s):
         except KeyError:
             raise context.ValueError("Could not interpret %r as a byte unit" % suffix)
 
-        out = math_ceil(n * multiplier / (2 ** 20))
+        out = math.ceil(n * multiplier / (2 ** 20))
     else:
         raise context.TypeError("memory must be an integer, got %r"
                                 % type(s).__name__)
@@ -187,10 +186,10 @@ class Security(Specification):
 
     Parameters
     ----------
-    cert_file : string, File, optional
+    cert_file : str, File, optional
         The TLS certificate file, in pem format. Either a path or a fully
         specified File object.
-    key_file : string, File, optional
+    key_file : str, File, optional
         The TLS private key file, in pem format. Either a path or a fully
         specified File object.
     cert_bytes : bytes, optional
@@ -240,7 +239,7 @@ class Security(Specification):
                                      "key_file or key_bytes")
 
     def _assign_file(self, field, value):
-        if isinstance(value, string):
+        if isinstance(value, str):
             value = File(value)
         elif not (value is None or isinstance(value, File)):
             raise context.TypeError("%s must be a File or None" % field)
@@ -248,7 +247,7 @@ class Security(Specification):
 
     def _assign_bytes(self, field, value):
         if value is not None:
-            if isinstance(value, string):
+            if isinstance(value, str):
                 value = value.encode()
             elif not isinstance(value, bytes):
                 raise context.TypeError("%s must be a bytes or None" % field)
@@ -397,7 +396,7 @@ class Security(Specification):
         self._validate()
 
         # Create directory if it doesn't exist
-        makedirs(directory, exist_ok=True)
+        os.makedirs(directory, exist_ok=True)
 
         cert_path = os.path.join(directory, 'skein.crt')
         key_path = os.path.join(directory, 'skein.pem')
@@ -514,7 +513,7 @@ class Resources(Specification):
 
     Parameters
     ----------
-    memory : string or int
+    memory : str or int
         The amount of memory to request. Can be either a string with units
         (e.g. ``"5 GiB"``), or numeric. If numeric, specifies the amount of
         memory in *MiB*. Note that the units are in mebibytes (MiB) NOT
@@ -635,7 +634,7 @@ class File(Specification):
         return 'File<source=%r, type=%r>' % (self.source, self.type)
 
     def _validate(self):
-        self._check_is_type('source', string)
+        self._check_is_type('source', str)
         self._check_is_type('type', FileType)
         self._check_is_type('visibility', FileVisibility)
         self._check_is_bounded_int('size')
@@ -647,7 +646,7 @@ class File(Specification):
 
     @source.setter
     def source(self, val):
-        if not isinstance(val, string):
+        if not isinstance(val, str):
             raise context.TypeError("'source' must be a string")
         self._source = self._normpath(val)
 
@@ -706,7 +705,7 @@ class File(Specification):
         Keys in the dict should match parameter names"""
         _origin = _pop_origin(kwargs)
 
-        if isinstance(obj, string):
+        if isinstance(obj, str):
             obj = {'source': obj}
 
         cls._check_keys(obj)
@@ -811,9 +810,9 @@ class Service(Specification):
 
     def _validate(self):
         self._check_is_bounded_int('instances', min=0)
-        self._check_is_type('node_label', string)
-        self._check_is_list_of('nodes', string)
-        self._check_is_list_of('racks', string)
+        self._check_is_type('node_label', str)
+        self._check_is_list_of('nodes', str)
+        self._check_is_list_of('racks', str)
         self._check_is_type('relax_locality', bool)
         self._check_is_bounded_int('max_restarts', min=-1)
         self._check_is_type('allow_failures', bool)
@@ -821,18 +820,18 @@ class Service(Specification):
         self._check_is_type('resources', Resources)
         self.resources._validate(is_request=True)
 
-        self._check_is_dict_of('files', string, File)
+        self._check_is_dict_of('files', str, File)
         for target, f in self.files.items():
             _check_is_filename(target)
             f._validate()
 
-        self._check_is_dict_of('env', string, string)
+        self._check_is_dict_of('env', str, str)
 
-        self._check_is_type('script', string)
+        self._check_is_type('script', str)
         if not self.script:
             raise context.ValueError("A script must be provided")
 
-        self._check_is_set_of('depends', string)
+        self._check_is_set_of('depends', str)
 
     @classmethod
     @implements(Specification.from_dict)
@@ -962,11 +961,11 @@ class ACLs(Specification):
 
     def _validate(self):
         self._check_is_type('enable', bool)
-        self._check_is_list_of('view_users', string)
-        self._check_is_list_of('view_groups', string)
-        self._check_is_list_of('modify_users', string)
-        self._check_is_list_of('modify_groups', string)
-        self._check_is_list_of('ui_users', string)
+        self._check_is_list_of('view_users', str)
+        self._check_is_list_of('view_groups', str)
+        self._check_is_list_of('modify_users', str)
+        self._check_is_list_of('modify_groups', str)
+        self._check_is_list_of('ui_users', str)
 
     @classmethod
     @implements(Specification.from_protobuf)
@@ -1067,7 +1066,7 @@ class Master(Specification):
                       if files is not None else {})
         self.env = {} if env is None else env
         self.log_level = log_level
-        self.log_config = (File(log_config) if isinstance(log_config, string)
+        self.log_config = (File(log_config) if isinstance(log_config, str)
                            else log_config)
         self.security = security
 
@@ -1077,13 +1076,13 @@ class Master(Specification):
         self._check_is_type('resources', Resources)
         self.resources._validate(is_request=True)
 
-        self._check_is_dict_of('files', string, File)
+        self._check_is_dict_of('files', str, File)
         for target, f in self.files.items():
             _check_is_filename(target)
             f._validate()
 
-        self._check_is_dict_of('env', string, string)
-        self._check_is_type('script', string)
+        self._check_is_dict_of('env', str, str)
+        self._check_is_type('script', str)
 
         if self.log_config is not None:
             self._check_is_type('log_config', File)
@@ -1165,15 +1164,15 @@ class ApplicationSpec(Specification):
     master : Master, optional
         Additional configuration for the application master service. See
         ``skein.Master`` for more information.
-    name : string, optional
+    name : str, optional
         The name of the application, defaults to 'skein'.
-    queue : string, optional
+    queue : str, optional
         The queue to submit to. Defaults to the default queue.
-    user : string, optional
+    user : str, optional
         The user name to submit the application as. Requires that the
         submitting user have permission to proxy as this user name. Default is
         the submitter's user name.
-    node_label : string, optional
+    node_label : str, optional
         The node label expression to use when requesting containers for this
         application. Services can override this setting by specifying
         ``node_label`` on the service directly. Default is no label.
@@ -1214,18 +1213,18 @@ class ApplicationSpec(Specification):
                 (self.name, self.queue))
 
     def _validate(self):
-        self._check_is_type('name', string)
-        self._check_is_type('queue', string)
-        self._check_is_type('user', string)
-        self._check_is_type('node_label', string)
-        self._check_is_set_of('tags', string)
-        self._check_is_list_of('file_systems', string)
+        self._check_is_type('name', str)
+        self._check_is_type('queue', str)
+        self._check_is_type('user', str)
+        self._check_is_type('node_label', str)
+        self._check_is_set_of('tags', str)
+        self._check_is_list_of('file_systems', str)
         self._check_is_bounded_int('max_attempts', min=1)
         self._check_is_type('acls', ACLs)
         self.acls._validate()
         self._check_is_type('master', Master)
         self.master._validate()
-        self._check_is_dict_of('services', string, Service)
+        self._check_is_dict_of('services', str, Service)
 
         if not self.services and not self.master.script:
             raise context.ValueError("There must be at least one service")
@@ -1483,20 +1482,20 @@ class ApplicationReport(ProtobufMessage):
         return runtime(self.start_time, self.finish_time)
 
     def _validate(self):
-        self._check_is_type('id', string)
-        self._check_is_type('name', string)
-        self._check_is_type('user', string)
-        self._check_is_type('queue', string)
-        self._check_is_set_of('tags', string)
-        self._check_is_type('host', string)
-        self._check_is_type('port', integer)
-        self._check_is_type('tracking_url', string)
+        self._check_is_type('id', str)
+        self._check_is_type('name', str)
+        self._check_is_type('user', str)
+        self._check_is_type('queue', str)
+        self._check_is_set_of('tags', str)
+        self._check_is_type('host', str)
+        self._check_is_type('port', int)
+        self._check_is_type('tracking_url', str)
         self._check_is_type('state', ApplicationState)
         self._check_is_type('final_status', FinalStatus)
         self._check_is_type('progress', float)
         self._check_is_type('usage', ResourceUsageReport)
         self.usage._validate()
-        self._check_is_type('diagnostics', string)
+        self._check_is_type('diagnostics', str)
         self._check_is_type('start_time', datetime, nullable=True)
         self._check_is_type('finish_time', datetime, nullable=True)
 
@@ -1606,14 +1605,14 @@ class Container(ProtobufMessage):
         self._state = ContainerState(state)
 
     def _validate(self):
-        self._check_is_type('service_name', string)
-        self._check_is_type('instance', integer)
+        self._check_is_type('service_name', str)
+        self._check_is_type('instance', int)
         self._check_is_type('state', ContainerState)
-        self._check_is_type('yarn_container_id', string)
-        self._check_is_type('yarn_node_http_address', string)
+        self._check_is_type('yarn_container_id', str)
+        self._check_is_type('yarn_node_http_address', str)
         self._check_is_type('start_time', datetime, nullable=True)
         self._check_is_type('finish_time', datetime, nullable=True)
-        self._check_is_type('exit_message', string)
+        self._check_is_type('exit_message', str)
 
     @property
     def id(self):
@@ -1746,11 +1745,11 @@ class NodeReport(ProtobufMessage):
         self._state = NodeState(state)
 
     def _validate(self):
-        self._check_is_type('id', string)
-        self._check_is_type('http_address', string)
-        self._check_is_type('rack_name', string)
-        self._check_is_set_of('labels', string)
-        self._check_is_type('health_report', string)
+        self._check_is_type('id', str)
+        self._check_is_type('http_address', str)
+        self._check_is_type('rack_name', str)
+        self._check_is_set_of('labels', str)
+        self._check_is_type('health_report', str)
         self._check_is_type('total_resources', Resources)
         self.total_resources._validate()
         self._check_is_type('used_resources', Resources)
@@ -1846,12 +1845,12 @@ class Queue(ProtobufMessage):
         self._state = QueueState(state)
 
     def _validate(self):
-        self._check_is_type('name', string)
+        self._check_is_type('name', str)
         self._check_is_type('capacity', float)
         self._check_is_type('max_capacity', float)
         self._check_is_type('percent_used', float)
-        self._check_is_set_of('node_labels', string)
-        self._check_is_type('default_node_label', string)
+        self._check_is_set_of('node_labels', str)
+        self._check_is_type('default_node_label', str)
 
     @classmethod
     @implements(ProtobufMessage.from_protobuf)
