@@ -98,6 +98,7 @@ public class Driver {
   private UserGroupInformation ugi;
   private FileSystem defaultFileSystem;
   private YarnClient defaultYarnClient;
+  private LogClient logClient;
 
   private String classpath;
 
@@ -279,6 +280,8 @@ public class Driver {
     defaultFileSystem = getFs();
     // Start the yarn client as *this* user
     defaultYarnClient = getYarnClient();
+    // Create a logs client
+    logClient = new LogClient(conf);
 
     // Start the server
     startServer();
@@ -313,6 +316,21 @@ public class Driver {
 
   public Path getAppDir(FileSystem fs, ApplicationId appId) {
     return new Path(fs.getHomeDirectory(), ".skein/" + appId.toString());
+  }
+
+  public Map<String, String> getApplicationLogs(
+      final ApplicationId appId, final String owner, String user)
+      throws IOException, InterruptedException {
+    if (user.isEmpty()) {
+      return logClient.getLogs(appId, owner);
+    } else {
+      return UserGroupInformation.createProxyUser(user, ugi).doAs(
+          new PrivilegedExceptionAction<Map<String, String>>() {
+            public Map<String, String> run() throws IOException {
+              return logClient.getLogs(appId, owner);
+            }
+          });
+    }
   }
 
   public void killApplication(final ApplicationId appId, String user)
@@ -667,6 +685,17 @@ public class Driver {
   private boolean hasStarted(ApplicationReport report) {
     switch (report.getYarnApplicationState()) {
       case RUNNING:
+      case FINISHED:
+      case FAILED:
+      case KILLED:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  private boolean hasCompleted(ApplicationReport report) {
+    switch (report.getYarnApplicationState()) {
       case FINISHED:
       case FAILED:
       case KILLED:
@@ -1038,6 +1067,49 @@ public class Driver {
         resp.onNext(MsgUtils.writeApplicationReport(report));
         resp.onCompleted();
       }
+    }
+
+    @Override
+    public void getLogs(Msg.LogsRequest req,
+        StreamObserver<Msg.LogsResponse> resp) {
+
+      if (notLoggedIn(resp)) {
+        return;
+      }
+
+      ApplicationReport report = getReport(req.getId(), resp);
+      if (report == null) {
+        return;
+      }
+
+      Map<String, String> logs;
+      if (hasCompleted(report)) {
+        try {
+          logs = getApplicationLogs(
+              report.getApplicationId(), report.getUser(), req.getUser());
+        } catch (LogClient.LogClientException exc) {
+          resp.onError(Status.INVALID_ARGUMENT
+              .withDescription(exc.getMessage())
+              .asRuntimeException());
+          return;
+        } catch (Exception exc) {
+          resp.onError(Status.INTERNAL
+              .withDescription("Failed to get logs for application '"
+                               + req.getId()
+                               + "', exception:\n"
+                               + exc.getMessage())
+              .asRuntimeException());
+          return;
+        }
+      } else {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription("Application " + req.getId()
+                             + " has not completed, logs are not available")
+            .asRuntimeException());
+        return;
+      }
+      resp.onNext(Msg.LogsResponse.newBuilder().putAllLogs(logs).build());
+      resp.onCompleted();
     }
 
     @Override

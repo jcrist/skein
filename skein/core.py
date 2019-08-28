@@ -25,7 +25,7 @@ from .ui import WebUI
 from .model import (Security, ApplicationSpec, ApplicationReport,
                     ApplicationState, ContainerState, Container,
                     FinalStatus, Resources, container_instance_from_string,
-                    LogLevel, NodeState, NodeReport, Queue)
+                    LogLevel, NodeState, NodeReport, Queue, ApplicationLogs)
 from .utils import (cached_property, grpc_fork_support_disabled, pid_exists,
                     datetime_to_millis)
 
@@ -803,6 +803,31 @@ class Client(_ClientBase):
         """
         resp = self._call('getStatus', proto.Application(id=app_id))
         return ApplicationReport.from_protobuf(resp)
+
+    def application_logs(self, app_id, user=""):
+        """Get logs from a completed skein application.
+
+        Parameters
+        ----------
+        app_id : str
+            The id of the application.
+        user : str, optional
+            The user to get the application logs as. Requires the current user
+            to have permissions to proxy as ``user``. Default is the current
+            user.
+
+        Returns
+        -------
+        ApplicationLogs : logs
+            A mapping of ``yarn_container_id`` to ``logs`` for each container.
+
+        Examples
+        --------
+        >>> client.application_logs('application_1526134340424_0012')
+        ApplicationLogs<application_1526134340424_0012>
+        """
+        resp = self._call('getLogs', proto.LogsRequest(id=app_id, user=user))
+        return ApplicationLogs(app_id, dict(resp.logs))
 
     def move_application(self, app_id, queue):
         """Move an application to a different queue.

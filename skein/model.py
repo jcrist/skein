@@ -2,8 +2,10 @@ from __future__ import absolute_import, print_function, division
 
 import json
 import os
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 from getpass import getuser
+from io import StringIO
 
 import yaml
 
@@ -18,7 +20,7 @@ __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
            'FileVisibility', 'ACLs', 'Master', 'Security', 'ApplicationState',
            'FinalStatus', 'ResourceUsageReport', 'ApplicationReport',
            'ContainerState', 'Container', 'LogLevel', 'NodeState', 'NodeReport',
-           'QueueState', 'Queue')
+           'QueueState', 'Queue', 'ApplicationLogs')
 
 
 def _check_is_filename(target):
@@ -1861,3 +1863,65 @@ class Queue(ProtobufMessage):
                    percent_used=obj.percent_used,
                    node_labels=set(obj.node_labels),
                    default_node_label=obj.default_node_label)
+
+
+class ApplicationLogs(Mapping):
+    """A mapping of ``yarn_container_id`` to their logs for an application"""
+
+    def __init__(self, app_id, logs):
+        self.app_id = app_id
+        self.logs = logs
+
+    def __getitem__(self, k):
+        return self.logs[k]
+
+    def __iter__(self):
+        return iter(self.logs)
+
+    def __len__(self):
+        return len(self.logs)
+
+    def __repr__(self):
+        return "ApplicationLogs<%s>" % self.app_id
+
+    def _ipython_key_completions_(self):
+        return list(self.logs)
+
+    def _repr_html_(self):
+        elements = ["<h3 style='margin-bottom: 10px'>%s</h3>\n" % self.app_id]
+        elements.extend(
+            "<details>\n<summary style='display:list-item'>{title}</summary>\n"
+            "<pre><code>\n{log}\n\n</code></pre>\n"
+            "</details>".format(title=title, log=log)
+            for title, log in sorted(self.logs.items())
+        )
+        return "\n".join(elements)
+
+    def dump(self, file=None):
+        """Write the logs to a file or stdout.
+
+        Parameters
+        ----------
+        file : file-like, optional
+            A file-like object to write the logs to. Defaults to ``sys.stdout``.
+        """
+        if file is not None:
+            write = lambda s: print(s, file=file)
+        else:
+            write = print
+        N = len(self.logs) - 1
+        write("** Logs for %s **" % self.app_id)
+        write("")
+        for n, (k, v) in enumerate(sorted(self.logs.items())):
+            write(k)
+            write("=" * len(k))
+            write(v)
+            if n < N:
+                write("")
+
+    def dumps(self):
+        """Write the logs to a string."""
+        s = StringIO()
+        self.dump(s)
+        s.seek(0)
+        return s.read()

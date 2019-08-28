@@ -198,6 +198,7 @@ def test_client_errors_nicely_if_not_logged_in(security, not_logged_in):
                            ('get_child_queues', ('default',)),
                            ('get_all_queues', ()),
                            ('application_report', (appid,)),
+                           ('application_logs', (appid,)),
                            ('connect', (appid,)),
                            ('move_application', (appid, 'default')),
                            ('kill_application', (appid,)),
@@ -696,7 +697,7 @@ def test_add_container(client):
         # then fail the whole application
         assert wait_for_completion(client, app.id) == 'FAILED'
 
-    logs = get_logs(app.id)
+    logs = get_logs(client, app.id)
     assert "test_0 - MYENV=foo" in logs
     assert "test_0 - MYENV2=baz" in logs
 
@@ -732,7 +733,7 @@ def test_container_environment(runon, client, has_kerberos_enabled):
     with run_application(client, spec=spec, connect=False) as app_id:
         assert wait_for_completion(client, app_id) == 'SUCCEEDED'
 
-    logs = get_logs(app_id)
+    logs = get_logs(client, app_id)
     assert "USER=testuser" in logs
     assert 'SKEIN_APPMASTER_ADDRESS=' in logs
     assert 'SKEIN_APPLICATION_ID=%s' % app_id in logs
@@ -828,7 +829,7 @@ def test_custom_log4j_properties(client, tmpdir):
     with run_application(client, spec=spec) as app:
         assert wait_for_completion(client, app.id) == 'SUCCEEDED'
 
-    logs = get_logs(app.id)
+    logs = get_logs(client, app.id)
     assert 'CUSTOM-LOG4J-SUCCEEDED' in logs
 
 
@@ -843,7 +844,7 @@ def test_set_log_level(client):
     with run_application(client, spec=spec) as app:
         assert wait_for_completion(client, app.id) == 'SUCCEEDED'
 
-    logs = get_logs(app.id)
+    logs = get_logs(client, app.id)
     assert 'DEBUG' in logs
 
 
@@ -873,7 +874,7 @@ def test_memory_limit_exceeded(kind, client):
                                  services=services)
     with run_application(client, spec=spec, connect=False) as app_id:
         assert wait_for_completion(client, app_id) == "FAILED"
-    logs = get_logs(app_id)
+    logs = get_logs(client, app_id)
     assert search_txt in logs
 
     if kind == 'master':
@@ -944,7 +945,7 @@ def test_proxy_user(client):
         services={
             "service": skein.Service(
                 resources=skein.Resources(memory=32, vcores=1),
-                script='sleep infinity')
+                script="sleep infinity")
         }
     )
     with run_application(client, spec=spec) as app:
@@ -955,6 +956,11 @@ def test_proxy_user(client):
     assert spec2.user == 'alice'
     for fil in spec2.services['service'].files.values():
         assert fil.source.startswith('hdfs://master.example.com:9000/user/alice')
+
+    # Can get logs as user
+    logs = get_logs(client, app.id, user="alice")
+    assert app.id in logs
+    assert "application.master.log" in logs
 
     # Application directory deleted after kill
     fs = hdfs.connect()
@@ -1030,7 +1036,7 @@ def test_master_driver_foo(client, tmpdir):
     with run_application(client, spec=spec, connect=False) as app_id:
         assert wait_for_completion(client, app_id) == 'SUCCEEDED'
 
-    logs = get_logs(app_id)
+    logs = get_logs(client, app_id)
     assert 'FOO=BAR' in logs
     assert 'myfile' in logs
 
@@ -1094,7 +1100,7 @@ def test_retries_succeeds(client):
     )
     with run_application(client, spec=spec, connect=False) as app_id:
         assert wait_for_completion(client, app_id) == 'SUCCEEDED'
-    logs = get_logs(app_id)
+    logs = get_logs(client, app_id)
     assert 'Failing on other attempts' in logs
     assert 'Application attempt 1 out of 2 failed, will retry' in logs
     assert 'Succeeding on attempt 02' in logs
@@ -1118,7 +1124,7 @@ def test_retries_fails(client):
     )
     with run_application(client, spec=spec, connect=False) as app_id:
         assert wait_for_completion(client, app_id) == 'FAILED'
-    logs = get_logs(app_id)
+    logs = get_logs(client, app_id)
     assert logs.count('Failing on other attempts') == 2
     assert 'Application attempt 1 out of 2 failed' in logs
 
@@ -1181,7 +1187,7 @@ def test_fail_on_container_failure(client, with_restarts):
     with run_application(client, spec=spec) as app:
         wait_for_completion(client, app.id) == "FAILED"
 
-    logs = get_logs(app.id)
+    logs = get_logs(client, app.id)
     assert "test_0" in logs
     assert "test_1" in logs
     assert ("test_2" in logs) == with_restarts
