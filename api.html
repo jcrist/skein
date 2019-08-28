@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>API Docs &#8212; Skein 0.7.4+2.g702192d documentation</title>
+    <title>API Docs &#8212; Skein 0.7.4+3.gc741271 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -2021,15 +2021,15 @@ at least one service, or a script for the application master to run
 <dt><strong>master</strong><span class="classifier">Master, optional</span></dt><dd><p>Additional configuration for the application master service. See
 <code class="docutils literal notranslate"><span class="pre">skein.Master</span></code> for more information.</p>
 </dd>
-<dt><strong>name</strong><span class="classifier">string, optional</span></dt><dd><p>The name of the application, defaults to ‘skein’.</p>
+<dt><strong>name</strong><span class="classifier">str, optional</span></dt><dd><p>The name of the application, defaults to ‘skein’.</p>
 </dd>
-<dt><strong>queue</strong><span class="classifier">string, optional</span></dt><dd><p>The queue to submit to. Defaults to the default queue.</p>
+<dt><strong>queue</strong><span class="classifier">str, optional</span></dt><dd><p>The queue to submit to. Defaults to the default queue.</p>
 </dd>
-<dt><strong>user</strong><span class="classifier">string, optional</span></dt><dd><p>The user name to submit the application as. Requires that the
+<dt><strong>user</strong><span class="classifier">str, optional</span></dt><dd><p>The user name to submit the application as. Requires that the
 submitting user have permission to proxy as this user name. Default is
 the submitter’s user name.</p>
 </dd>
-<dt><strong>node_label</strong><span class="classifier">string, optional</span></dt><dd><p>The node label expression to use when requesting containers for this
+<dt><strong>node_label</strong><span class="classifier">str, optional</span></dt><dd><p>The node label expression to use when requesting containers for this
 application. Services can override this setting by specifying
 <code class="docutils literal notranslate"><span class="pre">node_label</span></code> on the service directly. Default is no label.</p>
 </dd>
@@ -2498,7 +2498,7 @@ determined by the file system.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><dl>
-<dt><strong>memory</strong><span class="classifier">string or int</span></dt><dd><p>The amount of memory to request. Can be either a string with units
+<dt><strong>memory</strong><span class="classifier">str or int</span></dt><dd><p>The amount of memory to request. Can be either a string with units
 (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;5</span> <span class="pre">GiB&quot;</span></code>), or numeric. If numeric, specifies the amount of
 memory in <em>MiB</em>. Note that the units are in mebibytes (MiB) NOT
 megabytes (MB) - the former being binary based (1024 MiB in a GiB), the
@@ -2700,10 +2700,10 @@ Here we give view access to all users:</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><dl class="simple">
-<dt><strong>cert_file</strong><span class="classifier">string, File, optional</span></dt><dd><p>The TLS certificate file, in pem format. Either a path or a fully
+<dt><strong>cert_file</strong><span class="classifier">str, File, optional</span></dt><dd><p>The TLS certificate file, in pem format. Either a path or a fully
 specified File object.</p>
 </dd>
-<dt><strong>key_file</strong><span class="classifier">string, File, optional</span></dt><dd><p>The TLS private key file, in pem format. Either a path or a fully
+<dt><strong>key_file</strong><span class="classifier">str, File, optional</span></dt><dd><p>The TLS private key file, in pem format. Either a path or a fully
 specified File object.</p>
 </dd>
 <dt><strong>cert_bytes</strong><span class="classifier">bytes, optional</span></dt><dd><p>The contents of the TLS certificate file, in pem format.</p>
