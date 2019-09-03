@@ -232,3 +232,11 @@ Exceptions
 
 .. autoexception:: ApplicationError
     :show-inheritance:
+
+
+Tornado Utilities
+-----------------
+
+.. autofunction:: skein.tornado.init_kerberos
+
+.. autoclass:: skein.tornado.KerberosMixin
