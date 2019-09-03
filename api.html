@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>API Docs &#8212; Skein 0.8.0 documentation</title>
+    <title>API Docs &#8212; Skein 0.8.0+3.g316fa54 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -3287,6 +3287,84 @@ application doesn’t specify a node label itself.</p>
 </dd></dl>
 
 </div>
+<div class="section" id="tornado-utilities">
+<h2>Tornado Utilities<a class="headerlink" href="#tornado-utilities" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="skein.tornado.init_kerberos">
+<code class="sig-prename descclassname">skein.tornado.</code><code class="sig-name descname">init_kerberos</code><span class="sig-paren">(</span><em class="sig-param">keytab=None</em>, <em class="sig-param">service='HTTP'</em>, <em class="sig-param">hostname=None</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.tornado.init_kerberos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize Kerberos authentication settings.</p>
+<p>Should be called once on process startup, sets global settings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>keytab</strong><span class="classifier">str, optional</span></dt><dd><p>Path to the keytab file. If not set, will check the <code class="docutils literal notranslate"><span class="pre">KRB5_KTNAME</span></code>
+environment variable, and error otherwise.</p>
+</dd>
+<dt><strong>hostname</strong><span class="classifier">str, optional</span></dt><dd><p>The hostname. If not provided, will be inferred from the system.</p>
+</dd>
+<dt><strong>service</strong><span class="classifier">str, optional</span></dt><dd><p>The service name. The default of <code class="docutils literal notranslate"><span class="pre">&quot;HTTP&quot;</span></code> is usually sufficient.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.tornado.KerberosAuthMixin">
+<em class="property">class </em><code class="sig-prename descclassname">skein.tornado.</code><code class="sig-name descname">KerberosAuthMixin</code><a class="headerlink" href="#skein.tornado.KerberosAuthMixin" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <code class="docutils literal notranslate"><span class="pre">tornado.web.RequestHandler</span></code> mixin for authenticating with Kerberos.</p>
+<p class="rubric">Examples</p>
+<p>A simple hello-world application:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">skein.tornado</span> <span class="kn">import</span> <span class="n">init_kerberos</span><span class="p">,</span> <span class="n">KerberosAuthMixin</span>
+<span class="kn">from</span> <span class="nn">tornado</span> <span class="kn">import</span> <span class="n">web</span><span class="p">,</span> <span class="n">ioloop</span>
+
+<span class="c1"># Create a handler with the KerberosAuthMixin as a base class</span>
+<span class="k">class</span> <span class="nc">HelloHandler</span><span class="p">(</span><span class="n">KerberosAuthMixin</span><span class="p">,</span> <span class="n">web</span><span class="o">.</span><span class="n">RequestHandler</span><span class="p">):</span>
+    <span class="nd">@web.authenticated</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Hello </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_user</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="c1"># Initialize kerberos once per application</span>
+    <span class="n">init_kerberos</span><span class="p">(</span><span class="n">keytab</span><span class="o">=</span><span class="s2">&quot;/path/to/my/service.keytab&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Serve web application</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">web</span><span class="o">.</span><span class="n">Application</span><span class="p">([(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="n">HelloHandler</span><span class="p">)])</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="mi">8888</span><span class="p">)</span>
+    <span class="n">ioloop</span><span class="o">.</span><span class="n">IOLoop</span><span class="o">.</span><span class="n">current</span><span class="p">()</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="skein.tornado.SimpleAuthMixin">
+<em class="property">class </em><code class="sig-prename descclassname">skein.tornado.</code><code class="sig-name descname">SimpleAuthMixin</code><a class="headerlink" href="#skein.tornado.SimpleAuthMixin" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <code class="docutils literal notranslate"><span class="pre">tornado.web.RequestHandler</span></code> mixin for authenticating using Hadoop’s
+“simple” protocol.</p>
+<p>In Hadoop, “simple” authentication uses a URL query parameter to specify
+the user, and isn’t secure at all. This mixin class exists for parity with
+Hadoop, but kerberos authentication is advised instead.</p>
+<p class="rubric">Examples</p>
+<p>A simple hello-world application:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">skein.tornado</span> <span class="kn">import</span> <span class="n">SimpleAuthMixin</span>
+<span class="kn">from</span> <span class="nn">tornado</span> <span class="kn">import</span> <span class="n">web</span><span class="p">,</span> <span class="n">ioloop</span>
+
+<span class="c1"># Create a handler with the SimpleAuthMixin as a base class</span>
+<span class="k">class</span> <span class="nc">HelloHandler</span><span class="p">(</span><span class="n">SimpleAuthMixin</span><span class="p">,</span> <span class="n">web</span><span class="o">.</span><span class="n">RequestHandler</span><span class="p">):</span>
+    <span class="nd">@web.authenticated</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Hello </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_user</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="c1"># Serve web application</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">web</span><span class="o">.</span><span class="n">Application</span><span class="p">([(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="n">HelloHandler</span><span class="p">)])</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="mi">8888</span><span class="p">)</span>
+    <span class="n">ioloop</span><span class="o">.</span><span class="n">IOLoop</span><span class="o">.</span><span class="n">current</span><span class="p">()</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
 </div>
 
 
@@ -3349,6 +3427,7 @@ application doesn’t specify a node label itself.</p>
 <li class="toctree-l2"><a class="reference internal" href="#application-specification">Application Specification</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#application-responses">Application Responses</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#exceptions">Exceptions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tornado-utilities">Tornado Utilities</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Docs</a></li>
