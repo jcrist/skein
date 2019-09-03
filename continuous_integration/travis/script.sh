@@ -9,6 +9,8 @@ if [[ "$DOCS" != "true" ]]; then
     # kinit if needed
     if [[ "$CLUSTER_CONFIG" == "kerberos" ]]; then
         htcluster exec -- kinit testuser -kt testuser.keytab
+        htcluster exec -u root cp /etc/hadoop/conf/master-keytabs/HTTP.keytab /home/testuser/HTTP.keytab
+        htcluster exec -u root chmod 644 /home/testuser/HTTP.keytab
     fi
     # Run py.test inside docker
     htcluster exec -- $CONDA_ENV/bin/py.test skein/skein/ -vv

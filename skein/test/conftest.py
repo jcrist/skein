@@ -42,8 +42,16 @@ def hadoop3():
 
 
 KEYTAB_PATH = "/home/testuser/testuser.keytab"
+HTTP_KEYTAB_PATH = "/home/testuser/HTTP.keytab"
 HAS_KERBEROS = os.environ.get('HADOOP_TESTING_CONFIG', '').lower() == 'kerberos'
 HADOOP3 = os.environ.get('HADOOP_TESTING_VERSION', '').lower() == 'cdh6'
+
+
+@pytest.fixture(scope="session")
+def http_keytab():
+    if not os.path.exists(HTTP_KEYTAB_PATH):
+        pytest.skip("HTTP keytab not found")
+    return HTTP_KEYTAB_PATH
 
 
 def do_kinit():
