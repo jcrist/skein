@@ -8,7 +8,7 @@ from .exceptions import FileNotFoundError
 logger = logging.getLogger("tornado.application")
 
 
-__all__ = ("KerberosMixin", "init_kerberos")
+__all__ = ("KerberosAuthMixin", "init_kerberos", "SimpleAuthMixin")
 
 
 # The global service name, set by `init_kerberos`
@@ -65,7 +65,7 @@ def init_kerberos(keytab=None, service="HTTP", hostname=None):
     _SERVICE_NAME = "%s@%s" % (service, hostname)
 
 
-class KerberosMixin(object):
+class KerberosAuthMixin(object):
     """A ``tornado.web.RequestHandler`` mixin for authenticating with Kerberos.
 
     Examples
@@ -74,11 +74,11 @@ class KerberosMixin(object):
 
     .. code-block:: python
 
-      from skein.tornado import init_kerberos, KerberosMixin
+      from skein.tornado import init_kerberos, KerberosAuthMixin
       from tornado import web, ioloop
 
-      # Create a handler with the KerberosMixin as a base class
-      class HelloHandler(KerberosMixin, web.RequestHandler):
+      # Create a handler with the KerberosAuthMixin as a base class
+      class HelloHandler(KerberosAuthMixin, web.RequestHandler):
           @web.authenticated
           def get(self):
               self.write("Hello %s" % self.current_user)
@@ -174,4 +174,62 @@ class KerberosMixin(object):
             if gss_context is not None:
                 kerberos.authGSSServerClean(gss_context)
 
+        return user
+
+
+class SimpleAuthMixin(object):
+    """A ``tornado.web.RequestHandler`` mixin for authenticating using Hadoop's
+    "simple" protocol.
+
+    In Hadoop, "simple" authentication uses a URL query parameter to specify
+    the user, and isn't secure at all. This mixin class exists for parity with
+    Hadoop, but kerberos authentication is advised instead.
+
+    Examples
+    --------
+    A simple hello-world application:
+
+    .. code-block:: python
+
+      from skein.tornado import SimpleAuthMixin
+      from tornado import web, ioloop
+
+      # Create a handler with the SimpleAuthMixin as a base class
+      class HelloHandler(SimpleAuthMixin, web.RequestHandler):
+          @web.authenticated
+          def get(self):
+              self.write("Hello %s" % self.current_user)
+
+      if __name__ == "__main__":
+          # Serve web application
+          app = web.Application([("/", HelloHandler)])
+          app.listen(8888)
+          ioloop.IOLoop.current().start()
+    """
+    def _raise_auth_required(self):
+        from tornado import web
+        self.set_status(401)
+        self.write("Authentication required")
+        self.set_header("WWW-Authenticate", "PseudoAuth")
+        raise web.Finish()
+
+    def get_current_user(self):
+        """An implementation of ``get_current_user`` using simple auth.
+
+        Calls out to ``get_current_user_simple``, override if you want to
+        support multiple authentication methods.
+        """
+        return self.get_current_user_simple()
+
+    def get_current_user_simple(self):
+        """Authenticate the current user using simple auth.
+
+        Returns
+        -------
+        user : str
+            The current user name.
+        """
+        user = self.get_argument("user.name", "")
+        if not user:
+            self._raise_auth_required()
         return user

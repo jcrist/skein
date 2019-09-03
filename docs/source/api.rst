@@ -239,4 +239,6 @@ Tornado Utilities
 
 .. autofunction:: skein.tornado.init_kerberos
 
-.. autoclass:: skein.tornado.KerberosMixin
+.. autoclass:: skein.tornado.KerberosAuthMixin
+
+.. autoclass:: skein.tornado.SimpleAuthMixin
