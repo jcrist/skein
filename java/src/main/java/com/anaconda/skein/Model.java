@@ -303,13 +303,14 @@ public class Model {
     private Acls acls;
     private Master master;
     private Map<String, Service> services;
+    private boolean acquireMapReduceDelegationToken;
 
     public ApplicationSpec() {}
 
     public ApplicationSpec(String name, String queue, String user,
                            String nodeLabel, int maxAttempts, Set<String> tags,
                            List<Path> fileSystems, Acls acls, Master master,
-                           Map<String, Service> services) {
+                           Map<String, Service> services, boolean acquireMapReduceDelegationToken) {
       this.name = name;
       this.queue = queue;
       this.user = user;
@@ -320,6 +321,7 @@ public class Model {
       this.acls = acls;
       this.master = master;
       this.services = services;
+      this.acquireMapReduceDelegationToken = acquireMapReduceDelegationToken;
     }
 
     public String toString() {
@@ -364,6 +366,13 @@ public class Model {
 
     public void setServices(Map<String, Service> services) { this.services = services; }
     public Map<String, Service> getServices() { return services; }
+
+    public void setAcquireMapReduceDelegationToken(boolean acquireMapReduceDelegationToken) {
+      this.acquireMapReduceDelegationToken = acquireMapReduceDelegationToken;
+    }
+    public boolean getAcquireMapReduceDelegationToken() {
+      return acquireMapReduceDelegationToken;
+    }
 
     public void validate() throws IllegalArgumentException {
       throwIfNull(name, "name");

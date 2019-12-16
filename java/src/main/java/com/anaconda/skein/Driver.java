@@ -543,7 +543,9 @@ public class Driver {
       );
       credentials.addToken(rmDelegationTokenService, rmToken);
     }
-    addMapReduceHistoryToken(credentials);
+    if (spec.getAcquireMapReduceDelegationToken()) {
+      addMapReduceHistoryToken(credentials);
+    }
 
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);

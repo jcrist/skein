@@ -590,7 +590,8 @@ public class MsgUtils {
         .addAllTags(spec.getTags())
         .setAcls(writeAcls(spec.getAcls()))
         .setMaster(writeMaster(spec.getMaster()))
-        .addAllFileSystems(Lists.transform(spec.getFileSystems(), Functions.toStringFunction()));
+        .addAllFileSystems(Lists.transform(spec.getFileSystems(), Functions.toStringFunction()))
+        .setAcquireMapReduceDelegationToken(spec.getAcquireMapReduceDelegationToken());
 
     for (Map.Entry<String, Model.Service> entry : spec.getServices().entrySet()) {
       builder.putServices(entry.getKey(), writeService(entry.getValue()));
@@ -618,7 +619,7 @@ public class MsgUtils {
                                      fileSystems,
                                      readAcls(spec.getAcls()),
                                      readMaster(spec.getMaster()),
-                                     services);
+                                     services, spec.getAcquireMapReduceDelegationToken());
   }
 
   public static Msg.Container writeContainer(Model.Container container) {

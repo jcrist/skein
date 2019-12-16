@@ -151,6 +151,7 @@ message ApplicationSpec {
   Acls acls = 8;
   Master master = 9;
   map<string, Service> services = 10;
+  bool acquire_map_reduce_delegation_token = 11;
 }
 
 
