@@ -1201,7 +1201,7 @@ class ApplicationSpec(Specification):
     def __init__(self, services=None, master=None, name='skein',
                  queue='default', user='', node_label='', tags=None,
                  file_systems=None, acls=None, max_attempts=1,
-                 acquire_map_reduce_delegation_token = False):
+                 acquire_map_reduce_delegation_token=False):
         self.services = {} if services is None else services
         self.master = Master() if master is None else master
         self.name = name
@@ -1290,6 +1290,7 @@ class ApplicationSpec(Specification):
     def from_protobuf(cls, obj):
         services = {k: Service.from_protobuf(v)
                     for k, v in obj.services.items()}
+        ask_map_reduce_history_token = obj.acquire_map_reduce_delegation_token
         return cls(name=obj.name,
                    queue=obj.queue,
                    user=obj.user,
@@ -1300,7 +1301,7 @@ class ApplicationSpec(Specification):
                    acls=ACLs.from_protobuf(obj.acls),
                    master=Master.from_protobuf(obj.master),
                    services=services,
-                   acquire_map_reduce_delegation_token = obj.acquire_map_reduce_delegation_token)
+                   acquire_map_reduce_delegation_token=ask_map_reduce_history_token)
 
     @classmethod
     def from_file(cls, path, format='infer'):
