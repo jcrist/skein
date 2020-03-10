@@ -1,7 +1,8 @@
 package com.anaconda.skein;
 
+import com.anaconda.skein.credentials.CredentialProvider;
+import com.anaconda.skein.credentials.HdfsCredentials;
 import com.google.common.base.Strings;
-import com.google.common.collect.ObjectArrays;
 import com.google.protobuf.ByteString;
 
 import io.grpc.Server;
@@ -21,12 +22,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -43,33 +40,23 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ThreadPoolExecutor;
 
 public class Driver {
@@ -359,20 +346,28 @@ public class Driver {
   /** Start a new application. **/
   public ApplicationId submitApplication(final Model.ApplicationSpec spec)
       throws IOException, YarnException, InterruptedException {
+
     if (spec.getUser().isEmpty()) {
-      return submitApplicationInner(defaultYarnClient, defaultFileSystem, spec);
-    } else {
+      return submitApplicationInner(defaultYarnClient, defaultFileSystem, spec, null);
+    }
+    else {
+      // We need to obtain additional delegation token from systems while
+      // we are authenticated with kerberos, before we impersonate the user.
+      final Credentials cred = UserGroupInformation.getCurrentUser().getCredentials();
+      for(CredentialProvider c : spec.getCredentialProviders()) {
+        c.updateCredentials(cred);
+      }
       return UserGroupInformation.createProxyUser(spec.getUser(), ugi).doAs(
         new PrivilegedExceptionAction<ApplicationId>() {
           public ApplicationId run() throws IOException, YarnException {
-            return submitApplicationInner(getYarnClient(), getFs(), spec);
+            return submitApplicationInner(getYarnClient(), getFs(), spec, cred);
           }
         });
     }
   }
 
-  private ApplicationId submitApplicationInner(YarnClient yarnClient,
-      FileSystem fs, Model.ApplicationSpec spec) throws IOException, YarnException {
+  private ApplicationId submitApplicationInner(YarnClient yarnClient, FileSystem fs, Model.ApplicationSpec spec,
+                                               Credentials cred) throws IOException, YarnException {
     // First validate the spec request
     spec.validate();
 
@@ -414,12 +409,18 @@ public class Driver {
          + appDir
          + " >" + logdir + "/application.master.log 2>&1"));
 
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     ByteBuffer fsTokens = null;
     if (UserGroupInformation.isSecurityEnabled()) {
-      fsTokens = collectTokens(yarnClient, fs, spec);
-    } else {
-      env.put("HADOOP_USER_NAME", ugi.getUserName());
+      new HdfsCredentials(yarnClient, fs, spec, conf).updateCredentials(cred);
+      DataOutputBuffer dob = new DataOutputBuffer();
+      cred.writeTokenStorageToStream(dob);
+      fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+
+      // We cancel the delegation token when the job finishes, so that it cannot be used elsewhere
+      conf.setBoolean("mapreduce.job.complete.cancel.delegation.tokens", true);
+    }
+    else {
+      env.put("HADOOP_USER_NAME", UserGroupInformation.getCurrentUser().getUserName());
     }
 
     Map<ApplicationAccessType, String> acls = spec.getAcls().getYarnAcls();
@@ -450,43 +451,6 @@ public class Driver {
     }
 
     return appId;
-  }
-
-  private ByteBuffer collectTokens(YarnClient yarnClient, FileSystem fs,
-      Model.ApplicationSpec spec) throws IOException, YarnException {
-    // Collect security tokens as needed
-    LOG.debug("Collecting filesystem delegation tokens");
-    Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
-    TokenCache.obtainTokensForNamenodes(
-            credentials,
-            ObjectArrays.concat(
-                    new Path(fs.getUri()),
-                    spec.getFileSystems().toArray(new Path[0])),
-            conf);
-
-    boolean hasRMToken = false;
-    for (Token<?> token: credentials.getAllTokens()) {
-      if (token.getKind().equals(RMDelegationTokenIdentifier.KIND_NAME)) {
-        LOG.debug("RM delegation token already acquired");
-        hasRMToken = true;
-        break;
-      }
-    }
-    if (!hasRMToken) {
-      LOG.debug("Adding RM delegation token");
-      Text rmDelegationTokenService = ClientRMProxy.getRMDelegationTokenService(conf);
-      String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
-      org.apache.hadoop.yarn.api.records.Token rmDelegationToken =
-          yarnClient.getRMDelegationToken(new Text(tokenRenewer));
-      Token<TokenIdentifier> rmToken = ConverterUtils.convertFromYarn(
-          rmDelegationToken, rmDelegationTokenService
-      );
-      credentials.addToken(rmDelegationTokenService, rmToken);
-    }
-
-    DataOutputBuffer dob = new DataOutputBuffer();
-    credentials.writeTokenStorageToStream(dob);
-    return ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
   }
 
   private LocalResource finalizeSecurityFile(
@@ -1155,10 +1119,13 @@ public class Driver {
       try {
         appId = submitApplication(spec);
       } catch (Exception exc) {
+        StringWriter sw = new StringWriter();
+        exc.printStackTrace(new PrintWriter(sw));
+
         resp.onError(Status.INTERNAL
             .withDescription("Failed to submit application, "
                              + "exception:\n"
-                             + exc.getMessage())
+                             + sw.toString())
             .asRuntimeException());
         return;
       }

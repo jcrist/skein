@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
 from .skein_pb2 import (Empty, FinalStatus, ApplicationState, Resources, File,
-                        Service, Acls, Log, Master, Security, ApplicationSpec,
-                        ResourceUsageReport, ApplicationReport, Application,
-                        ApplicationsRequest, Url, ContainersRequest, Container,
+                        Service, Acls, Log, Master, CredentialProviderSpec,
+                        Security, ApplicationSpec, ResourceUsageReport, ApplicationReport,
+                        Application, ApplicationsRequest, Url, ContainersRequest, Container,
                         ContainerInstance, ScaleRequest, AddContainerRequest,
                         ShutdownRequest, KillRequest, SetProgressRequest,
                         NodeState, NodeReport, NodesRequest, Queue,

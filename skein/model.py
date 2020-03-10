@@ -16,10 +16,10 @@ from .utils import (implements, format_list, datetime_from_millis, runtime,
                     xor, lock_file)
 
 __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
-           'FileVisibility', 'ACLs', 'Master', 'Security', 'ApplicationState',
-           'FinalStatus', 'ResourceUsageReport', 'ApplicationReport',
-           'ContainerState', 'Container', 'LogLevel', 'NodeState', 'NodeReport',
-           'QueueState', 'Queue', 'ApplicationLogs')
+           'FileVisibility', 'ACLs', 'Master', 'CredentialProviderSpec', 'Security',
+           'ApplicationState', 'FinalStatus', 'ResourceUsageReport',
+           'ApplicationReport', 'ContainerState', 'Container', 'LogLevel', 'NodeState',
+           'NodeReport','QueueState', 'Queue', 'ApplicationLogs')
 
 
 def _check_is_filename(target):
@@ -1152,6 +1152,60 @@ class Master(Specification):
                    security=security)
 
 
+class CredentialProviderSpec(Specification):
+    """Configuration for the Credential Provider.
+
+    Parameters
+    ----------
+    name : str
+        Describes the name system for which to get the delegation token. Ex: 'hive'
+    uri : str, optional
+        Describes the uri of the system to connect to.
+    principal : str
+        Describes the kerberos principal of the system.
+    """
+    __slots__ = ('name', 'uri', 'principal')
+    _params = ('name', 'uri', 'principal')
+    _protobuf_cls = _proto.CredentialProviderSpec
+
+    def __init__(self, name='', uri='', principal=''):
+        self.name = name
+        self.uri = uri
+        self.principal = principal
+
+        self._validate()
+
+    def _validate(self):
+        self._check_is_type('name', str)
+        self._check_is_type('uri', str)
+        self._check_is_type('principal', str)
+
+    def __repr__(self):
+        return 'CredentialProvider<...>'
+
+    @classmethod
+    @implements(Specification.from_dict)
+    def from_dict(cls, obj, **kwargs):
+        cls._check_keys(obj)
+
+        obj = obj.copy()
+        name = obj.pop('name', None)
+        uri = obj.pop('uri', None)
+        principal = obj.pop('principal', None)
+
+        return cls(name=name,
+                   uri=uri,
+                   principal=principal,
+                   **obj)
+
+    @classmethod
+    @implements(Specification.from_protobuf)
+    def from_protobuf(cls, obj):
+        return cls(name=obj.name,
+                   uri=obj.uri,
+                   principal=obj.principal)
+
+
 class ApplicationSpec(Specification):
     """A complete description of an application.
 
@@ -1181,6 +1235,8 @@ class ApplicationSpec(Specification):
     file_systems : list, optional
         A list of Hadoop file systems to acquire delegation tokens for.
         A token is always acquired for the ``defaultFS``.
+    credential_providers : list, optional
+        TODO
     acls : ACLs, optional
         Allows restricting users/groups to subsets of application access. See
         ``skein.ACLs`` for more information.
@@ -1190,12 +1246,12 @@ class ApplicationSpec(Specification):
         application master during startup. Default is 1.
     """
     __slots__ = ('services', 'master', 'name', 'queue', 'user', 'node_label',
-                 'tags', 'file_systems', 'acls', 'max_attempts')
+                 'tags', 'file_systems', 'credential_providers', 'acls', 'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
     def __init__(self, services=None, master=None, name='skein',
                  queue='default', user='', node_label='', tags=None,
-                 file_systems=None, acls=None, max_attempts=1):
+                 file_systems=None, credential_providers=None, acls=None, max_attempts=1):
         self.services = {} if services is None else services
         self.master = Master() if master is None else master
         self.name = name
@@ -1204,6 +1260,7 @@ class ApplicationSpec(Specification):
         self.node_label = node_label
         self.tags = set() if tags is None else set(tags)
         self.file_systems = [] if file_systems is None else file_systems
+        self.credential_providers = [] if credential_providers is None else credential_providers
         self.acls = ACLs() if acls is None else acls
         self.max_attempts = max_attempts
         self._validate()
@@ -1219,6 +1276,7 @@ class ApplicationSpec(Specification):
         self._check_is_type('node_label', str)
         self._check_is_set_of('tags', str)
         self._check_is_list_of('file_systems', str)
+        #self._check_is_list_of('credential_providers', CredentialProviderSpec)
         self._check_is_bounded_int('max_attempts', min=1)
         self._check_is_type('acls', ACLs)
         self.acls._validate()
@@ -1275,7 +1333,16 @@ class ApplicationSpec(Specification):
         if master is not None and isinstance(master, dict):
             master = Master.from_dict(master, _origin=_origin)
 
-        return cls(services=services, acls=acls, master=master, **obj)
+        #print("George was here")
+        #raise Exception("George - model.py ;): " + str(len(credential_providers)))
+
+        credential_providers = obj.pop('credential_providers', None)
+        if credential_providers is not None and isinstance(credential_providers, list):
+            credential_providers = [
+                CredentialProviderSpec.from_dict(p, _origin=_origin) for p in credential_providers]
+
+        return cls(services=services, acls=acls, master=master,
+                   credential_providers=credential_providers, **obj)
 
     @classmethod
     @implements(Specification.from_protobuf)

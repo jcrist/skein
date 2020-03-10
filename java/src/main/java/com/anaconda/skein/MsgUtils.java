@@ -1,5 +1,7 @@
 package com.anaconda.skein;
 
+import com.anaconda.skein.credentials.CredentialProvider;
+import com.anaconda.skein.credentials.HiveCredentials;
 import com.google.common.base.Functions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -23,11 +25,7 @@ import org.apache.log4j.Level;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MsgUtils {
   public static final Msg.Empty EMPTY = Msg.Empty.newBuilder().build();
@@ -609,6 +607,14 @@ public class MsgUtils {
       fileSystems.add(new Path(spec.getFileSystems(i)));
     }
 
+    final List<CredentialProvider> credentialProviders = new LinkedList<CredentialProvider>();
+    for(int i = 0; i < spec.getCredentialProvidersCount(); i++) {
+      Msg.CredentialProviderSpec d = spec.getCredentialProviders(i);
+      if (d.getName().equals("hive")) {
+        credentialProviders.add(new HiveCredentials(d, spec.getUser()));
+      }
+    }
+
     return new Model.ApplicationSpec(spec.getName(),
                                      spec.getQueue(),
                                      spec.getUser(),
@@ -616,6 +622,7 @@ public class MsgUtils {
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
                                      fileSystems,
+                                     credentialProviders,
                                      readAcls(spec.getAcls()),
                                      readMaster(spec.getMaster()),
                                      services);

@@ -1,5 +1,6 @@
 package com.anaconda.skein;
 
+import com.anaconda.skein.credentials.CredentialProvider;
 import com.google.protobuf.ByteString;
 
 import org.apache.hadoop.fs.Path;
@@ -300,6 +301,7 @@ public class Model {
     private int maxAttempts;
     private Set<String> tags;
     private List<Path> fileSystems;
+    private List<CredentialProvider> credentialProviders;
     private Acls acls;
     private Master master;
     private Map<String, Service> services;
@@ -308,8 +310,8 @@ public class Model {
 
     public ApplicationSpec(String name, String queue, String user,
                            String nodeLabel, int maxAttempts, Set<String> tags,
-                           List<Path> fileSystems, Acls acls, Master master,
-                           Map<String, Service> services) {
+                           List<Path> fileSystems, List<CredentialProvider> credentialProviders,
+                           Acls acls, Master master, Map<String, Service> services) {
       this.name = name;
       this.queue = queue;
       this.user = user;
@@ -317,6 +319,7 @@ public class Model {
       this.maxAttempts = maxAttempts;
       this.tags = tags;
       this.fileSystems = fileSystems;
+      this.credentialProviders = credentialProviders;
       this.acls = acls;
       this.master = master;
       this.services = services;
@@ -330,6 +333,7 @@ public class Model {
               + "maxAttempts: " + maxAttempts + ", "
               + "tags: " + tags + ", "
               + "fileSystems" + fileSystems + ", "
+              + "delegationTokenSystems" + credentialProviders + ", "
               + "services: " + services + ">");
     }
 
@@ -355,6 +359,11 @@ public class Model {
       this.fileSystems = fileSystems;
     }
     public List<Path> getFileSystems() { return this.fileSystems; }
+
+    public void setCredentialProviders(List<CredentialProvider> credentialProviders) {
+      this.credentialProviders = credentialProviders;
+    }
+    public List<CredentialProvider> getCredentialProviders() { return this.credentialProviders; }
 
     public void setAcls(Acls acls) { this.acls = acls; }
     public Acls getAcls() { return this.acls; }
