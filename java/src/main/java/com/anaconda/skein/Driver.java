@@ -346,14 +346,14 @@ public class Driver {
   /** Start a new application. **/
   public ApplicationId submitApplication(final Model.ApplicationSpec spec)
       throws IOException, YarnException, InterruptedException {
+    final Credentials cred = UserGroupInformation.getCurrentUser().getCredentials();
 
     if (spec.getUser().isEmpty()) {
-      return submitApplicationInner(defaultYarnClient, defaultFileSystem, spec, null);
+      return submitApplicationInner(defaultYarnClient, defaultFileSystem, spec, cred);
     }
     else {
       // We need to obtain additional delegation token from systems while
       // we are authenticated with kerberos, before we impersonate the user.
-      final Credentials cred = UserGroupInformation.getCurrentUser().getCredentials();
       for(CredentialProvider c : spec.getCredentialProviders()) {
         c.updateCredentials(cred);
       }

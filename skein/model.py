@@ -1276,7 +1276,7 @@ class ApplicationSpec(Specification):
         self._check_is_type('node_label', str)
         self._check_is_set_of('tags', str)
         self._check_is_list_of('file_systems', str)
-        #self._check_is_list_of('credential_providers', CredentialProviderSpec)
+        self._check_is_list_of('credential_providers', CredentialProviderSpec)
         self._check_is_bounded_int('max_attempts', min=1)
         self._check_is_type('acls', ACLs)
         self.acls._validate()
@@ -1333,9 +1333,6 @@ class ApplicationSpec(Specification):
         if master is not None and isinstance(master, dict):
             master = Master.from_dict(master, _origin=_origin)
 
-        #print("George was here")
-        #raise Exception("George - model.py ;): " + str(len(credential_providers)))
-
         credential_providers = obj.pop('credential_providers', None)
         if credential_providers is not None and isinstance(credential_providers, list):
             credential_providers = [
@@ -1355,6 +1352,7 @@ class ApplicationSpec(Specification):
                    node_label=obj.node_label,
                    tags=set(obj.tags),
                    file_systems=list(obj.file_systems),
+                   credential_providers=list(obj.credential_providers),
                    max_attempts=min(1, obj.max_attempts),
                    acls=ACLs.from_protobuf(obj.acls),
                    master=Master.from_protobuf(obj.master),
