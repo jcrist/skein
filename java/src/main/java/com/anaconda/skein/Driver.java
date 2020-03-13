@@ -1125,6 +1125,7 @@ public class Driver {
         resp.onError(Status.INTERNAL
             .withDescription("Failed to submit application, "
                              + "exception:\n"
+                             + exc.getMessage()
                              + sw.toString())
             .asRuntimeException());
         return;
