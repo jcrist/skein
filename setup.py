@@ -192,7 +192,7 @@ cmdclass.update({'build_java': build_java,    # directly build the java source
 setup(name='skein',
       version=VERSION,
       cmdclass=cmdclass,
-      maintainer='Jim Crist',
+      maintainer='Jim Crist-Harif',
       maintainer_email='jcristharif@gmail.com',
       license='BSD',
       description=('A simple tool and library for deploying applications on '

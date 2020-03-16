@@ -3,8 +3,8 @@ import skein
 
 # Project settings
 project = 'Skein'
-copyright = '2018, Jim Crist'
-author = 'Jim Crist'
+copyright = '2018, Jim Crist-Harif'
+author = 'Jim Crist-Harif'
 release = version = skein.__version__
 
 source_suffix = '.rst'
