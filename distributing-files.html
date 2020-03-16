@@ -4,14 +4,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Distributing Files &#8212; Skein 0.8.0+4.gda71cf6 documentation</title>
+    <title>Distributing Files &#8212; Skein 0.8.0+5.gc89a54a documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
     <link rel="shortcut icon" href="_static/favicon.ico"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -141,7 +141,7 @@ avoid this problem completely. If they aren’t, then one needs to package the
 environment to distribute with the application. This is typically handled using</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://conda.github.io/conda-pack/">conda-pack</a> for <a class="reference external" href="http://conda.io/">conda</a> environments</p></li>
-<li><p><a class="reference external" href="https://jcrist.github.io/venv-pack/">venv-pack</a>  for virtual environments (both <a class="reference external" href="https://docs.python.org/3/library/venv.html">venv</a> and <a class="reference external" href="https://virtualenv.pypa.io/en/stable/">virtualenv</a> supported)</p></li>
+<li><p><a class="reference external" href="https://jcristharif.com/venv-pack/">venv-pack</a>  for virtual environments (both <a class="reference external" href="https://docs.python.org/3/library/venv.html">venv</a> and <a class="reference external" href="https://virtualenv.pypa.io/en/stable/">virtualenv</a> supported)</p></li>
 </ul>
 <p>Both are tools for taking an environment and creating an archive of it in a way
 that (most) absolute paths in any libraries or scripts are altered to be
@@ -173,14 +173,14 @@ Packing environment at <span class="s1">&#39;/home/jcrist/miniconda/envs/example
 </div>
 <div class="section" id="packaging-a-virtual-environment-with-venv-pack">
 <h3>Packaging a Virtual Environment with Venv-Pack<a class="headerlink" href="#packaging-a-virtual-environment-with-venv-pack" title="Permalink to this headline">¶</a></h3>
-<p>Here we create a virtual environment, and then use <a class="reference external" href="https://jcrist.github.io/venv-pack/">venv-pack</a> to package it
+<p>Here we create a virtual environment, and then use <a class="reference external" href="https://jcristharif.com/venv-pack/">venv-pack</a> to package it
 into a <code class="docutils literal notranslate"><span class="pre">tar.gz</span></code> file named <code class="docutils literal notranslate"><span class="pre">environment.tar.gz</span></code>. This is what will be
 distributed with our application. The virtual environment can be created using
 either <a class="reference external" href="https://docs.python.org/3/library/venv.html">venv</a> or <a class="reference external" href="https://virtualenv.pypa.io/en/stable/">virtualenv</a>.</p>
 <p>Note that the python linked to in the virtual environment must exist and be
 accessible on every node in the YARN cluster. If the environment was created
 with a different Python, you can change the link path using the
-<code class="docutils literal notranslate"><span class="pre">--python-prefix</span></code> flag. For more information see the <a class="reference external" href="https://jcrist.github.io/venv-pack/">venv-pack
+<code class="docutils literal notranslate"><span class="pre">--python-prefix</span></code> flag. For more information see the <a class="reference external" href="https://jcristharif.com/venv-pack/">venv-pack
 documentation</a>.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create a virtual environment</span>
 $ python -m venv example            <span class="c1"># Using venv</span>
@@ -305,7 +305,7 @@ looks the same for environments packaged using either tool.</p>
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>

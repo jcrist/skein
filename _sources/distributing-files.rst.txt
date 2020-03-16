@@ -225,6 +225,6 @@ looks the same for environments packaged using either tool.
 .. _virtual environments: https://docs.python.org/3/library/venv.html
 .. _virtualenv: https://virtualenv.pypa.io/en/stable/
 .. _venv-pack documentation:
-.. _venv-pack: https://jcrist.github.io/venv-pack/
+.. _venv-pack: https://jcristharif.com/venv-pack/
 .. _this blogpost from Hortonworks:
 .. _YARN resource localization: https://hortonworks.com/blog/resource-localization-in-yarn-deep-dive/

@@ -4,14 +4,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>API Docs &#8212; Skein 0.8.0+4.gda71cf6 documentation</title>
+    <title>API Docs &#8212; Skein 0.8.0+5.gc89a54a documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
     <link rel="shortcut icon" href="_static/favicon.ico"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -73,7 +73,7 @@ configured by setting the environment variable
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">skein</span><span class="o">.</span><span class="n">Client</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">skein</span><span class="o">.</span><span class="n">Client</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
 <span class="gp">... </span>    <span class="n">app_id</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="s1">&#39;spec.yaml&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -100,7 +100,7 @@ user.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">application_logs</span><span class="p">(</span><span class="s1">&#39;application_1526134340424_0012&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">application_logs</span><span class="p">(</span><span class="s1">&#39;application_1526134340424_0012&#39;</span><span class="p">)</span>
 <span class="go">ApplicationLogs&lt;application_1526134340424_0012&gt;</span>
 </pre></div>
 </div>
@@ -124,7 +124,7 @@ user.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">application_report</span><span class="p">(</span><span class="s1">&#39;application_1526134340424_0012&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">application_report</span><span class="p">(</span><span class="s1">&#39;application_1526134340424_0012&#39;</span><span class="p">)</span>
 <span class="go">ApplicationReport&lt;name=&#39;demo&#39;&gt;</span>
 </pre></div>
 </div>
@@ -187,7 +187,7 @@ application master. Defaults to the global configuration.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_all_queues</span><span class="p">()</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_all_queues</span><span class="p">()</span>
 <span class="go">[Queue&lt;name=&#39;default&#39;, percent_used=0.00&gt;,</span>
 <span class="go"> Queue&lt;name=&#39;myqueue&#39;, percent_used=5.00&gt;,</span>
 <span class="go"> Queue&lt;name=&#39;child1&#39;, percent_used=10.00&gt;,</span>
@@ -244,14 +244,14 @@ Can be either a datetime or a string representation of one.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>Get all the finished and failed applications</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_applications</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;FINISHED&#39;</span><span class="p">,</span> <span class="s1">&#39;FAILED&#39;</span><span class="p">])</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_applications</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;FINISHED&#39;</span><span class="p">,</span> <span class="s1">&#39;FAILED&#39;</span><span class="p">])</span>
 <span class="go">[ApplicationReport&lt;name=&#39;demo&#39;&gt;,</span>
 <span class="go"> ApplicationReport&lt;name=&#39;dask&#39;&gt;,</span>
 <span class="go"> ApplicationReport&lt;name=&#39;demo&#39;&gt;]</span>
 </pre></div>
 </div>
 <p>Get all applications named ‘demo’ started after 2019-4-10:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_applications</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;demo&#39;</span><span class="p">,</span> <span class="n">started_begin</span><span class="o">=</span><span class="s1">&#39;2019-4-10&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_applications</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;demo&#39;</span><span class="p">,</span> <span class="n">started_begin</span><span class="o">=</span><span class="s1">&#39;2019-4-10&#39;</span><span class="p">)</span>
 <span class="go">[ApplicationReport&lt;name=&#39;demo&#39;&gt;,</span>
 <span class="go"> ApplicationReport&lt;name=&#39;demo&#39;&gt;]</span>
 </pre></div>
@@ -276,7 +276,7 @@ Can be either a datetime or a string representation of one.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_child_queues</span><span class="p">(</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_child_queues</span><span class="p">(</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
 <span class="go">[Queue&lt;name=&#39;child1&#39;, percent_used=10.00&gt;,</span>
 <span class="go"> Queue&lt;name=&#39;child2&#39;, percent_used=0.00&gt;]</span>
 </pre></div>
@@ -303,7 +303,7 @@ is all states.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>Get all the running nodes</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_nodes</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;RUNNING&#39;</span><span class="p">])</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_nodes</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;RUNNING&#39;</span><span class="p">])</span>
 <span class="go">[NodeReport&lt;id=&#39;worker1.example.com:34721&#39;&gt;,</span>
 <span class="go"> NodeReport&lt;id=&#39;worker2.example.com:34721&#39;&gt;]</span>
 </pre></div>
@@ -328,7 +328,7 @@ is all states.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_queue</span><span class="p">(</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_queue</span><span class="p">(</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
 <span class="go">Queue&lt;name=&#39;myqueue&#39;, percent_used=5.00&gt;</span>
 </pre></div>
 </div>
@@ -589,7 +589,7 @@ Default is <code class="docutils literal notranslate"><span class="pre">['WAITIN
 ability to “wait” for keys to be set. Keys are strings, with values as
 bytes.</p>
 <p class="rubric">Examples</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app_client</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;bar&#39;</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app_client</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;bar&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">app_client</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">]</span>
 <span class="go">b&#39;bar&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">del</span> <span class="n">app_client</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">]</span>
@@ -599,7 +599,7 @@ bytes.</p>
 </div>
 <p>Wait until the key is set, either by another service or by a user
 client. This is useful for inter-service synchronization.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app_client</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="s1">&#39;mykey&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app_client</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="s1">&#39;mykey&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -841,7 +841,7 @@ Default is False.</p>
 <dd><p>Create a new EventQueue subscribed to no events.</p>
 <p class="rubric">Examples</p>
 <p>Subscribe to events starting with <code class="docutils literal notranslate"><span class="pre">'foo'</span></code> or <code class="docutils literal notranslate"><span class="pre">'bar'</span></code>.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">EventFilter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">EventFilter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">bar</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">EventFilter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">event_queue</span><span class="p">()</span>              
 <span class="gp">&gt;&gt;&gt; </span><span class="n">queue</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">foo</span><span class="p">)</span>                      
@@ -888,7 +888,7 @@ may be provided.</p>
 </dl>
 <p class="rubric">Examples</p>
 <p>Subscribe to all events with prefix <code class="docutils literal notranslate"><span class="pre">'foo'</span></code>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">):</span>  
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">):</span>  
 <span class="gp">... </span>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;PUT&#39;</span><span class="p">:</span>
 <span class="gp">... </span>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PUT&lt;key=</span><span class="si">%r</span><span class="s2">, value=</span><span class="si">%r</span><span class="s2">&gt;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">value</span><span class="p">))</span>
 <span class="gp">... </span>    <span class="k">else</span><span class="p">:</span>  <span class="c1"># DELETE</span>
@@ -1231,7 +1231,7 @@ operations, depending on which branch was evaluated.</p>
 <p>This implements an atomic <a class="reference external" href="https://en.wikipedia.org/wiki/Compare-and-swap">compare-and-swap</a> operation, a useful
 concurrency primitive. It sets <code class="docutils literal notranslate"><span class="pre">key</span></code> to <code class="docutils literal notranslate"><span class="pre">new</span></code> only if it currently
 is <code class="docutils literal notranslate"><span class="pre">prev</span></code>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">skein</span> <span class="k">import</span> <span class="n">kv</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">skein</span> <span class="kn">import</span> <span class="n">kv</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">new</span><span class="p">,</span> <span class="n">prev</span><span class="p">):</span>
 <span class="gp">... </span>    <span class="n">result</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">transaction</span><span class="p">(</span>
 <span class="gp">... </span>        <span class="n">conditions</span><span class="o">=</span><span class="p">[</span><span class="n">kv</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">==</span> <span class="n">prev</span><span class="p">],</span>  <span class="c1"># if key == prev</span>
@@ -1239,18 +1239,18 @@ is <code class="docutils literal notranslate"><span class="pre">prev</span></cod
 <span class="gp">... </span>    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">succeeded</span>
 </pre></div>
 </div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span>  
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span>  
 </pre></div>
 </div>
 <p>Since <code class="docutils literal notranslate"><span class="pre">'key'</span></code> currently is <code class="docutils literal notranslate"><span class="pre">b'value'</span></code>, the conditional expression
 succeeds and <code class="docutils literal notranslate"><span class="pre">'key'</span></code> is set to <code class="docutils literal notranslate"><span class="pre">b'new_value'</span></code></p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;new_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>  
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;new_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>  
 <span class="go">True</span>
 </pre></div>
 </div>
 <p>Since <code class="docutils literal notranslate"><span class="pre">'key'</span></code> currently is <code class="docutils literal notranslate"><span class="pre">b'value'</span></code> and not <code class="docutils literal notranslate"><span class="pre">b'wrong'</span></code>, the
 conditional expression fails and <code class="docutils literal notranslate"><span class="pre">'key'</span></code> remains unchanged.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;another_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;wrong&#39;</span><span class="p">)</span>  
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">compare_and_swap</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;another_value&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;wrong&#39;</span><span class="p">)</span>  
 <span class="go">False</span>
 </pre></div>
 </div>
@@ -1773,7 +1773,7 @@ provided, selects all events.</p>
 <em class="property">class </em><code class="sig-prename descclassname">skein.kv.</code><code class="sig-name descname">EventQueue</code><span class="sig-paren">(</span><em class="sig-param">kv</em><span class="sig-paren">)</span><a class="headerlink" href="#skein.kv.EventQueue" title="Permalink to this definition">¶</a></dt>
 <dd><p>A queue of events on the key-value store.</p>
 <p>Besides the normal <code class="docutils literal notranslate"><span class="pre">Queue</span></code> interface, also supports iteration.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">):</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">):</span>
 <span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -2617,26 +2617,26 @@ only the application owner has access (default). If it contains
 </dl>
 <p class="rubric">Examples</p>
 <p>By default ACLs are disabled, and all users have access.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skein</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skein</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">acls</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ACLs</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>Enabling ACLs results in only the application owner having access (provided
 YARN is also configured with ACLs enabled).</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">acls</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ACLs</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">acls</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ACLs</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>To give access to other users, add users/groups to the desired access
 types. Here we enable view access for all users in group <code class="docutils literal notranslate"><span class="pre">engineering</span></code>,
 and modify access for user <code class="docutils literal notranslate"><span class="pre">nancy</span></code>.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">acls</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ACLs</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">acls</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ACLs</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="gp">... </span>                  <span class="n">view_groups</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;engineering&#39;</span><span class="p">],</span>
 <span class="gp">... </span>                  <span class="n">modify_users</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nancy&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 <p>You can use the wildcard character <code class="docutils literal notranslate"><span class="pre">&quot;*&quot;</span></code> to enable access for all users.
 Here we give view access to all users:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">acls</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ACLs</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">acls</span> <span class="o">=</span> <span class="n">skein</span><span class="o">.</span><span class="n">ACLs</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="gp">... </span>                  <span class="n">view_users</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;*&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
@@ -3320,7 +3320,7 @@ environment variable, and error otherwise.</p>
 
 <span class="c1"># Create a handler with the KerberosAuthMixin as a base class</span>
 <span class="k">class</span> <span class="nc">HelloHandler</span><span class="p">(</span><span class="n">KerberosAuthMixin</span><span class="p">,</span> <span class="n">web</span><span class="o">.</span><span class="n">RequestHandler</span><span class="p">):</span>
-    <span class="nd">@web.authenticated</span>
+    <span class="nd">@web</span><span class="o">.</span><span class="n">authenticated</span>
     <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Hello </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_user</span><span class="p">)</span>
 
@@ -3351,7 +3351,7 @@ Hadoop, but kerberos authentication is advised instead.</p>
 
 <span class="c1"># Create a handler with the SimpleAuthMixin as a base class</span>
 <span class="k">class</span> <span class="nc">HelloHandler</span><span class="p">(</span><span class="n">SimpleAuthMixin</span><span class="p">,</span> <span class="n">web</span><span class="o">.</span><span class="n">RequestHandler</span><span class="p">):</span>
-    <span class="nd">@web.authenticated</span>
+    <span class="nd">@web</span><span class="o">.</span><span class="n">authenticated</span>
     <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Hello </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_user</span><span class="p">)</span>
 
@@ -3451,7 +3451,7 @@ Hadoop, but kerberos authentication is advised instead.</p>
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>

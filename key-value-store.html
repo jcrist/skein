@@ -4,14 +4,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Key-Value Store &#8212; Skein 0.8.0+4.gda71cf6 documentation</title>
+    <title>Key-Value Store &#8212; Skein 0.8.0+5.gc89a54a documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
     <link rel="shortcut icon" href="_static/favicon.ico"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -141,7 +141,7 @@ standard interface:</p>
 
 <span class="c1"># Check if &#39;grapes&#39; is present</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="s1">&#39;grapes&#39;</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span>
-<span class="bp">True</span>
+<span class="kc">True</span>
 
 <span class="c1"># Update the value for &#39;grapes&#39;</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="s1">&#39;grapes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;2.61&#39;</span>
@@ -337,23 +337,23 @@ keyword. Likewise the owner of a key or keys can be retrieved using the normal
 <span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;2.88&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="s1">&#39;sleeper_0&#39;</span><span class="p">)</span>
 
 <span class="c1"># Get the full value &amp; owner record for &#39;grapes&#39;</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">return_owner</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">return_owner</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">ValueOwnerPair</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;2.88&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="s1">&#39;sleeper_0&#39;</span><span class="p">)</span>
 
 <span class="c1"># Change the value, owner stays the same</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;2.61&#39;</span><span class="p">)</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">return_owner</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">return_owner</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">ValueOwnerPair</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;2.61&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="s1">&#39;sleeper_0&#39;</span><span class="p">)</span>
 
 <span class="c1"># Change the owner, value stays the same</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="s1">&#39;sleeper_1&#39;</span><span class="p">)</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">return_owner</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">return_owner</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">ValueOwnerPair</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;2.61&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="s1">&#39;sleeper_1&#39;</span><span class="p">)</span>
 
 <span class="c1"># To clear the owner, set to None</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">return_owner</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-<span class="n">ValueOwnerPair</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;2.61&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">return_owner</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ValueOwnerPair</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;2.61&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>When a container exits, all of its owned keys (if any) are deleted.</p>
@@ -361,13 +361,13 @@ keyword. Likewise the owner of a key or keys can be retrieved using the normal
 <span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s1">&#39;grapes&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="s1">&#39;sleeper_1&#39;</span><span class="p">)</span>
 
 <span class="o">&gt;&gt;&gt;</span> <span class="s1">&#39;grapes&#39;</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span>
-<span class="bp">True</span>
+<span class="kc">True</span>
 
 <span class="c1"># Kill the &#39;sleeper_1&#39; container</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">app</span><span class="o">.</span><span class="n">kill_container</span><span class="p">(</span><span class="s1">&#39;sleeper_1&#39;</span><span class="p">)</span>
 
 <span class="o">&gt;&gt;&gt;</span> <span class="s1">&#39;grapes&#39;</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">kv</span>
-<span class="bp">False</span>
+<span class="kc">False</span>
 </pre></div>
 </div>
 </div>
@@ -449,7 +449,7 @@ They can check for the existance or absence of a key, as well as comparisons
 <span class="go">value(&#39;apples&#39;) &gt; b&#39;000&#39;</span>
 
 <span class="go"># A condition to check if &#39;apples&#39; has an owner</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">kv</span><span class="o">.</span><span class="n">owner</span><span class="p">(</span><span class="s1">&#39;apples&#39;</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">None</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">kv</span><span class="o">.</span><span class="n">owner</span><span class="p">(</span><span class="s1">&#39;apples&#39;</span><span class="p">)</span> <span class="o">!=</span> <span class="kc">None</span>
 <span class="go">owner(&#39;apples&#39;) != None</span>
 </pre></div>
 </div>
@@ -613,7 +613,7 @@ use an event queue as a contextmanager, or call
     <span class="n">eq</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;service_1&#39;</span><span class="p">)</span>
     <span class="n">eq</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;service_2&#39;</span><span class="p">)</span>
 
-    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
         <span class="n">event</span> <span class="o">=</span> <span class="n">eq</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
         <span class="o">...</span>
 
@@ -649,13 +649,13 @@ filter.</p>
 <span class="c1"># key &#39;applesauce&#39;</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">eq</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 <span class="n">Event</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s1">&#39;applesauce&#39;</span><span class="p">,</span>
-      <span class="n">result</span><span class="o">=</span><span class="n">ValueOwnerPair</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;11.30&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="bp">None</span><span class="p">),</span>
+      <span class="n">result</span><span class="o">=</span><span class="n">ValueOwnerPair</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;11.30&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span>
       <span class="n">event_type</span><span class="o">=</span><span class="n">EventType</span><span class="o">.</span><span class="n">PUT</span><span class="p">,</span>
       <span class="n">event_filter</span><span class="o">=</span><span class="n">EventFilter</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s1">&#39;apple&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;applf&#39;</span><span class="p">,</span> <span class="n">event_type</span><span class="o">=</span><span class="n">EventType</span><span class="o">.</span><span class="n">ALL</span><span class="p">))</span>
 
 <span class="o">&gt;&gt;&gt;</span> <span class="n">eq</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 <span class="n">Event</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s1">&#39;applesauce&#39;</span><span class="p">,</span>
-      <span class="n">result</span><span class="o">=</span><span class="n">ValueOwnerPair</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;11.30&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="bp">None</span><span class="p">),</span>
+      <span class="n">result</span><span class="o">=</span><span class="n">ValueOwnerPair</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;11.30&#39;</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span>
       <span class="n">event_type</span><span class="o">=</span><span class="n">EventType</span><span class="o">.</span><span class="n">PUT</span><span class="p">,</span>
       <span class="n">event_filter</span><span class="o">=</span><span class="n">EventFilter</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">event_type</span><span class="o">=</span><span class="n">EventType</span><span class="o">.</span><span class="n">ALL</span><span class="p">))</span>
 </pre></div>
@@ -711,7 +711,7 @@ we provide a simple recipe for an atomic shared counter.</p>
 <span class="sd">    Block until the counter reaches 0</span>
 <span class="sd">    &gt;&gt;&gt; c.wait_until_zero()</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kv</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kv</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="n">key</span> <span class="o">=</span> <span class="n">key</span> <span class="ow">or</span> <span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span>
         <span class="c1"># Get the current value, or set it to 0 if new.</span>
         <span class="n">value</span> <span class="o">=</span> <span class="n">kv</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">int</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;little&#39;</span><span class="p">))</span>
@@ -737,7 +737,7 @@ we provide a simple recipe for an atomic shared counter.</p>
 
     <span class="k">def</span> <span class="nf">increment</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Increment and return the new value&quot;&quot;&quot;</span>
-        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
             <span class="c1"># Try to increment atomically until success. Inefficient if high</span>
             <span class="c1"># increment/decrement rate, but fine for low bandwidth changes</span>
             <span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">]</span>
@@ -753,7 +753,7 @@ we provide a simple recipe for an atomic shared counter.</p>
 
     <span class="k">def</span> <span class="nf">decrement</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Decrement and return the new value&quot;&quot;&quot;</span>
-        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
             <span class="c1"># Try to decrement atomically until success. Inefficient if high</span>
             <span class="c1"># increment/decrement rate, but fine for low bandwidth changes</span>
             <span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kv</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">]</span>
@@ -857,7 +857,7 @@ we provide a simple recipe for an atomic shared counter.</p>
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
