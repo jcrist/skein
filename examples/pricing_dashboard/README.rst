@@ -14,8 +14,8 @@ Packaging
 This example requires ``bokeh``, ``tornado``, and ``numpy``, in addition to
 ``skein``. To distribute the dependencies, we can make use of either
 `conda-pack <https://conda.github.io/conda-pack/>`__ or `venv-pack
-<https://jcrist.github.io/venv-pack/>`__. See `distributing python environments
-<https://jcrist.github.io/skein/distributing-files.html#distributing-python-environments>`__
+<https://jcristharif.com/venv-pack/>`__. See `distributing python environments
+<https://jcristharif.com/skein/distributing-files.html#distributing-python-environments>`__
 for more information.
 
 Using Conda Environments

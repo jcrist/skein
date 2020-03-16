@@ -88,7 +88,7 @@ class build_java(Command):
                 self.warn("Building Skein requires Maven, which wasn't found "
                           "in your environment. For information on setting "
                           "up a build environment for Skein see "
-                          "https://jcrist.github.io/skein/develop.html.")
+                          "https://jcristharif.com/skein/develop.html.")
                 sys.exit(1)
             raise
         if code:
@@ -193,13 +193,16 @@ setup(name='skein',
       version=VERSION,
       cmdclass=cmdclass,
       maintainer='Jim Crist',
-      maintainer_email='jiminy.crist@gmail.com',
+      maintainer_email='jcristharif@gmail.com',
       license='BSD',
       description=('A simple tool and library for deploying applications on '
                    'Apache YARN'),
       long_description=(open('README.rst').read()
                         if os.path.exists('README.rst') else ''),
-      url='http://github.com/jcrist/skein/',
+      url="https://jcristharif.com/skein/",
+      project_urls={"Documentation": "https://jcristharif.com/skein/",
+                    "Source": "https://github.com/jcrist/skein/",
+                    "Issue Tracker": "https://github.com/jcrist/skein/issues"},
       classifiers=["Development Status :: 5 - Production/Stable",
                    "License :: OSI Approved :: BSD License",
                    "Programming Language :: Java",
