@@ -3,7 +3,7 @@ Echo Server Example
 
 This example demonstrates deploying and interacting with a simple Python echo
 server. The server is deployed on a random port, and the `Key-Value Store
-<https://jcrist.github.io/skein/key-value-store.html>`__ is used to expose the
+<https://jcristharif.com/skein/key-value-store.html>`__ is used to expose the
 address to the client. The number of servers is then scaled dynamically.
 
 This example code is based off `this example
@@ -11,7 +11,7 @@ This example code is based off `this example
 from the asyncio documentation.
 
 A blogpost demonstrating this example in more detail `can be read here
-<http://jcrist.github.io/introducing-skein.html>`__.
+<http://jcristharif.com/introducing-skein.html>`__.
 
 
 Packaging
@@ -19,9 +19,9 @@ Packaging
 
 This example requires Python 3+ and ``skein``. To distribute the dependencies,
 we can make use of either `conda-pack <https://conda.github.io/conda-pack/>`__
-or `venv-pack <https://jcrist.github.io/venv-pack/>`__. See `distributing
+or `venv-pack <https://jcristharif.com/venv-pack/>`__. See `distributing
 python environments
-<https://jcrist.github.io/skein/distributing-files.html#distributing-python-environments>`__
+<https://jcristharif.com/skein/distributing-files.html#distributing-python-environments>`__
 for more information.
 
 
