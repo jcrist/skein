@@ -1,7 +1,5 @@
 package com.anaconda.skein;
 
-import com.anaconda.skein.credentials.CredentialProvider;
-import com.anaconda.skein.credentials.HiveCredentials;
 import com.google.common.base.Functions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -603,16 +601,13 @@ public class MsgUtils {
     }
 
     final List<Path> fileSystems = new ArrayList<Path>();
-    for (int i = 0; i < spec.getFileSystemsCount(); i++) {
-      fileSystems.add(new Path(spec.getFileSystems(i)));
+    for (String f: spec.getFileSystemsList()) {
+      fileSystems.add(new Path(f));
     }
 
-    final List<CredentialProvider> credentialProviders = new LinkedList<CredentialProvider>();
-    for(int i = 0; i < spec.getCredentialProvidersCount(); i++) {
-      Msg.CredentialProviderSpec d = spec.getCredentialProviders(i);
-      if (d.getName().equals("hive")) {
-        credentialProviders.add(new HiveCredentials(d, spec.getUser()));
-      }
+    final DelegationTokenManager delegationTokenManager = new DelegationTokenManager();
+    for(Msg.DelegationTokenProviderSpec s :spec.getDelegationTokenProvidersList()) {
+      delegationTokenManager.addTokenProvider(new Model.DelegationTokenProvider(s.getName(), s.getConfigMap()));
     }
 
     return new Model.ApplicationSpec(spec.getName(),
@@ -622,7 +617,7 @@ public class MsgUtils {
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
                                      fileSystems,
-                                     credentialProviders,
+                                     delegationTokenManager,
                                      readAcls(spec.getAcls()),
                                      readMaster(spec.getMaster()),
                                      services);

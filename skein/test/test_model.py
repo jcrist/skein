@@ -8,7 +8,7 @@ import pytest
 
 from skein.model import (ApplicationSpec, Service, Resources, File,
                          ApplicationState, FinalStatus, FileType, ACLs, Master,
-                         CredentialProviderSpec, Container, ApplicationReport,
+                         DelegationTokenProvider, Container, ApplicationReport,
                          ResourceUsageReport, NodeReport, LogLevel, parse_memory,
                          Security, Queue, ApplicationLogs)
 
@@ -326,11 +326,12 @@ def test_master_invariants():
     Master(files={'./bar': '/source.zip'})
 
 
-def test_credential_provider_spec():
-    p1 = CredentialProviderSpec(name='hive',
-                                uri='hive2://127.0.0.1:10000/myDatabase',
-                                principal='hive/my.hadoop.mycompany.com@HADOOP.MYCOMPANY.COM')
-    p3 = CredentialProviderSpec()
+def test_delegation_token_provider_spec():
+    p1 = DelegationTokenProvider(name='hive',
+                                 config={
+                                     'hive.jdbc.url': 'hive2://127.0.0.1:10000/myDatabase',
+                                     'hive.jdbc.principal': 'hive/my.hadoop.mycompany.com@HADOOP.MYCOMPANY.COM'})
+    p3 = DelegationTokenProvider()
     check_specification_methods(p1, p3)
 
 

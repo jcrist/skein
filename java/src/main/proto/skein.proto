@@ -140,10 +140,9 @@ message Master {
 }
 
 
-message CredentialProviderSpec {
+message DelegationTokenProviderSpec {
   string name = 1;
-  string uri = 2;
-  string principal = 3;
+  map<string, string> config = 2;
 }
 
 
@@ -155,7 +154,7 @@ message ApplicationSpec {
   int32 max_attempts = 5;
   repeated string tags = 6;
   repeated string file_systems = 7;
-  repeated CredentialProviderSpec credential_providers = 8;
+  repeated DelegationTokenProviderSpec delegation_token_providers = 8;
   Acls acls = 9;
   Master master = 10;
   map<string, Service> services = 11;

@@ -1,7 +1,5 @@
 package com.anaconda.skein;
 
-import com.anaconda.skein.credentials.CredentialProvider;
-import com.anaconda.skein.credentials.HdfsCredentials;
 import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 
@@ -21,8 +19,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -346,28 +342,24 @@ public class Driver {
   /** Start a new application. **/
   public ApplicationId submitApplication(final Model.ApplicationSpec spec)
       throws IOException, YarnException, InterruptedException {
-    final Credentials cred = UserGroupInformation.getCurrentUser().getCredentials();
+    DelegationTokenManager tokenManager = spec.getDelegationTokenManager();
+    tokenManager.initializeCredentials(UserGroupInformation.getCurrentUser().getCredentials());
 
     if (spec.getUser().isEmpty()) {
-      return submitApplicationInner(defaultYarnClient, defaultFileSystem, spec, cred);
+      return submitApplicationInner(defaultYarnClient, defaultFileSystem, spec);
     }
     else {
-      // We need to obtain additional delegation token from systems while
-      // we are authenticated with kerberos, before we impersonate the user.
-      for(CredentialProvider c : spec.getCredentialProviders()) {
-        c.updateCredentials(cred);
-      }
+      tokenManager.obtainTokensWithoutImpersonation(spec.getUser());
       return UserGroupInformation.createProxyUser(spec.getUser(), ugi).doAs(
         new PrivilegedExceptionAction<ApplicationId>() {
           public ApplicationId run() throws IOException, YarnException {
-            return submitApplicationInner(getYarnClient(), getFs(), spec, cred);
+            return submitApplicationInner(getYarnClient(), getFs(), spec);
           }
         });
     }
   }
 
-  private ApplicationId submitApplicationInner(YarnClient yarnClient, FileSystem fs, Model.ApplicationSpec spec,
-                                               Credentials cred) throws IOException, YarnException {
+  private ApplicationId submitApplicationInner(YarnClient yarnClient, FileSystem fs, Model.ApplicationSpec spec) throws IOException, YarnException {
     // First validate the spec request
     spec.validate();
 
@@ -411,10 +403,9 @@ public class Driver {
 
     ByteBuffer fsTokens = null;
     if (UserGroupInformation.isSecurityEnabled()) {
-      new HdfsCredentials(yarnClient, fs, spec, conf).updateCredentials(cred);
-      DataOutputBuffer dob = new DataOutputBuffer();
-      cred.writeTokenStorageToStream(dob);
-      fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      DelegationTokenManager tokenManager = spec.getDelegationTokenManager();
+      tokenManager.obtainTokensHDFS(yarnClient, fs, spec, conf);
+      fsTokens = tokenManager.toBytes();
 
       // We cancel the delegation token when the job finishes, so that it cannot be used elsewhere
       conf.setBoolean("mapreduce.job.complete.cancel.delegation.tokens", true);

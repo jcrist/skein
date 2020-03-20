@@ -3,7 +3,7 @@ from .core import Client, ApplicationClient, properties
 from .exceptions import (SkeinError, ConnectionError, DriverNotRunningError,
                          ApplicationNotRunningError, DriverError,
                          ApplicationError)
-from .model import (Security, ApplicationSpec, Service, File, Resources, CredentialProviderSpec,
+from .model import (Security, ApplicationSpec, Service, File, Resources, DelegationTokenProvider,
                     FileType, FileVisibility, ACLs, Master, LogLevel)
 
 from ._version import get_versions

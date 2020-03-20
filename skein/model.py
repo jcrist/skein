@@ -16,10 +16,10 @@ from .utils import (implements, format_list, datetime_from_millis, runtime,
                     xor, lock_file)
 
 __all__ = ('ApplicationSpec', 'Service', 'Resources', 'File', 'FileType',
-           'FileVisibility', 'ACLs', 'Master', 'CredentialProviderSpec', 'Security',
+           'FileVisibility', 'ACLs', 'Master', 'DelegationTokenProvider', 'Security',
            'ApplicationState', 'FinalStatus', 'ResourceUsageReport',
            'ApplicationReport', 'ContainerState', 'Container', 'LogLevel', 'NodeState',
-           'NodeReport','QueueState', 'Queue', 'ApplicationLogs')
+           'NodeReport', 'QueueState', 'Queue', 'ApplicationLogs')
 
 
 def _check_is_filename(target):
@@ -105,16 +105,16 @@ def parse_memory(s):
 
 
 _byte_sizes = {
-    'kb': 10**3,
-    'mb': 10**6,
-    'gb': 10**9,
-    'tb': 10**12,
-    'pb': 10**15,
-    'kib': 2**10,
-    'mib': 2**20,
-    'gib': 2**30,
-    'tib': 2**40,
-    'pib': 2**50,
+    'kb': 10 ** 3,
+    'mb': 10 ** 6,
+    'gb': 10 ** 9,
+    'tb': 10 ** 12,
+    'pb': 10 ** 15,
+    'kib': 2 ** 10,
+    'mib': 2 ** 20,
+    'gib': 2 ** 30,
+    'tib': 2 ** 40,
+    'pib': 2 ** 50,
     'b': 1,
     '': 2 ** 20
 }
@@ -443,13 +443,13 @@ class Security(Specification):
             [x509.NameAttribute(NameOID.COMMON_NAME, u'skein-internal')])
         now = datetime.utcnow()
         cert = (x509.CertificateBuilder()
-                    .subject_name(subject)
-                    .issuer_name(issuer)
-                    .public_key(key.public_key())
-                    .serial_number(x509.random_serial_number())
-                    .not_valid_before(now)
-                    .not_valid_after(now + timedelta(days=365))
-                    .sign(key, hashes.SHA256(), default_backend()))
+                .subject_name(subject)
+                .issuer_name(issuer)
+                .public_key(key.public_key())
+                .serial_number(x509.random_serial_number())
+                .not_valid_before(now)
+                .not_valid_after(now + timedelta(days=365))
+                .sign(key, hashes.SHA256(), default_backend()))
 
         cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
 
@@ -1152,36 +1152,34 @@ class Master(Specification):
                    security=security)
 
 
-class CredentialProviderSpec(Specification):
-    """Configuration for the Credential Provider.
+class DelegationTokenProvider(Specification):
+    """Configuration for the Delegation Token Provider.
 
     Parameters
     ----------
     name : str
         Describes the name system for which to get the delegation token. Ex: 'hive'
-    uri : str, optional
-        Describes the uri of the system to connect to.
-    principal : str
-        Describes the kerberos principal of the system.
+    config : dict
+        A mapping that contains the configuration to connect to external systems
+        to get the delegation token
     """
-    __slots__ = ('name', 'uri', 'principal')
-    _params = ('name', 'uri', 'principal')
-    _protobuf_cls = _proto.CredentialProviderSpec
+    __slots__ = ('name', 'config')
+    _params = ('name', 'config')
+    _protobuf_cls = _proto.DelegationTokenProviderSpec
 
-    def __init__(self, name='', uri='', principal=''):
+    def __init__(self, name='', config=None):
         self.name = name
-        self.uri = uri
-        self.principal = principal
+        # in one of the tests `config` is a protobuf ScalarMapContainer and I convert it to `dict`
+        self.config = {} if config is None else dict(config)
 
         self._validate()
 
     def _validate(self):
         self._check_is_type('name', str)
-        self._check_is_type('uri', str)
-        self._check_is_type('principal', str)
+        self._check_is_dict_of('config', str, str)
 
     def __repr__(self):
-        return 'CredentialProvider<...>'
+        return 'DelegationTokenProvider<...>'
 
     @classmethod
     @implements(Specification.from_dict)
@@ -1190,20 +1188,17 @@ class CredentialProviderSpec(Specification):
 
         obj = obj.copy()
         name = obj.pop('name', None)
-        uri = obj.pop('uri', None)
-        principal = obj.pop('principal', None)
+        config = obj.pop('config', None)
 
         return cls(name=name,
-                   uri=uri,
-                   principal=principal,
+                   config=config,
                    **obj)
 
     @classmethod
     @implements(Specification.from_protobuf)
     def from_protobuf(cls, obj):
         return cls(name=obj.name,
-                   uri=obj.uri,
-                   principal=obj.principal)
+                   config=obj.config)
 
 
 class ApplicationSpec(Specification):
@@ -1235,8 +1230,10 @@ class ApplicationSpec(Specification):
     file_systems : list, optional
         A list of Hadoop file systems to acquire delegation tokens for.
         A token is always acquired for the ``defaultFS``.
-    credential_providers : list, optional
-        TODO
+    delegation_token_providers : list, optional
+        A list of mappings.
+        Each mapping is for configuring a connection with an external system
+        and get a delegation token.
     acls : ACLs, optional
         Allows restricting users/groups to subsets of application access. See
         ``skein.ACLs`` for more information.
@@ -1246,12 +1243,12 @@ class ApplicationSpec(Specification):
         application master during startup. Default is 1.
     """
     __slots__ = ('services', 'master', 'name', 'queue', 'user', 'node_label',
-                 'tags', 'file_systems', 'credential_providers', 'acls', 'max_attempts')
+                 'tags', 'file_systems', 'delegation_token_providers', 'acls', 'max_attempts')
     _protobuf_cls = _proto.ApplicationSpec
 
     def __init__(self, services=None, master=None, name='skein',
                  queue='default', user='', node_label='', tags=None,
-                 file_systems=None, credential_providers=None, acls=None, max_attempts=1):
+                 file_systems=None, delegation_token_providers=None, acls=None, max_attempts=1):
         self.services = {} if services is None else services
         self.master = Master() if master is None else master
         self.name = name
@@ -1260,7 +1257,8 @@ class ApplicationSpec(Specification):
         self.node_label = node_label
         self.tags = set() if tags is None else set(tags)
         self.file_systems = [] if file_systems is None else file_systems
-        self.credential_providers = [] if credential_providers is None else credential_providers
+        self.delegation_token_providers = \
+            [] if delegation_token_providers is None else delegation_token_providers
         self.acls = ACLs() if acls is None else acls
         self.max_attempts = max_attempts
         self._validate()
@@ -1276,7 +1274,7 @@ class ApplicationSpec(Specification):
         self._check_is_type('node_label', str)
         self._check_is_set_of('tags', str)
         self._check_is_list_of('file_systems', str)
-        self._check_is_list_of('credential_providers', CredentialProviderSpec)
+        self._check_is_list_of('delegation_token_providers', DelegationTokenProvider)
         self._check_is_bounded_int('max_attempts', min=1)
         self._check_is_type('acls', ACLs)
         self.acls._validate()
@@ -1333,13 +1331,13 @@ class ApplicationSpec(Specification):
         if master is not None and isinstance(master, dict):
             master = Master.from_dict(master, _origin=_origin)
 
-        credential_providers = obj.pop('credential_providers', None)
-        if credential_providers is not None and isinstance(credential_providers, list):
-            credential_providers = [
-                CredentialProviderSpec.from_dict(p, _origin=_origin) for p in credential_providers]
+        delegation_token_providers = obj.pop('delegation_token_providers', None)
+        if delegation_token_providers is not None and isinstance(delegation_token_providers, list):
+            delegation_token_providers = [
+                DelegationTokenProvider.from_dict(p, _origin=_origin) for p in delegation_token_providers]
 
         return cls(services=services, acls=acls, master=master,
-                   credential_providers=credential_providers, **obj)
+                   delegation_token_providers=delegation_token_providers, **obj)
 
     @classmethod
     @implements(Specification.from_protobuf)
@@ -1352,7 +1350,7 @@ class ApplicationSpec(Specification):
                    node_label=obj.node_label,
                    tags=set(obj.tags),
                    file_systems=list(obj.file_systems),
-                   credential_providers=list(obj.credential_providers),
+                   delegation_token_providers=list(obj.delegation_token_providers),
                    max_attempts=min(1, obj.max_attempts),
                    acls=ACLs.from_protobuf(obj.acls),
                    master=Master.from_protobuf(obj.master),
