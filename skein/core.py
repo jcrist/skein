@@ -135,7 +135,8 @@ def secure_channel(address, security):
 
     creds = grpc.ssl_channel_credentials(cert_bytes, key_bytes, cert_bytes)
     options = [('grpc.ssl_target_name_override', 'skein-internal'),
-               ('grpc.default_authority', 'skein-internal')]
+               ('grpc.default_authority', 'skein-internal'),
+               ('grpc.max_receive_message_length', 50 * 1024 * 1024)]
     return grpc.secure_channel(address, creds, options)
 
 
