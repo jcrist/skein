@@ -794,13 +794,17 @@ class Client(_ClientBase):
         resp = self._call('getStatus', proto.Application(id=app_id))
         return ApplicationReport.from_protobuf(resp)
 
-    def application_logs(self, app_id, user=""):
+    def application_logs(self, app_id, owner="", user=""):
         """Get logs from a completed skein application.
 
         Parameters
         ----------
         app_id : str
             The id of the application.
+        owner : str, optional
+            The owner of the application. If not specified it will be
+            the user from yarn's application report or if not found
+            the current logged user.
         user : str, optional
             The user to get the application logs as. Requires the current user
             to have permissions to proxy as ``user``. Default is the current
@@ -816,7 +820,7 @@ class Client(_ClientBase):
         >>> client.application_logs('application_1526134340424_0012')
         ApplicationLogs<application_1526134340424_0012>
         """
-        resp = self._call('getLogs', proto.LogsRequest(id=app_id, user=user))
+        resp = self._call('getLogs', proto.LogsRequest(id=app_id, user=user, owner=owner))
         return ApplicationLogs(app_id, dict(resp.logs))
 
     def move_application(self, app_id, queue):

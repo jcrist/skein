@@ -1027,9 +1027,11 @@ public class Driver {
       ApplicationId appId = Utils.appIdFromString(appIdString);
 
       if (appId == null) {
-        resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("Invalid ApplicationId '" + appIdString + "'")
-            .asRuntimeException());
+        if (resp != null) {
+          resp.onError(Status.INVALID_ARGUMENT
+              .withDescription("Invalid ApplicationId '" + appIdString + "'")
+              .asRuntimeException());
+        }
         return null;
       }
 
@@ -1037,17 +1039,21 @@ public class Driver {
       try {
         report = defaultYarnClient.getApplicationReport(appId);
       } catch (Exception exc) {
-        resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("Unknown ApplicationId '" + appIdString + "'")
-            .asRuntimeException());
+        if (resp != null) {
+          resp.onError(Status.INVALID_ARGUMENT
+              .withDescription("Unknown ApplicationId '" + appIdString + "'")
+              .asRuntimeException());
+        }
         return null;
       }
 
       if (!report.getApplicationType().equals("skein")) {
-        resp.onError(Status.INVALID_ARGUMENT
-            .withDescription("ApplicationId '" + appIdString
-                             + "' is not a skein application")
-            .asRuntimeException());
+        if (resp != null) {
+          resp.onError(Status.INVALID_ARGUMENT
+              .withDescription("ApplicationId '" + appIdString
+                              + "' is not a skein application")
+              .asRuntimeException());
+        }
         return null;
       }
 
@@ -1077,39 +1083,62 @@ public class Driver {
         return;
       }
 
-      ApplicationReport report = getReport(req.getId(), resp);
-      if (report == null) {
-        return;
-      }
-
-      Map<String, String> logs;
-      if (hasCompleted(report)) {
-        try {
-          logs = getApplicationLogs(
-              report.getApplicationId(), report.getUser(), req.getUser());
-        } catch (LogClient.LogClientException exc) {
-          resp.onError(Status.INVALID_ARGUMENT
-              .withDescription(exc.getMessage())
-              .asRuntimeException());
-          return;
-        } catch (Exception exc) {
-          resp.onError(Status.INTERNAL
-              .withDescription("Failed to get logs for application '"
-                               + req.getId()
-                               + "', exception:\n"
-                               + exc.getMessage())
-              .asRuntimeException());
-          return;
-        }
-      } else {
+      ApplicationReport report = getReport(req.getId(), null);
+      if (report != null && !hasCompleted(report)) {
         resp.onError(Status.INVALID_ARGUMENT
             .withDescription("Application " + req.getId()
                              + " has not completed, logs are not available")
             .asRuntimeException());
         return;
       }
+
+      ApplicationId appId = Utils.appIdFromString(req.getId());
+
+      
+      String appOwner = req.getOwner();
+      if (appOwner == null || appOwner.isEmpty()) {
+        appOwner = guessAppOwner(report);
+        if (appOwner == null) {
+           resp.onError(Status.INVALID_ARGUMENT
+           .withDescription("Can not find the appOwner."
+                             + " Please specify the correct appOwner")
+          .asRuntimeException());
+          return;
+        }
+      }
+
+      LOG.debug("Getting log for owner {}", appOwner);
+
+      Map<String, String> logs;
+      try {
+        logs = getApplicationLogs(
+            appId, appOwner, req.getUser());
+      } catch (LogClient.LogClientException exc) {
+        resp.onError(Status.INVALID_ARGUMENT
+            .withDescription(exc.getMessage())
+            .asRuntimeException());
+        return;
+      } catch (Exception exc) {
+        resp.onError(Status.INTERNAL
+            .withDescription("Failed to get logs for application '"
+                              + req.getId()
+                              + "', exception:\n"
+                              + exc.getMessage())
+            .asRuntimeException());
+        return;
+      }
       resp.onNext(Msg.LogsResponse.newBuilder().putAllLogs(logs).build());
       resp.onCompleted();
+    }
+
+    private String guessAppOwner(ApplicationReport appReport) {
+      String appOwner = null;
+      if (appReport != null) {
+        appOwner = appReport.getUser();
+      } else {
+        appOwner = ugi.getShortUserName();
+      }
+      return appOwner;
     }
 
     @Override
