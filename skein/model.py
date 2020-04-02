@@ -1274,7 +1274,8 @@ class ApplicationSpec(Specification):
         self._check_is_type('node_label', str)
         self._check_is_set_of('tags', str)
         self._check_is_list_of('file_systems', str)
-        self._check_is_list_of('delegation_token_providers', DelegationTokenProvider)
+        #self._check_is_list_of('delegation_token_providers', DelegationTokenProvider)
+        self._check_is_type('delegation_token_providers', list)
         self._check_is_bounded_int('max_attempts', min=1)
         self._check_is_type('acls', ACLs)
         self.acls._validate()
@@ -1331,26 +1332,23 @@ class ApplicationSpec(Specification):
         if master is not None and isinstance(master, dict):
             master = Master.from_dict(master, _origin=_origin)
 
-        delegation_token_providers = obj.pop('delegation_token_providers', None)
-        if delegation_token_providers is not None and isinstance(delegation_token_providers, list):
-            delegation_token_providers = [
-                DelegationTokenProvider.from_dict(p, _origin=_origin) for p in delegation_token_providers]
-
-        return cls(services=services, acls=acls, master=master,
-                   delegation_token_providers=delegation_token_providers, **obj)
+        return cls(services=services, acls=acls, master=master, **obj)
 
     @classmethod
     @implements(Specification.from_protobuf)
     def from_protobuf(cls, obj):
         services = {k: Service.from_protobuf(v)
                     for k, v in obj.services.items()}
+        delegation_token_providers = [DelegationTokenProvider.from_protobuf(p)
+                                      for p in obj.delegation_token_providers]
+
         return cls(name=obj.name,
                    queue=obj.queue,
                    user=obj.user,
                    node_label=obj.node_label,
                    tags=set(obj.tags),
                    file_systems=list(obj.file_systems),
-                   delegation_token_providers=list(obj.delegation_token_providers),
+                   delegation_token_providers=delegation_token_providers,
                    max_attempts=min(1, obj.max_attempts),
                    acls=ACLs.from_protobuf(obj.acls),
                    master=Master.from_protobuf(obj.master),

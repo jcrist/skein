@@ -3,11 +3,14 @@ package com.anaconda.skein;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SaslRpcServer;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
@@ -16,6 +19,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hive.hcatalog.api.HCatClient;
+import org.apache.hive.hcatalog.common.HCatException;
 import org.apache.hive.jdbc.HiveConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +33,9 @@ import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.commons.lang.SystemUtils.USER_NAME;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_RPC_PROTECTION;
 
 public class DelegationTokenManager {
     private static final Logger LOG = LoggerFactory.getLogger(DelegationTokenManager.class);
@@ -108,12 +116,41 @@ public class DelegationTokenManager {
         }
     }
 
+    // This method is inspired from org.apache.oozie.action.hadoop.HCatCredentials which does the same thing for Oozie.
+    public void obtainTokensHCat(Map<String, String> config, String user){
+        String principal = config.get("hcat.metastore.principal");
+        String server = config.get("hcat.metastore.uri");
+
+        String protection = "authentication"; // default value
+        if(config.containsKey(HADOOP_RPC_PROTECTION))
+            protection = config.get(HADOOP_RPC_PROTECTION);
+
+        try {
+            HiveConf hiveConf = new HiveConf();
+            hiveConf.set("hive.metastore.sasl.enabled", "true");
+            hiveConf.set("hive.metastore.kerberos.principal", principal);
+            hiveConf.set("hive.metastore.local", "false");
+            hiveConf.set(HiveConf.ConfVars.METASTOREURIS.varname, server);
+            hiveConf.set(HADOOP_RPC_PROTECTION, protection);
+
+            HCatClient hiveClient = HCatClient.create(hiveConf);
+            String tokenStrForm = hiveClient.getDelegationToken(user, principal);
+            Token<DelegationTokenIdentifier> hcatToken = new Token<>();
+            hcatToken.decodeFromUrlString(tokenStrForm);
+            credentials.addToken(getUniqueAlias(hcatToken), hcatToken);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     // For some systems (like Hive) to obtain the delegation token we need to do it
     // while we are authenticated with kerberos, before we impersonate the user.
     public void obtainTokensWithoutImpersonation(String userWeAuthenticateFor) throws IllegalArgumentException {
         for (Model.DelegationTokenProvider p : this.delegationTokenProviders) {
             if(p.getName().equals("hive")) {
                 this.obtainTokensHive(p.getConfig(), userWeAuthenticateFor);
+            } else if(p.getName().equals("hcat")) {
+                this.obtainTokensHCat(p.getConfig(), userWeAuthenticateFor);
             } else {
                 throw new IllegalArgumentException("The Provider for Delegation Token was not found");
             }

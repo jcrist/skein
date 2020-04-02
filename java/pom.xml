@@ -401,6 +401,13 @@
       <scope>provided</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.apache.hive.hcatalog</groupId>
+      <artifactId>hive-webhcat-java-client</artifactId>
+      <version>${hiveVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+
     <!--Test Dependencies-->
     <dependency>
       <groupId>junit</groupId>
