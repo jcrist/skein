@@ -1146,10 +1146,9 @@ public class ApplicationMaster {
         // instead. See https://github.com/dask/dask-yarn/issues/48 for more
         // discussion.
         Resource requestedResource = service.getResources();
-        Resource resource = Resource.newInstance(
-            container.getResource().getMemory(),
-            requestedResource.getVirtualCores()
-        );
+        Resource resource = requestedResource;
+        resource.setMemory(container.getResource().getMemory());
+
         if (requestedResource.compareTo(resource) > 0) {
           // Safeguard around containers not matching, shouldn't ever be hit
           LOG.warn("{} with {}, priority {} doesn't meet requested resource "
