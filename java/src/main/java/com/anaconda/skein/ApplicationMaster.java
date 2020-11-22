@@ -1145,15 +1145,13 @@ public class ApplicationMaster {
         // memory returned, but the requested number of vcores, and use that
         // instead. See https://github.com/dask/dask-yarn/issues/48 for more
         // discussion.
-        Resource requestedResource = service.getResources();
-        Resource resource = requestedResource;
-        resource.setMemory(container.getResource().getMemory());
-
-        if (requestedResource.compareTo(resource) > 0) {
+        Resource resource = service.getResources();
+        if (resource.getMemory() > container.getResource().getMemory()) {
           // Safeguard around containers not matching, shouldn't ever be hit
-          LOG.warn("{} with {}, priority {} doesn't meet requested resource "
+          LOG.warn("{} with memory {}, priority {} doesn't meet requested resource "
                    + "requirements {}, releasing",
-                   container.getId(), resource, priority, service.getResources());
+                   container.getId(), container.getResource().getMemory(),
+                   priority, resource.getMemory());
           rmClient.releaseAssignedContainer(container.getId());
           return;
         }
