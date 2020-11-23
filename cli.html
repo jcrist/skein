@@ -1,12 +1,13 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
-    <title>CLI Docs &#8212; Skein 0.8.0+6.ga19cc28 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CLI Docs &#8212; Skein 0.8.0+7.g882683d documentation</title>
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
@@ -41,13 +42,13 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein [--help] [--version] command ...</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-version">
 <code class="sig-name descname">--version</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-version" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show version then exit</p>
@@ -59,9 +60,9 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application [--help] command ...</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-application-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -72,21 +73,21 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application kill [--user USER] [--help] APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-application-kill-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-kill-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-application-kill-arg-app_id">
+<span id="cmdoption-skein-application-kill-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-kill-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-kill-user">
 <code class="sig-name descname">--user</code><code class="sig-prename descclassname"> &lt;user&gt;</code><a class="headerlink" href="#cmdoption-skein-application-kill-user" title="Permalink to this definition">¶</a></dt>
 <dd><p>The user to kill the application as. Requires the current user to have permissions to proxy as <code class="docutils literal notranslate"><span class="pre">user</span></code>. Default is the current user.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-kill-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-kill-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-application-kill-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-kill-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -97,21 +98,21 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application logs [--user USER] [--help] APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-application-logs-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-logs-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-application-logs-arg-app_id">
+<span id="cmdoption-skein-application-logs-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-logs-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-logs-user">
 <code class="sig-name descname">--user</code><code class="sig-prename descclassname"> &lt;user&gt;</code><a class="headerlink" href="#cmdoption-skein-application-logs-user" title="Permalink to this definition">¶</a></dt>
 <dd><p>The user to get the application logs as. Requires the current user to have permissions to proxy as <code class="docutils literal notranslate"><span class="pre">user</span></code>. Default is the current user.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-logs-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-logs-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-application-logs-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-logs-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -127,63 +128,63 @@
 <span class="go">                            [--finished-end FINISHED_END] [--help]</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-ls-all">
-<code class="sig-name descname">--all</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-ls-all" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-application-ls-a"></span><code class="sig-name descname">--all</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-ls-all" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show applications in all states (default is only active applications)</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-ls-state">
-<code class="sig-name descname">--state</code><code class="sig-prename descclassname"> &lt;state&gt;</code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-s</code><code class="sig-prename descclassname"> &lt;state&gt;</code><a class="headerlink" href="#cmdoption-skein-application-ls-state" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-application-ls-s"></span><code class="sig-name descname">--state</code><code class="sig-prename descclassname"> &lt;state&gt;</code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-s</code><code class="sig-prename descclassname"> &lt;state&gt;</code><a class="headerlink" href="#cmdoption-skein-application-ls-state" title="Permalink to this definition">¶</a></dt>
 <dd><p>Select applications with this state. May be repeated to filter on multiple states.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-ls-name">
 <code class="sig-name descname">--name</code><code class="sig-prename descclassname"> &lt;name&gt;</code><a class="headerlink" href="#cmdoption-skein-application-ls-name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Select applications with this name.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-ls-queue">
 <code class="sig-name descname">--queue</code><code class="sig-prename descclassname"> &lt;queue&gt;</code><a class="headerlink" href="#cmdoption-skein-application-ls-queue" title="Permalink to this definition">¶</a></dt>
 <dd><p>Select applications with this queue.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-ls-user">
 <code class="sig-name descname">--user</code><code class="sig-prename descclassname"> &lt;user&gt;</code><a class="headerlink" href="#cmdoption-skein-application-ls-user" title="Permalink to this definition">¶</a></dt>
 <dd><p>Select applications with this user.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-ls-started-begin">
 <code class="sig-name descname">--started-begin</code><code class="sig-prename descclassname"> &lt;started_begin&gt;</code><a class="headerlink" href="#cmdoption-skein-application-ls-started-begin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Select applications that started after this datetime (inclusive). Accepts several date and time formats (e.g. <code class="docutils literal notranslate"><span class="pre">YYYY-M-D</span> <span class="pre">H:M:S</span></code> or <code class="docutils literal notranslate"><span class="pre">H:M</span></code>). See the documentation for more information.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-ls-started-end">
 <code class="sig-name descname">--started-end</code><code class="sig-prename descclassname"> &lt;started_end&gt;</code><a class="headerlink" href="#cmdoption-skein-application-ls-started-end" title="Permalink to this definition">¶</a></dt>
 <dd><p>Select applications that started before this datetime (inclusive)</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-ls-finished-begin">
 <code class="sig-name descname">--finished-begin</code><code class="sig-prename descclassname"> &lt;finished_begin&gt;</code><a class="headerlink" href="#cmdoption-skein-application-ls-finished-begin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Select applications that finished after this datetime (inclusive)</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-ls-finished-end">
 <code class="sig-name descname">--finished-end</code><code class="sig-prename descclassname"> &lt;finished_end&gt;</code><a class="headerlink" href="#cmdoption-skein-application-ls-finished-end" title="Permalink to this definition">¶</a></dt>
 <dd><p>Select applications that finished before this datetime (inclusive)</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-ls-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-ls-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-application-ls-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-ls-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -194,21 +195,21 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application mv [--help] APP_ID QUEUE</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-application-mv-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-mv-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-application-mv-arg-app_id">
+<span id="cmdoption-skein-application-mv-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-mv-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-mv-arg-queue">
 <code class="sig-name descname">queue</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-mv-arg-queue" title="Permalink to this definition">¶</a></dt>
 <dd><p>The queue to move the application to.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-mv-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-mv-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-application-mv-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-mv-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -221,27 +222,27 @@
 <span class="go">                                  APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-application-shutdown-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-shutdown-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-application-shutdown-arg-app_id">
+<span id="cmdoption-skein-application-shutdown-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-shutdown-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id. To use in a container inside a skein application, pass in “current”</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-shutdown-status">
 <code class="sig-name descname">--status</code><code class="sig-prename descclassname"> &lt;status&gt;</code><a class="headerlink" href="#cmdoption-skein-application-shutdown-status" title="Permalink to this definition">¶</a></dt>
 <dd><p>Final Application Status. Default is SUCCEEDED</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-shutdown-diagnostics">
 <code class="sig-name descname">--diagnostics</code><code class="sig-prename descclassname"> &lt;diagnostics&gt;</code><a class="headerlink" href="#cmdoption-skein-application-shutdown-diagnostics" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application diagnostic exit message. If not provided, a default will be used.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-shutdown-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-shutdown-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-application-shutdown-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-shutdown-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -252,15 +253,15 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application specification [--help] APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-application-specification-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-specification-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-application-specification-arg-app_id">
+<span id="cmdoption-skein-application-specification-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-specification-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id. To use in a container inside a skein application, pass in “current”</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-specification-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-specification-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-application-specification-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-specification-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -271,15 +272,15 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application status [--help] APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-application-status-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-status-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-application-status-arg-app_id">
+<span id="cmdoption-skein-application-status-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-status-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-status-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-status-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-application-status-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-status-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -290,15 +291,15 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein application submit [--help] spec</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-submit-arg-spec">
 <code class="sig-name descname">spec</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-submit-arg-spec" title="Permalink to this definition">¶</a></dt>
 <dd><p>The specification file</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-application-submit-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-submit-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-application-submit-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-application-submit-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -309,9 +310,9 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein config [--help] command ...</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-config-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-config-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-config-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-config-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -322,15 +323,15 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein config gencerts [--force] [--help]</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-config-gencerts-force">
-<code class="sig-name descname">--force</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-config-gencerts-force" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-config-gencerts-f"></span><code class="sig-name descname">--force</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-config-gencerts-force" title="Permalink to this definition">¶</a></dt>
 <dd><p>Overwrite existing configuration</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-config-gencerts-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-config-gencerts-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-config-gencerts-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-config-gencerts-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -341,9 +342,9 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein container [--help] command ...</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-container-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-container-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -354,21 +355,21 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein container kill --id CONTAINER_ID [--help] APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-container-kill-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-kill-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-container-kill-arg-app_id">
+<span id="cmdoption-skein-container-kill-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-kill-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id. To use in a container inside a skein application, pass in “current”</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-container-kill-id">
 <code class="sig-name descname">--id</code><code class="sig-prename descclassname"> &lt;container_id&gt;</code><a class="headerlink" href="#cmdoption-skein-container-kill-id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The container id</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-container-kill-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-kill-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-container-kill-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-kill-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -380,33 +381,33 @@
 <span class="go">                          APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-container-ls-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-ls-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-container-ls-arg-app_id">
+<span id="cmdoption-skein-container-ls-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-ls-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id. To use in a container inside a skein application, pass in “current”</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-container-ls-all">
-<code class="sig-name descname">--all</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-ls-all" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-container-ls-a"></span><code class="sig-name descname">--all</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-ls-all" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show all containers (default is only active containers)</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-container-ls-service">
 <code class="sig-name descname">--service</code><code class="sig-prename descclassname"> &lt;service&gt;</code><a class="headerlink" href="#cmdoption-skein-container-ls-service" title="Permalink to this definition">¶</a></dt>
 <dd><p>Filter by container services. May be repeated to select multiple services.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-container-ls-state">
 <code class="sig-name descname">--state</code><code class="sig-prename descclassname"> &lt;state&gt;</code><a class="headerlink" href="#cmdoption-skein-container-ls-state" title="Permalink to this definition">¶</a></dt>
 <dd><p>Filter by container states. May be repeated to select multiple states.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-container-ls-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-ls-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-container-ls-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-ls-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -417,27 +418,27 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein container scale --service SERVICE --number NUMBER [--help] APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-container-scale-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-scale-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-container-scale-arg-app_id">
+<span id="cmdoption-skein-container-scale-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-scale-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id. To use in a container inside a skein application, pass in “current”</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-container-scale-service">
-<code class="sig-name descname">--service</code><code class="sig-prename descclassname"> &lt;service&gt;</code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-s</code><code class="sig-prename descclassname"> &lt;service&gt;</code><a class="headerlink" href="#cmdoption-skein-container-scale-service" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-container-scale-s"></span><code class="sig-name descname">--service</code><code class="sig-prename descclassname"> &lt;service&gt;</code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-s</code><code class="sig-prename descclassname"> &lt;service&gt;</code><a class="headerlink" href="#cmdoption-skein-container-scale-service" title="Permalink to this definition">¶</a></dt>
 <dd><p>Service name</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-container-scale-number">
-<code class="sig-name descname">--number</code><code class="sig-prename descclassname"> &lt;number&gt;</code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-n</code><code class="sig-prename descclassname"> &lt;number&gt;</code><a class="headerlink" href="#cmdoption-skein-container-scale-number" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-container-scale-n"></span><code class="sig-name descname">--number</code><code class="sig-prename descclassname"> &lt;number&gt;</code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-n</code><code class="sig-prename descclassname"> &lt;number&gt;</code><a class="headerlink" href="#cmdoption-skein-container-scale-number" title="Permalink to this definition">¶</a></dt>
 <dd><p>The requested number of instances</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-container-scale-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-scale-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-container-scale-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-container-scale-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -448,9 +449,9 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein driver [--help] command ...</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-driver-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -461,9 +462,9 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein driver address [--help]</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-address-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-address-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-driver-address-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-address-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -474,9 +475,9 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein driver pid [--help]</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-pid-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-pid-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-driver-pid-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-pid-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -489,39 +490,39 @@
 <span class="go">                            [--java-option JAVA_OPTIONS] [--help]</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-restart-keytab">
 <code class="sig-name descname">--keytab</code><code class="sig-prename descclassname"> &lt;path&gt;</code><a class="headerlink" href="#cmdoption-skein-driver-restart-keytab" title="Permalink to this definition">¶</a></dt>
 <dd><p>Path to a keytab file to use when starting the driver. If not provided, the driver will login using the ticket cache instead.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-restart-principal">
 <code class="sig-name descname">--principal</code><code class="sig-prename descclassname"> &lt;principal&gt;</code><a class="headerlink" href="#cmdoption-skein-driver-restart-principal" title="Permalink to this definition">¶</a></dt>
 <dd><p>The principal to use when starting the driver with a keytab.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-restart-log">
 <code class="sig-name descname">--log</code><code class="sig-prename descclassname"> &lt;log&gt;</code><a class="headerlink" href="#cmdoption-skein-driver-restart-log" title="Permalink to this definition">¶</a></dt>
 <dd><p>If provided, the driver will write logs here.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-restart-log-level">
 <code class="sig-name descname">--log-level</code><code class="sig-prename descclassname"> &lt;log_level&gt;</code><a class="headerlink" href="#cmdoption-skein-driver-restart-log-level" title="Permalink to this definition">¶</a></dt>
 <dd><p>The driver log level, default is INFO</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-restart-java-option">
 <code class="sig-name descname">--java-option</code><code class="sig-prename descclassname"> &lt;java_options&gt;</code><a class="headerlink" href="#cmdoption-skein-driver-restart-java-option" title="Permalink to this definition">¶</a></dt>
 <dd><p>Forward a Java option to the driver, can be used multiple times.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-restart-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-restart-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-driver-restart-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-restart-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -534,39 +535,39 @@
 <span class="go">                          [--help]</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-start-keytab">
 <code class="sig-name descname">--keytab</code><code class="sig-prename descclassname"> &lt;path&gt;</code><a class="headerlink" href="#cmdoption-skein-driver-start-keytab" title="Permalink to this definition">¶</a></dt>
 <dd><p>Path to a keytab file to use when starting the driver. If not provided, the driver will login using the ticket cache instead.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-start-principal">
 <code class="sig-name descname">--principal</code><code class="sig-prename descclassname"> &lt;principal&gt;</code><a class="headerlink" href="#cmdoption-skein-driver-start-principal" title="Permalink to this definition">¶</a></dt>
 <dd><p>The principal to use when starting the driver with a keytab.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-start-log">
 <code class="sig-name descname">--log</code><code class="sig-prename descclassname"> &lt;log&gt;</code><a class="headerlink" href="#cmdoption-skein-driver-start-log" title="Permalink to this definition">¶</a></dt>
 <dd><p>If provided, the driver will write logs here.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-start-log-level">
 <code class="sig-name descname">--log-level</code><code class="sig-prename descclassname"> &lt;log_level&gt;</code><a class="headerlink" href="#cmdoption-skein-driver-start-log-level" title="Permalink to this definition">¶</a></dt>
 <dd><p>The driver log level, default is INFO</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-start-java-option">
 <code class="sig-name descname">--java-option</code><code class="sig-prename descclassname"> &lt;java_options&gt;</code><a class="headerlink" href="#cmdoption-skein-driver-start-java-option" title="Permalink to this definition">¶</a></dt>
 <dd><p>Forward a Java option to the driver, can be used multiple times.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-start-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-start-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-driver-start-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-start-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -577,15 +578,15 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein driver stop [--force] [--help]</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-stop-force">
-<code class="sig-name descname">--force</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-stop-force" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-driver-stop-f"></span><code class="sig-name descname">--force</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-stop-force" title="Permalink to this definition">¶</a></dt>
 <dd><p>Stop the process associated with the driver PID, even if unable to verify it corresponds to a skein driver</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-driver-stop-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-stop-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-driver-stop-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-driver-stop-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -596,9 +597,9 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kv [--help] command ...</span>
 </pre></div>
 </div>
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-kv-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-kv-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -609,21 +610,21 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kv del --key KEY [--help] APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-kv-del-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-del-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-kv-del-arg-app_id">
+<span id="cmdoption-skein-kv-del-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-del-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id. To use in a container inside a skein application, pass in “current”</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-kv-del-key">
 <code class="sig-name descname">--key</code><code class="sig-prename descclassname"> &lt;key&gt;</code><a class="headerlink" href="#cmdoption-skein-kv-del-key" title="Permalink to this definition">¶</a></dt>
 <dd><p>The key to delete.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-kv-del-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-del-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-kv-del-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-del-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -634,27 +635,27 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kv get --key KEY [--wait] [--help] APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-kv-get-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-get-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-kv-get-arg-app_id">
+<span id="cmdoption-skein-kv-get-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-get-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id. To use in a container inside a skein application, pass in “current”</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-kv-get-key">
 <code class="sig-name descname">--key</code><code class="sig-prename descclassname"> &lt;key&gt;</code><a class="headerlink" href="#cmdoption-skein-kv-get-key" title="Permalink to this definition">¶</a></dt>
 <dd><p>The key to get</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-kv-get-wait">
 <code class="sig-name descname">--wait</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-get-wait" title="Permalink to this definition">¶</a></dt>
 <dd><p>If true, will block until the key is set</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-kv-get-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-get-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-kv-get-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-get-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -665,15 +666,15 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kv ls [--help] APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-kv-ls-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-ls-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-kv-ls-arg-app_id">
+<span id="cmdoption-skein-kv-ls-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-ls-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id. To use in a container inside a skein application, pass in “current”</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-kv-ls-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-ls-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-kv-ls-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-ls-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
@@ -684,27 +685,27 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">usage: skein kv put --key KEY [--value VALUE] [--help] APP_ID</span>
 </pre></div>
 </div>
-<dl class="option">
-<dt id="cmdoption-skein-kv-put-arg-app-id">
-<code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-put-arg-app-id" title="Permalink to this definition">¶</a></dt>
+<dl class="std option">
+<dt id="cmdoption-skein-kv-put-arg-app_id">
+<span id="cmdoption-skein-kv-put-arg-app-id"></span><code class="sig-name descname">app_id</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-put-arg-app_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>The application id. To use in a container inside a skein application, pass in “current”</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-kv-put-key">
 <code class="sig-name descname">--key</code><code class="sig-prename descclassname"> &lt;key&gt;</code><a class="headerlink" href="#cmdoption-skein-kv-put-key" title="Permalink to this definition">¶</a></dt>
 <dd><p>The key to put</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-kv-put-value">
 <code class="sig-name descname">--value</code><code class="sig-prename descclassname"> &lt;value&gt;</code><a class="headerlink" href="#cmdoption-skein-kv-put-value" title="Permalink to this definition">¶</a></dt>
 <dd><p>The value to put. If not provided, will be read from stdin.</p>
 </dd></dl>
 
-<dl class="option">
+<dl class="std option">
 <dt id="cmdoption-skein-kv-put-help">
-<code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-put-help" title="Permalink to this definition">¶</a></dt>
+<span id="cmdoption-skein-kv-put-h"></span><code class="sig-name descname">--help</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-skein-kv-put-help" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show this help message then exit</p>
 </dd></dl>
 
