@@ -4,6 +4,11 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.8.1 (Mar 2, 2021)
+---------------------------
+
+- Fix resource check for GPU support (:issue:`220`, :pr:`224`)
+
 Version 0.8.0 (August 28, 2019)
 -------------------------------
 
