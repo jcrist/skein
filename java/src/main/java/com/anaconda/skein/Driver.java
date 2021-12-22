@@ -315,7 +315,9 @@ public class Driver {
   }
 
   public Path getAppDir(FileSystem fs, ApplicationId appId) {
-    return new Path(fs.getHomeDirectory(), ".skein/" + appId.toString());
+    String  skeinStagingDir = System.getenv("SKEIN_STAGING_DIR");
+    Path stagingPath = (skeinStagingDir == null) ? fs.getHomeDirectory() : new Path(skeinStagingDir);
+    return new Path(stagingPath, ".skein/" + appId.toString());
   }
 
   public Map<String, String> getApplicationLogs(
