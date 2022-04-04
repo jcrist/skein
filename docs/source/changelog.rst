@@ -4,6 +4,13 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.8.2 (Apr 4, 2022)
+---------------------------
+
+- Fix corrupt CLASSPATH env by removing trailing newline (:pr:`241`)
+- Fix setup.py failure caused by PyPI yanked package: grpcio=1.45.0 (:pr:`242`)
+- Add inline comments to pom.xml to help the java novice debug (:pr:`243`)
+
 Version 0.8.1 (Mar 2, 2021)
 ---------------------------
 
