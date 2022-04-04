@@ -167,12 +167,12 @@ is_build_step = bool({'build', 'install', 'develop',
 protos_built = bool(_compiled_protos()) and 'clean' not in sys.argv
 
 if 'build_proto' in sys.argv or (is_build_step and not protos_built):
-    setup_requires = ['grpcio-tools']
+    setup_requires = ['grpcio-tools!=1.45.0']
 else:
     setup_requires = []
 
 
-install_requires = ['grpcio>=1.11.0',
+install_requires = ['grpcio>=1.11.0,!=1.45.0',
                     'protobuf>=3.5.0',
                     'pyyaml',
                     'cryptography']
