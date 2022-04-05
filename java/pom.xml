@@ -3,6 +3,14 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <!--
+    pom.xml is a file associated with Apache Maven. It is used to declare plugins
+    influencing maven and the projects dependencies etc. Maven can compile this
+    project into a .jar file.
+
+    To learn more:
+    https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html
+  -->
   <groupId>com.anaconda.skein</groupId>
   <artifactId>skein</artifactId>
   <version>UNKNOWN</version>
@@ -36,6 +44,13 @@
     </extensions>
 
     <plugins>
+      <!--
+        This plugin provides the capability to package the artifact in an
+        uber-jar, including its dependencies and to shade - i.e. rename - the
+        packages of some of the dependencies.
+
+        https://maven.apache.org/plugins/maven-shade-plugin/
+      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
@@ -149,6 +164,13 @@
         </executions>
       </plugin>
 
+      <!--
+        Maven Protocol Buffers Plugin uses Protocol Buffer Compiler (protoc)
+        tool to generate Java source files from .proto (protocol buffer
+        definition) files for the specified project.
+
+        https://www.xolstice.org/protobuf-maven-plugin/
+      -->
       <plugin>
         <groupId>org.xolstice.maven.plugins</groupId>
         <artifactId>protobuf-maven-plugin</artifactId>
@@ -181,6 +203,12 @@
         </executions>
       </plugin>
 
+      <!--
+        maven-replacer-plugin:replacer is a build plugin to replace tokens
+        within a file with a given value and fully supports regular expressions.
+
+        https://code.google.com/archive/p/maven-replacer-plugin/
+      -->
       <plugin>
         <groupId>com.google.code.maven-replacer-plugin</groupId>
         <artifactId>replacer</artifactId>
@@ -206,6 +234,11 @@
         </configuration>
       </plugin>
 
+      <!--
+        The Compiler Plugin is used to compile the sources of your project.
+
+        https://maven.apache.org/plugins/maven-compiler-plugin/
+      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -214,11 +247,19 @@
           <compilerArgs>
             <arg>-Xlint:all</arg>
           </compilerArgs>
+          <!-- About source/target: https://maven.apache.org/plugins/maven-compiler-plugin/examples/set-compiler-source-and-target.html -->
           <source>7</source>
           <target>7</target>
         </configuration>
       </plugin>
 
+      <!--
+        The Checkstyle Plugin generates a report regarding the code style used
+        by the developers. For more information about Checkstyle, see
+        https://checkstyle.org/.
+
+        https://maven.apache.org/plugins/maven-checkstyle-plugin/
+      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
@@ -242,6 +283,12 @@
         </executions>
       </plugin>
 
+      <!--
+        The Surefire Plugin is used during the test phase of the build lifecycle
+        to execute the unit tests of an application. It generates reports [...].
+
+        https://maven.apache.org/plugins/maven-surefire-plugin/
+      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -253,14 +300,11 @@
     </plugins>
   </build>
 
+  <!--
+    About dependencies:
+    https://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html
+  -->
   <dependencies>
-
-    <dependency>
-      <groupId>javax.annotation</groupId>
-      <artifactId>javax.annotation-api</artifactId>
-      <version>1.2</version>
-      <scope>provided</scope>
-    </dependency>
 
     <dependency>
       <groupId>io.grpc</groupId>
@@ -332,6 +376,14 @@
       <groupId>com.github.spullara.mustache.java</groupId>
       <artifactId>compiler</artifactId>
       <version>0.8.18</version>
+    </dependency>
+
+    <!-- dependencies with scope=provided -->
+    <dependency>
+      <groupId>javax.annotation</groupId>
+      <artifactId>javax.annotation-api</artifactId>
+      <version>1.2</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
