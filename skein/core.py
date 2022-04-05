@@ -213,10 +213,9 @@ def _start_driver(security=None, set_global=False, keytab=None, principal=None,
     env = dict(os.environ)
     env['SKEIN_CERTIFICATE'] = security._get_bytes('cert')
     env['SKEIN_KEY'] = security._get_bytes('key')
-    # Update the classpath in the environment
-    classpath = (subprocess.check_output(['yarn', 'classpath', '--glob'])
-                           .decode('utf-8'))
-    env['CLASSPATH'] = '%s:%s' % (_SKEIN_JAR, classpath)
+    # Construct classpath from skein.jar & hadoop default classpath
+    yarn_classpath = subprocess.check_output(['yarn', 'classpath', '--glob']).decode('utf-8').strip()
+    env['CLASSPATH'] = '%s:%s' % (_SKEIN_JAR, yarn_classpath)
 
     callback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     callback.bind(('127.0.0.1', 0))
