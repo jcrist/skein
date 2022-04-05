@@ -4,6 +4,12 @@ Changelog
 Upcoming Release
 ----------------
 
+Version 0.8.2 (Apr 5, 2022)
+---------------------------
+
+- Ensure skein works even if hadoop classpath has trailing newline (:pr:`241`)
+- Fix setup.py failure caused by PyPI yanked package: grpcio=1.45.0 (:pr:`242`)
+
 Version 0.8.1 (Mar 2, 2021)
 ---------------------------
 
