@@ -3,6 +3,8 @@ package com.anaconda.skein;
 import com.google.common.base.Strings;
 import com.google.common.collect.ObjectArrays;
 import com.google.protobuf.ByteString;
+import com.mapr.security.client.ClientSecurity;
+import com.mapr.security.client.MapRClientSecurityException;
 
 import io.grpc.Server;
 import io.grpc.Status;
@@ -27,6 +29,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -253,14 +256,20 @@ public class Driver {
     // be killed and restarted.  We keep the driver running (even though it
     // can't do anything) so that client processes can get a nice error
     // message, rather than having to look in the logs.
-    if (UserGroupInformation.isSecurityEnabled()
-        && !(ugi.hasKerberosCredentials() || ugi.getCredentials().numberOfTokens() > 0)) {
-      LOG.warn("Kerberos ticket not found, please kinit and restart");
-      loggedIn = false;
-    } else {
-      loggedIn = true;
+    loggedIn = true;
+    if (UserGroupInformation.isSecurityEnabled()) {
+      if (VersionInfo.getVersion().contains("mapr")) {
+        try {
+          loggedIn = new ClientSecurity().hasValidTicket();
+        } catch (MapRClientSecurityException mcse) {
+          LOG.warn("MapR ticket is not found or not valid");
+          loggedIn = false;
+        }
+      } else if (!(ugi.hasKerberosCredentials() || ugi.getCredentials().numberOfTokens() > 0)) {
+        LOG.warn("Kerberos ticket not found, please kinit and restart");
+        loggedIn = false;
+      } 
     }
-
     conf = new YarnConfiguration();
 
     // Build the classpath for running the appmaster
