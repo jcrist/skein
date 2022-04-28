@@ -143,7 +143,24 @@ public class Model {
     }
   }
 
-  public static class Acls {
+  public static class DelegationTokenProvider {
+    private String name;
+    private Map<String, String> config;
+
+    public DelegationTokenProvider(String name, Map<String, String> config) {
+      this.name = name;
+      this.config = config;
+    }
+
+    public String getName() { return name;}
+    public void setName(String name) { this.name = name;}
+
+    public Map<String, String> getConfig() {return config;}
+    public void setConfig(Map<String, String> config) { this.config = config;}
+  }
+
+
+    public static class Acls {
     private boolean enable;
     private List<String> viewUsers;
     private List<String> viewGroups;
@@ -292,6 +309,8 @@ public class Model {
     }
   }
 
+
+
   public static class ApplicationSpec {
     private String name;
     private String queue;
@@ -300,6 +319,7 @@ public class Model {
     private int maxAttempts;
     private Set<String> tags;
     private List<Path> fileSystems;
+    private DelegationTokenManager delegationTokenManager;
     private Acls acls;
     private Master master;
     private Map<String, Service> services;
@@ -308,8 +328,8 @@ public class Model {
 
     public ApplicationSpec(String name, String queue, String user,
                            String nodeLabel, int maxAttempts, Set<String> tags,
-                           List<Path> fileSystems, Acls acls, Master master,
-                           Map<String, Service> services) {
+                           List<Path> fileSystems, DelegationTokenManager delegationTokenManager,
+                           Acls acls, Master master, Map<String, Service> services) {
       this.name = name;
       this.queue = queue;
       this.user = user;
@@ -317,6 +337,7 @@ public class Model {
       this.maxAttempts = maxAttempts;
       this.tags = tags;
       this.fileSystems = fileSystems;
+      this.delegationTokenManager = delegationTokenManager;
       this.acls = acls;
       this.master = master;
       this.services = services;
@@ -330,6 +351,7 @@ public class Model {
               + "maxAttempts: " + maxAttempts + ", "
               + "tags: " + tags + ", "
               + "fileSystems" + fileSystems + ", "
+              + "delegationTokenManager" + delegationTokenManager + ", "
               + "services: " + services + ">");
     }
 
@@ -355,6 +377,11 @@ public class Model {
       this.fileSystems = fileSystems;
     }
     public List<Path> getFileSystems() { return this.fileSystems; }
+
+    public void setDelegationTokenManager(DelegationTokenManager delegationTokenManager) {
+      this.delegationTokenManager = delegationTokenManager;
+    }
+    public DelegationTokenManager getDelegationTokenManager() { return this.delegationTokenManager; }
 
     public void setAcls(Acls acls) { this.acls = acls; }
     public Acls getAcls() { return this.acls; }

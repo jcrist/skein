@@ -21,6 +21,7 @@
     <boringssl.version>2.0.17.Final</boringssl.version>
     <jetty.version>9.2.10.v20150310</jetty.version>
     <hadoopVersion>2.7.2</hadoopVersion>
+    <hiveVersion>2.1.1</hiveVersion>
     <skein.version>UNKNOWN</skein.version>
   </properties>
 
@@ -75,6 +76,9 @@
                   <artifact>*:*</artifact>
                   <excludes>
                     <exclude>META-INF/maven/**</exclude>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
                     <exclude>google/**</exclude>
                     <exclude>skein.proto</exclude>
                   </excludes>
@@ -446,6 +450,20 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-common</artifactId>
       <version>${hadoopVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-jdbc</artifactId>
+      <version>${hiveVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hive.hcatalog</groupId>
+      <artifactId>hive-webhcat-java-client</artifactId>
+      <version>${hiveVersion}</version>
       <scope>provided</scope>
     </dependency>
 

@@ -378,7 +378,6 @@ def test_key_value_mutablemapping(kv_test_app):
     with pytest.raises(TypeError):
         kv_test_app.kv.update({'a': 1}, {'b': 2})
 
-
 def test_key_value_count(kv_test_app):
     kv_test_app.kv.update(kv_test_data)
     assert kv_test_app.kv.count() == 7

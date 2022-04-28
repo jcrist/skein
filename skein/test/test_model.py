@@ -8,9 +8,9 @@ import pytest
 
 from skein.model import (ApplicationSpec, Service, Resources, File,
                          ApplicationState, FinalStatus, FileType, ACLs, Master,
-                         Container, ApplicationReport, ResourceUsageReport,
-                         NodeReport, LogLevel, parse_memory, Security, Queue,
-                         ApplicationLogs)
+                         DelegationTokenProvider, Container, ApplicationReport,
+                         ResourceUsageReport, NodeReport, LogLevel, parse_memory,
+                         Security, Queue, ApplicationLogs)
 
 
 def indent(s, n):
@@ -324,6 +324,15 @@ def test_master_invariants():
         Master(files={'foo/bar': '/source.zip'})
     # Local relative paths are fine
     Master(files={'./bar': '/source.zip'})
+
+
+def test_delegation_token_provider_spec():
+    p1 = DelegationTokenProvider(name='hive',
+                                 config={
+                                     'hive.jdbc.url': 'hive2://127.0.0.1:10000/myDatabase',
+                                     'hive.jdbc.principal': 'hive/my.hadoop.mycompany.com@HADOOP.MYCOMPANY.COM'})
+    p3 = DelegationTokenProvider()
+    check_specification_methods(p1, p3)
 
 
 def test_service():

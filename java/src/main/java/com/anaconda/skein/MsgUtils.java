@@ -23,11 +23,7 @@ import org.apache.log4j.Level;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MsgUtils {
   public static final Msg.Empty EMPTY = Msg.Empty.newBuilder().build();
@@ -605,8 +601,13 @@ public class MsgUtils {
     }
 
     final List<Path> fileSystems = new ArrayList<Path>();
-    for (int i = 0; i < spec.getFileSystemsCount(); i++) {
-      fileSystems.add(new Path(spec.getFileSystems(i)));
+    for (String f: spec.getFileSystemsList()) {
+      fileSystems.add(new Path(f));
+    }
+
+    final DelegationTokenManager delegationTokenManager = new DelegationTokenManager();
+    for(Msg.DelegationTokenProviderSpec s :spec.getDelegationTokenProvidersList()) {
+      delegationTokenManager.addTokenProvider(new Model.DelegationTokenProvider(s.getName(), s.getConfigMap()));
     }
 
     return new Model.ApplicationSpec(spec.getName(),
@@ -616,6 +617,7 @@ public class MsgUtils {
                                      spec.getMaxAttempts(),
                                      new HashSet<String>(spec.getTagsList()),
                                      fileSystems,
+                                     delegationTokenManager,
                                      readAcls(spec.getAcls()),
                                      readMaster(spec.getMaster()),
                                      services);
