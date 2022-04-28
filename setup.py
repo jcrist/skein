@@ -6,6 +6,7 @@ import sys
 import pkg_resources
 from distutils.command.build import build as _build
 from distutils.command.clean import clean as _clean
+from distutils.command.install_lib import install_lib as _install_lib
 from distutils.dir_util import remove_tree
 from glob import glob
 
@@ -134,6 +135,13 @@ class install(_install):
         _ensure_proto(self)
         _install.run(self)
 
+        
+class install_lib(_install_lib):
+    def run(self):
+        _ensure_java(self)
+        _ensure_proto(self)
+        _install_lib.run(self)
+
 
 class develop(_develop):
     user_options = list(_develop.user_options)
@@ -162,7 +170,7 @@ class clean(_clean):
         _clean.run(self)
 
 
-is_build_step = bool({'build', 'install', 'develop',
+is_build_step = bool({'build', 'install', 'develop', 'bdist_egg',
                       'bdist_wheel'}.intersection(sys.argv))
 protos_built = bool(_compiled_protos()) and 'clean' not in sys.argv
 
@@ -184,6 +192,7 @@ cmdclass = versioneer.get_cmdclass()
 cmdclass.update({'build_java': build_java,    # directly build the java source
                  'build_proto': build_proto,  # directly build the proto source
                  'build': build,              # bdist_wheel or pip install .
+                 'install_lib': install_lib,  # bdist_egg
                  'install': install,          # python setup.py install
                  'develop': develop,          # python setup.py develop
                  'clean': clean})             # extra cleanup
