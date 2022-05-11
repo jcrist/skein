@@ -1188,14 +1188,20 @@ class ApplicationSpec(Specification):
         The maximum number of submission attempts before marking the
         application as failed. Note that this only considers failures of the
         application master during startup. Default is 1.
+    acquire_map_reduce_delegation_token: bool, optional
+        Ask delegation token to connect to the map reduce history server.
+        Mandatory if a map reduce job is launched from skein.
+        Default is False
     """
     __slots__ = ('services', 'master', 'name', 'queue', 'user', 'node_label',
-                 'tags', 'file_systems', 'acls', 'max_attempts')
+                 'tags', 'file_systems', 'acls', 'max_attempts',
+                 'acquire_map_reduce_delegation_token')
     _protobuf_cls = _proto.ApplicationSpec
 
     def __init__(self, services=None, master=None, name='skein',
                  queue='default', user='', node_label='', tags=None,
-                 file_systems=None, acls=None, max_attempts=1):
+                 file_systems=None, acls=None, max_attempts=1,
+                 acquire_map_reduce_delegation_token=False):
         self.services = {} if services is None else services
         self.master = Master() if master is None else master
         self.name = name
@@ -1206,6 +1212,7 @@ class ApplicationSpec(Specification):
         self.file_systems = [] if file_systems is None else file_systems
         self.acls = ACLs() if acls is None else acls
         self.max_attempts = max_attempts
+        self.acquire_map_reduce_delegation_token = acquire_map_reduce_delegation_token
         self._validate()
 
     def __repr__(self):
@@ -1225,6 +1232,7 @@ class ApplicationSpec(Specification):
         self._check_is_type('master', Master)
         self.master._validate()
         self._check_is_dict_of('services', str, Service)
+        self._check_is_type('acquire_map_reduce_delegation_token', bool)
 
         if not self.services and not self.master.script:
             raise context.ValueError("There must be at least one service")
@@ -1282,6 +1290,7 @@ class ApplicationSpec(Specification):
     def from_protobuf(cls, obj):
         services = {k: Service.from_protobuf(v)
                     for k, v in obj.services.items()}
+        ask_map_reduce_history_token = obj.acquire_map_reduce_delegation_token
         return cls(name=obj.name,
                    queue=obj.queue,
                    user=obj.user,
@@ -1291,7 +1300,8 @@ class ApplicationSpec(Specification):
                    max_attempts=min(1, obj.max_attempts),
                    acls=ACLs.from_protobuf(obj.acls),
                    master=Master.from_protobuf(obj.master),
-                   services=services)
+                   services=services,
+                   acquire_map_reduce_delegation_token=ask_map_reduce_history_token)
 
     @classmethod
     def from_file(cls, path, format='infer'):

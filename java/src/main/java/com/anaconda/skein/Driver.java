@@ -14,6 +14,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslProvider;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -22,8 +24,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.Master;
 import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.v2.api.HSClientProtocol;
+import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -48,6 +57,9 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
@@ -62,6 +74,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -364,7 +377,8 @@ public class Driver {
     } else {
       return UserGroupInformation.createProxyUser(spec.getUser(), ugi).doAs(
         new PrivilegedExceptionAction<ApplicationId>() {
-          public ApplicationId run() throws IOException, YarnException {
+          public ApplicationId run() throws IOException, YarnException,
+              InterruptedException {
             return submitApplicationInner(getYarnClient(), getFs(), spec);
           }
         });
@@ -372,7 +386,8 @@ public class Driver {
   }
 
   private ApplicationId submitApplicationInner(YarnClient yarnClient,
-      FileSystem fs, Model.ApplicationSpec spec) throws IOException, YarnException {
+      FileSystem fs, Model.ApplicationSpec spec) throws IOException, YarnException,
+      InterruptedException {
     // First validate the spec request
     spec.validate();
 
@@ -452,8 +467,53 @@ public class Driver {
     return appId;
   }
 
+  private MRClientProtocol instantiateHistoryProxy()
+      throws IOException {
+    final String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS);
+    if (StringUtils.isEmpty(serviceAddr)) {
+      return null;
+    }
+    LOG.debug("Connecting to HistoryServer at: " + serviceAddr);
+    final YarnRPC rpc = YarnRPC.create(conf);
+    LOG.debug("Connected to HistoryServer at: " + serviceAddr);
+    UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+    return currentUser.doAs(new PrivilegedAction<MRClientProtocol>() {
+      @Override
+      public MRClientProtocol run() {
+        return (MRClientProtocol) rpc.getProxy(HSClientProtocol.class,
+            NetUtils.createSocketAddr(serviceAddr), conf);
+      }
+    });
+  }
+
+  private Token<?> getDelegationTokenFromHS(MRClientProtocol hsProxy)
+      throws IOException, InterruptedException {
+    final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    GetDelegationTokenRequest request;
+    request = recordFactory.newRecordInstance(GetDelegationTokenRequest.class);
+    request.setRenewer(Master.getMasterPrincipal(conf));
+    org.apache.hadoop.yarn.api.records.Token mrDelegationToken;
+    mrDelegationToken = hsProxy.getDelegationToken(request).getDelegationToken();
+    return ConverterUtils.convertFromYarn(mrDelegationToken, hsProxy.getConnectAddress());
+  }
+
+
+  private void addMapReduceHistoryToken(Credentials credentials)
+    throws IOException, InterruptedException {
+    // RPC to history server
+    MRClientProtocol hsProxy = instantiateHistoryProxy();
+    if (UserGroupInformation.isSecurityEnabled() && (hsProxy != null)) {
+      Text hsService = SecurityUtil.buildTokenService(hsProxy.getConnectAddress());
+      if (credentials.getToken(hsService) == null) {
+        credentials.addToken(hsService, getDelegationTokenFromHS(hsProxy));
+        // }
+      }
+    }
+  }
+
   private ByteBuffer collectTokens(YarnClient yarnClient, FileSystem fs,
-      Model.ApplicationSpec spec) throws IOException, YarnException {
+      Model.ApplicationSpec spec) throws IOException, YarnException,
+      InterruptedException {
     // Collect security tokens as needed
     LOG.debug("Collecting filesystem delegation tokens");
     Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
@@ -482,6 +542,9 @@ public class Driver {
           rmDelegationToken, rmDelegationTokenService
       );
       credentials.addToken(rmDelegationTokenService, rmToken);
+    }
+    if (spec.getAcquireMapReduceDelegationToken()) {
+      addMapReduceHistoryToken(credentials);
     }
 
     DataOutputBuffer dob = new DataOutputBuffer();
