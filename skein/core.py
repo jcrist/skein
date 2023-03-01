@@ -845,6 +845,13 @@ class Client(_ClientBase):
         """
         self._call('kill', proto.KillRequest(id=app_id, user=user))
 
+    def ping(self):
+        try:
+            # Ping server to check connection
+            self._call('ping', proto.Empty())
+        except Exception:
+            raise
+
 
 class ApplicationClient(_ClientBase):
     """A client for the application master.
