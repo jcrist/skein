@@ -19,7 +19,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <grpc.version>1.16.0</grpc.version>
     <boringssl.version>2.0.17.Final</boringssl.version>
-    <jetty.version>9.2.10.v20150310</jetty.version>
+    <jetty.version>10.0.14</jetty.version>
     <hadoopVersion>2.7.2</hadoopVersion>
     <skein.version>UNKNOWN</skein.version>
   </properties>
