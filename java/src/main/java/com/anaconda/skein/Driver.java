@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -440,6 +441,10 @@ public class Driver {
       appContext.setMaxAppAttempts(spec.getMaxAttempts());
       appContext.setNodeLabelExpression(Strings.emptyToNull(spec.getNodeLabel()));
       appContext.setApplicationTags(spec.getTags());
+      appContext.setLogAggregationContext(
+        LogAggregationContext.newInstance(
+            env.get("YARN_LOG_AGGREGATION_INCLUDE_PATTERN"),
+            env.get("YARN_LOG_AGGREGATION_EXCLUDE_PATTERN")));
 
       LOG.info("Submitting application...");
       yarnClient.submitApplication(appContext);
